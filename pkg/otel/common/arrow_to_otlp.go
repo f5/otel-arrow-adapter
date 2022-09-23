@@ -114,7 +114,7 @@ func ResourceId(r pcommon.Resource) string {
 }
 
 func ScopeId(is pcommon.InstrumentationScope) string {
-	return "name:" + is.Name() + "|version:" + is.Version() + "|" + AttributesId(is.Attributes()) + "|" + fmt.Sprintf("dac:%d", is.DroppedAttributesCount)
+	return "name:" + is.Name() + "|version:" + is.Version() + "|" + AttributesId(is.Attributes()) + "|" + fmt.Sprintf("dac:%d", is.DroppedAttributesCount())
 }
 
 func ValueId(v pcommon.Value) string {
@@ -130,7 +130,7 @@ func ValueId(v pcommon.Value) string {
 	case pcommon.ValueTypeMap:
 		return AttributesId(v.MapVal())
 	case pcommon.ValueTypeBytes:
-		return fmt.Sprintf("%x", v.BytesVal())
+		return fmt.Sprintf("%x", v.BytesVal().AsRaw())
 	case pcommon.ValueTypeSlice:
 		values := v.SliceVal()
 		valueId := "["
@@ -159,49 +159,52 @@ func AttributesFrom(dt arrow.DataType, arr arrow.Array, row int) (pcommon.Map, e
 	for i := 0; i < attrArray.NumField(); i++ {
 		valueField := structType.Field(i)
 
-		if err := PutKeyValueFrom(a, valueField.Name, valueField.Type, attrArray.Field(i), row); err != nil {
+		newV := a.PutEmpty(valueField.Name)
+
+		if err := CopyValueFrom(newV, valueField.Type, attrArray.Field(i), row); err != nil {
 			return a, err
 		}
 	}
 	return a, nil
 }
 
-func PutKeyValueFrom(a pcommon.Map, key string, dt arrow.DataType, arr arrow.Array, row int) error {
+func CopyValueFrom(dest pcommon.Value, dt arrow.DataType, arr arrow.Array, row int) error {
 	switch t := dt.(type) {
 	case *arrow.BooleanType:
 		v, err := air.BoolFromArray(arr, row)
 		if err != nil {
 			return err
 		}
-		a.PutBool(key, v)
+		dest.SetBoolVal(v)
 		return nil
 	case *arrow.Float64Type:
 		v, err := air.F64FromArray(arr, row)
 		if err != nil {
 			return err
 		}
-		a.PutDouble(key, v)
+		dest.SetDoubleVal(v)
 		return nil
 	case *arrow.Int64Type:
 		v, err := air.I64FromArray(arr, row)
 		if err != nil {
 			return err
 		}
-		a.PutInt(key, v)
+		dest.SetIntVal(v)
 		return nil
 	case *arrow.StringType:
 		v, err := air.StringFromArray(arr, row)
 		if err != nil {
 			return err
 		}
-		a.PutString(key, v)
+		dest.SetStringVal(v)
 		return nil
 	case *arrow.BinaryType:
 		v, err := air.BinaryFromArray(arr, row)
 		if err != nil {
 			return err
 		}
-		a.PutEmptyBytes(key).FromRaw(v)
+		// @@@ Note extra copying
+		dest.SetEmptyBytesVal().FromRaw(v)
 		return nil
 	case *arrow.StructType:
 		structKvs, err := AttributesFrom(dt, arr, row)
@@ -209,7 +212,7 @@ func PutKeyValueFrom(a pcommon.Map, key string, dt arrow.DataType, arr arrow.Arr
 			return err
 		}
 		// @@@ Note extra copying
-		structKvs.CopyTo(a.PutEmptyMap(key))
+		structKvs.CopyTo(dest.SetEmptyMapVal())
 		return nil
 	case *arrow.ListType:
 		arrList, ok := arr.(*array.List)
@@ -220,7 +223,7 @@ func PutKeyValueFrom(a pcommon.Map, key string, dt arrow.DataType, arr arrow.Arr
 		if err != nil {
 			return err
 		}
-		values.CopyTo(a.PutEmptySlice(key))
+		values.CopyTo(dest.SetEmptySliceVal())
 		return nil
 	case *arrow.DictionaryType:
 		switch t.ValueType.(type) {
@@ -229,14 +232,14 @@ func PutKeyValueFrom(a pcommon.Map, key string, dt arrow.DataType, arr arrow.Arr
 			if err != nil {
 				return err
 			}
-			a.PutString(key, v)
+			dest.SetStringVal(v)
 			return nil
 		case *arrow.BinaryType:
 			v, err := air.BinaryFromArray(arr, row)
 			if err != nil {
 				return err
 			}
-			a.PutEmptyBytes(key).FromRaw(v)
+			dest.SetEmptyBytesVal().FromRaw(v)
 			return nil
 		default:
 			return fmt.Errorf("unsupported dictionary value type %T", t.ValueType)
@@ -250,18 +253,18 @@ func ArrayValueFrom(arrList *array.List, row int) (pcommon.Slice, error) {
 	start := int(arrList.Offsets()[row])
 	end := int(arrList.Offsets()[row+1])
 	result := pcommon.NewSlice()
+	result.EnsureCapacity(end - start)
 
 	arrItems := arrList.ListValues()
 	for ; start < end; start++ {
+		v := result.AppendEmpty()
 		if arrList.IsNull(start) {
-			result = append(result, nil)
 			continue
 		}
-		v, err := AnyValueFrom(arrList.DataType(), arrItems, start)
+		err := CopyValueFrom(v, arrList.DataType(), arrItems, start)
 		if err != nil {
-			return nil, err
+			return result, err
 		}
-		result = append(result, v)
 	}
 
 	return result, nil
