@@ -17,7 +17,7 @@ package logs
 import (
 	"github.com/apache/arrow/go/v9/arrow"
 
-	collogspb "otel-arrow-adapter/api/go.opentelemetry.io/proto/otlp/collector/logs/v1"
+	collogspb "go.opentelemetry.io/collector/pdata/plog"
 	"otel-arrow-adapter/pkg/air"
 	"otel-arrow-adapter/pkg/air/config"
 	"otel-arrow-adapter/pkg/otel/common"
@@ -25,7 +25,7 @@ import (
 )
 
 // OtlpLogsToArrowRecords converts an OTLP ResourceLogs to one or more Arrow records
-func OtlpLogsToArrowRecords(rr *air.RecordRepository, request *collogspb.ExportLogsServiceRequest, cfg *config.Config) ([]arrow.Record, error) {
+func OtlpLogsToArrowRecords(rr *air.RecordRepository, request *collogspb.Logs, cfg *config.Config) ([]arrow.Record, error) {
 	for _, resourceLogs := range request.ResourceLogs {
 		for _, scopeLogs := range resourceLogs.ScopeLogs {
 			for _, log := range scopeLogs.LogRecords {

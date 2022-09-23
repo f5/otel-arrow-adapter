@@ -18,8 +18,8 @@ import (
 	"fmt"
 	"testing"
 
-	commonpb "otel-arrow-adapter/api/go.opentelemetry.io/proto/otlp/common/v1"
-	v1 "otel-arrow-adapter/api/go.opentelemetry.io/proto/otlp/metrics/v1"
+	commonpb "go.opentelemetry.io/collector/pdata/pcommon"
+	v1 "go.opentelemetry.io/collector/pdata/pmetric"
 	"otel-arrow-adapter/pkg/otel/metrics"
 )
 
@@ -29,7 +29,7 @@ func TestDataPointSig(t *testing.T) {
 	ndp := v1.NumberDataPoint{
 		StartTimeUnixNano: 1,
 		TimeUnixNano:      2,
-		Attributes: []*commonpb.KeyValue{
+		Attributes: pcommon.Map{
 			{
 				Key: "k4",
 				Value: &commonpb.AnyValue{Value: &commonpb.AnyValue_DoubleValue{
@@ -64,7 +64,7 @@ func TestDataPointSig(t *testing.T) {
 				Key: "k8",
 				Value: &commonpb.AnyValue{Value: &commonpb.AnyValue_KvlistValue{
 					KvlistValue: &commonpb.KeyValueList{
-						Values: []*commonpb.KeyValue{
+						Values: pcommon.Map{
 							{
 								Key: "k4",
 								Value: &commonpb.AnyValue{Value: &commonpb.AnyValue_DoubleValue{
@@ -85,7 +85,7 @@ func TestDataPointSig(t *testing.T) {
 				Key: "k7",
 				Value: &commonpb.AnyValue{Value: &commonpb.AnyValue_KvlistValue{
 					KvlistValue: &commonpb.KeyValueList{
-						Values: []*commonpb.KeyValue{
+						Values: pcommon.Map{
 							{
 								Key: "k4",
 								Value: &commonpb.AnyValue{Value: &commonpb.AnyValue_DoubleValue{

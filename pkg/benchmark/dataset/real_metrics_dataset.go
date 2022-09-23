@@ -23,11 +23,11 @@ import (
 
 	"google.golang.org/protobuf/proto"
 
-	colmetrics "otel-arrow-adapter/api/go.opentelemetry.io/proto/otlp/collector/metrics/v1"
-	otlpmetrics "otel-arrow-adapter/api/go.opentelemetry.io/proto/otlp/metrics/v1"
+	colmetrics "go.opentelemetry.io/collector/pdata/pmetric"
+	otlpmetrics "go.opentelemetry.io/collector/pdata/pmetric"
 )
 
-// RealMetricsDataset represents a dataset of real metrics read from an ExportMetricsServiceRequest serialized to a binary file.
+// RealMetricsDataset represents a dataset of real metrics read from an Metrics serialized to a binary file.
 type RealMetricsDataset struct {
 	metrics []metrics
 }
@@ -44,7 +44,7 @@ func NewRealMetricsDataset(path string) *RealMetricsDataset {
 	if err != nil {
 		log.Fatal("read file:", err)
 	}
-	var otlp colmetrics.ExportMetricsServiceRequest
+	var otlp colmetrics.Metrics
 	if err := proto.Unmarshal(data, &otlp); err != nil {
 		log.Fatal("unmarshal:", err)
 	}
@@ -68,7 +68,7 @@ func (d *RealMetricsDataset) Len() int {
 }
 
 // Metrics returns a subset of metrics from the original dataset.
-func (d *RealMetricsDataset) Metrics(offset, size int) []*colmetrics.ExportMetricsServiceRequest {
+func (d *RealMetricsDataset) Metrics(offset, size int) []*colmetrics.Metrics {
 	resMetrics := map[*otlpmetrics.ResourceMetrics]map[*otlpmetrics.ScopeMetrics][]*otlpmetrics.Metric{}
 
 	for _, metric := range d.metrics[offset : offset+size] {
@@ -82,7 +82,7 @@ func (d *RealMetricsDataset) Metrics(offset, size int) []*colmetrics.ExportMetri
 		metrics = append(metrics, metric.metric)
 	}
 
-	request := colmetrics.ExportMetricsServiceRequest{
+	request := colmetrics.Metrics{
 		ResourceMetrics: make([]*otlpmetrics.ResourceMetrics, 0, len(resMetrics)),
 	}
 
@@ -103,5 +103,5 @@ func (d *RealMetricsDataset) Metrics(offset, size int) []*colmetrics.ExportMetri
 		})
 	}
 
-	return []*colmetrics.ExportMetricsServiceRequest{&request}
+	return []*colmetrics.Metrics{&request}
 }

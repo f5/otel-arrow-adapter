@@ -17,8 +17,8 @@ package trace
 import (
 	"github.com/apache/arrow/go/v9/arrow"
 
-	coltracepb "otel-arrow-adapter/api/go.opentelemetry.io/proto/otlp/collector/trace/v1"
-	v1 "otel-arrow-adapter/api/go.opentelemetry.io/proto/otlp/trace/v1"
+	coltracepb "go.opentelemetry.io/collector/pdata/ptrace"
+	v1 "go.opentelemetry.io/collector/pdata/ptrace"
 	"otel-arrow-adapter/pkg/air"
 	"otel-arrow-adapter/pkg/air/config"
 	"otel-arrow-adapter/pkg/air/rfield"
@@ -27,7 +27,7 @@ import (
 )
 
 // OtlpTraceToArrowRecords converts an OTLP trace to one or more Arrow records.
-func OtlpTraceToArrowRecords(rr *air.RecordRepository, request *coltracepb.ExportTraceServiceRequest, cfg *config.Config) ([]arrow.Record, error) {
+func OtlpTraceToArrowRecords(rr *air.RecordRepository, request *coltracepb.Traces, cfg *config.Config) ([]arrow.Record, error) {
 	if cfg.TraceEncoding.Hierarchical {
 		AddHierarchicalTraces(rr, request, cfg)
 	} else {
@@ -42,7 +42,7 @@ func OtlpTraceToArrowRecords(rr *air.RecordRepository, request *coltracepb.Expor
 	return records, nil
 }
 
-func AddFlattenTraces(rr *air.RecordRepository, request *coltracepb.ExportTraceServiceRequest, cfg *config.Config) {
+func AddFlattenTraces(rr *air.RecordRepository, request *coltracepb.Traces, cfg *config.Config) {
 	for _, resourceSpans := range request.ResourceSpans {
 		for _, scopeSpans := range resourceSpans.ScopeSpans {
 			for _, span := range scopeSpans.Spans {
@@ -108,7 +108,7 @@ func AddFlattenTraces(rr *air.RecordRepository, request *coltracepb.ExportTraceS
 	}
 }
 
-func AddHierarchicalTraces(rr *air.RecordRepository, request *coltracepb.ExportTraceServiceRequest, cfg *config.Config) {
+func AddHierarchicalTraces(rr *air.RecordRepository, request *coltracepb.Traces, cfg *config.Config) {
 	record := air.NewRecord()
 	resSpansValues := make([]rfield.Value, 0, len(request.ResourceSpans))
 

@@ -17,7 +17,7 @@ package datagen
 import (
 	"golang.org/x/exp/rand"
 
-	commonpb "otel-arrow-adapter/api/go.opentelemetry.io/proto/otlp/common/v1"
+	commonpb "go.opentelemetry.io/collector/pdata/pcommon"
 )
 
 var HOSTNAMES = []string{"host1.mydomain.com", "host2.org", "host3.thedomain.edu", "host4.gov", "host5.retailer.com"}
@@ -27,8 +27,8 @@ var VERSIONS = []string{"1.0.0", "1.0.2", "2.0", "1.9.9"}
 var STATES = []string{"running", "ready", "maintenance", "degraded", "unavailable", "unknown"}
 var TRACE_IDS = []string{"trace1", "trace2", "trace3", "trace4", "trace5"}
 
-func DefaultAttributes() []*commonpb.KeyValue {
-	attributes := []*commonpb.KeyValue{
+func DefaultAttributes() pcommon.Map {
+	attributes := pcommon.Map{
 		{
 			Key:   "hostname",
 			Value: &commonpb.AnyValue{Value: &commonpb.AnyValue_StringValue{StringValue: HOSTNAMES[rand.Intn(len(HOSTNAMES))]}},
@@ -49,7 +49,7 @@ func DefaultAttributes() []*commonpb.KeyValue {
 		//{
 		//	Key: "tags_array",
 		//	Value: &commonpb.AnyValue{Value: &commonpb.AnyValue_ArrayValue{ArrayValue: &commonpb.ArrayValue{
-		//		Values: []*commonpb.AnyValue{
+		//		Values: []pcommon.Value{
 		//			{Value: &commonpb.AnyValue_StringValue{StringValue: "tag1"}},
 		//			{Value: &commonpb.AnyValue_StringValue{StringValue: "tag2"}},
 		//		},
@@ -59,7 +59,7 @@ func DefaultAttributes() []*commonpb.KeyValue {
 		//	Key: "tags_kv_list",
 		//	Value: &commonpb.AnyValue{Value: &commonpb.AnyValue_KvlistValue{
 		//		KvlistValue: &commonpb.KeyValueList{
-		//			Values: []*commonpb.KeyValue{
+		//			Values: pcommon.Map{
 		//				{
 		//					Key:   "state",
 		//					Value: &commonpb.AnyValue{Value: &commonpb.AnyValue_StringValue{StringValue: STATES[rand.Intn(len(STATES))]}},
@@ -86,8 +86,8 @@ func DefaultAttributes() []*commonpb.KeyValue {
 	return attributes
 }
 
-func DefaultResourceAttributes() [][]*commonpb.KeyValue {
-	return [][]*commonpb.KeyValue{
+func DefaultResourceAttributes() []pcommon.Map {
+	return []pcommon.Map{
 		{
 			{
 				Key:   "hostname",
@@ -156,23 +156,23 @@ func DefaultResourceAttributes() [][]*commonpb.KeyValue {
 		}}
 }
 
-func DefaultInstrumentationScopes() []*commonpb.InstrumentationScope {
-	return []*commonpb.InstrumentationScope{
+func DefaultInstrumentationScopes() []pcommon.InstrumentationScope {
+	return []pcommon.InstrumentationScope{
 		{
 			Name:       "fake_generator",
 			Version:    "1.0.0",
-			Attributes: []*commonpb.KeyValue{},
+			Attributes: pcommon.Map{},
 		},
 		{
 			Name:       "fake_generator",
 			Version:    "1.0.1",
-			Attributes: []*commonpb.KeyValue{},
+			Attributes: pcommon.Map{},
 		},
 	}
 }
 
-func DefaultSpanEventAttributes() []*commonpb.KeyValue {
-	return []*commonpb.KeyValue{
+func DefaultSpanEventAttributes() pcommon.Map {
+	return pcommon.Map{
 		{
 			Key:   "hostname",
 			Value: &commonpb.AnyValue{Value: &commonpb.AnyValue_StringValue{StringValue: HOSTNAMES[rand.Intn(len(HOSTNAMES))]}},
@@ -192,8 +192,8 @@ func DefaultSpanEventAttributes() []*commonpb.KeyValue {
 	}
 }
 
-func DefaultSpanLinkAttributes() []*commonpb.KeyValue {
-	return []*commonpb.KeyValue{
+func DefaultSpanLinkAttributes() pcommon.Map {
+	return pcommon.Map{
 		{
 			Key:   "hostname",
 			Value: &commonpb.AnyValue{Value: &commonpb.AnyValue_StringValue{StringValue: HOSTNAMES[rand.Intn(len(HOSTNAMES))]}},

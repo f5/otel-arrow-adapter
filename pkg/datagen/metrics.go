@@ -17,21 +17,21 @@ package datagen
 import (
 	"time"
 
-	collogspb "otel-arrow-adapter/api/go.opentelemetry.io/proto/otlp/collector/metrics/v1"
-	commonpb "otel-arrow-adapter/api/go.opentelemetry.io/proto/otlp/common/v1"
-	metricspb "otel-arrow-adapter/api/go.opentelemetry.io/proto/otlp/metrics/v1"
-	resourcepb "otel-arrow-adapter/api/go.opentelemetry.io/proto/otlp/resource/v1"
+	collogspb "go.opentelemetry.io/collector/pdata/pmetric"
+	commonpb "go.opentelemetry.io/collector/pdata/pcommon"
+	metricspb "go.opentelemetry.io/collector/pdata/pmetric"
+	resourcepb "go.opentelemetry.io/collector/pdata/pcommon"
 )
 
 type MetricsGenerator struct {
-	resourceAttributes    [][]*commonpb.KeyValue
+	resourceAttributes    []pcommon.Map
 	defaultSchemaUrl      string
-	instrumentationScopes []*commonpb.InstrumentationScope
+	instrumentationScopes []pcommon.InstrumentationScope
 	dataGenerator         *DataGenerator
 	generation            int
 }
 
-func NewMetricsGenerator(resourceAttributes [][]*commonpb.KeyValue, instrumentationScopes []*commonpb.InstrumentationScope) *MetricsGenerator {
+func NewMetricsGenerator(resourceAttributes []pcommon.Map, instrumentationScopes []pcommon.InstrumentationScope) *MetricsGenerator {
 	return &MetricsGenerator{
 		resourceAttributes:    resourceAttributes,
 		defaultSchemaUrl:      "",
@@ -41,7 +41,7 @@ func NewMetricsGenerator(resourceAttributes [][]*commonpb.KeyValue, instrumentat
 	}
 }
 
-func (lg *MetricsGenerator) Generate(batchSize int, collectInterval time.Duration) *collogspb.ExportMetricsServiceRequest {
+func (lg *MetricsGenerator) Generate(batchSize int, collectInterval time.Duration) *collogspb.Metrics {
 	var resourceMetrics []*metricspb.ResourceMetrics
 
 	var metrics []*metricspb.Metric
@@ -70,12 +70,12 @@ func (lg *MetricsGenerator) Generate(batchSize int, collectInterval time.Duratio
 
 	lg.generation++
 
-	return &collogspb.ExportMetricsServiceRequest{
+	return &collogspb.Metrics{
 		ResourceMetrics: resourceMetrics,
 	}
 }
 
-func (lg *MetricsGenerator) GenerateSystemCpuTime(batchSize int, collectInterval time.Duration) *collogspb.ExportMetricsServiceRequest {
+func (lg *MetricsGenerator) GenerateSystemCpuTime(batchSize int, collectInterval time.Duration) *collogspb.Metrics {
 	var resourceMetrics []*metricspb.ResourceMetrics
 
 	var metrics []*metricspb.Metric
@@ -102,12 +102,12 @@ func (lg *MetricsGenerator) GenerateSystemCpuTime(batchSize int, collectInterval
 
 	lg.generation++
 
-	return &collogspb.ExportMetricsServiceRequest{
+	return &collogspb.Metrics{
 		ResourceMetrics: resourceMetrics,
 	}
 }
 
-func (lg *MetricsGenerator) GenerateSystemMemoryUsage(batchSize int, collectInterval time.Duration) *collogspb.ExportMetricsServiceRequest {
+func (lg *MetricsGenerator) GenerateSystemMemoryUsage(batchSize int, collectInterval time.Duration) *collogspb.Metrics {
 	var resourceMetrics []*metricspb.ResourceMetrics
 
 	var metrics []*metricspb.Metric
@@ -134,12 +134,12 @@ func (lg *MetricsGenerator) GenerateSystemMemoryUsage(batchSize int, collectInte
 
 	lg.generation++
 
-	return &collogspb.ExportMetricsServiceRequest{
+	return &collogspb.Metrics{
 		ResourceMetrics: resourceMetrics,
 	}
 }
 
-func (lg *MetricsGenerator) GenerateSystemCpuLoadAverage1m(batchSize int, collectInterval time.Duration) *collogspb.ExportMetricsServiceRequest {
+func (lg *MetricsGenerator) GenerateSystemCpuLoadAverage1m(batchSize int, collectInterval time.Duration) *collogspb.Metrics {
 	var resourceMetrics []*metricspb.ResourceMetrics
 
 	var metrics []*metricspb.Metric
@@ -166,7 +166,7 @@ func (lg *MetricsGenerator) GenerateSystemCpuLoadAverage1m(batchSize int, collec
 
 	lg.generation++
 
-	return &collogspb.ExportMetricsServiceRequest{
+	return &collogspb.Metrics{
 		ResourceMetrics: resourceMetrics,
 	}
 }
@@ -178,7 +178,7 @@ func SystemCpuTime(dg *DataGenerator, cpuCount int) *metricspb.Metric {
 	for cpu := 0; cpu < cpuCount; cpu++ {
 		for _, state := range cpuStates {
 			dataPoint = append(dataPoint, &metricspb.NumberDataPoint{
-				Attributes: []*commonpb.KeyValue{
+				Attributes: pcommon.Map{
 					{
 						Key:   "state",
 						Value: &commonpb.AnyValue{Value: &commonpb.AnyValue_StringValue{StringValue: state}},
@@ -220,7 +220,7 @@ func SystemMemoryUsage(dg *DataGenerator) *metricspb.Metric {
 			Sum: &metricspb.Sum{
 				DataPoints: []*metricspb.NumberDataPoint{
 					{
-						Attributes: []*commonpb.KeyValue{
+						Attributes: pcommon.Map{
 							{
 								Key:   "state",
 								Value: &commonpb.AnyValue{Value: &commonpb.AnyValue_StringValue{StringValue: "used"}},
@@ -234,7 +234,7 @@ func SystemMemoryUsage(dg *DataGenerator) *metricspb.Metric {
 						},
 					},
 					{
-						Attributes: []*commonpb.KeyValue{
+						Attributes: pcommon.Map{
 							{
 								Key:   "state",
 								Value: &commonpb.AnyValue{Value: &commonpb.AnyValue_StringValue{StringValue: "free"}},
@@ -248,7 +248,7 @@ func SystemMemoryUsage(dg *DataGenerator) *metricspb.Metric {
 						},
 					},
 					{
-						Attributes: []*commonpb.KeyValue{
+						Attributes: pcommon.Map{
 							{
 								Key:   "state",
 								Value: &commonpb.AnyValue{Value: &commonpb.AnyValue_StringValue{StringValue: "inactive"}},

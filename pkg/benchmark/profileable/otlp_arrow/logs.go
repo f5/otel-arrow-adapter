@@ -6,7 +6,7 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	v1 "otel-arrow-adapter/api/go.opentelemetry.io/proto/otlp/collector/events/v1"
-	logspb "otel-arrow-adapter/api/go.opentelemetry.io/proto/otlp/collector/logs/v1"
+	logspb "go.opentelemetry.io/collector/pdata/plog"
 	"otel-arrow-adapter/pkg/air"
 	"otel-arrow-adapter/pkg/air/config"
 	"otel-arrow-adapter/pkg/benchmark"
@@ -19,7 +19,7 @@ type LogsProfileable struct {
 	tags        []string
 	compression benchmark.CompressionAlgorithm
 	dataset     dataset.LogsDataset
-	logs        []*logspb.ExportLogsServiceRequest
+	logs        []*logspb.Logs
 	rr          *air.RecordRepository
 	producer    *batch_event.Producer
 	batchEvents []*v1.BatchEvent

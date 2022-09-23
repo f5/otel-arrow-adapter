@@ -19,15 +19,15 @@ import (
 
 	"github.com/apache/arrow/go/v9/arrow"
 
-	commonpb "otel-arrow-adapter/api/go.opentelemetry.io/proto/otlp/common/v1"
-	resourcepb "otel-arrow-adapter/api/go.opentelemetry.io/proto/otlp/resource/v1"
 	"otel-arrow-adapter/pkg/air"
 	"otel-arrow-adapter/pkg/air/config"
 	"otel-arrow-adapter/pkg/air/rfield"
 	"otel-arrow-adapter/pkg/otel/constants"
+
+	"go.opentelemetry.io/collector/pdata/pcommon"
 )
 
-func NewAttributes(attributes []*commonpb.KeyValue, cfg *config.Config) *rfield.Field {
+func NewAttributes(attributes pcommon.Map, cfg *config.Config) *rfield.Field {
 	switch cfg.Attribute.Encoding {
 	case config.AttributesAsStructs:
 		return NewAttributesAsStructs(attributes)
@@ -40,7 +40,7 @@ func NewAttributes(attributes []*commonpb.KeyValue, cfg *config.Config) *rfield.
 	}
 }
 
-func NewAttributesAsStructs(attributes []*commonpb.KeyValue) *rfield.Field {
+func NewAttributesAsStructs(attributes pcommon.Map) *rfield.Field {
 	if attributes == nil || len(attributes) == 0 {
 		return nil
 	}
@@ -65,7 +65,7 @@ func NewAttributesAsStructs(attributes []*commonpb.KeyValue) *rfield.Field {
 	return nil
 }
 
-func NewAttributesAsLists(attributes []*commonpb.KeyValue) *rfield.Field {
+func NewAttributesAsLists(attributes pcommon.Map) *rfield.Field {
 	if attributes == nil || len(attributes) == 0 {
 		return nil
 	}
@@ -168,7 +168,7 @@ func (f AttributeTuples) Less(i, j int) bool {
 func (f AttributeTuples) Len() int      { return len(f) }
 func (f AttributeTuples) Swap(i, j int) { f[i], f[j] = f[j], f[i] }
 
-func NewAttributesAsListStructs(attributes []*commonpb.KeyValue) *rfield.Field {
+func NewAttributesAsListStructs(attributes pcommon.Map) *rfield.Field {
 	if attributes == nil || len(attributes) == 0 {
 		return nil
 	}
@@ -270,7 +270,7 @@ func NewAttributesAsListStructs(attributes []*commonpb.KeyValue) *rfield.Field {
 	return nil
 }
 
-func AttributesValue(attributes []*commonpb.KeyValue) rfield.Value {
+func AttributesValue(attributes pcommon.Map) rfield.Value {
 	if attributes == nil || len(attributes) == 0 {
 		return nil
 	}
@@ -294,14 +294,14 @@ func AttributesValue(attributes []*commonpb.KeyValue) rfield.Value {
 	return nil
 }
 
-func AddResource(record *air.Record, resource *resourcepb.Resource, cfg *config.Config) {
+func AddResource(record *air.Record, resource pcommon.Resource, cfg *config.Config) {
 	resourceField := ResourceField(resource, cfg)
 	if resourceField != nil {
 		record.AddField(resourceField)
 	}
 }
 
-func ResourceField(resource *resourcepb.Resource, cfg *config.Config) *rfield.Field {
+func ResourceField(resource pcommon.Resource, cfg *config.Config) *rfield.Field {
 	var resourceFields []*rfield.Field
 
 	// ToDo test attributes := NewAttributes(resource.Attributes)
@@ -323,14 +323,14 @@ func ResourceField(resource *resourcepb.Resource, cfg *config.Config) *rfield.Fi
 	}
 }
 
-func AddScope(record *air.Record, scopeKey string, scope *commonpb.InstrumentationScope, cfg *config.Config) {
+func AddScope(record *air.Record, scopeKey string, scope pcommon.InstrumentationScope, cfg *config.Config) {
 	scopeField := ScopeField(scopeKey, scope, cfg)
 	if scopeField != nil {
 		record.AddField(scopeField)
 	}
 }
 
-func ScopeField(scopeKey string, scope *commonpb.InstrumentationScope, cfg *config.Config) *rfield.Field {
+func ScopeField(scopeKey string, scope pcommon.InstrumentationScope, cfg *config.Config) *rfield.Field {
 	var fields []*rfield.Field
 
 	if len(scope.Name) > 0 {
@@ -354,20 +354,20 @@ func ScopeField(scopeKey string, scope *commonpb.InstrumentationScope, cfg *conf
 	return field
 }
 
-func OtlpAnyValueToValue(value *commonpb.AnyValue) rfield.Value {
+func OtlpAnyValueToValue(value pcommon.Value) rfield.Value {
 	if value != nil {
 		switch value.Value.(type) {
-		case *commonpb.AnyValue_BoolValue:
+		case pcommon.Value_BoolValue:
 			return rfield.NewBool(value.GetBoolValue())
-		case *commonpb.AnyValue_IntValue:
+		case pcommon.Value_IntValue:
 			return rfield.NewI64(value.GetIntValue())
-		case *commonpb.AnyValue_DoubleValue:
+		case pcommon.Value_DoubleValue:
 			return rfield.NewF64(value.GetDoubleValue())
-		case *commonpb.AnyValue_StringValue:
+		case pcommon.Value_StringValue:
 			return rfield.NewString(value.GetStringValue())
-		case *commonpb.AnyValue_BytesValue:
+		case pcommon.Value_BytesValue:
 			return &rfield.Binary{Value: value.GetBytesValue()}
-		case *commonpb.AnyValue_ArrayValue:
+		case pcommon.Value_ArrayValue:
 			values := value.GetArrayValue()
 			fieldValues := make([]rfield.Value, 0, len(values.Values))
 			for _, value := range values.Values {
@@ -380,7 +380,7 @@ func OtlpAnyValueToValue(value *commonpb.AnyValue) rfield.Value {
 				return &rfield.List{Values: fieldValues}
 			}
 			return nil
-		case *commonpb.AnyValue_KvlistValue:
+		case pcommon.Value_KvlistValue:
 			values := value.GetKvlistValue()
 			if values == nil || len(values.Values) == 0 {
 				return nil

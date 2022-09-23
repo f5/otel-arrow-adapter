@@ -19,23 +19,23 @@ import (
 
 	"golang.org/x/exp/rand"
 
-	coltracepb "otel-arrow-adapter/api/go.opentelemetry.io/proto/otlp/collector/trace/v1"
-	commonpb "otel-arrow-adapter/api/go.opentelemetry.io/proto/otlp/common/v1"
-	resourcepb "otel-arrow-adapter/api/go.opentelemetry.io/proto/otlp/resource/v1"
-	tracepb "otel-arrow-adapter/api/go.opentelemetry.io/proto/otlp/trace/v1"
+	coltracepb "go.opentelemetry.io/collector/pdata/ptrace"
+	commonpb "go.opentelemetry.io/collector/pdata/pcommon"
+	resourcepb "go.opentelemetry.io/collector/pdata/pcommon"
+	tracepb "go.opentelemetry.io/collector/pdata/ptrace"
 )
 
 var EVENT_NAMES = []string{"empty", "dns-lookup", "tcp-connect", "tcp-handshake", "tcp-send", "tcp-receive", "tcp-close", "http-send", "http-receive", "http-close", "message-send", "message-receive", "message-close", "grpc-send", "grpc-receive", "grpc-close", "grpc-status", "grpc-trailers", "unknown"}
 var TRACE_STATES = []string{"started", "ended", "unknown"}
 
 type TraceGenerator struct {
-	resourceAttributes    [][]*commonpb.KeyValue
+	resourceAttributes    []pcommon.Map
 	defaultSchemaUrl      string
-	instrumentationScopes []*commonpb.InstrumentationScope
+	instrumentationScopes []pcommon.InstrumentationScope
 	dataGenerator         *DataGenerator
 }
 
-func NewTraceGenerator(resourceAttributes [][]*commonpb.KeyValue, instrumentationScopes []*commonpb.InstrumentationScope) *TraceGenerator {
+func NewTraceGenerator(resourceAttributes []pcommon.Map, instrumentationScopes []pcommon.InstrumentationScope) *TraceGenerator {
 	return &TraceGenerator{
 		resourceAttributes:    resourceAttributes,
 		defaultSchemaUrl:      "",
@@ -44,7 +44,7 @@ func NewTraceGenerator(resourceAttributes [][]*commonpb.KeyValue, instrumentatio
 	}
 }
 
-func (lg *TraceGenerator) Generate(batchSize int, collectInterval time.Duration) *coltracepb.ExportTraceServiceRequest {
+func (lg *TraceGenerator) Generate(batchSize int, collectInterval time.Duration) *coltracepb.Traces {
 	resourceAttrs := lg.resourceAttributes[rand.Intn(len(lg.resourceAttributes))]
 	scopeAttrs := lg.instrumentationScopes[rand.Intn(len(lg.instrumentationScopes))]
 	spans := make([]*tracepb.Span, 0, batchSize)
@@ -55,7 +55,7 @@ func (lg *TraceGenerator) Generate(batchSize int, collectInterval time.Duration)
 		spans = append(spans, Spans(lg.dataGenerator)...)
 	}
 
-	return &coltracepb.ExportTraceServiceRequest{
+	return &coltracepb.Traces{
 		ResourceSpans: []*tracepb.ResourceSpans{
 			{
 				Resource: &resourcepb.Resource{

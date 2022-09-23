@@ -20,24 +20,24 @@ package dataset
 import (
 	datagen2 "otel-arrow-adapter/pkg/datagen"
 
-	collogs "otel-arrow-adapter/api/go.opentelemetry.io/proto/otlp/collector/logs/v1"
-	colmetrics "otel-arrow-adapter/api/go.opentelemetry.io/proto/otlp/collector/metrics/v1"
-	coltrace "otel-arrow-adapter/api/go.opentelemetry.io/proto/otlp/collector/trace/v1"
+	collogs "go.opentelemetry.io/collector/pdata/plog"
+	colmetrics "go.opentelemetry.io/collector/pdata/pmetric"
+	coltrace "go.opentelemetry.io/collector/pdata/ptrace"
 )
 
 type MetricsDataset interface {
 	Len() int
-	Metrics(start, size int) []*colmetrics.ExportMetricsServiceRequest
+	Metrics(start, size int) []*colmetrics.Metrics
 }
 
 type LogsDataset interface {
 	Len() int
-	Logs(start, size int) []*collogs.ExportLogsServiceRequest
+	Logs(start, size int) []*collogs.Logs
 }
 
 type TraceDataset interface {
 	Len() int
-	Traces(start, size int) []*coltrace.ExportTraceServiceRequest
+	Traces(start, size int) []*coltrace.Traces
 }
 
 // ===== Fake metrics dataset =====
@@ -56,8 +56,8 @@ func (d *FakeMetricsDataset) Len() int {
 	return d.len
 }
 
-func (d *FakeMetricsDataset) Metrics(_, size int) []*colmetrics.ExportMetricsServiceRequest {
-	return []*colmetrics.ExportMetricsServiceRequest{d.generator.Generate(size, 100)}
+func (d *FakeMetricsDataset) Metrics(_, size int) []*colmetrics.Metrics {
+	return []*colmetrics.Metrics{d.generator.Generate(size, 100)}
 }
 
 // ===== Fake logs dataset =====
@@ -76,8 +76,8 @@ func (d *FakeLogsDataset) Len() int {
 	return d.len
 }
 
-func (d *FakeLogsDataset) Logs(_, size int) []*collogs.ExportLogsServiceRequest {
-	return []*collogs.ExportLogsServiceRequest{d.generator.Generate(size, 100)}
+func (d *FakeLogsDataset) Logs(_, size int) []*collogs.Logs {
+	return []*collogs.Logs{d.generator.Generate(size, 100)}
 }
 
 // ===== Fake trace dataset =====
@@ -96,6 +96,6 @@ func (d *FakeTraceDataset) Len() int {
 	return d.len
 }
 
-func (d *FakeTraceDataset) Traces(_, size int) []*coltrace.ExportTraceServiceRequest {
-	return []*coltrace.ExportTraceServiceRequest{d.generator.Generate(size, 100)}
+func (d *FakeTraceDataset) Traces(_, size int) []*coltrace.Traces {
+	return []*coltrace.Traces{d.generator.Generate(size, 100)}
 }

@@ -19,21 +19,21 @@ import (
 
 	"github.com/brianvoe/gofakeit/v6"
 
-	collogspb "otel-arrow-adapter/api/go.opentelemetry.io/proto/otlp/collector/logs/v1"
-	commonpb "otel-arrow-adapter/api/go.opentelemetry.io/proto/otlp/common/v1"
-	logspb "otel-arrow-adapter/api/go.opentelemetry.io/proto/otlp/logs/v1"
-	resourcepb "otel-arrow-adapter/api/go.opentelemetry.io/proto/otlp/resource/v1"
+	collogspb "go.opentelemetry.io/collector/pdata/plog"
+	commonpb "go.opentelemetry.io/collector/pdata/pcommon"
+	logspb "go.opentelemetry.io/collector/pdata/plog"
+	resourcepb "go.opentelemetry.io/collector/pdata/pcommon"
 )
 
 type LogsGenerator struct {
-	resourceAttributes    [][]*commonpb.KeyValue
+	resourceAttributes    []pcommon.Map
 	defaultSchemaUrl      string
-	instrumentationScopes []*commonpb.InstrumentationScope
+	instrumentationScopes []pcommon.InstrumentationScope
 	dataGenerator         *DataGenerator
 	generation            int
 }
 
-func NewLogsGenerator(resourceAttributes [][]*commonpb.KeyValue, instrumentationScopes []*commonpb.InstrumentationScope) *LogsGenerator {
+func NewLogsGenerator(resourceAttributes []pcommon.Map, instrumentationScopes []pcommon.InstrumentationScope) *LogsGenerator {
 	return &LogsGenerator{
 		resourceAttributes:    resourceAttributes,
 		defaultSchemaUrl:      "",
@@ -43,7 +43,7 @@ func NewLogsGenerator(resourceAttributes [][]*commonpb.KeyValue, instrumentation
 	}
 }
 
-func (lg *LogsGenerator) Generate(batchSize int, collectInterval time.Duration) *collogspb.ExportLogsServiceRequest {
+func (lg *LogsGenerator) Generate(batchSize int, collectInterval time.Duration) *collogspb.Logs {
 	var resourceLogs []*logspb.ResourceLogs
 
 	for i := 0; i < batchSize; i++ {
@@ -74,7 +74,7 @@ func (lg *LogsGenerator) Generate(batchSize int, collectInterval time.Duration) 
 		})
 	}
 
-	return &collogspb.ExportLogsServiceRequest{
+	return &collogspb.Logs{
 		ResourceLogs: resourceLogs,
 	}
 }

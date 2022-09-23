@@ -23,11 +23,11 @@ import (
 
 	"google.golang.org/protobuf/proto"
 
-	collogs "otel-arrow-adapter/api/go.opentelemetry.io/proto/otlp/collector/logs/v1"
-	logspb "otel-arrow-adapter/api/go.opentelemetry.io/proto/otlp/logs/v1"
+	collogs "go.opentelemetry.io/collector/pdata/plog"
+	logspb "go.opentelemetry.io/collector/pdata/plog"
 )
 
-// RealLogsDataset represents a dataset of real logs read from an ExportLogsServiceRequest serialized to a binary file.
+// RealLogsDataset represents a dataset of real logs read from an Logs serialized to a binary file.
 type RealLogsDataset struct {
 	logs []logUnit
 }
@@ -44,7 +44,7 @@ func NewRealLogsDataset(path string) *RealLogsDataset {
 	if err != nil {
 		log.Fatal("read file:", err)
 	}
-	var otlp collogs.ExportLogsServiceRequest
+	var otlp collogs.Logs
 	if err := proto.Unmarshal(data, &otlp); err != nil {
 		log.Fatal("unmarshal:", err)
 	}
@@ -68,7 +68,7 @@ func (d *RealLogsDataset) Len() int {
 }
 
 // Logs returns a subset of log records from the original dataset.
-func (d *RealLogsDataset) Logs(offset, size int) []*collogs.ExportLogsServiceRequest {
+func (d *RealLogsDataset) Logs(offset, size int) []*collogs.Logs {
 	resourceLogs := map[*logspb.ResourceLogs]map[*logspb.ScopeLogs][]*logspb.LogRecord{}
 
 	for _, logRecord := range d.logs[offset : offset+size] {
@@ -82,7 +82,7 @@ func (d *RealLogsDataset) Logs(offset, size int) []*collogs.ExportLogsServiceReq
 		logs = append(logs, logRecord.logRecord)
 	}
 
-	request := collogs.ExportLogsServiceRequest{
+	request := collogs.Logs{
 		ResourceLogs: make([]*logspb.ResourceLogs, 0, len(resourceLogs)),
 	}
 
@@ -104,5 +104,5 @@ func (d *RealLogsDataset) Logs(offset, size int) []*collogs.ExportLogsServiceReq
 		})
 	}
 
-	return []*collogs.ExportLogsServiceRequest{&request}
+	return []*collogs.Logs{&request}
 }

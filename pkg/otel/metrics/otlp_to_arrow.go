@@ -17,9 +17,9 @@ package metrics
 import (
 	"fmt"
 
-	collogspb "otel-arrow-adapter/api/go.opentelemetry.io/proto/otlp/collector/metrics/v1"
-	commonpb "otel-arrow-adapter/api/go.opentelemetry.io/proto/otlp/common/v1"
-	metricspb "otel-arrow-adapter/api/go.opentelemetry.io/proto/otlp/metrics/v1"
+	collogspb "go.opentelemetry.io/collector/pdata/pmetric"
+	commonpb "go.opentelemetry.io/collector/pdata/pcommon"
+	metricspb "go.opentelemetry.io/collector/pdata/pmetric"
 	"otel-arrow-adapter/pkg/air"
 	"otel-arrow-adapter/pkg/air/config"
 	"otel-arrow-adapter/pkg/air/rfield"
@@ -45,7 +45,7 @@ func NewMultivariateMetricsConfig() *MultivariateMetricsConfig {
 }
 
 // OtlpMetricsToArrowRecords converts an OTLP ResourceMetrics to one or more Arrow records.
-func OtlpMetricsToArrowRecords(rr *air.RecordRepository, request *collogspb.ExportMetricsServiceRequest, multivariateConf *MultivariateMetricsConfig, cfg *config.Config) ([]arrow.Record, error) {
+func OtlpMetricsToArrowRecords(rr *air.RecordRepository, request *collogspb.Metrics, multivariateConf *MultivariateMetricsConfig, cfg *config.Config) ([]arrow.Record, error) {
 	result := []arrow.Record{}
 	for _, resourceMetrics := range request.ResourceMetrics {
 		for _, scopeMetrics := range resourceMetrics.ScopeMetrics {
@@ -439,12 +439,12 @@ func addExpHistogram(rr *air.RecordRepository, resMetrics *metricspb.ResourceMet
 	Negative *ExponentialHistogramDataPoint_Buckets `protobuf:"bytes,9,opt,name=negative,proto3" json:"negative,omitempty"`
 */
 
-func ExtractMultivariateValue(attributes []*commonpb.KeyValue, multivariateKey string) (*string, error) {
+func ExtractMultivariateValue(attributes pcommon.Map, multivariateKey string) (*string, error) {
 	for _, attribute := range attributes {
 		if attribute.GetKey() == multivariateKey {
 			value := attribute.GetValue().Value
 			switch t := value.(type) {
-			case *commonpb.AnyValue_StringValue:
+			case pcommon.Value_StringValue:
 				return &t.StringValue, nil
 			default:
 				return nil, fmt.Errorf("Unsupported multivariate value type: %v", value)
@@ -454,7 +454,7 @@ func ExtractMultivariateValue(attributes []*commonpb.KeyValue, multivariateKey s
 	return nil, nil
 }
 
-func AddMultivariateValue(attributes []*commonpb.KeyValue, multivariateKey string, fields *[]*rfield.Field) (*string, error) {
+func AddMultivariateValue(attributes pcommon.Map, multivariateKey string, fields *[]*rfield.Field) (*string, error) {
 	var multivariateValue *string
 	attributeFields := make([]*rfield.Field, 0, len(attributes))
 	for _, attribute := range attributes {
@@ -462,7 +462,7 @@ func AddMultivariateValue(attributes []*commonpb.KeyValue, multivariateKey strin
 			if attribute.GetKey() == multivariateKey {
 				value := attribute.GetValue().Value
 				switch t := value.(type) {
-				case *commonpb.AnyValue_StringValue:
+				case pcommon.Value_StringValue:
 					multivariateValue = &t.StringValue
 					continue
 				default:

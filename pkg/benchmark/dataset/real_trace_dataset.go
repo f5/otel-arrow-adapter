@@ -27,9 +27,9 @@ import (
 	"golang.org/x/exp/rand"
 	"google.golang.org/protobuf/proto"
 
-	coltrace "otel-arrow-adapter/api/go.opentelemetry.io/proto/otlp/collector/trace/v1"
-	otelcommon "otel-arrow-adapter/api/go.opentelemetry.io/proto/otlp/common/v1"
-	oteltrace "otel-arrow-adapter/api/go.opentelemetry.io/proto/otlp/trace/v1"
+	coltrace "go.opentelemetry.io/collector/pdata/ptrace"
+	otelcommon "go.opentelemetry.io/collector/pdata/pcommon"
+	oteltrace "go.opentelemetry.io/collector/pdata/ptrace"
 )
 
 // ===== Real trace dataset =====
@@ -57,7 +57,7 @@ func NewRealTraceDataset(path string, sortOrder []string) *RealTraceDataset {
 	if err != nil {
 		log.Fatal("read file:", err)
 	}
-	var otlp coltrace.ExportTraceServiceRequest
+	var otlp coltrace.Traces
 	if err := proto.Unmarshal(data, &otlp); err != nil {
 		log.Fatal("unmarshal:", err)
 	}
@@ -98,8 +98,8 @@ func (d *RealTraceDataset) Len() int {
 	return len(d.spans)
 }
 
-func (d *RealTraceDataset) Traces(offset, size int) []*coltrace.ExportTraceServiceRequest {
-	var otlp coltrace.ExportTraceServiceRequest
+func (d *RealTraceDataset) Traces(offset, size int) []*coltrace.Traces {
+	var otlp coltrace.Traces
 
 	ssm := map[*oteltrace.ScopeSpans]*oteltrace.ScopeSpans{}
 	rsm := map[*oteltrace.ResourceSpans]*oteltrace.ResourceSpans{}
@@ -128,7 +128,7 @@ func (d *RealTraceDataset) Traces(offset, size int) []*coltrace.ExportTraceServi
 		outscope.Spans = append(outscope.Spans, span.Span)
 	}
 
-	return []*coltrace.ExportTraceServiceRequest{&otlp}
+	return []*coltrace.Traces{&otlp}
 }
 
 func v2s(v *otelcommon.AnyValue) string {

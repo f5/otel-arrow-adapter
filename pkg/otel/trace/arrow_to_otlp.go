@@ -23,16 +23,16 @@ import (
 	"github.com/apache/arrow/go/v9/arrow"
 	"github.com/apache/arrow/go/v9/arrow/array"
 
-	coltrace "otel-arrow-adapter/api/go.opentelemetry.io/proto/otlp/collector/trace/v1"
-	commonpb "otel-arrow-adapter/api/go.opentelemetry.io/proto/otlp/common/v1"
-	tracepb "otel-arrow-adapter/api/go.opentelemetry.io/proto/otlp/trace/v1"
+	coltrace "go.opentelemetry.io/collector/pdata/ptrace"
+	commonpb "go.opentelemetry.io/collector/pdata/pcommon"
+	tracepb "go.opentelemetry.io/collector/pdata/ptrace"
 	"otel-arrow-adapter/pkg/air"
 	"otel-arrow-adapter/pkg/otel/common"
 	"otel-arrow-adapter/pkg/otel/constants"
 )
 
-func ArrowRecordsToOtlpTrace(record arrow.Record) (*coltrace.ExportTraceServiceRequest, error) {
-	request := coltrace.ExportTraceServiceRequest{
+func ArrowRecordsToOtlpTrace(record arrow.Record) (*coltrace.Traces, error) {
+	request := coltrace.Traces{
 		ResourceSpans: []*tracepb.ResourceSpans{},
 	}
 
@@ -140,7 +140,7 @@ func NewSpanFrom(record arrow.Record, row int) (*tracepb.Span, error) {
 		return nil, err
 	}
 	attrField, attrColumn := air.FieldArray(record, constants.ATTRIBUTES)
-	attributes := []*commonpb.KeyValue(nil)
+	attributes := pcommon.Map(nil)
 	if attrColumn != nil {
 		attributes, err = common.AttributesFrom(attrField.Type, attrColumn, row)
 		if err != nil {

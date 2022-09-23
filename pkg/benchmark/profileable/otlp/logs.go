@@ -5,7 +5,7 @@ import (
 
 	"google.golang.org/protobuf/proto"
 
-	v1 "otel-arrow-adapter/api/go.opentelemetry.io/proto/otlp/collector/logs/v1"
+	v1 "go.opentelemetry.io/collector/pdata/plog"
 	"otel-arrow-adapter/pkg/benchmark"
 	"otel-arrow-adapter/pkg/benchmark/dataset"
 )
@@ -13,7 +13,7 @@ import (
 type LogsProfileable struct {
 	compression benchmark.CompressionAlgorithm
 	dataset     dataset.LogsDataset
-	logs        []*v1.ExportLogsServiceRequest
+	logs        []*v1.Logs
 }
 
 func NewLogsProfileable(dataset dataset.LogsDataset, compression benchmark.CompressionAlgorithm) *LogsProfileable {
@@ -51,9 +51,9 @@ func (s *LogsProfileable) Serialize(io.Writer) ([][]byte, error) {
 	return buffers, nil
 }
 func (s *LogsProfileable) Deserialize(_ io.Writer, buffers [][]byte) {
-	s.logs = make([]*v1.ExportLogsServiceRequest, len(buffers))
+	s.logs = make([]*v1.Logs, len(buffers))
 	for i, b := range buffers {
-		m := &v1.ExportLogsServiceRequest{}
+		m := &v1.Logs{}
 		if err := proto.Unmarshal(b, m); err != nil {
 			panic(err)
 		}

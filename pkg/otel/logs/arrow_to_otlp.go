@@ -20,16 +20,16 @@ package logs
 import (
 	"github.com/apache/arrow/go/v9/arrow"
 
-	collogs "otel-arrow-adapter/api/go.opentelemetry.io/proto/otlp/collector/logs/v1"
-	commonpb "otel-arrow-adapter/api/go.opentelemetry.io/proto/otlp/common/v1"
-	logspb "otel-arrow-adapter/api/go.opentelemetry.io/proto/otlp/logs/v1"
+	collogs "go.opentelemetry.io/collector/pdata/plog"
+	commonpb "go.opentelemetry.io/collector/pdata/pcommon"
+	logspb "go.opentelemetry.io/collector/pdata/plog"
 	"otel-arrow-adapter/pkg/air"
 	"otel-arrow-adapter/pkg/otel/common"
 	"otel-arrow-adapter/pkg/otel/constants"
 )
 
-func ArrowRecordsToOtlpLogs(record arrow.Record) (*collogs.ExportLogsServiceRequest, error) {
-	request := collogs.ExportLogsServiceRequest{
+func ArrowRecordsToOtlpLogs(record arrow.Record) (*collogs.Logs, error) {
+	request := collogs.Logs{
 		ResourceLogs: []*logspb.ResourceLogs{},
 	}
 
@@ -101,7 +101,7 @@ func NewLogRecordFrom(record arrow.Record, row int) (*logspb.LogRecord, error) {
 		return nil, err
 	}
 	bodyField, bodyArray := air.FieldArray(record, constants.BODY)
-	var body *commonpb.AnyValue
+	var body pcommon.Value
 	if bodyArray != nil {
 		body, err = common.AnyValueFrom(bodyField.Type, bodyArray, row)
 		if err != nil {
@@ -109,7 +109,7 @@ func NewLogRecordFrom(record arrow.Record, row int) (*logspb.LogRecord, error) {
 		}
 	}
 	attrField, attrColumn := air.FieldArray(record, constants.ATTRIBUTES)
-	attributes := []*commonpb.KeyValue(nil)
+	attributes := pcommon.Map(nil)
 	if attrColumn != nil {
 		attributes, err = common.AttributesFrom(attrField.Type, attrColumn, row)
 		if err != nil {

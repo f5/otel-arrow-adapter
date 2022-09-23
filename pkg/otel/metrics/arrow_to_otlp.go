@@ -23,16 +23,16 @@ import (
 	"github.com/apache/arrow/go/v9/arrow"
 	"github.com/apache/arrow/go/v9/arrow/array"
 
-	colmetrics "otel-arrow-adapter/api/go.opentelemetry.io/proto/otlp/collector/metrics/v1"
-	v1 "otel-arrow-adapter/api/go.opentelemetry.io/proto/otlp/common/v1"
-	metricspb "otel-arrow-adapter/api/go.opentelemetry.io/proto/otlp/metrics/v1"
+	colmetrics "go.opentelemetry.io/collector/pdata/pmetric"
+	v1 "go.opentelemetry.io/collector/pdata/pcommon"
+	metricspb "go.opentelemetry.io/collector/pdata/pmetric"
 	"otel-arrow-adapter/pkg/air"
 	"otel-arrow-adapter/pkg/otel/common"
 	"otel-arrow-adapter/pkg/otel/constants"
 )
 
-func ArrowRecordsToOtlpMetrics(record arrow.Record) (*colmetrics.ExportMetricsServiceRequest, error) {
-	request := colmetrics.ExportMetricsServiceRequest{
+func ArrowRecordsToOtlpMetrics(record arrow.Record) (*colmetrics.Metrics, error) {
+	request := colmetrics.Metrics{
 		ResourceMetrics: []*metricspb.ResourceMetrics{},
 	}
 

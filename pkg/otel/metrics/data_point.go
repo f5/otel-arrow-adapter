@@ -19,11 +19,11 @@ import (
 	"math"
 	"sort"
 
-	commonpb "otel-arrow-adapter/api/go.opentelemetry.io/proto/otlp/common/v1"
-	v1 "otel-arrow-adapter/api/go.opentelemetry.io/proto/otlp/metrics/v1"
+	commonpb "go.opentelemetry.io/collector/pdata/pcommon"
+	v1 "go.opentelemetry.io/collector/pdata/pmetric"
 )
 
-type KeyValues []*commonpb.KeyValue
+type KeyValues pcommon.Map
 
 // Sort interface
 func (kvs KeyValues) Less(i, j int) bool { return kvs[i].Key < kvs[j].Key }
@@ -40,7 +40,7 @@ func DataPointSig(dataPoint *v1.NumberDataPoint, multivariateKey string) []byte 
 	return sig
 }
 
-func KeyValuesSig(sig *[]byte, kvs []*commonpb.KeyValue, multivariateKey string) {
+func KeyValuesSig(sig *[]byte, kvs pcommon.Map, multivariateKey string) {
 	// Sort KeyValue slice by key to make the signature deterministic.
 	sort.Sort(KeyValues(kvs))
 
@@ -58,31 +58,31 @@ func KeyValuesSig(sig *[]byte, kvs []*commonpb.KeyValue, multivariateKey string)
 	}
 }
 
-func ValueSig(sig *[]byte, value *commonpb.AnyValue) {
+func ValueSig(sig *[]byte, value pcommon.Value) {
 	switch value.Value.(type) {
-	case *commonpb.AnyValue_BoolValue:
+	case pcommon.Value_BoolValue:
 		*sig = append(*sig, BoolToByte(value.GetBoolValue()))
-	case *commonpb.AnyValue_IntValue:
+	case pcommon.Value_IntValue:
 		if cap(*sig)-len(*sig) < 8 {
 			*sig = append(make([]byte, 0, len(*sig)+8), *sig...)
 		}
 		pos := len(*sig)
 		*sig = append(*sig, make([]byte, 8)...)
 		binary.LittleEndian.PutUint64((*sig)[pos:], uint64(value.GetIntValue()))
-	case *commonpb.AnyValue_DoubleValue:
+	case pcommon.Value_DoubleValue:
 		if cap(*sig)-len(*sig) < 8 {
 			*sig = append(make([]byte, 0, len(*sig)+8), *sig...)
 		}
 		pos := len(*sig)
 		*sig = append(*sig, make([]byte, 8)...)
 		binary.LittleEndian.PutUint64((*sig)[pos:], math.Float64bits(value.GetDoubleValue()))
-	case *commonpb.AnyValue_BytesValue:
+	case pcommon.Value_BytesValue:
 		*sig = append(*sig, value.GetBytesValue()...)
-	case *commonpb.AnyValue_StringValue:
+	case pcommon.Value_StringValue:
 		*sig = append(*sig, []byte(value.GetStringValue())...)
-	case *commonpb.AnyValue_KvlistValue:
+	case pcommon.Value_KvlistValue:
 		KeyValuesSig(sig, value.GetKvlistValue().Values, "")
-	case *commonpb.AnyValue_ArrayValue:
+	case pcommon.Value_ArrayValue:
 		for _, item := range value.GetArrayValue().Values {
 			ValueSig(sig, item)
 		}
