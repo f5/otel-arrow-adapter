@@ -61,15 +61,12 @@ func NewResourceFrom(record arrow.Record, row int) (pcommon.Resource, error) {
 	if err != nil {
 		return r, err
 	}
-	var attributes pcommon.Map
 	if attrField != nil {
-		attributes, err = AttributesFrom(attrField.Type, attrArray, row)
-	}
-	if err != nil {
-		return r, err
+		if err = CopyAttributesFrom(r.Attributes(), attrField.Type, attrArray, row); err != nil {
+			return r, err
+		}
 	}
 	r.SetDroppedAttributesCount(droppedAttributesCount)
-	attributes.CopyTo(r.Attributes())
 	return r, nil
 }
 
@@ -95,17 +92,14 @@ func NewInstrumentationScopeFrom(record arrow.Record, row int, scope string) (pc
 	if err != nil {
 		return s, err
 	}
-	var attributes pcommon.Map
 	if attrField != nil {
-		attributes, err = AttributesFrom(attrField.Type, attrArray, row)
-	}
-	if err != nil {
-		return s, err
+		if err = CopyAttributesFrom(s.Attributes(), attrField.Type, attrArray, row); err != nil {
+			return s, err
+		}
 	}
 	s.SetName(name)
 	s.SetVersion(version)
 	s.SetDroppedAttributesCount(droppedAttributesCount)
-	attributes.CopyTo(s.Attributes())
 	return s, nil
 }
 
@@ -148,24 +142,23 @@ func ValueId(v pcommon.Value) string {
 	}
 }
 
-func AttributesFrom(dt arrow.DataType, arr arrow.Array, row int) (pcommon.Map, error) {
-	a := pcommon.NewMap()
+func CopyAttributesFrom(a pcommon.Map, dt arrow.DataType, arr arrow.Array, row int) error {
 	structType, ok := dt.(*arrow.StructType)
 	if !ok {
-		return a, fmt.Errorf("attributes is not a struct")
+		return fmt.Errorf("attributes is not a struct")
 	}
 	attrArray := arr.(*array.Struct)
-	// @@@: cannot preallocate size attrArray.NumField()
+	a.EnsureCapacity(attrArray.NumField())
 	for i := 0; i < attrArray.NumField(); i++ {
 		valueField := structType.Field(i)
 
 		newV := a.PutEmpty(valueField.Name)
 
 		if err := CopyValueFrom(newV, valueField.Type, attrArray.Field(i), row); err != nil {
-			return a, err
+			return err
 		}
 	}
-	return a, nil
+	return nil
 }
 
 func CopyValueFrom(dest pcommon.Value, dt arrow.DataType, arr arrow.Array, row int) error {
@@ -207,12 +200,9 @@ func CopyValueFrom(dest pcommon.Value, dt arrow.DataType, arr arrow.Array, row i
 		dest.SetEmptyBytesVal().FromRaw(v)
 		return nil
 	case *arrow.StructType:
-		structKvs, err := AttributesFrom(dt, arr, row)
-		if err != nil {
+		if err := CopyAttributesFrom(dest.SetEmptyMapVal(), dt, arr, row); err != nil {
 			return err
 		}
-		// @@@ Note extra copying
-		structKvs.CopyTo(dest.SetEmptyMapVal())
 		return nil
 	case *arrow.ListType:
 		arrList, ok := arr.(*array.List)
