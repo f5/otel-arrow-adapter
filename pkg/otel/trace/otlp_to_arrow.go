@@ -15,6 +15,9 @@
 package trace
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/apache/arrow/go/v9/arrow"
 
 	"otel-arrow-adapter/pkg/air"
@@ -24,15 +27,19 @@ import (
 	"otel-arrow-adapter/pkg/otel/constants"
 
 	"go.opentelemetry.io/collector/pdata/ptrace"
-	coltracepb "go.opentelemetry.io/collector/pdata/ptrace"
 )
 
 // OtlpTraceToArrowRecords converts an OTLP trace to one or more Arrow records.
-func OtlpTraceToArrowRecords(rr *air.RecordRepository, request coltracepb.Traces, cfg *config.Config) ([]arrow.Record, error) {
-	if cfg.TraceEncoding.Hierarchical {
-		AddHierarchicalTraces(rr, request, cfg)
-	} else {
+func OtlpTraceToArrowRecords(rr *air.RecordRepository, request ptrace.Traces, cfg *config.Config) ([]arrow.Record, error) {
+	switch cfg.TraceEncoding {
+	case config.Flat:
 		AddFlattenTraces(rr, request, cfg)
+	case config.Hierarchical:
+		AddHierarchicalTraces(rr, request, cfg)
+	case config.Hybrid:
+		AddHybridTraces(rr, request, cfg)
+	default:
+		panic(fmt.Sprintf("unknown trace encoding: %s", cfg.TraceEncoding))
 	}
 
 	records, err := rr.BuildRecords()
@@ -43,7 +50,7 @@ func OtlpTraceToArrowRecords(rr *air.RecordRepository, request coltracepb.Traces
 	return records, nil
 }
 
-func AddFlattenTraces(rr *air.RecordRepository, request coltracepb.Traces, cfg *config.Config) {
+func AddFlattenTraces(rr *air.RecordRepository, request ptrace.Traces, cfg *config.Config) {
 	for i := 0; i < request.ResourceSpans().Len(); i++ {
 		resourceSpans := request.ResourceSpans().At(i)
 
@@ -117,7 +124,7 @@ func AddFlattenTraces(rr *air.RecordRepository, request coltracepb.Traces, cfg *
 	}
 }
 
-func AddHierarchicalTraces(rr *air.RecordRepository, request coltracepb.Traces, cfg *config.Config) {
+func AddHierarchicalTraces(rr *air.RecordRepository, request ptrace.Traces, cfg *config.Config) {
 	record := air.NewRecord()
 	resSpansValues := make([]rfield.Value, 0, request.ResourceSpans().Len())
 
@@ -218,6 +225,123 @@ func AddHierarchicalTraces(rr *air.RecordRepository, request coltracepb.Traces, 
 	}
 	record.ListField(constants.RESOURCE_SPANS, rfield.List{Values: resSpansValues})
 	rr.AddRecord(record)
+}
+
+func AddHybridTraces(rr *air.RecordRepository, request *ptrace.ExportTraceServiceRequest, cfg *config.Config) {
+	similarResSpans := make(map[string][]rfield.Value)
+
+	for _, resourceSpans := range request.ResourceSpans {
+		resFields := make([]*rfield.Field, 0, 3)
+
+		// Resource field
+		resFields = append(resFields, common.ResourceField(resourceSpans.Resource, cfg))
+
+		// Schema URL
+		if len(resourceSpans.SchemaUrl) > 0 {
+			resFields = append(resFields, rfield.NewStringField(constants.SCHEMA_URL, resourceSpans.SchemaUrl))
+		}
+
+		// Scope spans
+		similarScopeSpans := make(map[string][]rfield.Value)
+		for _, scopeSpans := range resourceSpans.ScopeSpans {
+			fields := make([]*rfield.Field, 0, 3)
+			fields = append(fields, common.ScopeField(constants.SCOPE_SPANS, scopeSpans.Scope, cfg))
+			if len(scopeSpans.SchemaUrl) > 0 {
+				fields = append(fields, rfield.NewStringField(constants.SCHEMA_URL, scopeSpans.SchemaUrl))
+			}
+
+			similarSpans := make(map[string][]rfield.Value)
+			for _, span := range scopeSpans.Spans {
+				fields := make([]*rfield.Field, 0, 10)
+				if span.StartTimeUnixNano > 0 {
+					fields = append(fields, rfield.NewU64Field(constants.START_TIME_UNIX_NANO, span.StartTimeUnixNano))
+				}
+				if span.EndTimeUnixNano > 0 {
+					fields = append(fields, rfield.NewU64Field(constants.END_TIME_UNIX_NANO, span.EndTimeUnixNano))
+				}
+
+				if span.TraceId != nil && len(span.TraceId) > 0 {
+					fields = append(fields, rfield.NewBinaryField(constants.TRACE_ID, span.TraceId))
+				}
+				if span.SpanId != nil && len(span.SpanId) > 0 {
+					fields = append(fields, rfield.NewBinaryField(constants.SPAN_ID, span.SpanId))
+				}
+				if len(span.TraceState) > 0 {
+					fields = append(fields, rfield.NewStringField(constants.TRACE_STATE, span.TraceState))
+				}
+				if span.ParentSpanId != nil && len(span.ParentSpanId) > 0 {
+					fields = append(fields, rfield.NewBinaryField(constants.PARENT_SPAN_ID, span.SpanId))
+				}
+				if len(span.Name) > 0 {
+					fields = append(fields, rfield.NewStringField(constants.NAME, span.Name))
+				}
+				fields = append(fields, rfield.NewI32Field(constants.KIND, int32(span.Kind)))
+				attributes := common.NewAttributes(span.Attributes, cfg)
+				if attributes != nil {
+					fields = append(fields, attributes)
+				}
+
+				if span.DroppedAttributesCount > 0 {
+					fields = append(fields, rfield.NewU32Field(constants.DROPPED_ATTRIBUTES_COUNT, uint32(span.DroppedAttributesCount)))
+				}
+
+				// Events
+				eventsField := EventsField(span.Events, cfg)
+				if eventsField != nil {
+					fields = append(fields, eventsField)
+				}
+				if span.DroppedEventsCount > 0 {
+					fields = append(fields, rfield.NewU32Field(constants.DROPPED_EVENTS_COUNT, uint32(span.DroppedEventsCount)))
+				}
+
+				// Links
+				linksField := LinksAsListOfStructsField(span.Links, cfg)
+				if linksField != nil {
+					fields = append(fields, linksField)
+				}
+				if span.DroppedLinksCount > 0 {
+					fields = append(fields, rfield.NewU32Field(constants.DROPPED_LINKS_COUNT, uint32(span.DroppedLinksCount)))
+				}
+
+				// Status
+				if span.Status != nil {
+					fields = append(fields, rfield.NewI32Field(constants.STATUS, int32(span.Status.Code)))
+					if len(span.Status.Message) > 0 {
+						fields = append(fields, rfield.NewStringField(constants.STATUS_MESSAGE, span.Status.Message))
+					}
+				}
+
+				spanValue := rfield.NewStruct(fields)
+
+				// Compute signature for the span value
+				var sig strings.Builder
+				attributes.Normalize()
+				attributes.WriteSignature(&sig)
+				//spanValue.Normalize()
+				//spanValue.WriteSignature(&sig)
+				similarSpans[sig.String()] = append(similarSpans[sig.String()], spanValue)
+			}
+			for sig, spans := range similarSpans {
+				scopeSpansFields := make([]*rfield.Field, 0, 3)
+				copy(scopeSpansFields, fields)
+				scopeSpansFields = append(scopeSpansFields, rfield.NewListField(constants.SPANS, rfield.List{
+					Values: spans,
+				}))
+				similarScopeSpans[sig] = append(similarScopeSpans[sig], rfield.NewStruct(scopeSpansFields))
+			}
+		}
+		for sig, scopeSpans := range similarScopeSpans {
+			resFieldsCopy := make([]*rfield.Field, 0, 3)
+			copy(resFieldsCopy, resFields)
+			resFieldsCopy = append(resFieldsCopy, rfield.NewListField(constants.SCOPE_SPANS, rfield.List{Values: scopeSpans}))
+			similarResSpans[sig] = append(similarResSpans[sig], rfield.NewStruct(resFieldsCopy))
+		}
+	}
+	for _, resSpans := range similarResSpans {
+		record := air.NewRecord()
+		record.ListField(constants.RESOURCE_SPANS, rfield.List{Values: resSpans})
+		rr.AddRecord(record)
+	}
 }
 
 func AddEvents(record *air.Record, events ptrace.SpanEventSlice, cfg *config.Config) {
