@@ -39,7 +39,7 @@ func OtlpTraceToArrowRecords(rr *air.RecordRepository, request ptrace.Traces, cf
 	case config.Hybrid:
 		AddHybridTraces(rr, request, cfg)
 	default:
-		panic(fmt.Sprintf("unknown trace encoding: %s", cfg.TraceEncoding))
+		panic(fmt.Sprintf("unknown trace encoding: %v", cfg.TraceEncoding))
 	}
 
 	records, err := rr.BuildRecords()
@@ -227,88 +227,92 @@ func AddHierarchicalTraces(rr *air.RecordRepository, request ptrace.Traces, cfg 
 	rr.AddRecord(record)
 }
 
-func AddHybridTraces(rr *air.RecordRepository, request *ptrace.ExportTraceServiceRequest, cfg *config.Config) {
+func AddHybridTraces(rr *air.RecordRepository, request ptrace.Traces, cfg *config.Config) {
 	similarResSpans := make(map[string][]rfield.Value)
 
-	for _, resourceSpans := range request.ResourceSpans {
+	for i := 0; i < request.ResourceSpans().Len(); i++ {
+		resourceSpans := request.ResourceSpans().At(i)
 		resFields := make([]*rfield.Field, 0, 3)
 
 		// Resource field
-		resFields = append(resFields, common.ResourceField(resourceSpans.Resource, cfg))
+		resFields = append(resFields, common.ResourceField(resourceSpans.Resource(), cfg))
 
 		// Schema URL
-		if len(resourceSpans.SchemaUrl) > 0 {
-			resFields = append(resFields, rfield.NewStringField(constants.SCHEMA_URL, resourceSpans.SchemaUrl))
+		if resourceSpans.SchemaUrl() != "" {
+			resFields = append(resFields, rfield.NewStringField(constants.SCHEMA_URL, resourceSpans.SchemaUrl()))
 		}
 
 		// Scope spans
 		similarScopeSpans := make(map[string][]rfield.Value)
-		for _, scopeSpans := range resourceSpans.ScopeSpans {
+		for j := 0; j < resourceSpans.ScopeSpans().Len(); j++ {
+			scopeSpans := resourceSpans.ScopeSpans().At(j)
 			fields := make([]*rfield.Field, 0, 3)
-			fields = append(fields, common.ScopeField(constants.SCOPE_SPANS, scopeSpans.Scope, cfg))
-			if len(scopeSpans.SchemaUrl) > 0 {
-				fields = append(fields, rfield.NewStringField(constants.SCHEMA_URL, scopeSpans.SchemaUrl))
+			fields = append(fields, common.ScopeField(constants.SCOPE_SPANS, scopeSpans.Scope(), cfg))
+			if scopeSpans.SchemaUrl() != "" {
+				fields = append(fields, rfield.NewStringField(constants.SCHEMA_URL, scopeSpans.SchemaUrl()))
 			}
 
 			similarSpans := make(map[string][]rfield.Value)
-			for _, span := range scopeSpans.Spans {
+			for k := 0; k < scopeSpans.Spans().Len(); k++ {
+				span := scopeSpans.Spans().At(k)
+
 				fields := make([]*rfield.Field, 0, 10)
-				if span.StartTimeUnixNano > 0 {
-					fields = append(fields, rfield.NewU64Field(constants.START_TIME_UNIX_NANO, span.StartTimeUnixNano))
+				if ts := span.StartTimestamp(); ts > 0 {
+					fields = append(fields, rfield.NewU64Field(constants.START_TIME_UNIX_NANO, uint64(ts)))
 				}
-				if span.EndTimeUnixNano > 0 {
-					fields = append(fields, rfield.NewU64Field(constants.END_TIME_UNIX_NANO, span.EndTimeUnixNano))
+				if ts := span.EndTimestamp(); ts > 0 {
+					fields = append(fields, rfield.NewU64Field(constants.END_TIME_UNIX_NANO, uint64(ts)))
 				}
 
-				if span.TraceId != nil && len(span.TraceId) > 0 {
-					fields = append(fields, rfield.NewBinaryField(constants.TRACE_ID, span.TraceId))
+				if tid := span.TraceID(); !tid.IsEmpty() {
+					fields = append(fields, rfield.NewBinaryField(constants.TRACE_ID, tid[:]))
 				}
-				if span.SpanId != nil && len(span.SpanId) > 0 {
-					fields = append(fields, rfield.NewBinaryField(constants.SPAN_ID, span.SpanId))
+				if sid := span.SpanID(); !sid.IsEmpty() {
+					fields = append(fields, rfield.NewBinaryField(constants.SPAN_ID, sid[:]))
 				}
-				if len(span.TraceState) > 0 {
-					fields = append(fields, rfield.NewStringField(constants.TRACE_STATE, span.TraceState))
+				if span.TraceState() != "" {
+					fields = append(fields, rfield.NewStringField(constants.TRACE_STATE, string(span.TraceState())))
 				}
-				if span.ParentSpanId != nil && len(span.ParentSpanId) > 0 {
-					fields = append(fields, rfield.NewBinaryField(constants.PARENT_SPAN_ID, span.SpanId))
+				if psid := span.ParentSpanID(); !psid.IsEmpty() {
+					fields = append(fields, rfield.NewBinaryField(constants.PARENT_SPAN_ID, psid[:]))
 				}
-				if len(span.Name) > 0 {
-					fields = append(fields, rfield.NewStringField(constants.NAME, span.Name))
+				if span.Name() != "" {
+					fields = append(fields, rfield.NewStringField(constants.NAME, span.Name()))
 				}
-				fields = append(fields, rfield.NewI32Field(constants.KIND, int32(span.Kind)))
-				attributes := common.NewAttributes(span.Attributes, cfg)
+				fields = append(fields, rfield.NewI32Field(constants.KIND, int32(span.Kind())))
+				attributes := common.NewAttributes(span.Attributes(), cfg)
 				if attributes != nil {
 					fields = append(fields, attributes)
 				}
 
-				if span.DroppedAttributesCount > 0 {
-					fields = append(fields, rfield.NewU32Field(constants.DROPPED_ATTRIBUTES_COUNT, uint32(span.DroppedAttributesCount)))
+				if dc := span.DroppedAttributesCount(); dc > 0 {
+					fields = append(fields, rfield.NewU32Field(constants.DROPPED_ATTRIBUTES_COUNT, uint32(dc)))
 				}
 
 				// Events
-				eventsField := EventsField(span.Events, cfg)
+				eventsField := EventsField(span.Events(), cfg)
 				if eventsField != nil {
 					fields = append(fields, eventsField)
 				}
-				if span.DroppedEventsCount > 0 {
-					fields = append(fields, rfield.NewU32Field(constants.DROPPED_EVENTS_COUNT, uint32(span.DroppedEventsCount)))
+				if dc := span.DroppedEventsCount(); dc > 0 {
+					fields = append(fields, rfield.NewU32Field(constants.DROPPED_EVENTS_COUNT, uint32(dc)))
 				}
 
 				// Links
-				linksField := LinksAsListOfStructsField(span.Links, cfg)
+				linksField := LinksAsListOfStructsField(span.Links(), cfg)
 				if linksField != nil {
 					fields = append(fields, linksField)
 				}
-				if span.DroppedLinksCount > 0 {
-					fields = append(fields, rfield.NewU32Field(constants.DROPPED_LINKS_COUNT, uint32(span.DroppedLinksCount)))
+				if dc := span.DroppedLinksCount(); dc > 0 {
+					fields = append(fields, rfield.NewU32Field(constants.DROPPED_LINKS_COUNT, uint32(dc)))
 				}
 
 				// Status
-				if span.Status != nil {
-					fields = append(fields, rfield.NewI32Field(constants.STATUS, int32(span.Status.Code)))
-					if len(span.Status.Message) > 0 {
-						fields = append(fields, rfield.NewStringField(constants.STATUS_MESSAGE, span.Status.Message))
-					}
+				if span.Status().Code() != 0 {
+					fields = append(fields, rfield.NewI32Field(constants.STATUS, int32(span.Status().Code())))
+				}
+				if span.Status().Message() != "" {
+					fields = append(fields, rfield.NewStringField(constants.STATUS_MESSAGE, span.Status().Message()))
 				}
 
 				spanValue := rfield.NewStruct(fields)
