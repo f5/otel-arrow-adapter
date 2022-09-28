@@ -17,78 +17,75 @@ package metrics
 import (
 	"encoding/binary"
 	"math"
-	"sort"
 
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 )
 
-type KeyValues pcommon.Map
-
-// Sort interface
-func (kvs KeyValues) Less(i, j int) bool { return kvs[i].Key < kvs[j].Key }
-func (kvs KeyValues) Len() int           { return len(kvs) }
-func (kvs KeyValues) Swap(i, j int)      { kvs[i], kvs[j] = kvs[j], kvs[i] }
-
-func DataPointSig(dataPoint *pmetric.NumberDataPoint, multivariateKey string) []byte {
+func DataPointSig(dataPoint pmetric.NumberDataPoint, multivariateKey string) []byte {
 	sig := make([]byte, 16, 128)
 
 	// Serialize times and attributes to build the signature.
-	binary.LittleEndian.PutUint64(sig[0:], dataPoint.StartTimeUnixNano)
-	binary.LittleEndian.PutUint64(sig[8:], dataPoint.TimeUnixNano)
-	KeyValuesSig(&sig, dataPoint.Attributes, multivariateKey)
-	return sig
+	binary.LittleEndian.PutUint64(sig[0:], uint64(dataPoint.StartTimestamp()))
+	binary.LittleEndian.PutUint64(sig[8:], uint64(dataPoint.Timestamp()))
+	return MapSig(sig, dataPoint.Attributes(), multivariateKey)
 }
 
-func KeyValuesSig(sig *[]byte, kvs pcommon.Map, multivariateKey string) {
+func MapSig(sig []byte, kvs pcommon.Map, multivariateKey string) []byte {
 	// Sort KeyValue slice by key to make the signature deterministic.
-	sort.Sort(KeyValues(kvs))
+	kvs.Sort()
 
-	for _, kv := range kvs {
+	kvs.Range(func(key string, value pcommon.Value) bool {
 		// Skip the multivariate key.
-		if kv.Key == multivariateKey {
-			continue
+		if key == multivariateKey {
+			return true
 		}
 
 		// Serialize attribute name
-		*sig = append(*sig, []byte(kv.Key)...)
+		sig = append(sig, []byte(key)...)
 
 		// Serialize attribute value
-		ValueSig(sig, kv.Value)
-	}
+		sig = ValueSig(sig, value)
+		return true
+	})
+
+	return sig
 }
 
-func ValueSig(sig *[]byte, value pcommon.Value) {
-	switch value.Value.(type) {
-	case pcommon.Value_BoolValue:
-		*sig = append(*sig, BoolToByte(value.GetBoolValue()))
-	case pcommon.Value_IntValue:
-		if cap(*sig)-len(*sig) < 8 {
-			*sig = append(make([]byte, 0, len(*sig)+8), *sig...)
-		}
-		pos := len(*sig)
-		*sig = append(*sig, make([]byte, 8)...)
-		binary.LittleEndian.PutUint64((*sig)[pos:], uint64(value.GetIntValue()))
-	case pcommon.Value_DoubleValue:
-		if cap(*sig)-len(*sig) < 8 {
-			*sig = append(make([]byte, 0, len(*sig)+8), *sig...)
-		}
-		pos := len(*sig)
-		*sig = append(*sig, make([]byte, 8)...)
-		binary.LittleEndian.PutUint64((*sig)[pos:], math.Float64bits(value.GetDoubleValue()))
-	case pcommon.Value_BytesValue:
-		*sig = append(*sig, value.GetBytesValue()...)
-	case pcommon.Value_StringValue:
-		*sig = append(*sig, []byte(value.GetStringValue())...)
-	case pcommon.Value_KvlistValue:
-		KeyValuesSig(sig, value.GetKvlistValue().Values, "")
-	case pcommon.Value_ArrayValue:
-		for _, item := range value.GetArrayValue().Values {
-			ValueSig(sig, item)
-		}
+func SliceSig(sig []byte, sl pcommon.Slice) []byte {
+	for i := 0; i < sl.Len(); i++ {
+		val := sl.At(i)
+
+		sig = ValueSig(sig, val)
+	}
+
+	return sig
+}
+
+func ValueSig(sig []byte, value pcommon.Value) []byte {
+	switch value.Type() {
+	case pcommon.ValueTypeBool:
+		sig = append(sig, BoolToByte(value.BoolVal()))
+	case pcommon.ValueTypeInt:
+		var buf [8]byte
+		binary.LittleEndian.PutUint64(buf[:], uint64(value.IntVal()))
+		sig = append(sig, buf[:]...)
+	case pcommon.ValueTypeDouble:
+		var buf [8]byte
+		binary.LittleEndian.PutUint64(buf[:], math.Float64bits(value.DoubleVal()))
+		sig = append(sig, buf[:]...)
+	case pcommon.ValueTypeBytes:
+		sig = append(sig, value.BytesVal().AsRaw()...)
+	case pcommon.ValueTypeString:
+		sig = append(sig, []byte(value.StringVal())...)
+	case pcommon.ValueTypeSlice:
+		sig = SliceSig(sig, value.SliceVal())
+	case pcommon.ValueTypeMap:
+		sig = MapSig(sig, value.MapVal(), "")
 	default:
 		panic("unsupported value type")
 	}
+	return sig
 }
 
 func BoolToByte(b bool) byte {
