@@ -19,8 +19,8 @@ import (
 	"math"
 	"sort"
 
-	commonpb "go.opentelemetry.io/collector/pdata/pcommon"
-	v1 "go.opentelemetry.io/collector/pdata/pmetric"
+	"go.opentelemetry.io/collector/pdata/pcommon"
+	"go.opentelemetry.io/collector/pdata/pmetric"
 )
 
 type KeyValues pcommon.Map
@@ -30,7 +30,7 @@ func (kvs KeyValues) Less(i, j int) bool { return kvs[i].Key < kvs[j].Key }
 func (kvs KeyValues) Len() int           { return len(kvs) }
 func (kvs KeyValues) Swap(i, j int)      { kvs[i], kvs[j] = kvs[j], kvs[i] }
 
-func DataPointSig(dataPoint *v1.NumberDataPoint, multivariateKey string) []byte {
+func DataPointSig(dataPoint *pmetric.NumberDataPoint, multivariateKey string) []byte {
 	sig := make([]byte, 16, 128)
 
 	// Serialize times and attributes to build the signature.
