@@ -17,91 +17,91 @@
 
 package dataset
 
-import (
-	"log"
-	"os"
+// import (
+// 	"log"
+// 	"os"
 
-	"google.golang.org/protobuf/proto"
+// 	"google.golang.org/protobuf/proto"
 
-	colmetrics "go.opentelemetry.io/collector/pdata/pmetric"
-	otlpmetrics "go.opentelemetry.io/collector/pdata/pmetric"
-)
+// 	colmetrics "go.opentelemetry.io/collector/pdata/pmetric"
+// 	otlpmetrics "go.opentelemetry.io/collector/pdata/pmetric"
+// )
 
-// RealMetricsDataset represents a dataset of real metrics read from an Metrics serialized to a binary file.
-type RealMetricsDataset struct {
-	metrics []metrics
-}
+// // RealMetricsDataset represents a dataset of real metrics read from an Metrics serialized to a binary file.
+// type RealMetricsDataset struct {
+// 	metrics []metrics
+// }
 
-type metrics struct {
-	metric   *otlpmetrics.Metric
-	resource *otlpmetrics.ResourceMetrics
-	scope    *otlpmetrics.ScopeMetrics
-}
+// type metrics struct {
+// 	metric   *otlpmetrics.Metric
+// 	resource *otlpmetrics.ResourceMetrics
+// 	scope    *otlpmetrics.ScopeMetrics
+// }
 
-// NewRealMetricsDataset creates a new RealMetricsDataset from a binary file.
-func NewRealMetricsDataset(path string) *RealMetricsDataset {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		log.Fatal("read file:", err)
-	}
-	var otlp colmetrics.Metrics
-	if err := proto.Unmarshal(data, &otlp); err != nil {
-		log.Fatal("unmarshal:", err)
-	}
+// // NewRealMetricsDataset creates a new RealMetricsDataset from a binary file.
+// func NewRealMetricsDataset(path string) *RealMetricsDataset {
+// 	data, err := os.ReadFile(path)
+// 	if err != nil {
+// 		log.Fatal("read file:", err)
+// 	}
+// 	var otlp colmetrics.Metrics
+// 	if err := proto.Unmarshal(data, &otlp); err != nil {
+// 		log.Fatal("unmarshal:", err)
+// 	}
 
-	ds := &RealMetricsDataset{metrics: []metrics{}}
+// 	ds := &RealMetricsDataset{metrics: []metrics{}}
 
-	for _, rm := range otlp.ResourceMetrics {
-		for _, sm := range rm.ScopeMetrics {
-			for _, m := range sm.Metrics {
-				ds.metrics = append(ds.metrics, metrics{metric: m, resource: rm, scope: sm})
-			}
-		}
-	}
+// 	for _, rm := range otlp.ResourceMetrics {
+// 		for _, sm := range rm.ScopeMetrics {
+// 			for _, m := range sm.Metrics {
+// 				ds.metrics = append(ds.metrics, metrics{metric: m, resource: rm, scope: sm})
+// 			}
+// 		}
+// 	}
 
-	return ds
-}
+// 	return ds
+// }
 
-// Len returns the number of metrics in the dataset.
-func (d *RealMetricsDataset) Len() int {
-	return len(d.metrics)
-}
+// // Len returns the number of metrics in the dataset.
+// func (d *RealMetricsDataset) Len() int {
+// 	return len(d.metrics)
+// }
 
-// Metrics returns a subset of metrics from the original dataset.
-func (d *RealMetricsDataset) Metrics(offset, size int) []*colmetrics.Metrics {
-	resMetrics := map[*otlpmetrics.ResourceMetrics]map[*otlpmetrics.ScopeMetrics][]*otlpmetrics.Metric{}
+// // Metrics returns a subset of metrics from the original dataset.
+// func (d *RealMetricsDataset) Metrics(offset, size int) []*colmetrics.Metrics {
+// 	resMetrics := map[*otlpmetrics.ResourceMetrics]map[*otlpmetrics.ScopeMetrics][]*otlpmetrics.Metric{}
 
-	for _, metric := range d.metrics[offset : offset+size] {
-		if rl, ok := resMetrics[metric.resource]; !ok {
-			resMetrics[metric.resource] = map[*otlpmetrics.ScopeMetrics][]*otlpmetrics.Metric{}
-		} else if _, ok := rl[metric.scope]; !ok {
-			rl[metric.scope] = []*otlpmetrics.Metric{}
-		}
+// 	for _, metric := range d.metrics[offset : offset+size] {
+// 		if rl, ok := resMetrics[metric.resource]; !ok {
+// 			resMetrics[metric.resource] = map[*otlpmetrics.ScopeMetrics][]*otlpmetrics.Metric{}
+// 		} else if _, ok := rl[metric.scope]; !ok {
+// 			rl[metric.scope] = []*otlpmetrics.Metric{}
+// 		}
 
-		metrics := resMetrics[metric.resource][metric.scope]
-		metrics = append(metrics, metric.metric)
-	}
+// 		metrics := resMetrics[metric.resource][metric.scope]
+// 		metrics = append(metrics, metric.metric)
+// 	}
 
-	request := colmetrics.Metrics{
-		ResourceMetrics: make([]*otlpmetrics.ResourceMetrics, 0, len(resMetrics)),
-	}
+// 	request := colmetrics.Metrics{
+// 		ResourceMetrics: make([]*otlpmetrics.ResourceMetrics, 0, len(resMetrics)),
+// 	}
 
-	for rm, sm := range resMetrics {
-		scopeMetrics := make([]*otlpmetrics.ScopeMetrics, 0, len(sm))
-		for sl, mrs := range sm {
-			scopeMetrics = append(scopeMetrics, &otlpmetrics.ScopeMetrics{
-				Scope:     sl.Scope,
-				Metrics:   mrs,
-				SchemaUrl: sl.SchemaUrl,
-			})
-		}
+// 	for rm, sm := range resMetrics {
+// 		scopeMetrics := make([]*otlpmetrics.ScopeMetrics, 0, len(sm))
+// 		for sl, mrs := range sm {
+// 			scopeMetrics = append(scopeMetrics, &otlpmetrics.ScopeMetrics{
+// 				Scope:     sl.Scope,
+// 				Metrics:   mrs,
+// 				SchemaUrl: sl.SchemaUrl,
+// 			})
+// 		}
 
-		request.ResourceMetrics = append(request.ResourceMetrics, &otlpmetrics.ResourceMetrics{
-			Resource:     rm.Resource,
-			ScopeMetrics: scopeMetrics,
-			SchemaUrl:    rm.SchemaUrl,
-		})
-	}
+// 		request.ResourceMetrics = append(request.ResourceMetrics, &otlpmetrics.ResourceMetrics{
+// 			Resource:     rm.Resource,
+// 			ScopeMetrics: scopeMetrics,
+// 			SchemaUrl:    rm.SchemaUrl,
+// 		})
+// 	}
 
-	return []*colmetrics.Metrics{&request}
-}
+// 	return []*colmetrics.Metrics{&request}
+// }

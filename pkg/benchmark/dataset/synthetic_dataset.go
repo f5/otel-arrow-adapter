@@ -18,26 +18,32 @@
 package dataset
 
 import (
-	datagen2 "otel-arrow-adapter/pkg/datagen"
+	"otel-arrow-adapter/pkg/datagen"
+	"otel-arrow-adapter/pkg/otel/common"
 
-	collogs "go.opentelemetry.io/collector/pdata/plog"
-	colmetrics "go.opentelemetry.io/collector/pdata/pmetric"
-	coltrace "go.opentelemetry.io/collector/pdata/ptrace"
+	"go.opentelemetry.io/collector/pdata/pcommon"
+	"go.opentelemetry.io/collector/pdata/plog"
+	"go.opentelemetry.io/collector/pdata/pmetric"
+	"go.opentelemetry.io/collector/pdata/ptrace"
 )
 
 type MetricsDataset interface {
 	Len() int
-	Metrics(start, size int) []*colmetrics.Metrics
+	Metrics(start, size int) []pmetric.Metrics
 }
 
 type LogsDataset interface {
 	Len() int
-	Logs(start, size int) []*collogs.Logs
+	Logs(start, size int) []plog.Logs
 }
 
 type TraceDataset interface {
 	Len() int
-	Traces(start, size int) []*coltrace.Traces
+	Traces(start, size int) []ptrace.Traces
+}
+
+func ResourceAndScopeId(r pcommon.Resource, is pcommon.InstrumentationScope) string {
+	return common.ResourceId(r) + "|" + common.ScopeId(is)
 }
 
 // ===== Fake metrics dataset =====
@@ -45,19 +51,19 @@ type TraceDataset interface {
 // FakeMetricsDataset is an implementation of MetricsDataset returning fake metrics.
 type FakeMetricsDataset struct {
 	len       int
-	generator *datagen2.MetricsGenerator
+	generator *datagen.MetricsGenerator
 }
 
 func NewFakeMetricsDataset(len int) *FakeMetricsDataset {
-	return &FakeMetricsDataset{len: len, generator: datagen2.NewMetricsGenerator(datagen2.DefaultResourceAttributes(), datagen2.DefaultInstrumentationScopes())}
+	return &FakeMetricsDataset{len: len, generator: datagen.NewMetricsGenerator(datagen.DefaultResourceAttributes(), datagen.DefaultInstrumentationScopes())}
 }
 
 func (d *FakeMetricsDataset) Len() int {
 	return d.len
 }
 
-func (d *FakeMetricsDataset) Metrics(_, size int) []*colmetrics.Metrics {
-	return []*colmetrics.Metrics{d.generator.Generate(size, 100)}
+func (d *FakeMetricsDataset) Metrics(_, size int) []pmetric.Metrics {
+	return []pmetric.Metrics{d.generator.Generate(size, 100)}
 }
 
 // ===== Fake logs dataset =====
@@ -65,19 +71,19 @@ func (d *FakeMetricsDataset) Metrics(_, size int) []*colmetrics.Metrics {
 // FakeLogsDataset is an implementation of LogsDataset returning fake logs.
 type FakeLogsDataset struct {
 	len       int
-	generator *datagen2.LogsGenerator
+	generator *datagen.LogsGenerator
 }
 
 func NewFakeLogsDataset(len int) *FakeLogsDataset {
-	return &FakeLogsDataset{len: len, generator: datagen2.NewLogsGenerator(datagen2.DefaultResourceAttributes(), datagen2.DefaultInstrumentationScopes())}
+	return &FakeLogsDataset{len: len, generator: datagen.NewLogsGenerator(datagen.DefaultResourceAttributes(), datagen.DefaultInstrumentationScopes())}
 }
 
 func (d *FakeLogsDataset) Len() int {
 	return d.len
 }
 
-func (d *FakeLogsDataset) Logs(_, size int) []*collogs.Logs {
-	return []*collogs.Logs{d.generator.Generate(size, 100)}
+func (d *FakeLogsDataset) Logs(_, size int) []plog.Logs {
+	return []plog.Logs{d.generator.Generate(size, 100)}
 }
 
 // ===== Fake trace dataset =====
@@ -85,17 +91,17 @@ func (d *FakeLogsDataset) Logs(_, size int) []*collogs.Logs {
 // FakeTraceDataset is an implementation of TraceDataset returning fake traces.
 type FakeTraceDataset struct {
 	len       int
-	generator *datagen2.TraceGenerator
+	generator *datagen.TraceGenerator
 }
 
 func NewFakeTraceDataset(len int) *FakeTraceDataset {
-	return &FakeTraceDataset{len: len, generator: datagen2.NewTraceGenerator(datagen2.DefaultResourceAttributes(), datagen2.DefaultInstrumentationScopes())}
+	return &FakeTraceDataset{len: len, generator: datagen.NewTraceGenerator(datagen.DefaultResourceAttributes(), datagen.DefaultInstrumentationScopes())}
 }
 
 func (d *FakeTraceDataset) Len() int {
 	return d.len
 }
 
-func (d *FakeTraceDataset) Traces(_, size int) []*coltrace.Traces {
-	return []*coltrace.Traces{d.generator.Generate(size, 100)}
+func (d *FakeTraceDataset) Traces(_, size int) []ptrace.Traces {
+	return []ptrace.Traces{d.generator.Generate(size, 100)}
 }
