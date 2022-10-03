@@ -11,6 +11,7 @@ require (
 	github.com/klauspost/compress v1.15.8
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/pierrec/lz4 v2.0.5+incompatible
+	github.com/stretchr/testify v1.8.0
 	go.opentelemetry.io/collector/pdata v0.60.0
 	golang.org/x/exp v0.0.0-20211216164055-b2b84827b756
 	google.golang.org/protobuf v1.28.1
@@ -33,6 +34,7 @@ require (
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/pierrec/lz4/v4 v4.1.15 // indirect
+	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/zeebo/xxh3 v1.0.1 // indirect
 	golang.org/x/mod v0.6.0-dev.0.20220106191415-9b9b3d81d5e3 // indirect
 	golang.org/x/net v0.0.0-20220127200216-cd36cc0744dd // indirect
@@ -42,6 +44,7 @@ require (
 	golang.org/x/xerrors v0.0.0-20220411194840-2f41105eb62f // indirect
 	google.golang.org/genproto v0.0.0-20220126215142-9970aeb2e350 // indirect
 	google.golang.org/grpc v1.49.0 // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
 replace github.com/apache/arrow/go/v9 => github.com/lquerel/arrow/go/v9 v9.0.0-20220708002903-441b5440ea47

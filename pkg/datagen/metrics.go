@@ -111,7 +111,7 @@ func (dg *DataGenerator) SystemCpuTime(metric pmetric.Metric, cpuCount int) {
 	metric.SetName("system.cpu.time")
 	metric.SetUnit("s")
 
-	sum := metric.Sum()
+	sum := metric.SetEmptySum()
 	sum.SetAggregationTemporality(pmetric.MetricAggregationTemporalityCumulative)
 	sum.SetIsMonotonic(true)
 	points := sum.DataPoints()
@@ -132,7 +132,7 @@ func (dg *DataGenerator) SystemMemoryUsage(metric pmetric.Metric) {
 	metric.SetName("system.memory.usage")
 	metric.SetDescription("Bytes of memory in use.")
 	metric.SetUnit("By")
-	sum := metric.Sum()
+	sum := metric.SetEmptySum()
 	sum.SetAggregationTemporality(pmetric.MetricAggregationTemporalityCumulative)
 	sum.SetIsMonotonic(false)
 	points := sum.DataPoints()
@@ -150,18 +150,18 @@ func (dg *DataGenerator) SystemMemoryUsage(metric pmetric.Metric) {
 	p2.SetIntVal(dg.GenI64Range(300_000_000, 500_000_000))
 
 	p3 := points.AppendEmpty()
-	p3.Attributes().PutString("state", "free")
+	p3.Attributes().PutString("state", "inactive")
 	p3.SetStartTimestamp(dg.PrevTime())
 	p3.SetTimestamp(dg.CurrentTime())
 	p3.SetIntVal(4_000_000_000)
 }
 
 func (dg *DataGenerator) SystemCpuLoadAverage1m(metric pmetric.Metric) {
-	metric.SetName("system.cpul.load_average.1m")
+	metric.SetName("system.cpu.load_average.1m")
 	metric.SetDescription("Average CPU Load over 1 minute.")
 	metric.SetUnit("1")
 
-	point := metric.Gauge().DataPoints().AppendEmpty()
+	point := metric.SetEmptyGauge().DataPoints().AppendEmpty()
 
 	point.SetStartTimestamp(dg.PrevTime())
 	point.SetTimestamp(dg.CurrentTime())

@@ -78,8 +78,8 @@ func (d *RealMetricsDataset) Metrics(offset, size int) []pmetric.Metrics {
 			resMetrics[metric.resource] = map[pmetric.ScopeMetrics][]pmetric.Metric{}
 		}
 
-		metrics := resMetrics[metric.resource][metric.scope]
-		metrics = append(metrics, metric.metric)
+		resMetrics[metric.resource][metric.scope] =
+			append(resMetrics[metric.resource][metric.scope], metric.metric)
 	}
 
 	request := pmetric.NewMetrics()

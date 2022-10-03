@@ -31,7 +31,7 @@ func TestOtlpLogsToArrowEvents(t *testing.T) {
 	lg := datagen2.NewLogsGenerator(datagen2.DefaultResourceAttributes(), datagen2.DefaultInstrumentationScopes())
 
 	request := lg.Generate(10, 100)
-	records, err := logs.OtlpLogsToArrowRecords(rr, request)
+	records, err := logs.OtlpLogsToArrowRecords(rr, request, cfg)
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}
