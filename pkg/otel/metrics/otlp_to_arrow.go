@@ -453,18 +453,18 @@ func AddMultivariateValue(attributes pcommon.Map, multivariateKey string, fields
 	var multivariateValue string
 	attributeFields := make([]*rfield.Field, 0, attributes.Len())
 	attributes.Range(func(key string, value pcommon.Value) bool {
-		if key != multivariateKey {
-			return true
-		}
-		switch value.Type() {
-		case pcommon.ValueTypeString:
-			multivariateValue = value.StringVal()
-			attributeFields = append(attributeFields, rfield.NewField(key, common.OtlpAnyValueToValue(value)))
-		default:
-			err = fmt.Errorf("Unsupported multivariate value type: %v", value)
+		if key == multivariateKey {
+			switch value.Type() {
+			case pcommon.ValueTypeString:
+				multivariateValue = value.StringVal()
+				return true
+			default:
+				err = fmt.Errorf("Unsupported multivariate value type: %v", value)
+			}
 		}
 
-		return false
+		attributeFields = append(attributeFields, rfield.NewField(key, common.OtlpAnyValueToValue(value)))
+		return true
 	})
 	if len(attributeFields) > 0 {
 		*fields = append(*fields, rfield.NewStructField(constants.ATTRIBUTES, rfield.Struct{Fields: attributeFields}))
