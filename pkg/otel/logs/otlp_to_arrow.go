@@ -22,11 +22,11 @@ import (
 	"otel-arrow-adapter/pkg/otel/common"
 	"otel-arrow-adapter/pkg/otel/constants"
 
-	collogspb "go.opentelemetry.io/collector/pdata/plog"
+	"go.opentelemetry.io/collector/pdata/plog"
 )
 
 // OtlpLogsToArrowRecords converts an OTLP ResourceLogs to one or more Arrow records
-func OtlpLogsToArrowRecords(rr *air.RecordRepository, request *collogspb.Logs, cfg *config.Config) ([]arrow.Record, error) {
+func OtlpLogsToArrowRecords(rr *air.RecordRepository, request plog.Logs, cfg *config.Config) ([]arrow.Record, error) {
 	for i := 0; i < request.ResourceLogs().Len(); i++ {
 		resourceLogs := request.ResourceLogs().At(i)
 

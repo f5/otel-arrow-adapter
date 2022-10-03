@@ -17,92 +17,88 @@
 
 package dataset
 
-// import (
-// 	"log"
-// 	"os"
+import (
+	"log"
+	"os"
 
-// 	"google.golang.org/protobuf/proto"
+	plog "go.opentelemetry.io/collector/pdata/plog"
+	"go.opentelemetry.io/collector/pdata/plog/plogotlp"
+)
 
-// 	collogs "go.opentelemetry.io/collector/pdata/plog"
-// 	logspb "go.opentelemetry.io/collector/pdata/plog"
-// )
+// RealLogsDataset represents a dataset of real logs read from an Logs serialized to a binary file.
+type RealLogsDataset struct {
+	logs []logUnit
+}
 
-// // RealLogsDataset represents a dataset of real logs read from an Logs serialized to a binary file.
-// type RealLogsDataset struct {
-// 	logs []logUnit
-// }
+type logUnit struct {
+	logRecord plog.LogRecord
+	resource  plog.ResourceLogs
+	scope     plog.ScopeLogs
+}
 
-// type logUnit struct {
-// 	logRecord *logspb.LogRecord
-// 	resource  *logspb.ResourceLogs
-// 	scope     *logspb.ScopeLogs
-// }
+// NewRealLogsDataset creates a new RealLogsDataset from a binary file.
+func NewRealLogsDataset(path string) *RealLogsDataset {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		log.Fatal("read file:", err)
+	}
+	otlp := plogotlp.NewRequest()
 
-// // NewRealLogsDataset creates a new RealLogsDataset from a binary file.
-// func NewRealLogsDataset(path string) *RealLogsDataset {
-// 	data, err := os.ReadFile(path)
-// 	if err != nil {
-// 		log.Fatal("read file:", err)
-// 	}
-// 	var otlp collogs.Logs
-// 	if err := proto.Unmarshal(data, &otlp); err != nil {
-// 		log.Fatal("unmarshal:", err)
-// 	}
+	if err := otlp.UnmarshalProto(data); err != nil {
+		log.Fatal("unmarshal:", err)
+	}
 
-// 	ds := &RealLogsDataset{logs: []logUnit{}}
+	ds := &RealLogsDataset{logs: []logUnit{}}
+	logs := otlp.Logs()
 
-// 	for _, rl := range otlp.ResourceLogs {
-// 		for _, sl := range rl.ScopeLogs {
-// 			for _, lr := range sl.LogRecords {
-// 				ds.logs = append(ds.logs, logUnit{logRecord: lr, resource: rl, scope: sl})
-// 			}
-// 		}
-// 	}
+	for ri := 0; ri < logs.ResourceLogs().Len(); ri++ {
+		rl := logs.ResourceLogs().At(ri)
+		for si := 0; si < rl.ScopeLogs().Len(); si++ {
+			sl := rl.ScopeLogs().At(si)
+			for li := 0; li < sl.LogRecords().Len(); li++ {
+				lr := sl.LogRecords().At(li)
+				ds.logs = append(ds.logs, logUnit{logRecord: lr, resource: rl, scope: sl})
+			}
+		}
+	}
 
-// 	return ds
-// }
+	return ds
+}
 
-// // Len returns the number of log records in the dataset.
-// func (d *RealLogsDataset) Len() int {
-// 	return len(d.logs)
-// }
+// Len returns the number of log records in the dataset.
+func (d *RealLogsDataset) Len() int {
+	return len(d.logs)
+}
 
-// // Logs returns a subset of log records from the original dataset.
-// func (d *RealLogsDataset) Logs(offset, size int) []*collogs.Logs {
-// 	resourceLogs := map[*logspb.ResourceLogs]map[*logspb.ScopeLogs][]*logspb.LogRecord{}
+// Logs returns a subset of log records from the original dataset.
+func (d *RealLogsDataset) Logs(offset, size int) []plog.Logs {
+	resourceLogs := map[plog.ResourceLogs]map[plog.ScopeLogs][]plog.LogRecord{}
 
-// 	for _, logRecord := range d.logs[offset : offset+size] {
-// 		if rl, ok := resourceLogs[logRecord.resource]; !ok {
-// 			resourceLogs[logRecord.resource] = map[*logspb.ScopeLogs][]*logspb.LogRecord{}
-// 		} else if _, ok := rl[logRecord.scope]; !ok {
-// 			rl[logRecord.scope] = []*logspb.LogRecord{}
-// 		}
+	for _, logRecord := range d.logs[offset : offset+size] {
+		if _, ok := resourceLogs[logRecord.resource]; !ok {
+			resourceLogs[logRecord.resource] = map[plog.ScopeLogs][]plog.LogRecord{}
+		}
 
-// 		logs := resourceLogs[logRecord.resource][logRecord.scope]
-// 		logs = append(logs, logRecord.logRecord)
-// 	}
+		resourceLogs[logRecord.resource][logRecord.scope] =
+			append(resourceLogs[logRecord.resource][logRecord.scope], logRecord.logRecord)
+	}
 
-// 	request := collogs.Logs{
-// 		ResourceLogs: make([]*logspb.ResourceLogs, 0, len(resourceLogs)),
-// 	}
+	request := plog.NewLogs()
 
-// 	for rl, sl := range resourceLogs {
+	for rl, sl := range resourceLogs {
+		outRl := request.ResourceLogs().AppendEmpty()
+		rl.Resource().CopyTo(outRl.Resource())
 
-// 		scopeLogs := make([]*logspb.ScopeLogs, 0, len(sl))
-// 		for sl, lrs := range sl {
-// 			scopeLogs = append(scopeLogs, &logspb.ScopeLogs{
-// 				Scope:      sl.Scope,
-// 				LogRecords: lrs,
-// 				SchemaUrl:  sl.SchemaUrl,
-// 			})
-// 		}
+		for sl, lrs := range sl {
+			outSl := outRl.ScopeLogs().AppendEmpty()
+			sl.Scope().CopyTo(outSl.Scope())
 
-// 		request.ResourceLogs = append(request.ResourceLogs, &logspb.ResourceLogs{
-// 			Resource:  rl.Resource,
-// 			ScopeLogs: scopeLogs,
-// 			SchemaUrl: rl.SchemaUrl,
-// 		})
-// 	}
+			for _, lr := range lrs {
+				outLr := outSl.LogRecords().AppendEmpty()
+				lr.CopyTo(outLr)
+			}
+		}
+	}
 
-// 	return []*collogs.Logs{&request}
-// }
+	return []plog.Logs{request}
+}

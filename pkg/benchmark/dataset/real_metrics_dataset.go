@@ -17,91 +17,87 @@
 
 package dataset
 
-// import (
-// 	"log"
-// 	"os"
+import (
+	"log"
+	"os"
 
-// 	"google.golang.org/protobuf/proto"
+	"go.opentelemetry.io/collector/pdata/pmetric"
+	"go.opentelemetry.io/collector/pdata/pmetric/pmetricotlp"
+)
 
-// 	colmetrics "go.opentelemetry.io/collector/pdata/pmetric"
-// 	otlpmetrics "go.opentelemetry.io/collector/pdata/pmetric"
-// )
+// RealMetricsDataset represents a dataset of real metrics read from an Metrics serialized to a binary file.
+type RealMetricsDataset struct {
+	metrics []metrics
+}
 
-// // RealMetricsDataset represents a dataset of real metrics read from an Metrics serialized to a binary file.
-// type RealMetricsDataset struct {
-// 	metrics []metrics
-// }
+type metrics struct {
+	metric   pmetric.Metric
+	resource pmetric.ResourceMetrics
+	scope    pmetric.ScopeMetrics
+}
 
-// type metrics struct {
-// 	metric   *otlpmetrics.Metric
-// 	resource *otlpmetrics.ResourceMetrics
-// 	scope    *otlpmetrics.ScopeMetrics
-// }
+// NewRealMetricsDataset creates a new RealMetricsDataset from a binary file.
+func NewRealMetricsDataset(path string) *RealMetricsDataset {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		log.Fatal("read file:", err)
+	}
+	otlp := pmetricotlp.NewRequest()
+	if err := otlp.UnmarshalProto(data); err != nil {
+		log.Fatal("unmarshal:", err)
+	}
+	mdata := otlp.Metrics()
 
-// // NewRealMetricsDataset creates a new RealMetricsDataset from a binary file.
-// func NewRealMetricsDataset(path string) *RealMetricsDataset {
-// 	data, err := os.ReadFile(path)
-// 	if err != nil {
-// 		log.Fatal("read file:", err)
-// 	}
-// 	var otlp colmetrics.Metrics
-// 	if err := proto.Unmarshal(data, &otlp); err != nil {
-// 		log.Fatal("unmarshal:", err)
-// 	}
+	ds := &RealMetricsDataset{metrics: []metrics{}}
 
-// 	ds := &RealMetricsDataset{metrics: []metrics{}}
+	for ri := 0; ri < mdata.ResourceMetrics().Len(); ri++ {
+		rm := mdata.ResourceMetrics().At(ri)
+		for si := 0; si < rm.ScopeMetrics().Len(); si++ {
+			sm := rm.ScopeMetrics().At(si)
+			for mi := 0; mi < sm.Metrics().Len(); mi++ {
+				m := sm.Metrics().At(mi)
+				ds.metrics = append(ds.metrics, metrics{metric: m, resource: rm, scope: sm})
+			}
+		}
+	}
 
-// 	for _, rm := range otlp.ResourceMetrics {
-// 		for _, sm := range rm.ScopeMetrics {
-// 			for _, m := range sm.Metrics {
-// 				ds.metrics = append(ds.metrics, metrics{metric: m, resource: rm, scope: sm})
-// 			}
-// 		}
-// 	}
+	return ds
+}
 
-// 	return ds
-// }
+// Len returns the number of metrics in the dataset.
+func (d *RealMetricsDataset) Len() int {
+	return len(d.metrics)
+}
 
-// // Len returns the number of metrics in the dataset.
-// func (d *RealMetricsDataset) Len() int {
-// 	return len(d.metrics)
-// }
+// Metrics returns a subset of metrics from the original dataset.
+func (d *RealMetricsDataset) Metrics(offset, size int) []pmetric.Metrics {
+	resMetrics := map[pmetric.ResourceMetrics]map[pmetric.ScopeMetrics][]pmetric.Metric{}
 
-// // Metrics returns a subset of metrics from the original dataset.
-// func (d *RealMetricsDataset) Metrics(offset, size int) []*colmetrics.Metrics {
-// 	resMetrics := map[*otlpmetrics.ResourceMetrics]map[*otlpmetrics.ScopeMetrics][]*otlpmetrics.Metric{}
+	for _, metric := range d.metrics[offset : offset+size] {
+		if _, ok := resMetrics[metric.resource]; !ok {
+			resMetrics[metric.resource] = map[pmetric.ScopeMetrics][]pmetric.Metric{}
+		}
 
-// 	for _, metric := range d.metrics[offset : offset+size] {
-// 		if rl, ok := resMetrics[metric.resource]; !ok {
-// 			resMetrics[metric.resource] = map[*otlpmetrics.ScopeMetrics][]*otlpmetrics.Metric{}
-// 		} else if _, ok := rl[metric.scope]; !ok {
-// 			rl[metric.scope] = []*otlpmetrics.Metric{}
-// 		}
+		metrics := resMetrics[metric.resource][metric.scope]
+		metrics = append(metrics, metric.metric)
+	}
 
-// 		metrics := resMetrics[metric.resource][metric.scope]
-// 		metrics = append(metrics, metric.metric)
-// 	}
+	request := pmetric.NewMetrics()
 
-// 	request := colmetrics.Metrics{
-// 		ResourceMetrics: make([]*otlpmetrics.ResourceMetrics, 0, len(resMetrics)),
-// 	}
+	for rm, smm := range resMetrics {
+		outRm := request.ResourceMetrics().AppendEmpty()
+		rm.Resource().CopyTo(outRm.Resource())
 
-// 	for rm, sm := range resMetrics {
-// 		scopeMetrics := make([]*otlpmetrics.ScopeMetrics, 0, len(sm))
-// 		for sl, mrs := range sm {
-// 			scopeMetrics = append(scopeMetrics, &otlpmetrics.ScopeMetrics{
-// 				Scope:     sl.Scope,
-// 				Metrics:   mrs,
-// 				SchemaUrl: sl.SchemaUrl,
-// 			})
-// 		}
+		for sm, ms := range smm {
+			outSm := outRm.ScopeMetrics().AppendEmpty()
+			sm.Scope().CopyTo(outSm.Scope())
 
-// 		request.ResourceMetrics = append(request.ResourceMetrics, &otlpmetrics.ResourceMetrics{
-// 			Resource:     rm.Resource,
-// 			ScopeMetrics: scopeMetrics,
-// 			SchemaUrl:    rm.SchemaUrl,
-// 		})
-// 	}
+			for _, m := range ms {
+				outM := outSm.Metrics().AppendEmpty()
+				m.CopyTo(outM)
+			}
+		}
+	}
 
-// 	return []*colmetrics.Metrics{&request}
-// }
+	return []pmetric.Metrics{request}
+}
