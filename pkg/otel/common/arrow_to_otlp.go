@@ -208,11 +208,9 @@ func CopyValueFrom(dest pcommon.Value, dt arrow.DataType, arr arrow.Array, row i
 		if !ok {
 			return fmt.Errorf("array is not a list")
 		}
-		values, err := ArrayValueFrom(arrList, row)
-		if err != nil {
+		if err := SetArrayValue(dest.SetEmptySliceVal(), arrList, row); err != nil {
 			return err
 		}
-		values.CopyTo(dest.SetEmptySliceVal())
 		return nil
 	case *arrow.DictionaryType:
 		switch t.ValueType.(type) {
@@ -238,10 +236,9 @@ func CopyValueFrom(dest pcommon.Value, dt arrow.DataType, arr arrow.Array, row i
 	}
 }
 
-func ArrayValueFrom(arrList *array.List, row int) (pcommon.Slice, error) {
+func SetArrayValue(result pcommon.Slice, arrList *array.List, row int) error {
 	start := int(arrList.Offsets()[row])
 	end := int(arrList.Offsets()[row+1])
-	result := pcommon.NewSlice()
 	result.EnsureCapacity(end - start)
 
 	arrItems := arrList.ListValues()
@@ -250,11 +247,10 @@ func ArrayValueFrom(arrList *array.List, row int) (pcommon.Slice, error) {
 		if arrList.IsNull(start) {
 			continue
 		}
-		err := CopyValueFrom(v, arrList.DataType(), arrItems, start)
-		if err != nil {
-			return result, err
+		if err := CopyValueFrom(v, arrList.DataType(), arrItems, start); err != nil {
+			return err
 		}
 	}
 
-	return result, nil
+	return nil
 }
