@@ -17,8 +17,6 @@ package metrics_test
 import (
 	"testing"
 
-	"github.com/davecgh/go-spew/spew"
-
 	"otel-arrow-adapter/pkg/air"
 	"otel-arrow-adapter/pkg/air/config"
 	"otel-arrow-adapter/pkg/datagen"
@@ -40,7 +38,6 @@ func TestSystemCpuTimeConversion(t *testing.T) {
 	multivariateConf.Metrics["system.memory.usage"] = "state"
 
 	request := lg.GenerateSystemCpuTime(1, 100)
-	spew.Dump(request)
 
 	multiSchemaRecords, err := metrics.OtlpMetricsToArrowRecords(rr, request, &multivariateConf, cfg)
 	if err != nil {
@@ -52,8 +49,9 @@ func TestSystemCpuTimeConversion(t *testing.T) {
 		if err != nil {
 			t.Errorf("Unexpected error: %v", err)
 		}
-		spew.Dump(req)
-		// @@@		common.MetricsRequestAssertEq(request, req)
+		if diff := oteltest.DiffMetrics(request, req); diff != "" {
+			t.Error("Unexpected diff: ", diff)
+		}
 	}
 }
 
@@ -102,7 +100,6 @@ func TestSystemCpuLoadAverage1mConversion(t *testing.T) {
 	multivariateConf.Metrics["system.memory.usage"] = "state"
 
 	request := lg.GenerateSystemCpuLoadAverage1m(1, 100)
-	spew.Dump(request)
 
 	multiSchemaRecords, err := metrics.OtlpMetricsToArrowRecords(rr, request, &multivariateConf, cfg)
 	if err != nil {
@@ -114,7 +111,8 @@ func TestSystemCpuLoadAverage1mConversion(t *testing.T) {
 		if err != nil {
 			t.Errorf("Unexpected error: %v", err)
 		}
-		spew.Dump(req)
-		// @@@ common.MetricsRequestAssertEq(request, req)
+		if diff := oteltest.DiffMetrics(request, req); diff != "" {
+			t.Error("Unexpected diff: ", diff)
+		}
 	}
 }
