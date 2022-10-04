@@ -19,10 +19,15 @@ import (
 	"math"
 
 	"go.opentelemetry.io/collector/pdata/pcommon"
-	"go.opentelemetry.io/collector/pdata/pmetric"
 )
 
-func DataPointSig(dataPoint pmetric.NumberDataPoint, multivariateKey string) []byte {
+type DataPoint interface {
+	Attributes() pcommon.Map
+	Timestamp() pcommon.Timestamp
+	StartTimestamp() pcommon.Timestamp
+}
+
+func DataPointSig[N DataPoint](dataPoint N, multivariateKey string) []byte {
 	sig := make([]byte, 16, 128)
 
 	// Serialize times and attributes to build the signature.

@@ -114,7 +114,7 @@ func multivariateMetric(rr *air.RecordRepository, res pcommon.Resource, scope pc
 
 	for i := 0; i < dataPoints.Len(); i++ {
 		ndp := dataPoints.At(i)
-		sig := DataPointSig(ndp, multivariateKey)
+		sig := DataPointSig[pmetric.NumberDataPoint](ndp, multivariateKey)
 		newEntry := false
 		stringSig := string(sig)
 		record := records[stringSig]

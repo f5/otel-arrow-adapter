@@ -196,7 +196,6 @@ func CopyValueFrom(dest pcommon.Value, dt arrow.DataType, arr arrow.Array, row i
 		if err != nil {
 			return err
 		}
-		// @@@ Note extra copying
 		dest.SetEmptyBytesVal().FromRaw(v)
 		return nil
 	case *arrow.StructType:

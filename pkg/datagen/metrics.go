@@ -112,8 +112,9 @@ func (dg *DataGenerator) SystemCpuTime(metric pmetric.Metric, cpuCount int) {
 	metric.SetUnit("s")
 
 	sum := metric.SetEmptySum()
-	sum.SetAggregationTemporality(pmetric.MetricAggregationTemporalityCumulative)
-	sum.SetIsMonotonic(true)
+	// TODO
+	// sum.SetAggregationTemporality(pmetric.MetricAggregationTemporalityCumulative)
+	// sum.SetIsMonotonic(true)
 	points := sum.DataPoints()
 
 	for cpu := 0; cpu < cpuCount; cpu++ {
@@ -133,8 +134,9 @@ func (dg *DataGenerator) SystemMemoryUsage(metric pmetric.Metric) {
 	metric.SetDescription("Bytes of memory in use.")
 	metric.SetUnit("By")
 	sum := metric.SetEmptySum()
-	sum.SetAggregationTemporality(pmetric.MetricAggregationTemporalityCumulative)
-	sum.SetIsMonotonic(false)
+	// TODO
+	// sum.SetAggregationTemporality(pmetric.MetricAggregationTemporalityCumulative)
+	// sum.SetIsMonotonic(false)
 	points := sum.DataPoints()
 
 	p1 := points.AppendEmpty()

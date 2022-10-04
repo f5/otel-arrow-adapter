@@ -23,6 +23,7 @@ import (
 	"otel-arrow-adapter/pkg/air/config"
 	"otel-arrow-adapter/pkg/datagen"
 	"otel-arrow-adapter/pkg/otel/metrics"
+	"otel-arrow-adapter/pkg/otel/oteltest"
 )
 
 func TestSystemCpuTimeConversion(t *testing.T) {
@@ -70,7 +71,6 @@ func TestSystemMemoryUsageConversion(t *testing.T) {
 	multivariateConf.Metrics["system.memory.usage"] = "state"
 
 	request := lg.GenerateSystemMemoryUsage(1, 100)
-	spew.Dump(request)
 
 	multiSchemaRecords, err := metrics.OtlpMetricsToArrowRecords(rr, request, &multivariateConf, cfg)
 	if err != nil {
@@ -82,8 +82,9 @@ func TestSystemMemoryUsageConversion(t *testing.T) {
 		if err != nil {
 			t.Errorf("Unexpected error: %v", err)
 		}
-		spew.Dump(req)
-		// @@@ common.MetricsRequestAssertEq(request, req)
+		if diff := oteltest.DiffMetrics(request, req); diff != "" {
+			t.Error("Unexpected diff: ", diff)
+		}
 	}
 }
 

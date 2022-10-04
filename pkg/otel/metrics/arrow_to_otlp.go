@@ -147,8 +147,8 @@ func collectSumMetrics(metrics pmetric.MetricSlice, timeUnixNano uint64, startTi
 	sum := m.SetEmptySum()
 	// TODO: Add isMonotonic
 	// TODO: Add temporality
-	sum.SetIsMonotonic(true)
-	sum.SetAggregationTemporality(pmetric.MetricAggregationTemporalityCumulative)
+	// sum.SetIsMonotonic(true)
+	// sum.SetAggregationTemporality(pmetric.MetricAggregationTemporalityCumulative)
 
 	switch dt := metricField.Type.(type) {
 	case *arrow.Int64Type:
@@ -245,8 +245,8 @@ func collectMultivariateSumMetrics(metrics pmetric.MetricSlice, timeUnixNano uin
 	sum := m.SetEmptySum()
 	// TODO: Add isMonotonic
 	// TODO: Add temporality
-	sum.SetIsMonotonic(true)
-	sum.SetAggregationTemporality(pmetric.MetricAggregationTemporalityCumulative)
+	// sum.SetIsMonotonic(true)
+	// sum.SetAggregationTemporality(pmetric.MetricAggregationTemporalityCumulative)
 
 	for i := range multiFields {
 		field := &multiFields[i]
