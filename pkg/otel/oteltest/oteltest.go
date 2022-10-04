@@ -25,8 +25,6 @@ import (
 	"go.opentelemetry.io/collector/pdata/pmetric/pmetricotlp"
 )
 
-// TODO Need the multivar config passed in to get this right
-
 type otelCopier[T any] interface {
 	metrics.DataPoint
 	CopyTo(T)
@@ -39,7 +37,7 @@ type otelPointSlice[PT metrics.DataPoint, ST otelCopier[PT]] interface {
 	AppendEmpty() PT
 }
 
-func sortPoints[PT metrics.DataPoint, ST otelCopier[PT]](multikey string, slice otelPointSlice[PT, ST]) {
+func sortPoints[PT metrics.DataPoint, ST otelCopier[PT]](slice otelPointSlice[PT, ST]) {
 	num := slice.Len()
 	var tmp []ST
 	for i := 0; i < num; i++ {
@@ -47,11 +45,15 @@ func sortPoints[PT metrics.DataPoint, ST otelCopier[PT]](multikey string, slice 
 		slice.At(i).Attributes().Sort()
 	}
 	sort.Slice(tmp, func(i, j int) bool {
-		a := slice.At(i)
-		b := slice.At(j)
+		a := tmp[i]
+		b := tmp[j]
 
-		asig := metrics.DataPointSig(a, multikey)
-		bsig := metrics.DataPointSig(b, multikey)
+		// Note: no multikey is passed into the data point signature because we
+		// are not about to remove that key.  DataPointSig takes that argument
+		// to compute the schema that will result after ignoring the multivariate
+		// key.
+		asig := metrics.DataPointSig(a, "")
+		bsig := metrics.DataPointSig(b, "")
 
 		return bytes.Compare(asig, bsig) < 0
 	})
@@ -75,12 +77,10 @@ func sortMetrics(x pmetric.Metrics) {
 				switch m.DataType() {
 				case pmetric.MetricDataTypeGauge:
 					sortPoints[pmetric.NumberDataPoint, pmetric.NumberDataPoint](
-						"@@@",
 						m.Gauge().DataPoints(),
 					)
 				case pmetric.MetricDataTypeSum:
 					sortPoints[pmetric.NumberDataPoint, pmetric.NumberDataPoint](
-						"@@@",
 						m.Sum().DataPoints(),
 					)
 				case pmetric.MetricDataTypeHistogram,
