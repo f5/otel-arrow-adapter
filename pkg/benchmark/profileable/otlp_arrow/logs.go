@@ -5,13 +5,13 @@ import (
 
 	"google.golang.org/protobuf/proto"
 
-	v1 "otel-arrow-adapter/api/go.opentelemetry.io/proto/otlp/collector/events/v1"
-	"otel-arrow-adapter/pkg/air"
-	"otel-arrow-adapter/pkg/air/config"
-	"otel-arrow-adapter/pkg/benchmark"
-	"otel-arrow-adapter/pkg/benchmark/dataset"
-	"otel-arrow-adapter/pkg/otel/batch_event"
-	"otel-arrow-adapter/pkg/otel/logs"
+	v1 "github.com/lquerel/otel-arrow-adapter/api/go.opentelemetry.io/proto/otlp/collector/arrow/v1"
+	"github.com/lquerel/otel-arrow-adapter/pkg/air"
+	"github.com/lquerel/otel-arrow-adapter/pkg/air/config"
+	"github.com/lquerel/otel-arrow-adapter/pkg/benchmark"
+	"github.com/lquerel/otel-arrow-adapter/pkg/benchmark/dataset"
+	"github.com/lquerel/otel-arrow-adapter/pkg/otel/batch_event"
+	"github.com/lquerel/otel-arrow-adapter/pkg/otel/logs"
 
 	"go.opentelemetry.io/collector/pdata/plog"
 )
@@ -23,7 +23,7 @@ type LogsProfileable struct {
 	logs        []plog.Logs
 	rr          *air.RecordRepository
 	producer    *batch_event.Producer
-	batchEvents []*v1.BatchEvent
+	batchEvents []*v1.ArrowBatch
 	config      *config.Config
 }
 
@@ -34,7 +34,7 @@ func NewLogsProfileable(tags []string, dataset dataset.LogsDataset, config *conf
 		compression: compression,
 		rr:          nil,
 		producer:    batch_event.NewProducer(),
-		batchEvents: make([]*v1.BatchEvent, 0, 10),
+		batchEvents: make([]*v1.ArrowBatch, 0, 10),
 		config:      config,
 	}
 }
@@ -65,7 +65,7 @@ func (s *LogsProfileable) PrepareBatch(_ io.Writer, startAt, size int) {
 }
 func (s *LogsProfileable) CreateBatch(_ io.Writer, _, _ int) {
 	// Conversion of OTLP metrics to OTLP Arrow events
-	s.batchEvents = make([]*v1.BatchEvent, 0, len(s.logs))
+	s.batchEvents = make([]*v1.ArrowBatch, 0, len(s.logs))
 	for _, log := range s.logs {
 		records, err := logs.OtlpLogsToArrowRecords(s.rr, log, s.config)
 		if err != nil {
@@ -81,7 +81,7 @@ func (s *LogsProfileable) CreateBatch(_ io.Writer, _, _ int) {
 			}
 			//fmt.Fprintf(writer, "\t- batch-id = %s\n", batchEvent.BatchId)
 			//fmt.Fprintf(writer, "\t- sub-stream-id = %s\n", batchEvent.SubStreamId)
-			//for _, p := range batchEvent.OtlpArrowPayloads {
+			//for _, p := range batchEvent.Payloads {
 			//	fmt.Fprintf(writer, "\t- IPC message size = %d\n", len(p.Schema))
 			//}
 			s.batchEvents = append(s.batchEvents, batchEvent)
@@ -104,9 +104,9 @@ func (s *LogsProfileable) Serialize(io.Writer) ([][]byte, error) {
 	return buffers, nil
 }
 func (s *LogsProfileable) Deserialize(_ io.Writer, buffers [][]byte) {
-	s.batchEvents = make([]*v1.BatchEvent, len(buffers))
+	s.batchEvents = make([]*v1.ArrowBatch, len(buffers))
 	for i, b := range buffers {
-		be := &v1.BatchEvent{}
+		be := &v1.ArrowBatch{}
 		if err := proto.Unmarshal(b, be); err != nil {
 			panic(err)
 		}

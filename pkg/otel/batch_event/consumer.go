@@ -22,7 +22,7 @@ import (
 
 	"github.com/apache/arrow/go/v9/arrow/ipc"
 
-	coleventspb "otel-arrow-adapter/api/go.opentelemetry.io/proto/otlp/collector/events/v1"
+	coleventspb "github.com/lquerel/otel-arrow-adapter/api/go.opentelemetry.io/proto/otlp/collector/arrow/v1"
 )
 
 type Consumer struct {
@@ -34,16 +34,16 @@ type streamConsumer struct {
 	ipcReader *ipc.Reader
 }
 
-// NewConsumer creates a new BatchEvent consumer.
+// NewConsumer creates a new ArrowBatch consumer.
 func NewConsumer() *Consumer {
 	return &Consumer{
 		streamConsumers: make(map[string]*streamConsumer),
 	}
 }
 
-// Consume takes a BatchEvent protobuf message and returns an array of RecordMessage.
-func (c *Consumer) Consume(event *coleventspb.BatchEvent) ([]*RecordMessage, error) {
-	// Retrieves (or creates) the stream consumer for the sub-stream id defined in the BatchEvent message.
+// Consume takes a ArrowBatch protobuf message and returns an array of RecordMessage.
+func (c *Consumer) Consume(event *coleventspb.ArrowBatch) ([]*RecordMessage, error) {
+	// Retrieves (or creates) the stream consumer for the sub-stream id defined in the ArrowBatch message.
 	sc := c.streamConsumers[event.SubStreamId]
 	if sc == nil {
 		bufReader := bytes.NewReader([]byte{})
@@ -55,8 +55,8 @@ func (c *Consumer) Consume(event *coleventspb.BatchEvent) ([]*RecordMessage, err
 
 	var ibes []*RecordMessage
 
-	// Transform each individual OtlpArrowPayload into RecordMessage
-	for _, payload := range event.OtlpArrowPayloads {
+	// Transform each individual Payload into RecordMessage
+	for _, payload := range event.Payloads {
 		sc.bufReader.Reset(payload.Schema) // ToDo change the protobuf definition to contain a single ipc_message
 		if sc.ipcReader == nil {
 			ipcReader, err := ipc.NewReader(sc.bufReader)

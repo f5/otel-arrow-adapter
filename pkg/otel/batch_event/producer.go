@@ -23,7 +23,7 @@ import (
 
 	"github.com/apache/arrow/go/v9/arrow/ipc"
 
-	coleventspb "otel-arrow-adapter/api/go.opentelemetry.io/proto/otlp/collector/events/v1"
+	coleventspb "github.com/lquerel/otel-arrow-adapter/api/go.opentelemetry.io/proto/otlp/collector/arrow/v1"
 )
 
 type Producer struct {
@@ -37,15 +37,15 @@ type streamProducer struct {
 	subStreamId string
 }
 
-// NewProducer creates a new BatchEvent producer.
+// NewProducer creates a new ArrowBatch producer.
 func NewProducer() *Producer {
 	return &Producer{
 		streamProducers: make(map[string]*streamProducer),
 	}
 }
 
-// Produce takes an RecordMessage and returns the corresponding BatchEvent protobuf message.
-func (p *Producer) Produce(rm *RecordMessage) (*coleventspb.BatchEvent, error) {
+// Produce takes an RecordMessage and returns the corresponding ArrowBatch protobuf message.
+func (p *Producer) Produce(rm *RecordMessage) (*coleventspb.ArrowBatch, error) {
 	// Retrieves (or creates) the stream Producer for the sub-stream id defined in the RecordMessage.
 	sp := p.streamProducers[rm.subStreamId]
 	if sp == nil {
@@ -73,10 +73,10 @@ func (p *Producer) Produce(rm *RecordMessage) (*coleventspb.BatchEvent, error) {
 	batchId := fmt.Sprintf("%d", sp.batchId)
 	sp.batchId++
 
-	return &coleventspb.BatchEvent{
+	return &coleventspb.ArrowBatch{
 		BatchId:     batchId,
 		SubStreamId: sp.subStreamId,
-		OtlpArrowPayloads: []*coleventspb.OtlpArrowPayload{
+		Payloads: []*coleventspb.Payload{
 			{
 				Type:   rm.recordType,
 				Schema: buf,

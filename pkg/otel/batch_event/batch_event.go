@@ -20,14 +20,14 @@ package batch_event
 import (
 	"github.com/apache/arrow/go/v9/arrow"
 
-	v1 "otel-arrow-adapter/api/go.opentelemetry.io/proto/otlp/collector/events/v1"
-	"otel-arrow-adapter/pkg/air"
+	v1 "github.com/lquerel/otel-arrow-adapter/api/go.opentelemetry.io/proto/otlp/collector/arrow/v1"
+	"github.com/lquerel/otel-arrow-adapter/pkg/air"
 )
 
 type RecordMessage struct {
 	batchId      string
 	subStreamId  string
-	recordType   v1.OtlpArrowPayloadType
+	recordType   v1.PayloadType
 	record       arrow.Record
 	deliveryType v1.DeliveryType
 }
@@ -35,7 +35,7 @@ type RecordMessage struct {
 func NewMetricsMessage(record arrow.Record, deliveryType v1.DeliveryType) *RecordMessage {
 	return &RecordMessage{
 		subStreamId:  air.SchemaToId(record.Schema()),
-		recordType:   v1.OtlpArrowPayloadType_METRICS,
+		recordType:   v1.PayloadType_METRICS,
 		record:       record,
 		deliveryType: deliveryType,
 	}
@@ -45,7 +45,7 @@ func NewLogsMessage(record arrow.Record, deliveryType v1.DeliveryType) *RecordMe
 	record.Schema()
 	return &RecordMessage{
 		subStreamId:  air.SchemaToId(record.Schema()),
-		recordType:   v1.OtlpArrowPayloadType_LOGS,
+		recordType:   v1.PayloadType_LOGS,
 		record:       record,
 		deliveryType: deliveryType,
 	}
@@ -54,7 +54,7 @@ func NewLogsMessage(record arrow.Record, deliveryType v1.DeliveryType) *RecordMe
 func NewTraceMessage(record arrow.Record, deliveryType v1.DeliveryType) *RecordMessage {
 	return &RecordMessage{
 		subStreamId:  air.SchemaToId(record.Schema()),
-		recordType:   v1.OtlpArrowPayloadType_SPANS,
+		recordType:   v1.PayloadType_SPANS,
 		record:       record,
 		deliveryType: deliveryType,
 	}

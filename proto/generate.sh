@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+# Run this in the top-level directory.
+
 # Get current directory.
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 
