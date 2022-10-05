@@ -7,7 +7,7 @@ option java_package = "io.opentelemetry.proto.collector.arrow.v1";
 option java_outer_classname = "ArrowServiceProto";
 
 // Note the following is temporary
-option go_package = "github.com/lquerel/otel-arrow-adapter/api/go.opentelemetry.io/proto/otlp/collector/arrow/v1";
+option go_package = "github.com/lquerel/otel-arrow-adapter/api/collector/arrow/v1";
 
 service ArrowService {
   // The ArrowStream endpoint is a bi-directional stream used to send batch of events (`ArrowBatch`) from the exporter
@@ -26,7 +26,7 @@ message ArrowBatch {
   string sub_stream_id = 2;
 
   // [mandatory] A collection of payloads containing the data of the batch.
-  repeated Payload otlp_arrow_payloads = 3;
+  repeated Payload payloads = 3;
 
   // [optional] Delivery type (BEST_EFFORT by default).
   DeliveryType delivery_type = 4;

@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"testing"
 
-	v1 "github.com/lquerel/otel-arrow-adapter/api/go.opentelemetry.io/proto/otlp/collector/arrow/v1"
+	v1 "github.com/lquerel/otel-arrow-adapter/api/collector/arrow/v1"
 	"github.com/lquerel/otel-arrow-adapter/pkg/air"
 	cfg "github.com/lquerel/otel-arrow-adapter/pkg/air/config"
 	"github.com/lquerel/otel-arrow-adapter/pkg/air/rfield"
