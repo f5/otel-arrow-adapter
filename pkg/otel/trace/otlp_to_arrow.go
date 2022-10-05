@@ -106,7 +106,7 @@ func groupSpansPerSig(scopeSpans ptrace.ScopeSpans, cfg *config.Config) (spansPe
 	for k := 0; k < scopeSpans.Spans().Len(); k++ {
 		span := scopeSpans.Spans().At(k)
 
-		fields := make([]*rfield.Field, 0, 10)
+		fields := make([]*rfield.Field, 0, 15)
 		if ts := span.StartTimestamp(); ts > 0 {
 			fields = append(fields, rfield.NewU64Field(constants.START_TIME_UNIX_NANO, uint64(ts)))
 		}
@@ -158,33 +158,47 @@ func groupSpansPerSig(scopeSpans ptrace.ScopeSpans, cfg *config.Config) (spansPe
 		}
 
 		// Status
-		if span.Status().Code() != 0 {
-			fields = append(fields, rfield.NewI32Field(constants.STATUS, int32(span.Status().Code())))
-		}
-		if span.Status().Message() != "" {
-			fields = append(fields, rfield.NewStringField(constants.STATUS_MESSAGE, span.Status().Message()))
+		statusField := status(span)
+		if statusField != nil {
+			fields = append(fields, rfield.NewStructField(constants.STATUS, *statusField))
 		}
 
 		spanValue := rfield.NewStruct(fields)
 
-		// Compute signature for the span value
+		// Compute signature for the span value based on the span attributes.
 		var sig strings.Builder
 		attributes.Normalize()
 		attributes.WriteSignature(&sig)
-		//spanValue.Normalize()
-		//spanValue.WriteSignature(&sig)
+
 		spansPerSig[sig.String()] = append(spansPerSig[sig.String()], spanValue)
 	}
 	return
 }
 
-// events converts OTLP span events to the AIR representation.
+func status(span ptrace.Span) *rfield.Struct {
+	fields := make([]*rfield.Field, 0, 2)
+
+	if span.Status().Code() != 0 {
+		fields = append(fields, rfield.NewI32Field(constants.STATUS, int32(span.Status().Code())))
+	}
+	if span.Status().Message() != "" {
+		fields = append(fields, rfield.NewStringField(constants.STATUS_MESSAGE, span.Status().Message()))
+	}
+
+	if len(fields) > 0 {
+		return rfield.NewStruct(fields)
+	} else {
+		return nil
+	}
+}
+
+// events converts OTLP span events into their AIR representation or returns nil when there is no events.
 func events(events ptrace.SpanEventSlice, cfg *config.Config) *rfield.Field {
 	if events.Len() == 0 {
 		return nil
 	}
 
-	convertedEvents := make([]rfield.Value, 0, events.Len())
+	airEvents := make([]rfield.Value, 0, events.Len())
 
 	for i := 0; i < events.Len(); i++ {
 		event := events.At(i)
@@ -203,26 +217,26 @@ func events(events ptrace.SpanEventSlice, cfg *config.Config) *rfield.Field {
 		if dc := event.DroppedAttributesCount(); dc > 0 {
 			fields = append(fields, rfield.NewU32Field(constants.DROPPED_ATTRIBUTES_COUNT, uint32(dc)))
 		}
-		convertedEvents = append(convertedEvents, &rfield.Struct{
+		airEvents = append(airEvents, &rfield.Struct{
 			Fields: fields,
 		})
 	}
 	return rfield.NewListField(constants.SPAN_EVENTS, rfield.List{
-		Values: convertedEvents,
+		Values: airEvents,
 	})
 }
 
-// links converts OTLP span links to the AIR representation.
+// links converts OTLP span links into their AIR representation or returns nil when there is no links.
 func links(links ptrace.SpanLinkSlice, cfg *config.Config) *rfield.Field {
 	if links.Len() == 0 {
 		return nil
 	}
 
-	convertedLinks := make([]rfield.Value, 0, links.Len())
+	airLinks := make([]rfield.Value, 0, links.Len())
 
 	for i := 0; i < links.Len(); i++ {
 		link := links.At(i)
-		fields := make([]*rfield.Field, 0, 4)
+		fields := make([]*rfield.Field, 0, 5)
 
 		if tid := link.TraceID(); !tid.IsEmpty() {
 			fields = append(fields, rfield.NewBinaryField(constants.TRACE_ID, tid[:]))
@@ -240,11 +254,11 @@ func links(links ptrace.SpanLinkSlice, cfg *config.Config) *rfield.Field {
 		if dc := link.DroppedAttributesCount(); dc > 0 {
 			fields = append(fields, rfield.NewU32Field(constants.DROPPED_ATTRIBUTES_COUNT, uint32(dc)))
 		}
-		convertedLinks = append(convertedLinks, &rfield.Struct{
+		airLinks = append(airLinks, &rfield.Struct{
 			Fields: fields,
 		})
 	}
 	return rfield.NewListField(constants.SPAN_LINKS, rfield.List{
-		Values: convertedLinks,
+		Values: airLinks,
 	})
 }
