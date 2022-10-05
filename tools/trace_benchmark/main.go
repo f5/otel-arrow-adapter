@@ -61,24 +61,6 @@ func main() {
 		otlpTraces := otlp.NewTraceProfileable(ds, compressionAlgo)
 
 		conf := config.NewUint16DefaultConfig()
-		conf.TraceEncoding = config.Flat
-		conf.Attribute.Encoding = config.AttributesAsStructs
-		otlpArrowTracesWithUint16Dictionary := otlp_arrow.NewTraceProfileable([]string{"uint16 dict", "attrs_as_structs"}, ds, conf, compressionAlgo)
-		conf = config.NewUint16DefaultConfig()
-		conf.TraceEncoding = config.Flat
-		conf.Attribute.Encoding = config.AttributesAsListStructs
-		otlpArrowTracesWithUint16DictionaryAsListStructs := otlp_arrow.NewTraceProfileable([]string{"uint16 dict", "attrs_as_list_structs"}, ds, conf, compressionAlgo)
-
-		conf = config.NewUint16DefaultConfig()
-		conf.TraceEncoding = config.Hierarchical
-		conf.Attribute.Encoding = config.AttributesAsStructs
-		otlpArrowTracesWithUint16DictionaryHierarchical := otlp_arrow.NewTraceProfileable([]string{"uint16 dict", "attrs_as_structs", "hierarchical"}, ds, conf, compressionAlgo)
-		conf = config.NewUint16DefaultConfig()
-		conf.TraceEncoding = config.Hierarchical
-		conf.Attribute.Encoding = config.AttributesAsListStructs
-		otlpArrowTracesWithUint16DictionaryAsListStructsHierarchical := otlp_arrow.NewTraceProfileable([]string{"uint16 dict", "attrs_as_list_structs", "hierarchical"}, ds, conf, compressionAlgo)
-
-		conf = config.NewUint16DefaultConfig()
 		conf.TraceEncoding = config.Hybrid
 		conf.Attribute.Encoding = config.AttributesAsStructs
 		otlpArrowTracesWithUint16DictionaryHybrid := otlp_arrow.NewTraceProfileable([]string{"uint16 dict", "attrs_as_structs", "hybrid"}, ds, conf, compressionAlgo)
@@ -88,20 +70,6 @@ func main() {
 		otlpArrowTracesWithUint16DictionaryAsListStructsHybrid := otlp_arrow.NewTraceProfileable([]string{"uint16 dict", "attrs_as_list_structs", "hybrid"}, ds, conf, compressionAlgo)
 
 		if err := profiler.Profile(otlpTraces, maxIter); err != nil {
-			panic(fmt.Errorf("expected no error, got %v", err))
-		}
-
-		if err := profiler.Profile(otlpArrowTracesWithUint16Dictionary, maxIter); err != nil {
-			panic(fmt.Errorf("expected no error, got %v", err))
-		}
-		if err := profiler.Profile(otlpArrowTracesWithUint16DictionaryAsListStructs, maxIter); err != nil {
-			panic(fmt.Errorf("expected no error, got %v", err))
-		}
-
-		if err := profiler.Profile(otlpArrowTracesWithUint16DictionaryHierarchical, maxIter); err != nil {
-			panic(fmt.Errorf("expected no error, got %v", err))
-		}
-		if err := profiler.Profile(otlpArrowTracesWithUint16DictionaryAsListStructsHierarchical, maxIter); err != nil {
 			panic(fmt.Errorf("expected no error, got %v", err))
 		}
 

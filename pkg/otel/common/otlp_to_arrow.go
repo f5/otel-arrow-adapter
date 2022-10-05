@@ -300,6 +300,7 @@ func AddResource(record *air.Record, resource pcommon.Resource, cfg *config.Conf
 	}
 }
 
+// ResourceField returns an AIR representation of the resource fields (i.e. attributes, dropped_attributes_count).
 func ResourceField(resource pcommon.Resource, cfg *config.Config) *rfield.Field {
 	var resourceFields []*rfield.Field
 
