@@ -12,5 +12,5 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package trace provides functions to convert OTLP traces to OTLP Arrow traces and vice versa.
-package trace
+// Package traces provides functions to convert OTLP traces to OTLP Arrow traces and vice versa.
+package traces

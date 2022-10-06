@@ -11,7 +11,7 @@ import (
 	"otel-arrow-adapter/pkg/benchmark"
 	"otel-arrow-adapter/pkg/benchmark/dataset"
 	"otel-arrow-adapter/pkg/otel/batch_event"
-	"otel-arrow-adapter/pkg/otel/trace"
+	"otel-arrow-adapter/pkg/otel/traces"
 
 	"go.opentelemetry.io/collector/pdata/ptrace"
 )
@@ -69,7 +69,7 @@ func (s *TraceProfileable) CreateBatch(_ io.Writer, _, _ int) {
 	// Conversion of OTLP metrics to OTLP Arrow events
 	s.batchEvents = make([]*v1.BatchEvent, 0, len(s.traces))
 	for _, traceReq := range s.traces {
-		records, err := trace.OtlpTraceToArrowRecords(s.rr, traceReq, s.config)
+		records, err := traces.OtlpTracesToArrowRecords(s.rr, traceReq, s.config)
 		if err != nil {
 			panic(err)
 		}
@@ -120,7 +120,7 @@ func (s *TraceProfileable) Deserialize(_ io.Writer, buffers [][]byte) {
 		//	panic(err)
 		//}
 		//for _, ibe := range ibes {
-		//	request, err := trace2.ArrowRecordsToOtlpTrace(ibe.Record())
+		//	request, err := trace2.ArrowRecordToOtlpTraces(ibe.Record())
 		//	if err != nil {
 		//		panic(err)
 		//	}

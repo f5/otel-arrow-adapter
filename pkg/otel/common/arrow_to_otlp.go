@@ -49,9 +49,9 @@ func AttributesId(attrs pcommon.Map) string {
 
 func NewResourceFrom(record arrow.Record, row int) (pcommon.Resource, error) {
 	r := pcommon.NewResource()
-	resourceField, resourceArray := air.FieldArray(record, constants.RESOURCE)
-	if resourceArray == nil {
-		return r, nil
+	resourceField, resourceArray, err := air.StructFromRecord(record, constants.RESOURCE)
+	if err != nil {
+		return r, err
 	}
 	droppedAttributesCount, err := air.U32FromStruct(resourceField, resourceArray, row, constants.DROPPED_ATTRIBUTES_COUNT)
 	if err != nil {
@@ -70,11 +70,35 @@ func NewResourceFrom(record arrow.Record, row int) (pcommon.Resource, error) {
 	return r, nil
 }
 
+// TODO change name to NewResourceFrom once the existing NewResourceFrom has been replace with this one
+
+// NewResourceFrom_ creates a new Resource from the given array and row.
+func NewResourceFrom_(listOfStructs *air.ListOfStructs, row int) (pcommon.Resource, error) {
+	r := pcommon.NewResource()
+	resDt, resArr, err := listOfStructs.StructArray(constants.RESOURCE, row)
+	if err != nil {
+		return r, err
+	}
+
+	// Dropped attributes count
+	droppedAttributesCount, err := air.U32FromStruct(resDt, resArr, row, constants.DROPPED_ATTRIBUTES_COUNT)
+	if err != nil {
+		return r, err
+	}
+	r.SetDroppedAttributesCount(droppedAttributesCount)
+
+	// Attributes
+	attrs, err := air.ListOfStructsFromStruct(resDt, resArr, row, constants.ATTRIBUTES)
+	err = attrs.CopyAttributesFrom(r.Attributes())
+
+	return r, err
+}
+
 func NewInstrumentationScopeFrom(record arrow.Record, row int, scope string) (pcommon.InstrumentationScope, error) {
 	s := pcommon.NewInstrumentationScope()
-	scopeField, scopeArray := air.FieldArray(record, scope)
-	if scopeArray == nil {
-		return s, nil
+	scopeField, scopeArray, err := air.StructFromRecord(record, scope)
+	if err != nil {
+		return s, err
 	}
 	name, err := air.StringFromStruct(scopeField, scopeArray, row, constants.NAME)
 	if err != nil {

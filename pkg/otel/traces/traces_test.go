@@ -12,48 +12,45 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package otel_test
+package traces
 
 import (
-	"bufio"
-	"bytes"
+	"fmt"
 	"testing"
 
-	"github.com/apache/arrow/go/v9/arrow/ipc"
 	"github.com/davecgh/go-spew/spew"
+	"go.opentelemetry.io/collector/pdata/ptrace/ptraceotlp"
 
 	"otel-arrow-adapter/pkg/air"
 	"otel-arrow-adapter/pkg/air/config"
 	"otel-arrow-adapter/pkg/datagen"
-	"otel-arrow-adapter/pkg/otel/traces"
 )
 
-func TestIPCWriter(t *testing.T) {
-	//t.Skip("WIP")
+// TODO: implement a series of tests to verify that the conversion from OTLP to Arrow and vice versa is correct.
+
+func TestOtlpToOtlpArrowConversion(t *testing.T) {
 	t.Parallel()
 
-	cfg := config.NewUint8DefaultConfig()
-	rr := air.NewRecordRepository(cfg)
-	lg := datagen.NewTraceGenerator(datagen.DefaultResourceAttributes(), datagen.DefaultInstrumentationScopes())
+	cfg := config.NewUint16DefaultConfig()
+	cfg.Attribute.Encoding = config.AttributesAsListStructs // TODO should become the default configuration.
 
-	request := lg.Generate(10, 100)
-	records, err := traces.OtlpTracesToArrowRecords(rr, request, cfg)
+	rr := air.NewRecordRepository(cfg)
+	tracesGen := datagen.NewTraceGenerator(datagen.DefaultResourceAttributes(), datagen.DefaultInstrumentationScopes())
+	request := ptraceotlp.NewRequestFromTraces(tracesGen.Generate(10, 100))
+
+	records, err := OtlpTracesToArrowRecords(rr, request.Traces(), cfg)
 	if err != nil {
-		t.Errorf("Unexpected error: %v", err)
-	}
-	if len(records) != 1 {
-		t.Errorf("Expected 1 record, got %d", len(records))
+		t.Fatal(err)
 	}
 
 	for _, record := range records {
-		var b bytes.Buffer
-		memWriter := bufio.NewWriter(&b)
-		writer := ipc.NewWriter(memWriter, ipc.WithSchema(record.Schema()))
-		_ = writer.Write(record)
-		spew.Dump(b.Bytes())
-		_ = memWriter.Flush()
-		b.Reset()
-		_ = writer.Write(record)
-		spew.Dump(b.Bytes())
+		fmt.Printf("#rows %d, #cols %d\n", record.NumRows(), record.NumCols())
+
+		traces, err := ArrowRecordToOtlpTraces(record)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		spew.Dump(traces)
 	}
 }

@@ -1,21 +1,18 @@
-/*
- * // Copyright The OpenTelemetry Authors
- * //
- * // Licensed under the Apache License, Version 2.0 (the "License");
- * // you may not use this file except in compliance with the License.
- * // You may obtain a copy of the License at
- * //
- * //       http://www.apache.org/licenses/LICENSE-2.0
- * //
- * // Unless required by applicable law or agreed to in writing, software
- * // distributed under the License is distributed on an "AS IS" BASIS,
- * // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * // See the License for the specific language governing permissions and
- * // limitations under the License.
- *
- */
+// Copyright The OpenTelemetry Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//       http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
-package trace
+package traces
 
 import (
 	"fmt"
@@ -31,48 +28,93 @@ import (
 	"go.opentelemetry.io/collector/pdata/ptrace"
 )
 
-func ArrowRecordsToOtlpTrace(record arrow.Record) (ptrace.Traces, error) {
-	request := ptrace.NewTraces()
+// ArrowRecordToOtlpTraces converts an Arrow Record to an OTLP Trace.
+// TODO: add a reference to the OTEP 0156 section that describes this mapping.
+func ArrowRecordToOtlpTraces(record arrow.Record) ([]ptrace.Traces, error) {
+	rowCount := int(record.NumRows())
+	allTraces := make([]ptrace.Traces, rowCount)
 
-	resourceSpans := map[string]ptrace.ResourceSpans{}
-	scopeSpans := map[string]ptrace.ScopeSpans{}
+	for row := 0; row < rowCount; row++ {
+		traces := ptrace.NewTraces()
+		allTraces = append(allTraces, traces)
+		traces.ResourceSpans().EnsureCapacity(rowCount)
 
-	numRows := int(record.NumRows())
-	for i := 0; i < numRows; i++ {
-		resource, err := common.NewResourceFrom(record, i)
+		arrowResSpan, err := air.ListOfStructsFromRecord(record, constants.RESOURCE_SPANS, row)
 		if err != nil {
-			return request, err
-		}
-		resId := common.ResourceId(resource)
-		rs, ok := resourceSpans[resId]
-		if !ok {
-			rs = request.ResourceSpans().AppendEmpty()
-			resource.CopyTo(rs.Resource())
-			// TODO: SchemaURL
-			resourceSpans[resId] = rs
+			return allTraces, err
 		}
 
-		scope, err := common.NewInstrumentationScopeFrom(record, i, constants.SCOPE_SPANS)
-		if err != nil {
-			return request, err
-		}
-		scopeSpanId := resId + "|" + common.ScopeId(scope)
-		ss, ok := scopeSpans[scopeSpanId]
-		if !ok {
-			ss = rs.ScopeSpans().AppendEmpty()
-			scope.CopyTo(ss.Scope())
-			// TODO: SchemaURL
-			scopeSpans[scopeSpanId] = ss
-		}
+		for resSpanIdx := arrowResSpan.Start(); resSpanIdx < arrowResSpan.End(); resSpanIdx++ {
+			resSpan := traces.ResourceSpans().AppendEmpty()
 
-		span := ss.Spans().AppendEmpty()
-		err = SetSpanFrom(span, record, i)
-		if err != nil {
-			return request, err
+			resource, err := common.NewResourceFrom_(arrowResSpan, resSpanIdx)
+			resource.CopyTo(resSpan.Resource())
+
+			schemaUrl, err := arrowResSpan.StringField(constants.SCHEMA_URL, resSpanIdx)
+			if err != nil {
+				return allTraces, err
+			}
+			resSpan.SetSchemaUrl(schemaUrl)
+
 		}
+		//resSpanCount := resSpanArr.Len()
+		//for resSpanIdx := 0; resSpanIdx < resSpanCount; resSpanIdx++ {
+		//	rs := traces.ResourceSpans().AppendEmpty()
+		//
+		//	// Resource
+		//	resource, err := common.NewResourceFrom_(resSpanArr, resSpanIdx)
+		//	spew.Dump(resource)
+		//
+		//	// Schema Url
+		//	schemaUrl, err := air.StringFromStruct(resSpanType, resSpanArr, resSpanIdx, constants.SCHEMA_URL)
+		//	if err != nil {
+		//		return allTraces, err
+		//	}
+		//	rs.SetSchemaUrl(schemaUrl)
+		//}
+		//spew.Dump(resSpanType)
+		//spew.Dump(resSpanArr)
 	}
 
-	return request, nil
+	//resourceSpans := map[string]ptrace.ResourceSpans{}
+	//scopeSpans := map[string]ptrace.ScopeSpans{}
+	//
+	//numRows := int(record.NumRows())
+	//for i := 0; i < numRows; i++ {
+	//	resource, err := common.NewResourceFrom(record, i)
+	//	if err != nil {
+	//		return traces, err
+	//	}
+	//	resId := common.ResourceId(resource)
+	//	rs, ok := resourceSpans[resId]
+	//	if !ok {
+	//		rs = traces.ResourceSpans().AppendEmpty()
+	//		resource.CopyTo(rs.Resource())
+	//		// TODO: SchemaURL
+	//		resourceSpans[resId] = rs
+	//	}
+	//
+	//	scope, err := common.NewInstrumentationScopeFrom(record, i, constants.SCOPE_SPANS)
+	//	if err != nil {
+	//		return traces, err
+	//	}
+	//	scopeSpanId := resId + "|" + common.ScopeId(scope)
+	//	ss, ok := scopeSpans[scopeSpanId]
+	//	if !ok {
+	//		ss = rs.ScopeSpans().AppendEmpty()
+	//		scope.CopyTo(ss.Scope())
+	//		// TODO: SchemaURL
+	//		scopeSpans[scopeSpanId] = ss
+	//	}
+	//
+	//	span := ss.Spans().AppendEmpty()
+	//	err = SetSpanFrom(span, record, i)
+	//	if err != nil {
+	//		return traces, err
+	//	}
+	//}
+
+	return allTraces, nil
 }
 
 func SetSpanFrom(span ptrace.Span, record arrow.Record, row int) error {
@@ -137,10 +179,12 @@ func SetSpanFrom(span ptrace.Span, record arrow.Record, row int) error {
 	if err != nil {
 		return err
 	}
-	if attrField, attrColumn := air.FieldArray(record, constants.ATTRIBUTES); attrColumn != nil {
-		if err = common.CopyAttributesFrom(span.Attributes(), attrField.Type, attrColumn, row); err != nil {
-			return err
-		}
+	attrField, attrColumn, err := air.FieldArray(record, constants.ATTRIBUTES)
+	if err != nil {
+		return err
+	}
+	if err = common.CopyAttributesFrom(span.Attributes(), attrField.Type, attrColumn, row); err != nil {
+		return err
 	}
 	if err := CopyEventsFrom(span.Events(), record, row); err != nil {
 		return err
@@ -172,9 +216,9 @@ func SetSpanFrom(span ptrace.Span, record arrow.Record, row int) error {
 }
 
 func CopyEventsFrom(result ptrace.SpanEventSlice, record arrow.Record, row int) error {
-	eventsColumn := air.Array(record, constants.SPAN_EVENTS)
-	if eventsColumn == nil {
-		return nil
+	eventsColumn, err := air.Array(record, constants.SPAN_EVENTS)
+	if err != nil {
+		return err
 	}
 	switch eventList := eventsColumn.(type) {
 	case *array.List:
@@ -236,9 +280,9 @@ func CopyEventsFrom(result ptrace.SpanEventSlice, record arrow.Record, row int) 
 }
 
 func CopyLinksFrom(result ptrace.SpanLinkSlice, record arrow.Record, row int) error {
-	linksColumn := air.Array(record, constants.SPAN_LINKS)
-	if linksColumn == nil {
-		return nil
+	linksColumn, err := air.Array(record, constants.SPAN_LINKS)
+	if err != nil {
+		return err
 	}
 	switch linkList := linksColumn.(type) {
 	case *array.List:
