@@ -60,6 +60,10 @@ func NewTraceMessage(record arrow.Record, deliveryType v1.DeliveryType) *RecordM
 	}
 }
 
-func (ibe *RecordMessage) Record() arrow.Record {
-	return ibe.record
+func (rm *RecordMessage) PayloadType() v1.PayloadType {
+	return rm.recordType
+}
+
+func (rm *RecordMessage) Record() arrow.Record {
+	return rm.record
 }
