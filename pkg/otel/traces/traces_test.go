@@ -23,18 +23,16 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/collector/pdata/ptrace/ptraceotlp"
 
-	"otel-arrow-adapter/pkg/air"
-	"otel-arrow-adapter/pkg/air/config"
 	"otel-arrow-adapter/pkg/datagen"
 )
 
+// TestOtlpToOtlpArrowConversion tests the conversion of OTLP traces to Arrow and back to OTLP.
+//
+// This test is based on the JSON serialization of the initial generated OTLP traces compared to the JSON serialization
+// of the OTLP traces generated from the Arrow records.
 func TestOtlpToOtlpArrowConversion(t *testing.T) {
 	t.Parallel()
 
-	cfg := config.NewUint16DefaultConfig()
-	cfg.Attribute.Encoding = config.AttributesAsListStructs // TODO should become the default configuration.
-
-	rr := air.NewRecordRepository(cfg)
 	tracesGen := datagen.NewTraceGenerator(datagen.DefaultResourceAttributes(), datagen.DefaultInstrumentationScopes())
 
 	// Generate a random OTLP traces request.
@@ -46,14 +44,16 @@ func TestOtlpToOtlpArrowConversion(t *testing.T) {
 	}
 
 	// Convert the OTLP traces request to Arrow.
-	records, err := OtlpTracesToArrowRecords(rr, initialRequest.Traces(), cfg)
+	otlpArrowProducer := NewOtlpArrowProducer()
+	records, err := otlpArrowProducer.ProduceFrom(initialRequest.Traces())
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Convert the Arrow records back to OTLP.
+	otlpProducer := NewOtlpProducer()
 	for _, record := range records {
-		traces, err := ArrowRecordToOtlpTraces(record)
+		traces, err := otlpProducer.ProduceFrom(record)
 		if err != nil {
 			t.Fatal(err)
 		}

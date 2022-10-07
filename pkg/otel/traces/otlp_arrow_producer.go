@@ -28,6 +28,36 @@ import (
 	"go.opentelemetry.io/collector/pdata/ptrace"
 )
 
+// OtlpArrowProducer produces OTLP Arrow records from OTLP traces.
+type OtlpArrowProducer struct {
+	cfg *config.Config
+	rr  *air.RecordRepository
+}
+
+// NewOtlpArrowProducer creates a new OtlpArrowProducer with the default configuration.
+func NewOtlpArrowProducer() *OtlpArrowProducer {
+	cfg := config.NewUint16DefaultConfig()
+	cfg.Attribute.Encoding = config.AttributesAsListStructs // TODO should become the default configuration.
+
+	return &OtlpArrowProducer{
+		cfg: cfg,
+		rr:  air.NewRecordRepository(cfg),
+	}
+}
+
+// NewOtlpArrowProducerWith creates a new OtlpArrowProducer with the given configuration.
+func NewOtlpArrowProducerWith(cfg *config.Config) *OtlpArrowProducer {
+	return &OtlpArrowProducer{
+		rr: air.NewRecordRepository(cfg),
+	}
+}
+
+// ProduceFrom produces Arrow records from the given OTLP traces.
+func (e *OtlpArrowProducer) ProduceFrom(traces ptrace.Traces) (records []arrow.Record, err error) {
+	records, err = OtlpTracesToArrowRecords(e.rr, traces, e.cfg)
+	return
+}
+
 type resourceSpanFields struct {
 	resource   *rfield.Field
 	scopeSpans []rfield.Value

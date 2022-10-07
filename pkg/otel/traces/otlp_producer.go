@@ -27,26 +27,43 @@ import (
 	"go.opentelemetry.io/collector/pdata/ptrace"
 )
 
+// OtlpProducer produces OTLP traces from OTLP Arrow traces.
+type OtlpProducer struct {
+}
+
+// NewOtlpProducer creates a new OtlpProducer.
+func NewOtlpProducer() *OtlpProducer {
+	return &OtlpProducer{}
+}
+
+// ProduceFrom produces OTLP Traces from an Arrow Record.
+func (p *OtlpProducer) ProduceFrom(record arrow.Record) ([]ptrace.Traces, error) {
+	return ArrowRecordToOtlpTraces(record)
+}
+
 // ArrowRecordToOtlpTraces converts an Arrow Record to an OTLP Trace.
 // TODO: add a reference to the OTEP 0156 section that describes this mapping.
 func ArrowRecordToOtlpTraces(record arrow.Record) ([]ptrace.Traces, error) {
-	rowCount := int(record.NumRows())
-	allTraces := make([]ptrace.Traces, 0, rowCount)
+	// Each first level row in the Arrow Record represents a Traces entity.
+	tracesCount := int(record.NumRows())
+	allTraces := make([]ptrace.Traces, 0, tracesCount)
 
-	for row := 0; row < rowCount; row++ {
+	for traceIdx := 0; traceIdx < tracesCount; traceIdx++ {
 		traces := ptrace.NewTraces()
-		allTraces = append(allTraces, traces)
-		traces.ResourceSpans().EnsureCapacity(rowCount)
 
-		arrowResSpans, err := air.ListOfStructsFromRecord(record, constants.RESOURCE_SPANS, row)
+		arrowResSpans, err := air.ListOfStructsFromRecord(record, constants.RESOURCE_SPANS, traceIdx)
 		if err != nil {
 			return allTraces, err
 		}
+		traces.ResourceSpans().EnsureCapacity(arrowResSpans.End() - arrowResSpans.Start())
 
 		for resSpanIdx := arrowResSpans.Start(); resSpanIdx < arrowResSpans.End(); resSpanIdx++ {
 			resSpan := traces.ResourceSpans().AppendEmpty()
 
 			resource, err := common.NewResourceFrom_(arrowResSpans, resSpanIdx)
+			if err != nil {
+				return allTraces, err
+			}
 			resource.CopyTo(resSpan.Resource())
 
 			schemaUrl, err := arrowResSpans.StringFieldByName(constants.SCHEMA_URL, resSpanIdx)
@@ -55,7 +72,7 @@ func ArrowRecordToOtlpTraces(record arrow.Record) ([]ptrace.Traces, error) {
 			}
 			resSpan.SetSchemaUrl(schemaUrl)
 
-			arrowScopeSpans, err := arrowResSpans.ListOfStructsByName(resSpanIdx, constants.SCOPE_SPANS)
+			arrowScopeSpans, err := arrowResSpans.ListOfStructsByName(constants.SCOPE_SPANS, resSpanIdx)
 			if err != nil {
 				return allTraces, err
 			}
@@ -63,6 +80,9 @@ func ArrowRecordToOtlpTraces(record arrow.Record) ([]ptrace.Traces, error) {
 				scopeSpan := resSpan.ScopeSpans().AppendEmpty()
 
 				scope, err := common.NewScopeFrom(arrowScopeSpans, scopeSpanIdx)
+				if err != nil {
+					return allTraces, err
+				}
 				scope.CopyTo(scopeSpan.Scope())
 
 				schemaUrl, err := arrowScopeSpans.StringFieldByName(constants.SCHEMA_URL, scopeSpanIdx)
@@ -71,7 +91,7 @@ func ArrowRecordToOtlpTraces(record arrow.Record) ([]ptrace.Traces, error) {
 				}
 				scopeSpan.SetSchemaUrl(schemaUrl)
 
-				arrowSpans, err := arrowScopeSpans.ListOfStructsByName(scopeSpanIdx, constants.SPANS)
+				arrowSpans, err := arrowScopeSpans.ListOfStructsByName(constants.SPANS, scopeSpanIdx)
 				if err != nil {
 					return allTraces, err
 				}
@@ -84,11 +104,14 @@ func ArrowRecordToOtlpTraces(record arrow.Record) ([]ptrace.Traces, error) {
 				}
 			}
 		}
+
+		allTraces = append(allTraces, traces)
 	}
 
 	return allTraces, nil
 }
 
+// SetSpanFrom initializes a Span from an Arrow representation.
 func SetSpanFrom(span ptrace.Span, los *air.ListOfStructs, row int) error {
 	traceId, err := los.BinaryFieldByName(constants.TRACE_ID, row)
 	if err != nil {
@@ -155,7 +178,7 @@ func SetSpanFrom(span ptrace.Span, los *air.ListOfStructs, row int) error {
 	if err != nil {
 		return err
 	}
-	attrs, err := los.ListOfStructsByName(row, constants.ATTRIBUTES)
+	attrs, err := los.ListOfStructsByName(constants.ATTRIBUTES, row)
 	if err != nil {
 		return err
 	}
@@ -191,8 +214,9 @@ func SetSpanFrom(span ptrace.Span, los *air.ListOfStructs, row int) error {
 	return nil
 }
 
+// CopyEventsFrom initializes a Span's Events from an Arrow representation.
 func CopyEventsFrom(result ptrace.SpanEventSlice, los *air.ListOfStructs, row int) error {
-	eventLos, err := los.ListOfStructsByName(row, constants.SPAN_EVENTS)
+	eventLos, err := los.ListOfStructsByName(constants.SPAN_EVENTS, row)
 
 	if err != nil {
 		return err
@@ -244,8 +268,9 @@ func CopyEventsFrom(result ptrace.SpanEventSlice, los *air.ListOfStructs, row in
 	return nil
 }
 
+// CopyLinksFrom initializes a Span's Links from an Arrow representation.
 func CopyLinksFrom(result ptrace.SpanLinkSlice, los *air.ListOfStructs, row int) error {
-	linkLos, err := los.ListOfStructsByName(row, constants.SPAN_LINKS)
+	linkLos, err := los.ListOfStructsByName(constants.SPAN_LINKS, row)
 
 	if err != nil {
 		return err

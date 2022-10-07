@@ -432,7 +432,7 @@ func (los *ListOfStructs) ListOfStructsById(row int, fieldId int, fieldName stri
 	}
 }
 
-func (los *ListOfStructs) ListOfStructsByName(row int, name string) (*ListOfStructs, error) {
+func (los *ListOfStructs) ListOfStructsByName(name string, row int) (*ListOfStructs, error) {
 	fieldId, found := los.dt.FieldIdx(name)
 	if !found {
 		return nil, nil
