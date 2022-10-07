@@ -89,9 +89,45 @@ func NewResourceFrom_(listOfStructs *air.ListOfStructs, row int) (pcommon.Resour
 
 	// Attributes
 	attrs, err := air.ListOfStructsFromStruct(resDt, resArr, row, constants.ATTRIBUTES)
-	err = attrs.CopyAttributesFrom(r.Attributes())
-
+	if err != nil {
+		return r, err
+	}
+	if attrs != nil {
+		err = attrs.CopyAttributesFrom(r.Attributes())
+	}
 	return r, err
+}
+
+func NewScopeFrom(listOfStructs *air.ListOfStructs, row int) (pcommon.InstrumentationScope, error) {
+	s := pcommon.NewInstrumentationScope()
+	scopeField, scopeArray, err := listOfStructs.StructArray(constants.SCOPE, row)
+	if err != nil {
+		return s, err
+	}
+	name, err := air.StringFromStruct(scopeField, scopeArray, row, constants.NAME)
+	if err != nil {
+		return s, err
+	}
+	version, err := air.StringFromStruct(scopeField, scopeArray, row, constants.VERSION)
+	if err != nil {
+		return s, err
+	}
+	droppedAttributesCount, err := air.U32FromStruct(scopeField, scopeArray, row, constants.DROPPED_ATTRIBUTES_COUNT)
+	if err != nil {
+		return s, err
+	}
+
+	attrs, err := air.ListOfStructsFromStruct(scopeField, scopeArray, row, constants.ATTRIBUTES)
+	if err != nil {
+		return s, err
+	}
+	if attrs != nil {
+		err = attrs.CopyAttributesFrom(s.Attributes())
+	}
+	s.SetName(name)
+	s.SetVersion(version)
+	s.SetDroppedAttributesCount(droppedAttributesCount)
+	return s, nil
 }
 
 func NewInstrumentationScopeFrom(record arrow.Record, row int, scope string) (pcommon.InstrumentationScope, error) {

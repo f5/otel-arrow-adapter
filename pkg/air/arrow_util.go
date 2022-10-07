@@ -217,7 +217,51 @@ func (los *ListOfStructs) End() int {
 	return los.end
 }
 
-func (los *ListOfStructs) StringField(name string, row int) (string, error) {
+func (los *ListOfStructs) FieldIdx(name string) (int, bool) {
+	return los.dt.FieldIdx(name)
+}
+
+func (los *ListOfStructs) StringFieldById(fieldId int, row int) (string, error) {
+	column := los.arr.Field(fieldId)
+	return StringFromArray(column, row)
+}
+
+func (los *ListOfStructs) U32FieldById(fieldId int, row int) (uint32, error) {
+	column := los.arr.Field(fieldId)
+	return U32FromArray(column, row)
+}
+
+func (los *ListOfStructs) U64FieldById(fieldId int, row int) (uint64, error) {
+	column := los.arr.Field(fieldId)
+	return U64FromArray(column, row)
+}
+
+func (los *ListOfStructs) I32FieldById(fieldId int, row int) (int32, error) {
+	column := los.arr.Field(fieldId)
+	return I32FromArray(column, row)
+}
+
+func (los *ListOfStructs) I64FieldById(fieldId int, row int) (int64, error) {
+	column := los.arr.Field(fieldId)
+	return I64FromArray(column, row)
+}
+
+func (los *ListOfStructs) F64FieldById(fieldId int, row int) (float64, error) {
+	column := los.arr.Field(fieldId)
+	return F64FromArray(column, row)
+}
+
+func (los *ListOfStructs) BoolFieldById(fieldId int, row int) (bool, error) {
+	column := los.arr.Field(fieldId)
+	return BoolFromArray(column, row)
+}
+
+func (los *ListOfStructs) BinaryFieldById(fieldId int, row int) ([]byte, error) {
+	column := los.arr.Field(fieldId)
+	return BinaryFromArray(column, row)
+}
+
+func (los *ListOfStructs) StringFieldByName(name string, row int) (string, error) {
 	fieldId, found := los.dt.FieldIdx(name)
 	if !found {
 		return "", nil
@@ -226,7 +270,34 @@ func (los *ListOfStructs) StringField(name string, row int) (string, error) {
 	return StringFromArray(column, row)
 }
 
-func (los *ListOfStructs) I64Field(name string, row int) (int64, error) {
+func (los *ListOfStructs) U32FieldByName(name string, row int) (uint32, error) {
+	fieldId, found := los.dt.FieldIdx(name)
+	if !found {
+		return 0, nil
+	}
+	column := los.arr.Field(fieldId)
+	return U32FromArray(column, row)
+}
+
+func (los *ListOfStructs) U64FieldByName(name string, row int) (uint64, error) {
+	fieldId, found := los.dt.FieldIdx(name)
+	if !found {
+		return 0, nil
+	}
+	column := los.arr.Field(fieldId)
+	return U64FromArray(column, row)
+}
+
+func (los *ListOfStructs) I32FieldByName(name string, row int) (int32, error) {
+	fieldId, found := los.dt.FieldIdx(name)
+	if !found {
+		return 0, nil
+	}
+	column := los.arr.Field(fieldId)
+	return I32FromArray(column, row)
+}
+
+func (los *ListOfStructs) I64FieldByName(name string, row int) (int64, error) {
 	fieldId, found := los.dt.FieldIdx(name)
 	if !found {
 		return 0, nil
@@ -235,7 +306,7 @@ func (los *ListOfStructs) I64Field(name string, row int) (int64, error) {
 	return I64FromArray(column, row)
 }
 
-func (los *ListOfStructs) F64Field(name string, row int) (float64, error) {
+func (los *ListOfStructs) F64FieldByName(name string, row int) (float64, error) {
 	fieldId, found := los.dt.FieldIdx(name)
 	if !found {
 		return 0.0, nil
@@ -244,7 +315,7 @@ func (los *ListOfStructs) F64Field(name string, row int) (float64, error) {
 	return F64FromArray(column, row)
 }
 
-func (los *ListOfStructs) BoolField(name string, row int) (bool, error) {
+func (los *ListOfStructs) BoolFieldByName(name string, row int) (bool, error) {
 	fieldId, found := los.dt.FieldIdx(name)
 	if !found {
 		return false, nil
@@ -253,7 +324,7 @@ func (los *ListOfStructs) BoolField(name string, row int) (bool, error) {
 	return BoolFromArray(column, row)
 }
 
-func (los *ListOfStructs) BinaryField(name string, row int) ([]byte, error) {
+func (los *ListOfStructs) BinaryFieldByName(name string, row int) ([]byte, error) {
 	fieldId, found := los.dt.FieldIdx(name)
 	if !found {
 		return nil, nil
@@ -279,10 +350,14 @@ func (los *ListOfStructs) StructArray(name string, row int) (*arrow.StructType, 
 	}
 }
 
+func (los *ListOfStructs) IsNull(row int) bool {
+	return los.arr.IsNull(row)
+}
+
 func (los *ListOfStructs) CopyAttributesFrom(attr pcommon.Map) error {
 	attr.EnsureCapacity(los.end - los.start)
 	for i := los.start; i < los.end; i++ {
-		key, err := los.StringField("key", i)
+		key, err := los.StringFieldByName("key", i)
 		if err != nil {
 			return err
 		}
@@ -296,31 +371,31 @@ func (los *ListOfStructs) CopyAttributesFrom(attr pcommon.Map) error {
 		// TODO replace field name strings with constants
 		switch sig {
 		case common.STRING_SIG:
-			value, err := los.StringField("string", i)
+			value, err := los.StringFieldByName("string", i)
 			if err != nil {
 				return err
 			}
 			attr.PutString(key, value)
 		case common.BINARY_SIG:
-			value, err := los.BinaryField("binary", i)
+			value, err := los.BinaryFieldByName("binary", i)
 			if err != nil {
 				return err
 			}
 			attr.PutEmptyBytes(key).FromRaw(value)
 		case common.I64_SIG:
-			value, err := los.I64Field("i64", i)
+			value, err := los.I64FieldByName("i64", i)
 			if err != nil {
 				return err
 			}
 			attr.PutInt(key, value)
 		case common.F64_SIG:
-			value, err := los.F64Field("f64", i)
+			value, err := los.F64FieldByName("f64", i)
 			if err != nil {
 				return err
 			}
 			attr.PutDouble(key, value)
 		case common.BOOL_SIG:
-			value, err := los.BoolField("bool", i)
+			value, err := los.BoolFieldByName("bool", i)
 			if err != nil {
 				return err
 			}
@@ -328,6 +403,41 @@ func (los *ListOfStructs) CopyAttributesFrom(attr pcommon.Map) error {
 		}
 	}
 	return nil
+}
+
+func (los *ListOfStructs) ListOfStructsById(row int, fieldId int, fieldName string) (*ListOfStructs, error) {
+	column := los.arr.Field(fieldId)
+	switch listArr := column.(type) {
+	case *array.List:
+		if listArr.IsNull(row) {
+			return nil, nil
+		}
+		switch structArr := listArr.ListValues().(type) {
+		case *array.Struct:
+			dt := structArr.DataType().(*arrow.StructType)
+			start := int(listArr.Offsets()[row])
+			end := int(listArr.Offsets()[row+1])
+
+			return &ListOfStructs{
+				dt:    dt,
+				arr:   structArr,
+				start: start,
+				end:   end,
+			}, nil
+		default:
+			return nil, fmt.Errorf("field %q is not a list of structs", fieldName)
+		}
+	default:
+		return nil, fmt.Errorf("field %q is not a list", fieldName)
+	}
+}
+
+func (los *ListOfStructs) ListOfStructsByName(row int, name string) (*ListOfStructs, error) {
+	fieldId, found := los.dt.FieldIdx(name)
+	if !found {
+		return nil, nil
+	}
+	return los.ListOfStructsById(row, fieldId, name)
 }
 
 func ListOfStructsFromStruct(fieldType *arrow.StructType, structArr *array.Struct, row int, name string) (*ListOfStructs, error) {
@@ -576,6 +686,18 @@ func StringFromStruct(fieldType *arrow.StructType, arr arrow.Array, row int, col
 		return StringFromArray(structArr.Field(id), row)
 	} else {
 		return "", fmt.Errorf("column array is not of type struct")
+	}
+}
+
+func I32FromStruct(fieldType *arrow.StructType, arr arrow.Array, row int, column string) (int32, error) {
+	if structArr := arr.(*array.Struct); structArr != nil {
+		_, id, found := FieldOfStruct(fieldType, column)
+		if !found {
+			return 0, nil
+		}
+		return I32FromArray(structArr.Field(id), row)
+	} else {
+		return 0, fmt.Errorf("column array is not of type struct")
 	}
 }
 

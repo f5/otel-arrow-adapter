@@ -34,12 +34,6 @@ type resourceSpanFields struct {
 	schemaUrl  *rfield.Field
 }
 
-type scopeSpanFields struct {
-	scope     *rfield.Field
-	spans     []rfield.Value
-	schemaUrl *rfield.Field
-}
-
 func (r *resourceSpanFields) resourceSpan() rfield.Value {
 	fields := make([]*rfield.Field, 0, 3)
 	if r.resource != nil {
@@ -52,6 +46,12 @@ func (r *resourceSpanFields) resourceSpan() rfield.Value {
 		fields = append(fields, rfield.NewListField(constants.SCOPE_SPANS, rfield.List{Values: r.scopeSpans}))
 	}
 	return rfield.NewStruct(fields)
+}
+
+type scopeSpanFields struct {
+	scope     *rfield.Field
+	spans     []rfield.Value
+	schemaUrl *rfield.Field
 }
 
 func (s *scopeSpanFields) scopeSpan() rfield.Value {
