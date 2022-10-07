@@ -243,7 +243,7 @@ func status(span ptrace.Span) *rfield.Struct {
 	fields := make([]*rfield.Field, 0, 2)
 
 	if span.Status().Code() != 0 {
-		fields = append(fields, rfield.NewI32Field(constants.STATUS, int32(span.Status().Code())))
+		fields = append(fields, rfield.NewI32Field(constants.STATUS_CODE, int32(span.Status().Code())))
 	}
 	if span.Status().Message() != "" {
 		fields = append(fields, rfield.NewStringField(constants.STATUS_MESSAGE, span.Status().Message()))

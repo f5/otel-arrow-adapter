@@ -15,18 +15,18 @@
 package traces
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"testing"
 
-	"github.com/davecgh/go-spew/spew"
+	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/collector/pdata/ptrace/ptraceotlp"
 
 	"otel-arrow-adapter/pkg/air"
 	"otel-arrow-adapter/pkg/air/config"
 	"otel-arrow-adapter/pkg/datagen"
 )
-
-// TODO: implement a series of tests to verify that the conversion from OTLP to Arrow and vice versa is correct.
 
 func TestOtlpToOtlpArrowConversion(t *testing.T) {
 	t.Parallel()
@@ -36,21 +36,50 @@ func TestOtlpToOtlpArrowConversion(t *testing.T) {
 
 	rr := air.NewRecordRepository(cfg)
 	tracesGen := datagen.NewTraceGenerator(datagen.DefaultResourceAttributes(), datagen.DefaultInstrumentationScopes())
-	request := ptraceotlp.NewRequestFromTraces(tracesGen.Generate(10, 100))
 
-	records, err := OtlpTracesToArrowRecords(rr, request.Traces(), cfg)
+	// Generate a random OTLP traces request.
+	initialRequest := ptraceotlp.NewRequestFromTraces(tracesGen.Generate(10, 100))
+
+	expectedJson, err := initialRequest.MarshalJSON()
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	for _, record := range records {
-		fmt.Printf("#rows %d, #cols %d\n", record.NumRows(), record.NumCols())
+	// Convert the OTLP traces request to Arrow.
+	records, err := OtlpTracesToArrowRecords(rr, initialRequest.Traces(), cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
 
+	// Convert the Arrow records back to OTLP.
+	for _, record := range records {
 		traces, err := ArrowRecordToOtlpTraces(record)
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		spew.Dump(traces)
+		assert.Equal(t, 1, len(traces), "there should be exactly one trace in the request")
+		for _, trace := range traces {
+			observedRequest := ptraceotlp.NewRequestFromTraces(trace)
+			observedJson, err := observedRequest.MarshalJSON()
+			if err != nil {
+				t.Fatal(err)
+			}
+			assert.JSONEq(t, string(expectedJson), string(observedJson), "the observed request should be equal to the expected request")
+		}
 	}
+}
+
+func PrettyPrintRequest(request ptraceotlp.Request) error {
+	jsonStr, err := request.MarshalJSON()
+	if err != nil {
+		return err
+	}
+	var prettyJSON bytes.Buffer
+	err = json.Indent(&prettyJSON, jsonStr, "", "  ")
+	if err != nil {
+		return err
+	}
+	fmt.Printf("%s\n", string(prettyJSON.Bytes()))
+	return nil
 }

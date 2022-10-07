@@ -31,7 +31,7 @@ import (
 // TODO: add a reference to the OTEP 0156 section that describes this mapping.
 func ArrowRecordToOtlpTraces(record arrow.Record) ([]ptrace.Traces, error) {
 	rowCount := int(record.NumRows())
-	allTraces := make([]ptrace.Traces, rowCount)
+	allTraces := make([]ptrace.Traces, 0, rowCount)
 
 	for row := 0; row < rowCount; row++ {
 		traces := ptrace.NewTraces()
