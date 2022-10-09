@@ -20,10 +20,11 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"go.opentelemetry.io/collector/pdata/ptrace"
 	"go.opentelemetry.io/collector/pdata/ptrace/ptraceotlp"
 
 	"otel-arrow-adapter/pkg/datagen"
+	"otel-arrow-adapter/pkg/otel/assert"
 )
 
 // TestOtlpToOtlpArrowConversion tests the conversion of OTLP traces to Arrow and back to OTLP.
@@ -37,11 +38,6 @@ func TestOtlpToOtlpArrowConversion(t *testing.T) {
 
 	// Generate a random OTLP traces request.
 	initialRequest := ptraceotlp.NewRequestFromTraces(tracesGen.Generate(10, 100))
-
-	expectedJson, err := initialRequest.MarshalJSON()
-	if err != nil {
-		t.Fatal(err)
-	}
 
 	// Convert the OTLP traces request to Arrow.
 	otlpArrowProducer := NewOtlpArrowProducer()
@@ -58,15 +54,7 @@ func TestOtlpToOtlpArrowConversion(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		assert.Equal(t, 1, len(traces), "there should be exactly one trace in the request")
-		for _, trace := range traces {
-			observedRequest := ptraceotlp.NewRequestFromTraces(trace)
-			observedJson, err := observedRequest.MarshalJSON()
-			if err != nil {
-				t.Fatal(err)
-			}
-			assert.JSONEq(t, string(expectedJson), string(observedJson), "the observed request should be equal to the expected request")
-		}
+		assert.Equiv(t, []ptrace.Traces{initialRequest.Traces()}, traces)
 	}
 }
 
