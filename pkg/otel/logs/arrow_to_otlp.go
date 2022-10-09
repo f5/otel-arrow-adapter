@@ -38,7 +38,7 @@ func ArrowRecordsToOtlpLogs(record arrow.Record) (plog.Logs, error) {
 
 	numRows := int(record.NumRows())
 	for i := 0; i < numRows; i++ {
-		resource, err := common.NewResourceFrom(record, i)
+		resource, err := common.NewResourceFromOld(record, i)
 		if err != nil {
 			return request, err
 		}

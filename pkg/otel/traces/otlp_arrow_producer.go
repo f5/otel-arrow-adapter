@@ -15,6 +15,7 @@
 package traces
 
 import (
+	"io"
 	"strings"
 
 	"github.com/apache/arrow/go/v9/arrow"
@@ -35,9 +36,10 @@ type OtlpArrowProducer struct {
 }
 
 // NewOtlpArrowProducer creates a new OtlpArrowProducer with the default configuration.
+// Note: the default attribute encoding is AttributesAsListStructs
 func NewOtlpArrowProducer() *OtlpArrowProducer {
 	cfg := config.NewUint16DefaultConfig()
-	cfg.Attribute.Encoding = config.AttributesAsListStructs // TODO should become the default configuration.
+	cfg.Attribute.Encoding = config.AttributesAsListStructs
 
 	return &OtlpArrowProducer{
 		cfg: cfg,
@@ -48,23 +50,113 @@ func NewOtlpArrowProducer() *OtlpArrowProducer {
 // NewOtlpArrowProducerWith creates a new OtlpArrowProducer with the given configuration.
 func NewOtlpArrowProducerWith(cfg *config.Config) *OtlpArrowProducer {
 	return &OtlpArrowProducer{
-		rr: air.NewRecordRepository(cfg),
+		cfg: cfg,
+		rr:  air.NewRecordRepository(cfg),
 	}
 }
 
-// ProduceFrom produces Arrow records from the given OTLP traces.
-func (e *OtlpArrowProducer) ProduceFrom(traces ptrace.Traces) (records []arrow.Record, err error) {
-	records, err = OtlpTracesToArrowRecords(e.rr, traces, e.cfg)
-	return
+// ProduceFrom produces Arrow records from the given OTLP traces. The generated schemas of the Arrow records follow
+// the hierarchical organization of the trace protobuf structure.
+//
+// Resource signature = resource attributes sig + dropped attributes count sig + schema URL sig
+//
+// More details can be found in the OTEL 0156 section XYZ.
+// TODO: add a reference to the OTEP 0156 section that describes this mapping.
+func (p *OtlpArrowProducer) ProduceFrom(traces ptrace.Traces) ([]arrow.Record, error) {
+	// Map maintaining groups of scope spans per resource span signature.
+	// A resource span signature is based on the resource attributes,
+	// the dropped attributes count and the schema URL
+	resSpansPerSig := make(map[string]*ScopeSpanGroup)
+
+	for rsIdx := 0; rsIdx < traces.ResourceSpans().Len(); rsIdx++ {
+		resourceSpans := traces.ResourceSpans().At(rsIdx)
+
+		// Add resource fields (attributes and dropped attributes count)
+		resField, resSig := common.ResourceFieldWithSig(resourceSpans.Resource(), p.cfg)
+
+		// Add schema URL
+		var schemaUrl *rfield.Field
+		if resourceSpans.SchemaUrl() != "" {
+			schemaUrl = rfield.NewStringField(constants.SCHEMA_URL, resourceSpans.SchemaUrl())
+			resSig += ",schema_url:" + resourceSpans.SchemaUrl()
+		}
+
+		// TODO explore group span per attribute sig to minimize overall schema complexity
+
+		// Group spans per scope span signature
+		spansPerScopeSpanSig := GroupSpans(resourceSpans, p.cfg)
+
+		// Create a new entry in the map if the signature is not already present
+		resSpanFields := resSpansPerSig[resSig]
+		if resSpanFields == nil {
+			resSpanFields = NewScopeSpanGroup(resField, schemaUrl)
+			resSpansPerSig[resSig] = resSpanFields
+		}
+
+		// Merge spans sharing the same scope span signature
+		for sig, ss := range spansPerScopeSpanSig {
+			scopeSpan := resSpanFields.scopeSpans[sig]
+			if scopeSpan == nil {
+				resSpanFields.scopeSpans[sig] = ss
+			} else {
+				scopeSpan.spans = append(scopeSpan.spans, ss.spans...)
+			}
+		}
+	}
+
+	// TODO Other way to explore -> create a single Arrow record from a list of resource spans.
+	// All resource spans sharing the same signature are represented as an AIR record.
+	for _, resSpanFields := range resSpansPerSig {
+		record := air.NewRecord()
+		record.ListField(constants.RESOURCE_SPANS, rfield.List{Values: []rfield.Value{
+			resSpanFields.ResourceSpan(),
+		}})
+		p.rr.AddRecord(record)
+	}
+	//for _, resSpanFields := range resSpansPerSig {
+	//	resSpans := resSpanFields.ResourceSpans()
+	//	for _, resSpan := range resSpans {
+	//		record := air.NewRecord()
+	//		record.ListField(constants.RESOURCE_SPANS, rfield.List{Values: []rfield.Value{
+	//			resSpan,
+	//		}})
+	//		p.rr.AddRecord(record)
+	//	}
+	//}
+
+	// Build all Arrow records from the AIR records
+	records, err := p.rr.BuildRecords()
+	if err != nil {
+		return nil, err
+	}
+
+	return records, nil
 }
 
-type resourceSpanFields struct {
+// DumpMetadata dumps the metadata of the underlying AIR record repository.
+func (p *OtlpArrowProducer) DumpMetadata(writer io.Writer) {
+	p.rr.DumpMetadata(writer)
+}
+
+// ScopeSpanGroup groups a set of scope spans for a specific resource and schema url.
+type ScopeSpanGroup struct {
 	resource   *rfield.Field
-	scopeSpans []rfield.Value
 	schemaUrl  *rfield.Field
+	scopeSpans map[string]*SpanGroup
 }
 
-func (r *resourceSpanFields) resourceSpan() rfield.Value {
+// NewScopeSpanGroup creates a new scope span group for the given resource and schema url.
+func NewScopeSpanGroup(resource *rfield.Field, schemaUrl *rfield.Field) *ScopeSpanGroup {
+	return &ScopeSpanGroup{
+		resource:   resource,
+		scopeSpans: make(map[string]*SpanGroup),
+		schemaUrl:  schemaUrl,
+	}
+}
+
+// ResourceSpan builds an AIR representation of the current resource span for this group of scope spans.
+// Resource span = resource fields + schema URL + scope spans
+func (r *ScopeSpanGroup) ResourceSpan() rfield.Value {
 	fields := make([]*rfield.Field, 0, 3)
 	if r.resource != nil {
 		fields = append(fields, r.resource)
@@ -73,18 +165,42 @@ func (r *resourceSpanFields) resourceSpan() rfield.Value {
 		fields = append(fields, r.schemaUrl)
 	}
 	if len(r.scopeSpans) > 0 {
-		fields = append(fields, rfield.NewListField(constants.SCOPE_SPANS, rfield.List{Values: r.scopeSpans}))
+		scopeSpans := make([]rfield.Value, 0, len(r.scopeSpans))
+		for _, ss := range r.scopeSpans {
+			scopeSpans = append(scopeSpans, ss.ScopeSpan())
+		}
+		fields = append(fields, rfield.NewListField(constants.SCOPE_SPANS, rfield.List{Values: scopeSpans}))
 	}
 	return rfield.NewStruct(fields)
 }
 
-type scopeSpanFields struct {
-	scope     *rfield.Field
-	spans     []rfield.Value
-	schemaUrl *rfield.Field
+func (r *ScopeSpanGroup) ResourceSpans() []rfield.Value {
+	resSpans := make([]rfield.Value, 0, len(r.scopeSpans))
+
+	for _, ss := range r.scopeSpans {
+		fields := make([]*rfield.Field, 0, 3)
+		if r.resource != nil {
+			fields = append(fields, r.resource)
+		}
+		if r.schemaUrl != nil {
+			fields = append(fields, r.schemaUrl)
+		}
+		fields = append(fields, rfield.NewListField(constants.SCOPE_SPANS, rfield.List{Values: []rfield.Value{ss.ScopeSpan()}}))
+		resSpans = append(resSpans, rfield.NewStruct(fields))
+	}
+	return resSpans
 }
 
-func (s *scopeSpanFields) scopeSpan() rfield.Value {
+// SpanGroup groups a set of spans for a specific scope span and schema url.
+type SpanGroup struct {
+	scope     *rfield.Field
+	schemaUrl *rfield.Field
+	spans     []rfield.Value
+}
+
+// ScopeSpan builds an AIR representation of the current scope span for this group of spans.
+// Scope span = scope fields + schema URL + spans
+func (s *SpanGroup) ScopeSpan() rfield.Value {
 	fields := make([]*rfield.Field, 0, 3)
 	if s.scope != nil {
 		fields = append(fields, s.scope)
@@ -99,71 +215,10 @@ func (s *scopeSpanFields) scopeSpan() rfield.Value {
 	return rfield.NewStruct(fields)
 }
 
-// OtlpTracesToArrowRecords converts an OTLP traces to one or more Arrow records.
-// TODO: add a reference to the OTEP 0156 section that describes this mapping.
-func OtlpTracesToArrowRecords(rr *air.RecordRepository, request ptrace.Traces, cfg *config.Config) ([]arrow.Record, error) {
-	// Map used to merge all scope spans sharing the same resource span signature.
-	// A resource span signature is based on the resource attributes, the dropped attributes count and the schema URL
-	resSpansPerSig := make(map[string]*resourceSpanFields)
-
-	for i := 0; i < request.ResourceSpans().Len(); i++ {
-		resourceSpans := request.ResourceSpans().At(i)
-
-		// Add resource fields (attributes and dropped attributes count)
-		resField, resSig := common.ResourceFieldWithSig(resourceSpans.Resource(), cfg)
-
-		// Add schema URL
-		var schemaUrl *rfield.Field
-		if resourceSpans.SchemaUrl() != "" {
-			schemaUrl = rfield.NewStringField(constants.SCHEMA_URL, resourceSpans.SchemaUrl())
-			resSig += ",schema_url:" + resourceSpans.SchemaUrl()
-		}
-
-		// Create a new entry in the map if the signature is not already present
-		resSpanFields := resSpansPerSig[resSig]
-		if resSpanFields == nil {
-			resSpanFields = &resourceSpanFields{
-				resource:   resField,
-				scopeSpans: make([]rfield.Value, 0, 16),
-				schemaUrl:  schemaUrl,
-			}
-			resSpansPerSig[resSig] = resSpanFields
-		}
-
-		// Group scope spans per signature
-		scopeSpansPerSig := groupScopeSpansPerSig(resourceSpans, cfg)
-
-		// TODO Merge spans sharing the same resource spans and scope spans signatures.
-
-		// Add scope spans
-		for _, scopeSpans := range scopeSpansPerSig {
-			resSpanFields.scopeSpans = append(resSpanFields.scopeSpans, scopeSpans.scopeSpan())
-		}
-	}
-
-	// TODO Other way to explore -> create a single Arrow record from a list of resource spans.
-	// All resource spans sharing the same signature are represented as an AIR record.
-	for _, resSpanFields := range resSpansPerSig {
-		record := air.NewRecord()
-		record.ListField(constants.RESOURCE_SPANS, rfield.List{Values: []rfield.Value{
-			resSpanFields.resourceSpan(),
-		}})
-		rr.AddRecord(record)
-	}
-
-	// Build all Arrow records from the AIR records
-	records, err := rr.BuildRecords()
-	if err != nil {
-		return nil, err
-	}
-
-	return records, nil
-}
-
-// groupScopeSpansPerSig groups spans per signature.
+// GroupSpans groups spans per signature.
 // A scope span signature is based on the scope attributes, the dropped attributes count and the schema URL.
-func groupScopeSpansPerSig(resourceSpans ptrace.ResourceSpans, cfg *config.Config) (scopeSpansPerSig map[string]*scopeSpanFields) {
-	scopeSpansPerSig = make(map[string]*scopeSpanFields)
+func GroupSpans(resourceSpans ptrace.ResourceSpans, cfg *config.Config) (scopeSpansPerSig map[string]*SpanGroup) {
+	scopeSpansPerSig = make(map[string]*SpanGroup)
 	for j := 0; j < resourceSpans.ScopeSpans().Len(); j++ {
 		scopeSpans := resourceSpans.ScopeSpans().At(j)
 
@@ -184,7 +239,7 @@ func groupScopeSpansPerSig(resourceSpans ptrace.ResourceSpans, cfg *config.Confi
 		ssSig := sig.String()
 		ssFields := scopeSpansPerSig[ssSig]
 		if ssFields == nil {
-			ssFields = &scopeSpanFields{
+			ssFields = &SpanGroup{
 				scope:     scopeField,
 				spans:     make([]rfield.Value, 0, 16),
 				schemaUrl: schemaField,

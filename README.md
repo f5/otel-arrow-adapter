@@ -61,7 +61,7 @@ The integration of this package with the OpenTelemetry Collector is done in the 
 
 ### Traces 
 
-Some utility functions in package `pkg/otel/traces` than can be used to convert OTLP traces to/from OTLP Arrow traces:
+Below some utility functions in package `pkg/otel/traces` than can be used to convert OTLP traces to/from OTLP Arrow traces:
 * `OtlpArrowProducer` takes OTLP Traces and produces OTLP Arrow Traces.
 * `OtlpProducer` takes OTLP Arrow Traces and produces OTLP Traces.
 

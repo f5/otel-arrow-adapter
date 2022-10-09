@@ -60,7 +60,7 @@ func ArrowRecordToOtlpTraces(record arrow.Record) ([]ptrace.Traces, error) {
 		for resSpanIdx := arrowResSpans.Start(); resSpanIdx < arrowResSpans.End(); resSpanIdx++ {
 			resSpan := traces.ResourceSpans().AppendEmpty()
 
-			resource, err := common.NewResourceFrom_(arrowResSpans, resSpanIdx)
+			resource, err := common.NewResourceFrom(arrowResSpans, resSpanIdx)
 			if err != nil {
 				return allTraces, err
 			}

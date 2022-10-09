@@ -47,7 +47,8 @@ func AttributesId(attrs pcommon.Map) string {
 	return attrsId.String()
 }
 
-func NewResourceFrom(record arrow.Record, row int) (pcommon.Resource, error) {
+// TODO replace this implementation with the one used for traces.
+func NewResourceFromOld(record arrow.Record, row int) (pcommon.Resource, error) {
 	r := pcommon.NewResource()
 	resourceField, resourceArray, err := air.StructFromRecord(record, constants.RESOURCE)
 	if err != nil {
@@ -70,24 +71,22 @@ func NewResourceFrom(record arrow.Record, row int) (pcommon.Resource, error) {
 	return r, nil
 }
 
-// TODO change name to NewResourceFrom once the existing NewResourceFrom has been replace with this one
-
-// NewResourceFrom_ creates a new Resource from the given array and row.
-func NewResourceFrom_(listOfStructs *air.ListOfStructs, row int) (pcommon.Resource, error) {
+// NewResourceFrom creates a new Resource from the given array and row.
+func NewResourceFrom(resList *air.ListOfStructs, row int) (pcommon.Resource, error) {
 	r := pcommon.NewResource()
-	resDt, resArr, err := listOfStructs.StructArray(constants.RESOURCE, row)
+	resDt, resArr, err := resList.StructArray(constants.RESOURCE, row)
 	if err != nil {
 		return r, err
 	}
 
-	// Dropped attributes count
+	// Read dropped attributes count
 	droppedAttributesCount, err := air.U32FromStruct(resDt, resArr, row, constants.DROPPED_ATTRIBUTES_COUNT)
 	if err != nil {
 		return r, err
 	}
 	r.SetDroppedAttributesCount(droppedAttributesCount)
 
-	// Attributes
+	// Read attributes
 	attrs, err := air.ListOfStructsFromStruct(resDt, resArr, row, constants.ATTRIBUTES)
 	if err != nil {
 		return r, err
@@ -95,6 +94,7 @@ func NewResourceFrom_(listOfStructs *air.ListOfStructs, row int) (pcommon.Resour
 	if attrs != nil {
 		err = attrs.CopyAttributesFrom(r.Attributes())
 	}
+
 	return r, err
 }
 
