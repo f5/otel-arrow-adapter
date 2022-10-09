@@ -21,22 +21,33 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"go.opentelemetry.io/collector/pdata/ptrace"
-	"go.opentelemetry.io/collector/pdata/ptrace/ptraceotlp"
 )
 
-func Equiv(t *testing.T, expected []ptrace.Traces, actual []ptrace.Traces) {
-	expectedVPaths, err := VPaths(expected)
+// Equiv asserts that two arrays of json.Marshaler are equivalent. Metrics, logs, and traces requests implement
+// json.Marshaler and are considered equivalent if they have the same set of vPaths. A vPath is a path to a value
+// in a json object. For example the vPath "resource.attributes.service.name=myservice" refers to the value "myservice"
+// in the json object {"resource":{"attributes":{"service":{"name":"myservice"}}}}.
+//
+// The structure of the expected and actual json objects does not need to be exactly the same. For example, the following
+// json objects are considered equivalent:
+// [{"resource":{"attributes":{"service":"myservice", "version":"1.0"}}}]
+// [{"resource":{"attributes":{"service":"myservice"}}}, {"resource":{"attributes":{"version":"1.0"}}}]
+//
+// This concept of equivalence is useful for testing the conversion OTLP to/from OTLP Arrow as this conversion doesn't
+// necessarily preserve the structure of the original OTLP entity. Resource spans or scope spans can be split or merged
+// during the conversion if the semantic is preserved.
+func Equiv(t *testing.T, expected []json.Marshaler, actual []json.Marshaler) {
+	expectedVPaths, err := vPaths(expected)
 	if err != nil {
 		assert.FailNow(t, "Failed to convert expected traces to canonical representation", err)
 	}
-	actualVPaths, err := VPaths(actual)
+	actualVPaths, err := vPaths(actual)
 	if err != nil {
 		assert.FailNow(t, "Failed to convert actual traces to canonical representation", err)
 	}
 
-	missingExpectedVPaths := Difference(expectedVPaths, actualVPaths)
-	missingActualVPaths := Difference(actualVPaths, expectedVPaths)
+	missingExpectedVPaths := difference(expectedVPaths, actualVPaths)
+	missingActualVPaths := difference(actualVPaths, expectedVPaths)
 
 	if len(missingExpectedVPaths) > 0 {
 		fmt.Printf("Missing expected vPaths:\n")
@@ -55,25 +66,26 @@ func Equiv(t *testing.T, expected []ptrace.Traces, actual []ptrace.Traces) {
 	}
 }
 
-func NotEquiv(t *testing.T, expected []ptrace.Traces, actual []ptrace.Traces) {
-	expectedVPaths, err := VPaths(expected)
+// NotEquiv asserts that two arrays of json.Marshaler are not equivalent. See Equiv for the definition of equivalence.
+func NotEquiv(t *testing.T, expected []json.Marshaler, actual []json.Marshaler) {
+	expectedVPaths, err := vPaths(expected)
 	if err != nil {
 		assert.FailNow(t, "Failed to convert expected traces to canonical representation", err)
 	}
-	actualVPaths, err := VPaths(actual)
+	actualVPaths, err := vPaths(actual)
 	if err != nil {
 		assert.FailNow(t, "Failed to convert actual traces to canonical representation", err)
 	}
 
-	missingExpectedVPaths := Difference(expectedVPaths, actualVPaths)
-	missingActualVPaths := Difference(actualVPaths, expectedVPaths)
+	missingExpectedVPaths := difference(expectedVPaths, actualVPaths)
+	missingActualVPaths := difference(actualVPaths, expectedVPaths)
 
 	if len(missingExpectedVPaths) == 0 && len(missingActualVPaths) == 0 {
 		assert.FailNow(t, "Traces should not be equivalent")
 	}
 }
 
-func Difference(a, b []string) []string {
+func difference(a, b []string) []string {
 	mb := make(map[string]struct{}, len(b))
 	for _, x := range b {
 		mb[x] = struct{}{}
@@ -87,15 +99,15 @@ func Difference(a, b []string) []string {
 	return diff
 }
 
-func VPaths(traces []ptrace.Traces) ([]string, error) {
-	jsonTraces, err := ToUnstructuredJson(traces)
+func vPaths(marshaler []json.Marshaler) ([]string, error) {
+	jsonTraces, err := jsonify(marshaler)
 	if err != nil {
 		return nil, err
 	}
 	vPathMap := make(map[string]bool)
 
 	for i := 0; i < len(jsonTraces); i++ {
-		ExportAllVPaths(jsonTraces[i], "", vPathMap)
+		exportAllVPaths(jsonTraces[i], "", vPathMap)
 	}
 
 	vPaths := make([]string, 0, len(vPathMap))
@@ -106,7 +118,7 @@ func VPaths(traces []ptrace.Traces) ([]string, error) {
 	return vPaths, nil
 }
 
-func ExportAllVPaths(traces map[string]interface{}, currentVPath string, vPaths map[string]bool) {
+func exportAllVPaths(traces map[string]interface{}, currentVPath string, vPaths map[string]bool) {
 	for key, value := range traces {
 		localVPath := key
 		if currentVPath != "" {
@@ -116,7 +128,7 @@ func ExportAllVPaths(traces map[string]interface{}, currentVPath string, vPaths 
 		case []interface{}:
 			for i := 0; i < len(v); i++ {
 				arrayVPath := localVPath + fmt.Sprintf("[%d]", i)
-				ExportAllVPaths(v[i].(map[string]interface{}), arrayVPath, vPaths)
+				exportAllVPaths(v[i].(map[string]interface{}), arrayVPath, vPaths)
 			}
 		case []string:
 			vPaths[localVPath+"="+strings.Join(v, ",")] = true
@@ -127,7 +139,7 @@ func ExportAllVPaths(traces map[string]interface{}, currentVPath string, vPaths 
 		case []bool:
 			vPaths[localVPath+"="+strings.Join(strings.Fields(fmt.Sprint(v)), ",")] = true
 		case map[string]interface{}:
-			ExportAllVPaths(v, localVPath, vPaths)
+			exportAllVPaths(v, localVPath, vPaths)
 		case string:
 			vPaths[localVPath+"="+v] = true
 		case int64:
@@ -140,11 +152,11 @@ func ExportAllVPaths(traces map[string]interface{}, currentVPath string, vPaths 
 	}
 }
 
-func ToUnstructuredJson(traces []ptrace.Traces) ([]map[string]interface{}, error) {
-	jsonTraces := make([]map[string]interface{}, 0, len(traces))
+func jsonify(marshaler []json.Marshaler) ([]map[string]interface{}, error) {
+	jsonTraces := make([]map[string]interface{}, 0, len(marshaler))
 
-	for i := 0; i < len(traces); i++ {
-		jsonBytes, err := ptraceotlp.NewRequestFromTraces(traces[i]).MarshalJSON()
+	for i := 0; i < len(marshaler); i++ {
+		jsonBytes, err := marshaler[i].MarshalJSON()
 		if err != nil {
 			return nil, err
 		}

@@ -37,11 +37,11 @@ func TestOtlpToOtlpArrowConversion(t *testing.T) {
 	tracesGen := datagen.NewTraceGenerator(datagen.DefaultResourceAttributes(), datagen.DefaultInstrumentationScopes())
 
 	// Generate a random OTLP traces request.
-	initialRequest := ptraceotlp.NewRequestFromTraces(tracesGen.Generate(10, 100))
+	expectedRequest := ptraceotlp.NewRequestFromTraces(tracesGen.Generate(10, 100))
 
 	// Convert the OTLP traces request to Arrow.
 	otlpArrowProducer := NewOtlpArrowProducer()
-	records, err := otlpArrowProducer.ProduceFrom(initialRequest.Traces())
+	records, err := otlpArrowProducer.ProduceFrom(expectedRequest.Traces())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -54,8 +54,21 @@ func TestOtlpToOtlpArrowConversion(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		assert.Equiv(t, []ptrace.Traces{initialRequest.Traces()}, traces)
+		actualRequests := make([]json.Marshaler, len(traces))
+		for i, t := range traces {
+			actualRequests[i] = ptraceotlp.NewRequestFromTraces(t)
+		}
+
+		assert.Equiv(t, []json.Marshaler{expectedRequest}, actualRequests)
 	}
+}
+
+func Map(input []ptrace.Traces, f func(traces ptrace.Traces) ptraceotlp.Request) []ptraceotlp.Request {
+	output := make([]ptraceotlp.Request, len(input))
+	for i, v := range input {
+		output[i] = f(v)
+	}
+	return output
 }
 
 func PrettyPrintRequest(request ptraceotlp.Request) error {

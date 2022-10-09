@@ -15,9 +15,11 @@
 package assert
 
 import (
+	"encoding/json"
 	"testing"
 
 	"go.opentelemetry.io/collector/pdata/ptrace"
+	"go.opentelemetry.io/collector/pdata/ptrace/ptraceotlp"
 )
 
 func TestEquiv(t *testing.T) {
@@ -31,13 +33,13 @@ func TestEquiv(t *testing.T) {
 	rs.Resource().Attributes().PutBool("foo4", true)
 	rs.SetSchemaUrl("http://foo.bar")
 
-	expectedTraces := []ptrace.Traces{
-		traces,
+	expectedTraces := []json.Marshaler{
+		ptraceotlp.NewRequestFromTraces(traces),
 	}
 
-	actualTraces := []ptrace.Traces{
-		traces,
-		traces,
+	actualTraces := []json.Marshaler{
+		ptraceotlp.NewRequestFromTraces(traces),
+		ptraceotlp.NewRequestFromTraces(traces),
 	}
 	Equiv(t, expectedTraces, actualTraces)
 
@@ -46,8 +48,8 @@ func TestEquiv(t *testing.T) {
 	rs.Resource().Attributes().PutString("foo", "bar")
 	rs.Resource().Attributes().PutString("baz", "qux")
 	rs.SetSchemaUrl("http://foo.bar")
-	actualTraces = []ptrace.Traces{
-		traces,
+	actualTraces = []json.Marshaler{
+		ptraceotlp.NewRequestFromTraces(traces),
 	}
 	NotEquiv(t, expectedTraces, actualTraces)
 }
