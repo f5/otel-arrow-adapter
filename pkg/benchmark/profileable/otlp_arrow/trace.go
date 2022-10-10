@@ -68,25 +68,11 @@ func (s *TraceProfileable) CreateBatch(_ io.Writer, _, _ int) {
 	// Conversion of OTLP metrics to OTLP Arrow events
 	s.batchEvents = make([]*v1.BatchEvent, 0, len(s.traces))
 	for _, traceReq := range s.traces {
-		records, err := s.otlpArrowProducer.ProduceFrom(traceReq)
+		batchEvents, err := s.producer.BatchEventsFrom(traceReq)
 		if err != nil {
 			panic(err)
 		}
-		for _, record := range records {
-			//fmt.Fprintf(writer, "IPC Message\n")
-			//fmt.Fprintf(writer, "\t- schema id = %s\n", schemaId)
-			//fmt.Fprintf(writer, "\t- record #row = %d\n", record.Column(0).Len())
-			batchEvent, err := s.producer.Produce(batch_event.NewTraceMessage(record, v1.DeliveryType_BEST_EFFORT))
-			if err != nil {
-				panic(err)
-			}
-			//fmt.Fprintf(writer, "\t- batch-id = %s\n", batchEvent.BatchId)
-			//fmt.Fprintf(writer, "\t- sub-stream-id = %s\n", batchEvent.SubStreamId)
-			//for _, p := range batchEvent.OtlpArrowPayloads {
-			//	fmt.Fprintf(writer, "\t- IPC message size = %d\n", len(p.Schema))
-			//}
-			s.batchEvents = append(s.batchEvents, batchEvent)
-		}
+		s.batchEvents = append(s.batchEvents, batchEvents...)
 	}
 }
 func (s *TraceProfileable) Process(io.Writer) string {
@@ -104,6 +90,7 @@ func (s *TraceProfileable) Serialize(io.Writer) ([][]byte, error) {
 	}
 	return buffers, nil
 }
+
 func (s *TraceProfileable) Deserialize(_ io.Writer, buffers [][]byte) {
 	s.batchEvents = make([]*v1.BatchEvent, len(buffers))
 	for i, b := range buffers {

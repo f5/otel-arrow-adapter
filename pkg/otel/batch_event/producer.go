@@ -48,8 +48,8 @@ func NewProducer() *Producer {
 	}
 }
 
-// BatchEventFromTraces produces a BatchEvent message from a ptrace.Traces messages.
-func (p *Producer) BatchEventFromTraces(traces ptrace.Traces) ([]*coleventspb.BatchEvent, error) {
+// BatchEventsFrom produces a BatchEvent message from a ptrace.Traces messages.
+func (p *Producer) BatchEventsFrom(traces ptrace.Traces) ([]*coleventspb.BatchEvent, error) {
 	records, err := p.otlpArrowTracesProducer.ProduceFrom(traces)
 	if err != nil {
 		return nil, err

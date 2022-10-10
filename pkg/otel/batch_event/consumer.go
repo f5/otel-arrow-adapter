@@ -45,8 +45,8 @@ func NewConsumer() *Consumer {
 	}
 }
 
-// TracesFromBatchEvent produces an array of ptrace.Traces from a BatchEvent message.
-func (c *Consumer) TracesFromBatchEvent(batchEvent *coleventspb.BatchEvent) ([]ptrace.Traces, error) {
+// TracesFrom produces an array of ptrace.Traces from a BatchEvent message.
+func (c *Consumer) TracesFrom(batchEvent *coleventspb.BatchEvent) ([]ptrace.Traces, error) {
 	records, err := c.Consume(batchEvent)
 	if err != nil {
 		return nil, err
