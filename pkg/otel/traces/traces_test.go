@@ -15,12 +15,9 @@
 package traces
 
 import (
-	"bytes"
 	"encoding/json"
-	"fmt"
 	"testing"
 
-	"go.opentelemetry.io/collector/pdata/ptrace"
 	"go.opentelemetry.io/collector/pdata/ptrace/ptraceotlp"
 
 	"otel-arrow-adapter/pkg/datagen"
@@ -61,26 +58,4 @@ func TestOtlpToOtlpArrowConversion(t *testing.T) {
 
 		assert.Equiv(t, []json.Marshaler{expectedRequest}, actualRequests)
 	}
-}
-
-func Map(input []ptrace.Traces, f func(traces ptrace.Traces) ptraceotlp.Request) []ptraceotlp.Request {
-	output := make([]ptraceotlp.Request, len(input))
-	for i, v := range input {
-		output[i] = f(v)
-	}
-	return output
-}
-
-func PrettyPrintRequest(request ptraceotlp.Request) error {
-	jsonStr, err := request.MarshalJSON()
-	if err != nil {
-		return err
-	}
-	var prettyJSON bytes.Buffer
-	err = json.Indent(&prettyJSON, jsonStr, "", "  ")
-	if err != nil {
-		return err
-	}
-	fmt.Printf("%s\n", string(prettyJSON.Bytes()))
-	return nil
 }
