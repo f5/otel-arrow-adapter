@@ -22,7 +22,6 @@ import (
 	"github.com/apache/arrow/go/v9/arrow/ipc"
 	"github.com/davecgh/go-spew/spew"
 
-	"github.com/lquerel/otel-arrow-adapter/pkg/air"
 	"github.com/lquerel/otel-arrow-adapter/pkg/air/config"
 	"github.com/lquerel/otel-arrow-adapter/pkg/datagen"
 	"github.com/lquerel/otel-arrow-adapter/pkg/otel/traces"
@@ -33,11 +32,11 @@ func TestIPCWriter(t *testing.T) {
 	t.Parallel()
 
 	cfg := config.NewUint8DefaultConfig()
-	rr := air.NewRecordRepository(cfg)
 	lg := datagen.NewTraceGenerator(datagen.DefaultResourceAttributes(), datagen.DefaultInstrumentationScopes())
 
 	request := lg.Generate(10, 100)
-	records, err := traces.OtlpTracesToArrowRecords(rr, request, cfg)
+	producer := traces.NewOtlpArrowProducerWith(cfg)
+	records, err := producer.ProduceFrom(request)
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}
