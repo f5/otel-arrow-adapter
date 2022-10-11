@@ -24,7 +24,7 @@ import (
 	"github.com/apache/arrow/go/v9/arrow"
 	"github.com/apache/arrow/go/v9/arrow/array"
 
-	"otel-arrow-adapter/pkg/air/common"
+	"github.com/lquerel/otel-arrow-adapter/pkg/air/common"
 )
 
 type SortableField struct {

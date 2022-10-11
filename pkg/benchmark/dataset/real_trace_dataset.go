@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"otel-arrow-adapter/pkg/otel/common"
+	"github.com/lquerel/otel-arrow-adapter/pkg/otel/common"
 	"sort"
 	"strings"
 

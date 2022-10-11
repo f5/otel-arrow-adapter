@@ -22,7 +22,7 @@ import (
 
 	"github.com/apache/arrow/go/v9/arrow/ipc"
 
-	coleventspb "otel-arrow-adapter/api/go.opentelemetry.io/proto/otlp/collector/events/v1"
+	coleventspb "github.com/lquerel/otel-arrow-adapter/api/collector/arrow/v1"
 )
 
 type Consumer struct {
