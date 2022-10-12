@@ -320,7 +320,7 @@ func CopyLinksFrom(result ptrace.SpanLinkSlice, los *air.ListOfStructs, row int)
 			if err != nil {
 				return err
 			}
-			link.SetTraceState(ptrace.TraceState(value))
+			link.TraceStateStruct().FromRaw(value)
 		}
 		if attributesFound {
 			attrs, err := linkLos.ListOfStructsById(linkIdx, attributesId, constants.ATTRIBUTES)
