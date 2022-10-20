@@ -15,6 +15,7 @@
 package air_test
 
 import (
+	"bytes"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -265,7 +266,9 @@ func TestRecordSchemaId(t *testing.T) {
 	})
 
 	record.Normalize()
-	id := record.SchemaId()
+	var schemaIdBuf bytes.Buffer
+	record.SchemaId(&schemaIdBuf)
+	id := string(schemaIdBuf.Bytes())
 	expectedSchemaId := "a:{b:Str,c:{a:[{f2_3_4_1:Str,f2_3_4_2:I8,f2_3_4_3:Str}],t:Str,x:[I64],y:[Str],z:[I64]},e:Str},b:Str"
 	if id != expectedSchemaId {
 		t.Errorf("Expected: %s\nGot: %s", expectedSchemaId, id)
@@ -386,7 +389,9 @@ func TestRecordWithNestedListSchemaId(t *testing.T) {
 	record := air.NewRecord()
 	record.ListField("resource_spans", resourceSpans)
 	record.Normalize()
-	id := record.SchemaId()
+	var schemaIdBuf bytes.Buffer
+	record.SchemaId(&schemaIdBuf)
+	id := string(schemaIdBuf.Bytes())
 
 	if id != "resource_spans:[{schema_url:Str,spans:[{end_time:U64,events:[{a:Str,b:Str,c:Str,d:Str,ts:U64}],flags:I32,name:Str,parent_span_id:Bin,span_id:Bin,start_time:U64,trace_state:Str}]}]" {
 		t.Errorf("invalid schema id")
@@ -502,7 +507,10 @@ func TestRecordWithNestedListSchemaId(t *testing.T) {
 	record = air.NewRecord()
 	record.ListField("resource_spans", resourceSpans)
 	record.Normalize()
-	id = record.SchemaId()
+
+	schemaIdBuf.Reset()
+	record.SchemaId(&schemaIdBuf)
+	id = string(schemaIdBuf.Bytes())
 
 	if id != "resource_spans:[{schema_url:Str,spans:[{end_time:U64,events:[{a:Str,b:Str,c:Str,d:Str,ts:U64}],flags:I32,name:Str,parent_span_id:Bin,span_id:Bin,start_time:U64,trace_state:Str}]}]" {
 		t.Errorf("invalid schema id")

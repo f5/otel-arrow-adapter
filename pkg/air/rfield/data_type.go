@@ -15,6 +15,7 @@
 package rfield
 
 import (
+	"bytes"
 	"sort"
 	"strings"
 
@@ -48,7 +49,7 @@ type NameType struct {
 }
 
 // WriteDataTypeSignature writes the canonical arrow.DataType signature of the data type.
-func WriteDataTypeSignature(dataType arrow.DataType, sig *strings.Builder) {
+func WriteDataTypeSignature(dataType arrow.DataType, sig *bytes.Buffer) {
 	switch dataType.ID() {
 	case arrow.BOOL:
 		sig.WriteString(common.BOOL_SIG)
@@ -77,9 +78,9 @@ func WriteDataTypeSignature(dataType arrow.DataType, sig *strings.Builder) {
 	case arrow.BINARY:
 		sig.WriteString(common.BINARY_SIG)
 	case arrow.LIST:
-		sig.WriteString("[")
+		sig.WriteByte('[')
 		WriteDataTypeSignature(dataType.(*arrow.ListType).Elem(), sig)
-		sig.WriteString("]")
+		sig.WriteByte(']')
 	case arrow.STRUCT:
 		structDataType := dataType.(*arrow.StructType)
 		fields := make([]*NameType, 0, len(structDataType.Fields()))
@@ -96,9 +97,9 @@ func WriteDataTypeSignature(dataType arrow.DataType, sig *strings.Builder) {
 		for _, field := range fields {
 			fieldSigs = append(fieldSigs, field.Name+":"+field.Type)
 		}
-		sig.WriteString("{")
+		sig.WriteByte('{')
 		sig.WriteString(strings.Join(fieldSigs, ","))
-		sig.WriteString("}")
+		sig.WriteByte('}')
 	case arrow.DATE32, arrow.DATE64, arrow.DECIMAL128, arrow.DECIMAL256, arrow.DENSE_UNION, arrow.SPARSE_UNION,
 		arrow.INTERVAL, arrow.TIME32, arrow.TIME64, arrow.DICTIONARY, arrow.FIXED_SIZE_LIST, arrow.MAP,
 		arrow.FIXED_SIZE_BINARY, arrow.INTERVAL_DAY_TIME, arrow.INTERVAL_MONTHS, arrow.INTERVAL_MONTH_DAY_NANO,
@@ -112,9 +113,9 @@ func WriteDataTypeSignature(dataType arrow.DataType, sig *strings.Builder) {
 
 // DataTypeSignature returns the canonical arrow.DataType signature of the data type.
 func DataTypeSignature(dataType arrow.DataType) string {
-	var sig strings.Builder
+	var sig bytes.Buffer
 	WriteDataTypeSignature(dataType, &sig)
-	return sig.String()
+	return string(sig.Bytes())
 }
 
 // CoerceDataType coerces an heterogeneous set of [`DataType`] into a single one. Rules:
