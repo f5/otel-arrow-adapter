@@ -1561,7 +1561,7 @@ func (v *List) Compare(_ Value) int {
 func (v *List) WriteSignature(sig *strings.Builder) {
 	sig.WriteString("[")
 	eType := v.EType()
-	sig.WriteString(DataTypeSignature(eType))
+	WriteDataTypeSignature(eType, sig)
 	sig.WriteString("]")
 }
 func (v *List) WriteData(sig *strings.Builder) {
