@@ -71,30 +71,33 @@ func TestConversionFromRealData(t *testing.T) {
 	// Load a real OTLP traces request.
 	ds := dataset.NewRealTraceDataset("../../../data/nth_first_otlp_traces.pb", []string{"trace_id"})
 
-	// TODO iterate over the following ranges 1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000
-	traces := ds.Traces(1, 2)
-	expectedRequest := ptraceotlp.NewRequestFromTraces(traces[0])
+	batch_sizes := []int{1, 10, 100, 1000, 5000, 10000}
+	for _, batch_size := range batch_sizes {
+		traces := ds.Traces(0, batch_size)
+		expectedRequest := ptraceotlp.NewRequestFromTraces(traces[0])
 
-	// Convert the OTLP traces request to Arrow.
-	otlpArrowProducer := NewOtlpArrowProducer()
-	records, err := otlpArrowProducer.ProduceFrom(expectedRequest.Traces())
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// Convert the Arrow records back to OTLP.
-	otlpProducer := NewOtlpProducer()
-	for _, record := range records {
-		traces, err := otlpProducer.ProduceFrom(record)
+		// Convert the OTLP traces request to Arrow.
+		otlpArrowProducer := NewOtlpArrowProducer()
+		records, err := otlpArrowProducer.ProduceFrom(expectedRequest.Traces())
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		actualRequests := make([]json.Marshaler, len(traces))
-		for i, t := range traces {
-			actualRequests[i] = ptraceotlp.NewRequestFromTraces(t)
+		// Convert the Arrow records back to OTLP.
+		otlpProducer := NewOtlpProducer()
+		var actualRequests []json.Marshaler
+		for _, record := range records {
+			traces, err := otlpProducer.ProduceFrom(record)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			for _, t := range traces {
+				actualRequests = append(actualRequests, ptraceotlp.NewRequestFromTraces(t))
+			}
 		}
 
+		// Check the equivalence of the initial and the generated OTLP traces.
 		assert.Equiv(t, []json.Marshaler{expectedRequest}, actualRequests)
 	}
 }
