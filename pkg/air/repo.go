@@ -15,7 +15,6 @@
 package air
 
 import (
-	"bytes"
 	"fmt"
 	"io"
 
@@ -33,28 +32,23 @@ type RecordRepository struct {
 
 	// ToDo check if release is called properly
 	allocator *memory.GoAllocator
-
-	schemaIdBuf bytes.Buffer
 }
 
 func NewRecordRepository(config *config2.Config) *RecordRepository {
 	return &RecordRepository{
-		config:      config,
-		builders:    make(map[string]*RecordBuilder),
-		allocator:   memory.NewGoAllocator(),
-		schemaIdBuf: bytes.Buffer{},
+		config:    config,
+		builders:  make(map[string]*RecordBuilder),
+		allocator: memory.NewGoAllocator(),
 	}
 }
 
 func (rr *RecordRepository) AddRecord(record *Record) {
 	record.Normalize()
-	rr.schemaIdBuf.Reset()
-	record.SchemaId(&rr.schemaIdBuf)
+	schemaId := record.SchemaId()
 
-	if rb, ok := rr.builders[string(rr.schemaIdBuf.Bytes())]; ok {
+	if rb, ok := rr.builders[schemaId]; ok {
 		rb.AddRecord(record)
 	} else {
-		schemaId := string(rr.schemaIdBuf.Bytes())
 		rr.builders[schemaId] = NewRecordBuilderWithRecord(rr.allocator, record, rr.config)
 	}
 }

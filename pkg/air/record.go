@@ -15,8 +15,8 @@
 package air
 
 import (
-	"bytes"
 	"sort"
+	"strings"
 
 	"github.com/apache/arrow/go/v9/arrow"
 
@@ -63,13 +63,15 @@ func (r Record) Normalize() {
 }
 
 // SchemaId returns the canonical schema id of the record.
-func (r Record) SchemaId(schemaIdBuf *bytes.Buffer) {
+func (r Record) SchemaId() string {
+	var sig strings.Builder
 	for i, f := range r.fields {
 		if i > 0 {
-			schemaIdBuf.WriteByte(',')
+			sig.WriteByte(',')
 		}
-		f.WriteSigType(schemaIdBuf)
+		f.WriteSigType(&sig)
 	}
+	return sig.String()
 }
 
 func (r Record) FieldDataTypes() map[string]arrow.DataType {

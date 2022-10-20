@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"sort"
 	"strconv"
+	"strings"
 
 	"github.com/apache/arrow/go/v9/arrow"
 
@@ -32,8 +33,8 @@ type Value interface {
 	ValueByPath(path []int) Value
 	StringPath(path []int) string
 	Compare(other Value) int
-	WriteSignature(sig *bytes.Buffer)
-	WriteData(sig *bytes.Buffer)
+	WriteSignature(sig *strings.Builder)
+	WriteData(sig *strings.Builder)
 	AsBool() (*bool, error)
 
 	AsU8() (*uint8, error)
@@ -90,10 +91,10 @@ func (v *Bool) Compare(other Value) int {
 		return -1
 	}
 }
-func (v *Bool) WriteSignature(sig *bytes.Buffer) {
+func (v *Bool) WriteSignature(sig *strings.Builder) {
 	sig.WriteString(common.BOOL_SIG)
 }
-func (v *Bool) WriteData(sig *bytes.Buffer) {
+func (v *Bool) WriteData(sig *strings.Builder) {
 	if v.Value != nil {
 		sig.WriteString(fmt.Sprintf("%v", *v.Value))
 	}
@@ -225,10 +226,10 @@ func (v *I8) Compare(other Value) int {
 		return -1
 	}
 }
-func (v *I8) WriteSignature(sig *bytes.Buffer) {
+func (v *I8) WriteSignature(sig *strings.Builder) {
 	sig.WriteString(common.I8_SIG)
 }
-func (v *I8) WriteData(sig *bytes.Buffer) {
+func (v *I8) WriteData(sig *strings.Builder) {
 	if v.Value != nil {
 		sig.WriteString(fmt.Sprintf("%d", *v.Value))
 	}
@@ -332,10 +333,10 @@ func (v *I16) Compare(other Value) int {
 		return -1
 	}
 }
-func (v *I16) WriteSignature(sig *bytes.Buffer) {
+func (v *I16) WriteSignature(sig *strings.Builder) {
 	sig.WriteString(common.I16_SIG)
 }
-func (v *I16) WriteData(sig *bytes.Buffer) {
+func (v *I16) WriteData(sig *strings.Builder) {
 	if v.Value != nil {
 		sig.WriteString(fmt.Sprintf("%d", *v.Value))
 	}
@@ -435,10 +436,10 @@ func (v *I32) Compare(other Value) int {
 		return -1
 	}
 }
-func (v *I32) WriteSignature(sig *bytes.Buffer) {
+func (v *I32) WriteSignature(sig *strings.Builder) {
 	sig.WriteString(common.I32_SIG)
 }
-func (v *I32) WriteData(sig *bytes.Buffer) {
+func (v *I32) WriteData(sig *strings.Builder) {
 	if v.Value != nil {
 		sig.WriteString(fmt.Sprintf("%d", *v.Value))
 	}
@@ -534,10 +535,10 @@ func (v *I64) Compare(other Value) int {
 		return -1
 	}
 }
-func (v *I64) WriteSignature(sig *bytes.Buffer) {
+func (v *I64) WriteSignature(sig *strings.Builder) {
 	sig.WriteString(common.I64_SIG)
 }
-func (v *I64) WriteData(sig *bytes.Buffer) {
+func (v *I64) WriteData(sig *strings.Builder) {
 	if v.Value != nil {
 		sig.WriteString(fmt.Sprintf("%d", *v.Value))
 	}
@@ -629,10 +630,10 @@ func (v *U8) Compare(other Value) int {
 		return -1
 	}
 }
-func (v *U8) WriteSignature(sig *bytes.Buffer) {
+func (v *U8) WriteSignature(sig *strings.Builder) {
 	sig.WriteString(common.U8_SIG)
 }
-func (v *U8) WriteData(sig *bytes.Buffer) {
+func (v *U8) WriteData(sig *strings.Builder) {
 	if v.Value != nil {
 		sig.WriteString(fmt.Sprintf("%d", *v.Value))
 	}
@@ -748,10 +749,10 @@ func (v *U16) Compare(other Value) int {
 		return -1
 	}
 }
-func (v *U16) WriteSignature(sig *bytes.Buffer) {
+func (v *U16) WriteSignature(sig *strings.Builder) {
 	sig.WriteString(common.U16_SIG)
 }
-func (v *U16) WriteData(sig *bytes.Buffer) {
+func (v *U16) WriteData(sig *strings.Builder) {
 	if v.Value != nil {
 		sig.WriteString(fmt.Sprintf("%d", *v.Value))
 	}
@@ -859,10 +860,10 @@ func (v *U32) Compare(other Value) int {
 		return -1
 	}
 }
-func (v *U32) WriteSignature(sig *bytes.Buffer) {
+func (v *U32) WriteSignature(sig *strings.Builder) {
 	sig.WriteString(common.U32_SIG)
 }
-func (v *U32) WriteData(sig *bytes.Buffer) {
+func (v *U32) WriteData(sig *strings.Builder) {
 	if v.Value != nil {
 		sig.WriteString(fmt.Sprintf("%d", *v.Value))
 	}
@@ -962,10 +963,10 @@ func (v *U64) Compare(other Value) int {
 		return -1
 	}
 }
-func (v *U64) WriteSignature(sig *bytes.Buffer) {
+func (v *U64) WriteSignature(sig *strings.Builder) {
 	sig.WriteString(common.U64_SIG)
 }
-func (v *U64) WriteData(sig *bytes.Buffer) {
+func (v *U64) WriteData(sig *strings.Builder) {
 	if v.Value != nil {
 		sig.WriteString(fmt.Sprintf("%d", *v.Value))
 	}
@@ -1057,10 +1058,10 @@ func (v *F32) Compare(other Value) int {
 		return -1
 	}
 }
-func (v *F32) WriteSignature(sig *bytes.Buffer) {
+func (v *F32) WriteSignature(sig *strings.Builder) {
 	sig.WriteString(common.F32_SIG)
 }
-func (v *F32) WriteData(sig *bytes.Buffer) {
+func (v *F32) WriteData(sig *strings.Builder) {
 	if v.Value != nil {
 		sig.WriteString(fmt.Sprintf("%f", *v.Value))
 	}
@@ -1156,10 +1157,10 @@ func (v *F64) Compare(other Value) int {
 		return -1
 	}
 }
-func (v *F64) WriteSignature(sig *bytes.Buffer) {
+func (v *F64) WriteSignature(sig *strings.Builder) {
 	sig.WriteString(common.F64_SIG)
 }
-func (v *F64) WriteData(sig *bytes.Buffer) {
+func (v *F64) WriteData(sig *strings.Builder) {
 	if v.Value != nil {
 		sig.WriteString(fmt.Sprintf("%f", *v.Value))
 	}
@@ -1253,10 +1254,10 @@ func (v *String) Compare(other Value) int {
 		return -1
 	}
 }
-func (v *String) WriteSignature(sig *bytes.Buffer) {
+func (v *String) WriteSignature(sig *strings.Builder) {
 	sig.WriteString(common.STRING_SIG)
 }
-func (v *String) WriteData(sig *bytes.Buffer) {
+func (v *String) WriteData(sig *strings.Builder) {
 	if v.Value != nil {
 		sig.WriteString(*v.Value)
 	}
@@ -1332,10 +1333,10 @@ func (v *Binary) Compare(other Value) int {
 	otherValue := other.(*Binary).Value
 	return bytes.Compare(v.Value, otherValue)
 }
-func (v *Binary) WriteSignature(sig *bytes.Buffer) {
+func (v *Binary) WriteSignature(sig *strings.Builder) {
 	sig.WriteString(common.BINARY_SIG)
 }
-func (v *Binary) WriteData(sig *bytes.Buffer) {
+func (v *Binary) WriteData(sig *strings.Builder) {
 	if v.Value != nil {
 		sig.WriteString(fmt.Sprintf("%x", v.Value))
 	}
@@ -1427,17 +1428,17 @@ func (v *Struct) StringPath(path []int) string {
 func (v *Struct) Compare(_ Value) int {
 	panic("struct comparison not implemented")
 }
-func (v *Struct) WriteSignature(sig *bytes.Buffer) {
-	sig.WriteByte('{')
+func (v *Struct) WriteSignature(sig *strings.Builder) {
+	sig.WriteString("{")
 	for i, f := range v.Fields {
 		if i > 0 {
 			sig.WriteByte(',')
 		}
 		f.WriteSigType(sig)
 	}
-	sig.WriteByte('}')
+	sig.WriteString("}")
 }
-func (v *Struct) WriteData(sig *bytes.Buffer) {
+func (v *Struct) WriteData(sig *strings.Builder) {
 	sig.WriteString("{")
 	for i, f := range v.Fields {
 		if i > 0 {
@@ -1557,13 +1558,13 @@ func (v *List) StringPath(path []int) string {
 func (v *List) Compare(_ Value) int {
 	panic("struct comparison not implemented")
 }
-func (v *List) WriteSignature(sig *bytes.Buffer) {
-	sig.WriteByte('[')
+func (v *List) WriteSignature(sig *strings.Builder) {
+	sig.WriteString("[")
 	eType := v.EType()
 	WriteDataTypeSignature(eType, sig)
-	sig.WriteByte(']')
+	sig.WriteString("]")
 }
-func (v *List) WriteData(sig *bytes.Buffer) {
+func (v *List) WriteData(sig *strings.Builder) {
 	sig.WriteString("[")
 	for i := 0; i < len(v.Values); i++ {
 		if i > 0 {

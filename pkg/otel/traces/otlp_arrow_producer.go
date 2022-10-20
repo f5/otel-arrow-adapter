@@ -15,8 +15,8 @@
 package traces
 
 import (
-	"bytes"
 	"io"
+	"strings"
 
 	"github.com/apache/arrow/go/v9/arrow"
 
@@ -218,13 +218,12 @@ func (s *SpanGroup) ScopeSpan() rfield.Value {
 // GroupSpans groups spans per signature.
 // A scope span signature is based on the scope attributes, the dropped attributes count and the schema URL.
 func GroupSpans(resourceSpans ptrace.ResourceSpans, cfg *config.Config) (scopeSpansPerSig map[string]*SpanGroup) {
-	var sig bytes.Buffer
-
 	scopeSpansPerSig = make(map[string]*SpanGroup)
 	for j := 0; j < resourceSpans.ScopeSpans().Len(); j++ {
 		scopeSpans := resourceSpans.ScopeSpans().At(j)
 
-		sig.Reset()
+		var sig strings.Builder
+
 		scopeField := common.ScopeField(constants.SCOPE, scopeSpans.Scope(), cfg)
 		scopeField.Normalize()
 		scopeField.WriteSig(&sig)
@@ -237,7 +236,7 @@ func GroupSpans(resourceSpans ptrace.ResourceSpans, cfg *config.Config) (scopeSp
 		}
 
 		// Create a new entry in the map if the signature is not already present
-		ssSig := string(sig.Bytes())
+		ssSig := sig.String()
 		ssFields := scopeSpansPerSig[ssSig]
 		if ssFields == nil {
 			ssFields = &SpanGroup{

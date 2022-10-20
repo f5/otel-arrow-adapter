@@ -15,7 +15,7 @@
 package rfield
 
 import (
-	"bytes"
+	"strings"
 
 	"github.com/apache/arrow/go/v9/arrow"
 )
@@ -354,13 +354,13 @@ func (f *Field) Normalize() {
 }
 
 // WriteSigType writes the field signature type to the given writer.
-func (f *Field) WriteSigType(sig *bytes.Buffer) {
+func (f *Field) WriteSigType(sig *strings.Builder) {
 	sig.WriteString(f.Name)
-	sig.WriteByte(':')
+	sig.WriteString(":")
 	f.Value.WriteSignature(sig)
 
 	if f.metadata != nil {
-		sig.WriteByte('<')
+		sig.WriteString("<")
 		for i, key := range f.metadata.Keys {
 			if i > 0 {
 				sig.WriteByte(',')
@@ -369,18 +369,18 @@ func (f *Field) WriteSigType(sig *bytes.Buffer) {
 			sig.WriteByte('=')
 			sig.WriteString(f.metadata.Values[i])
 		}
-		sig.WriteByte('>')
+		sig.WriteString(">")
 	}
 }
 
 // WriteSig writes the field signature (type + data) to the given writer.
-func (f *Field) WriteSig(sig *bytes.Buffer) {
+func (f *Field) WriteSig(sig *strings.Builder) {
 	sig.WriteString(f.Name)
-	sig.WriteByte(':')
+	sig.WriteString(":")
 	f.Value.WriteSignature(sig)
 
 	if f.metadata != nil {
-		sig.WriteByte('<')
+		sig.WriteString("<")
 		for i, key := range f.metadata.Keys {
 			if i > 0 {
 				sig.WriteByte(',')
@@ -389,8 +389,8 @@ func (f *Field) WriteSig(sig *bytes.Buffer) {
 			sig.WriteByte('=')
 			sig.WriteString(f.metadata.Values[i])
 		}
-		sig.WriteByte('>')
+		sig.WriteString(">")
 	}
-	sig.WriteByte('=')
+	sig.WriteString("=")
 	f.Value.WriteData(sig)
 }

@@ -15,9 +15,9 @@
 package common
 
 import (
-	"bytes"
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/apache/arrow/go/v9/arrow"
 
@@ -331,7 +331,7 @@ func ResourceField(resource pcommon.Resource, cfg *config.Config) *rfield.Field 
 // and a signature of the resource fields (i.e. attributes).
 func ResourceFieldWithSig(resource pcommon.Resource, cfg *config.Config) (*rfield.Field, string) {
 	var resourceFields []*rfield.Field
-	var sig bytes.Buffer
+	var sig strings.Builder
 
 	attributes := NewAttributes(resource.Attributes(), cfg)
 	if attributes != nil {
@@ -352,7 +352,7 @@ func ResourceFieldWithSig(resource pcommon.Resource, cfg *config.Config) (*rfiel
 		field := rfield.NewStructField(constants.RESOURCE, rfield.Struct{
 			Fields: resourceFields,
 		})
-		return field, string(sig.Bytes())
+		return field, sig.String()
 	} else {
 		return nil, ""
 	}
