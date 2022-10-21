@@ -97,7 +97,7 @@ func (p *Producer) Produce(rms []*RecordMessage, deliveryType colarspb.DeliveryT
 		oapl[i] = &colarspb.OtlpArrowPayload{
 			SubStreamId: sp.subStreamId,
 			Type:        rm.payloadType,
-			Schema:      buf,
+			Record:      buf,
 		}
 	}
 

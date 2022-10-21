@@ -146,10 +146,10 @@ This capability will be used to implement an exporter into the existing collecto
     - [X] Events
 
 **Protocol**
-  - [X] OTLP proto [WIP change a little bit the BatchEvent specification]
+  - [X] OTLP proto 
   - [X] Event service
-  - [x] BatchEvent producer
-  - [X] BatchEvent consumer
+  - [x] BatchArrowRecords producer
+  - [X] BatchArrowRecords consumer
   - [ ] gRPC service implementation (most likely to be implemented in the OpenTelemetry collector itself)
 
 **Benchmarking tools** 

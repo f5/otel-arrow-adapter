@@ -23,7 +23,7 @@ import (
 	"github.com/apache/arrow/go/v9/arrow/ipc"
 	"go.opentelemetry.io/collector/pdata/ptrace"
 
-	coleventspb "github.com/lquerel/otel-arrow-adapter/api/collector/arrow/v1"
+	colarspb "github.com/lquerel/otel-arrow-adapter/api/collector/arrow/v1"
 	"github.com/lquerel/otel-arrow-adapter/pkg/otel/traces"
 )
 
@@ -46,8 +46,8 @@ func NewConsumer() *Consumer {
 	}
 }
 
-// TracesFrom produces an array of ptrace.Traces from a BatchEvent message.
-func (c *Consumer) TracesFrom(bar *coleventspb.BatchArrowRecords) ([]ptrace.Traces, error) {
+// TracesFrom produces an array of ptrace.Traces from a BatchArrowRecords message.
+func (c *Consumer) TracesFrom(bar *colarspb.BatchArrowRecords) ([]ptrace.Traces, error) {
 	records, err := c.Consume(bar)
 	if err != nil {
 		return nil, err
@@ -66,7 +66,7 @@ func (c *Consumer) TracesFrom(bar *coleventspb.BatchArrowRecords) ([]ptrace.Trac
 }
 
 // Consume takes a BatchArrowRecords protobuf message and returns an array of RecordMessage.
-func (c *Consumer) Consume(bar *coleventspb.BatchArrowRecords) ([]*RecordMessage, error) {
+func (c *Consumer) Consume(bar *colarspb.BatchArrowRecords) ([]*RecordMessage, error) {
 
 	var ibes []*RecordMessage
 
@@ -82,7 +82,7 @@ func (c *Consumer) Consume(bar *coleventspb.BatchArrowRecords) ([]*RecordMessage
 			c.streamConsumers[payload.SubStreamId] = sc
 		}
 
-		sc.bufReader.Reset(payload.Schema) // ToDo change the protobuf definition to contain a single ipc_message
+		sc.bufReader.Reset(payload.Record)
 		if sc.ipcReader == nil {
 			ipcReader, err := ipc.NewReader(sc.bufReader)
 			if err != nil {

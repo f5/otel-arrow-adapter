@@ -54,11 +54,11 @@ func TestProducerConsumer(t *testing.T) {
 		rms[i] = arrow_record.NewTraceMessage(record, v1.DeliveryType_BEST_EFFORT)
 	}
 
-	batchEvent, err := producer.Produce(rms, v1.DeliveryType_BEST_EFFORT)
+	bar, err := producer.Produce(rms, v1.DeliveryType_BEST_EFFORT)
 	if err != nil {
 		t.Fatal(err)
 	}
-	recordMessages, err := consumer.Consume(batchEvent)
+	recordMessages, err := consumer.Consume(bar)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -85,11 +85,11 @@ func TestProducerConsumer(t *testing.T) {
 		rms[i] = arrow_record.NewTraceMessage(record, v1.DeliveryType_BEST_EFFORT)
 	}
 
-	batchEvent, err = producer.Produce(rms, v1.DeliveryType_BEST_EFFORT)
+	bar, err = producer.Produce(rms, v1.DeliveryType_BEST_EFFORT)
 	if err != nil {
 		t.Fatal(err)
 	}
-	recordMessages, err = consumer.Consume(batchEvent)
+	recordMessages, err = consumer.Consume(bar)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -45,21 +45,15 @@ message OtlpArrowPayload {
   // [mandatory] Type of the OTLP Arrow payload.
   OtlpArrowPayloadType type = 2;
 
-  // [mandatory for the first message] Serialized Arrow Schema in IPC stream format representing the batch of events
-  // stored in record_batch. The definition of this schema follows a set of naming conventions and defines a set of
-  // mandatory and optional fields.
-  //
-  // For a description of the Arrow IPC format see: https://arrow.apache.org/docs/format/Columnar.html#serialization-and-interprocess-communication-ipc
-  bytes schema = 3;
-
   // [optional] Serialized Arrow dictionaries
-  repeated EncodedData dictionaries = 4;
+  repeated EncodedData dictionaries = 3;
 
   // [mandatory] Serialized Arrow Record Batch
-  EncodedData record_batch = 5;
+  // For a description of the Arrow IPC format see: https://arrow.apache.org/docs/format/Columnar.html#serialization-and-interprocess-communication-ipc
+  bytes record = 4;
 
   // [mandatory]
-  CompressionMethod compression = 6;
+  CompressionMethod compression = 5;
 }
 
 // The delivery mode used to process the message.
