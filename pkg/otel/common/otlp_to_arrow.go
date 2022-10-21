@@ -187,32 +187,52 @@ func NewAttributesAsListStructs(attributes pcommon.Map) *rfield.Field {
 		if value := OtlpAnyValueToValue(v); value != nil {
 			switch v := value.(type) {
 			case *rfield.String:
+				prefixedKey := strings.Builder{}
+				prefixedKey.WriteString(common.STRING_SIG)
+				prefixedKey.WriteByte('|')
+				prefixedKey.WriteString(key)
 				attributeTuples = append(attributeTuples, AttributeTuple{
-					key: common.STRING_SIG + "|" + key,
+					key: prefixedKey.String(),
 					str: v.Value,
 				})
 				stringCount++
 			case *rfield.I64:
+				prefixedKey := strings.Builder{}
+				prefixedKey.WriteString(common.I64_SIG)
+				prefixedKey.WriteByte('|')
+				prefixedKey.WriteString(key)
 				attributeTuples = append(attributeTuples, AttributeTuple{
-					key: common.I64_SIG + "|" + key,
+					key: prefixedKey.String(),
 					i64: v.Value,
 				})
 				i64Count++
 			case *rfield.F64:
+				prefixedKey := strings.Builder{}
+				prefixedKey.WriteString(common.F64_SIG)
+				prefixedKey.WriteByte('|')
+				prefixedKey.WriteString(key)
 				attributeTuples = append(attributeTuples, AttributeTuple{
-					key: common.F64_SIG + "|" + key,
+					key: prefixedKey.String(),
 					f64: v.Value,
 				})
 				f64Count++
 			case *rfield.Bool:
+				prefixedKey := strings.Builder{}
+				prefixedKey.WriteString(common.BOOL_SIG)
+				prefixedKey.WriteByte('|')
+				prefixedKey.WriteString(key)
 				attributeTuples = append(attributeTuples, AttributeTuple{
-					key:  common.BOOL_SIG + "|" + key,
+					key:  prefixedKey.String(),
 					bool: v.Value,
 				})
 				boolCount++
 			case *rfield.Binary:
+				prefixedKey := strings.Builder{}
+				prefixedKey.WriteString(common.BINARY_SIG)
+				prefixedKey.WriteByte('|')
+				prefixedKey.WriteString(key)
 				attributeTuples = append(attributeTuples, AttributeTuple{
-					key:    common.BINARY_SIG + "|" + key,
+					key:    prefixedKey.String(),
 					binary: v.Value,
 				})
 				binaryCount++
