@@ -22,6 +22,7 @@ import (
 	"go.opentelemetry.io/collector/pdata/ptrace"
 
 	colarspb "github.com/lquerel/otel-arrow-adapter/api/collector/arrow/v1"
+	"github.com/lquerel/otel-arrow-adapter/pkg/air/config"
 	"github.com/lquerel/otel-arrow-adapter/pkg/otel/traces"
 )
 
@@ -43,6 +44,15 @@ func NewProducer() *Producer {
 	return &Producer{
 		streamProducers:         make(map[string]*streamProducer),
 		otlpArrowTracesProducer: traces.NewOtlpArrowProducer(),
+		batchId:                 0,
+	}
+}
+
+// NewProducerWithConfig create a new BatchArrowRecords producer with the given configuration.
+func NewProducerWithConfig(cfg *config.Config) *Producer {
+	return &Producer{
+		streamProducers:         make(map[string]*streamProducer),
+		otlpArrowTracesProducer: traces.NewOtlpArrowProducerWith(cfg),
 		batchId:                 0,
 	}
 }

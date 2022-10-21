@@ -33,7 +33,7 @@ func NewTraceProfileable(tags []string, dataset dataset.TraceDataset, config *co
 		dataset:           dataset,
 		compression:       compression,
 		otlpArrowProducer: nil,
-		producer:          arrow_record.NewProducer(),
+		producer:          arrow_record.NewProducerWithConfig(config),
 		consumer:          arrow_record.NewConsumer(),
 		batchArrowRecords: make([]*v1.BatchArrowRecords, 0, 10),
 		config:            config,
