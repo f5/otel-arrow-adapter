@@ -25,14 +25,14 @@ import (
 	"github.com/lquerel/otel-arrow-adapter/pkg/air"
 	cfg "github.com/lquerel/otel-arrow-adapter/pkg/air/config"
 	"github.com/lquerel/otel-arrow-adapter/pkg/air/rfield"
-	"github.com/lquerel/otel-arrow-adapter/pkg/otel/batch_event"
+	"github.com/lquerel/otel-arrow-adapter/pkg/otel/arrow_record"
 )
 
 func TestProducerConsumer(t *testing.T) {
 	t.Parallel()
 
-	producer := batch_event.NewProducer()
-	consumer := batch_event.NewConsumer()
+	producer := arrow_record.NewProducer()
+	consumer := arrow_record.NewConsumer()
 	config := cfg.NewUint8DefaultConfig()
 	rr := air.NewRecordRepository(config)
 
@@ -50,7 +50,7 @@ func TestProducerConsumer(t *testing.T) {
 	}
 
 	for _, record := range records {
-		recordMesssage := batch_event.NewTraceMessage(record, v1.DeliveryType_BEST_EFFORT)
+		recordMesssage := arrow_record.NewTraceMessage(record, v1.DeliveryType_BEST_EFFORT)
 		batchEvent, err := producer.Produce(recordMesssage)
 		if err != nil {
 			t.Fatal(err)
@@ -79,7 +79,7 @@ func TestProducerConsumer(t *testing.T) {
 	}
 
 	for _, record := range records {
-		recordMesssage := batch_event.NewTraceMessage(record, v1.DeliveryType_BEST_EFFORT)
+		recordMesssage := arrow_record.NewTraceMessage(record, v1.DeliveryType_BEST_EFFORT)
 		batchEvent, err := producer.Produce(recordMesssage)
 		if err != nil {
 			t.Fatal(err)
