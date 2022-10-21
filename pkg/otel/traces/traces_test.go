@@ -98,6 +98,6 @@ func TestConversionFromRealData(t *testing.T) {
 		}
 
 		// Check the equivalence of the initial and the generated OTLP traces.
-		//assert.Equiv(t, []json.Marshaler{expectedRequest}, actualRequests)
+		assert.Equiv(t, []json.Marshaler{expectedRequest}, actualRequests)
 	}
 }

@@ -175,7 +175,7 @@ func NewAttributesAsListStructs(attributes pcommon.Map) *rfield.Field {
 		return nil
 	}
 
-	attributeTuples := make([]AttributeTuple, 0, attributes.Len())
+	attrCount := attributes.Len()
 
 	stringCount := 0
 	i64Count := 0
@@ -183,58 +183,19 @@ func NewAttributesAsListStructs(attributes pcommon.Map) *rfield.Field {
 	boolCount := 0
 	binaryCount := 0
 
+	// First pass to count the number of each type
 	attributes.Range(func(key string, v pcommon.Value) bool {
 		if value := OtlpAnyValueToValue(v); value != nil {
 			switch v := value.(type) {
 			case *rfield.String:
-				prefixedKey := strings.Builder{}
-				prefixedKey.WriteString(common.STRING_SIG)
-				prefixedKey.WriteByte('|')
-				prefixedKey.WriteString(key)
-				attributeTuples = append(attributeTuples, AttributeTuple{
-					key: prefixedKey.String(),
-					str: v.Value,
-				})
 				stringCount++
 			case *rfield.I64:
-				prefixedKey := strings.Builder{}
-				prefixedKey.WriteString(common.I64_SIG)
-				prefixedKey.WriteByte('|')
-				prefixedKey.WriteString(key)
-				attributeTuples = append(attributeTuples, AttributeTuple{
-					key: prefixedKey.String(),
-					i64: v.Value,
-				})
 				i64Count++
 			case *rfield.F64:
-				prefixedKey := strings.Builder{}
-				prefixedKey.WriteString(common.F64_SIG)
-				prefixedKey.WriteByte('|')
-				prefixedKey.WriteString(key)
-				attributeTuples = append(attributeTuples, AttributeTuple{
-					key: prefixedKey.String(),
-					f64: v.Value,
-				})
 				f64Count++
 			case *rfield.Bool:
-				prefixedKey := strings.Builder{}
-				prefixedKey.WriteString(common.BOOL_SIG)
-				prefixedKey.WriteByte('|')
-				prefixedKey.WriteString(key)
-				attributeTuples = append(attributeTuples, AttributeTuple{
-					key:  prefixedKey.String(),
-					bool: v.Value,
-				})
 				boolCount++
 			case *rfield.Binary:
-				prefixedKey := strings.Builder{}
-				prefixedKey.WriteString(common.BINARY_SIG)
-				prefixedKey.WriteByte('|')
-				prefixedKey.WriteString(key)
-				attributeTuples = append(attributeTuples, AttributeTuple{
-					key:    prefixedKey.String(),
-					binary: v.Value,
-				})
 				binaryCount++
 			default:
 				panic(fmt.Sprintf("unexpected type: %T", v))
@@ -242,33 +203,104 @@ func NewAttributesAsListStructs(attributes pcommon.Map) *rfield.Field {
 		}
 		return true
 	})
-	values := make([]rfield.Value, 0, attributes.Len())
-	attrCount := len(attributeTuples)
-	if attrCount > 0 {
-		// TODO remove attribute tuples and create the structs directly as the sorting of attributeTuples doesn't improve compression ratio
-		for i := 0; i < attrCount; i++ {
-			attribute := attributeTuples[i]
-			fields := make([]*rfield.Field, 0, attrCount)
-			fields = append(fields, &rfield.Field{Name: "key", Value: &rfield.String{Value: &attribute.key}})
-			if stringCount > 0 {
-				fields = append(fields, &rfield.Field{Name: "string", Value: &rfield.String{Value: attribute.str}})
+
+	// Second pass to build the values
+	values := make([]rfield.Value, 0, attrCount)
+	attributes.Range(func(key string, v pcommon.Value) bool {
+		fields := make([]*rfield.Field, 0, attrCount)
+
+		if value := OtlpAnyValueToValue(v); value != nil {
+			prefixedKeyBuf := strings.Builder{}
+			switch v := value.(type) {
+			case *rfield.String:
+				prefixedKeyBuf.WriteString(common.STRING_SIG)
+				fields = append(fields, &rfield.Field{Name: "string", Value: &rfield.String{Value: v.Value}})
+				if i64Count > 0 {
+					fields = append(fields, &rfield.Field{Name: "i64", Value: &rfield.I64{Value: nil}})
+				}
+				if f64Count > 0 {
+					fields = append(fields, &rfield.Field{Name: "f64", Value: &rfield.F64{Value: nil}})
+				}
+				if boolCount > 0 {
+					fields = append(fields, &rfield.Field{Name: "bool", Value: &rfield.Bool{Value: nil}})
+				}
+				if binaryCount > 0 {
+					fields = append(fields, &rfield.Field{Name: "binary", Value: &rfield.Binary{Value: nil}})
+				}
+			case *rfield.I64:
+				prefixedKeyBuf.WriteString(common.I64_SIG)
+				fields = append(fields, &rfield.Field{Name: "i64", Value: &rfield.I64{Value: v.Value}})
+				if stringCount > 0 {
+					fields = append(fields, &rfield.Field{Name: "string", Value: &rfield.String{Value: nil}})
+				}
+				if f64Count > 0 {
+					fields = append(fields, &rfield.Field{Name: "f64", Value: &rfield.F64{Value: nil}})
+				}
+				if boolCount > 0 {
+					fields = append(fields, &rfield.Field{Name: "bool", Value: &rfield.Bool{Value: nil}})
+				}
+				if binaryCount > 0 {
+					fields = append(fields, &rfield.Field{Name: "binary", Value: &rfield.Binary{Value: nil}})
+				}
+			case *rfield.F64:
+				prefixedKeyBuf.WriteString(common.F64_SIG)
+				fields = append(fields, &rfield.Field{Name: "f64", Value: &rfield.F64{Value: v.Value}})
+				if stringCount > 0 {
+					fields = append(fields, &rfield.Field{Name: "string", Value: &rfield.String{Value: nil}})
+				}
+				if i64Count > 0 {
+					fields = append(fields, &rfield.Field{Name: "i64", Value: &rfield.I64{Value: nil}})
+				}
+				if boolCount > 0 {
+					fields = append(fields, &rfield.Field{Name: "bool", Value: &rfield.Bool{Value: nil}})
+				}
+				if binaryCount > 0 {
+					fields = append(fields, &rfield.Field{Name: "binary", Value: &rfield.Binary{Value: nil}})
+				}
+			case *rfield.Bool:
+				prefixedKeyBuf.WriteString(common.BOOL_SIG)
+				fields = append(fields, &rfield.Field{Name: "bool", Value: &rfield.Bool{Value: v.Value}})
+				if stringCount > 0 {
+					fields = append(fields, &rfield.Field{Name: "string", Value: &rfield.String{Value: nil}})
+				}
+				if i64Count > 0 {
+					fields = append(fields, &rfield.Field{Name: "i64", Value: &rfield.I64{Value: nil}})
+				}
+				if f64Count > 0 {
+					fields = append(fields, &rfield.Field{Name: "f64", Value: &rfield.F64{Value: nil}})
+				}
+				if binaryCount > 0 {
+					fields = append(fields, &rfield.Field{Name: "binary", Value: &rfield.Binary{Value: nil}})
+				}
+			case *rfield.Binary:
+				prefixedKeyBuf.WriteString(common.BINARY_SIG)
+				fields = append(fields, &rfield.Field{Name: "binary", Value: &rfield.Binary{Value: v.Value}})
+				if stringCount > 0 {
+					fields = append(fields, &rfield.Field{Name: "string", Value: &rfield.String{Value: nil}})
+				}
+				if i64Count > 0 {
+					fields = append(fields, &rfield.Field{Name: "i64", Value: &rfield.I64{Value: nil}})
+				}
+				if f64Count > 0 {
+					fields = append(fields, &rfield.Field{Name: "f64", Value: &rfield.F64{Value: nil}})
+				}
+				if boolCount > 0 {
+					fields = append(fields, &rfield.Field{Name: "bool", Value: &rfield.Bool{Value: nil}})
+				}
+			default:
+				panic(fmt.Sprintf("unexpected type: %T", v))
 			}
-			if i64Count > 0 {
-				fields = append(fields, &rfield.Field{Name: "i64", Value: &rfield.I64{Value: attribute.i64}})
-			}
-			if f64Count > 0 {
-				fields = append(fields, &rfield.Field{Name: "f64", Value: &rfield.F64{Value: attribute.f64}})
-			}
-			if boolCount > 0 {
-				fields = append(fields, &rfield.Field{Name: "bool", Value: &rfield.Bool{Value: attribute.bool}})
-			}
-			if binaryCount > 0 {
-				fields = append(fields, &rfield.Field{Name: "binary", Value: &rfield.Binary{Value: attribute.binary}})
-			}
+			prefixedKeyBuf.WriteByte('|')
+			prefixedKeyBuf.WriteString(key)
+			prefixedKey := prefixedKeyBuf.String()
+			fields = append(fields, &rfield.Field{Name: "key", Value: &rfield.String{Value: &prefixedKey}})
+
 			values = append(values, &rfield.Struct{Fields: fields})
 		}
-	}
+		return true
+	})
 
+	// Create a list of attributes
 	if len(values) > 0 {
 		fieldStruct := make([]arrow.Field, 0, 6)
 		if binaryCount > 0 {
