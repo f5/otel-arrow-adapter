@@ -72,7 +72,7 @@ func (s *TraceProfileable) CreateBatch(_ io.Writer, _, _ int) {
 		if err != nil {
 			panic(err)
 		}
-		s.batchArrowRecords = append(s.batchArrowRecords, bar...)
+		s.batchArrowRecords = append(s.batchArrowRecords, bar)
 	}
 }
 func (s *TraceProfileable) Process(io.Writer) string {

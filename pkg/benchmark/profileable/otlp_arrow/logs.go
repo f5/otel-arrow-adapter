@@ -71,13 +71,15 @@ func (s *LogsProfileable) CreateBatch(_ io.Writer, _, _ int) {
 		if err != nil {
 			panic(err)
 		}
-		for _, record := range records {
-			bar, err := s.producer.Produce(arrow_record.NewLogsMessage(record, v1.DeliveryType_BEST_EFFORT))
-			if err != nil {
-				panic(err)
-			}
-			s.batchArrowRecords = append(s.batchArrowRecords, bar)
+		rms := make([]*arrow_record.RecordMessage, len(records))
+		for i, record := range records {
+			rms[i] = arrow_record.NewLogsMessage(record, v1.DeliveryType_BEST_EFFORT)
 		}
+		bar, err := s.producer.Produce(rms, v1.DeliveryType_BEST_EFFORT)
+		if err != nil {
+			panic(err)
+		}
+		s.batchArrowRecords = append(s.batchArrowRecords, bar)
 	}
 }
 func (s *LogsProfileable) Process(io.Writer) string {

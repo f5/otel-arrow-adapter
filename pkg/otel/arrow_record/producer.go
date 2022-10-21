@@ -21,7 +21,7 @@ import (
 	"github.com/apache/arrow/go/v9/arrow/ipc"
 	"go.opentelemetry.io/collector/pdata/ptrace"
 
-	coleventspb "github.com/lquerel/otel-arrow-adapter/api/collector/arrow/v1"
+	colarspb "github.com/lquerel/otel-arrow-adapter/api/collector/arrow/v1"
 	"github.com/lquerel/otel-arrow-adapter/pkg/otel/traces"
 )
 
@@ -29,12 +29,12 @@ import (
 type Producer struct {
 	streamProducers         map[string]*streamProducer
 	otlpArrowTracesProducer *traces.OtlpArrowProducer
+	batchId                 int64
 }
 
 type streamProducer struct {
 	output      bytes.Buffer
 	ipcWriter   *ipc.Writer
-	batchId     int64
 	subStreamId string
 }
 
@@ -43,64 +43,70 @@ func NewProducer() *Producer {
 	return &Producer{
 		streamProducers:         make(map[string]*streamProducer),
 		otlpArrowTracesProducer: traces.NewOtlpArrowProducer(),
+		batchId:                 0,
 	}
 }
 
 // BatchArrowRecordsFrom produces a BatchArrowRecords message from a ptrace.Traces messages.
-func (p *Producer) BatchArrowRecordsFrom(traces ptrace.Traces) ([]*coleventspb.BatchArrowRecords, error) {
+func (p *Producer) BatchArrowRecordsFrom(traces ptrace.Traces) (*colarspb.BatchArrowRecords, error) {
 	records, err := p.otlpArrowTracesProducer.ProduceFrom(traces)
 	if err != nil {
 		return nil, err
 	}
-	bar := make([]*coleventspb.BatchArrowRecords, len(records))
+
+	rms := make([]*RecordMessage, len(records))
 	for i, record := range records {
-		batchAR, err := p.Produce(NewTraceMessage(record, coleventspb.DeliveryType_BEST_EFFORT))
-		if err != nil {
-			return nil, err
-		}
-		bar[i] = batchAR
+		rms[i] = NewTraceMessage(record, colarspb.DeliveryType_BEST_EFFORT)
+	}
+
+	bar, err := p.Produce(rms, colarspb.DeliveryType_BEST_EFFORT)
+	if err != nil {
+		return nil, err
 	}
 	return bar, nil
 }
 
-// Produce takes an RecordMessage and returns the corresponding BatchArrowRecords protobuf message.
-func (p *Producer) Produce(rm *RecordMessage) (*coleventspb.BatchArrowRecords, error) {
-	// Retrieves (or creates) the stream Producer for the sub-stream id defined in the RecordMessage.
-	sp := p.streamProducers[rm.subStreamId]
-	if sp == nil {
-		var buf bytes.Buffer
-		sp = &streamProducer{
-			output:      buf,
-			batchId:     0,
-			subStreamId: fmt.Sprintf("%d", len(p.streamProducers)),
+// Produce takes a slice of RecordMessage and returns the corresponding BatchArrowRecords protobuf message.
+func (p *Producer) Produce(rms []*RecordMessage, deliveryType colarspb.DeliveryType) (*colarspb.BatchArrowRecords, error) {
+	oapl := make([]*colarspb.OtlpArrowPayload, len(rms))
+
+	for i, rm := range rms {
+		// Retrieves (or creates) the stream Producer for the sub-stream id defined in the RecordMessage.
+		sp := p.streamProducers[rm.subStreamId]
+		if sp == nil {
+			var buf bytes.Buffer
+			sp = &streamProducer{
+				output:      buf,
+				subStreamId: fmt.Sprintf("%d", len(p.streamProducers)),
+			}
+			p.streamProducers[rm.subStreamId] = sp
 		}
-		p.streamProducers[rm.subStreamId] = sp
+
+		if sp.ipcWriter == nil {
+			sp.ipcWriter = ipc.NewWriter(&sp.output, ipc.WithSchema(rm.record.Schema()))
+		}
+		err := sp.ipcWriter.Write(rm.record)
+		if err != nil {
+			return nil, err
+		}
+		buf := sp.output.Bytes()
+
+		// Reset the buffer
+		sp.output.Reset()
+
+		oapl[i] = &colarspb.OtlpArrowPayload{
+			SubStreamId: sp.subStreamId,
+			Type:        rm.payloadType,
+			Schema:      buf,
+		}
 	}
 
-	if sp.ipcWriter == nil {
-		sp.ipcWriter = ipc.NewWriter(&sp.output, ipc.WithSchema(rm.record.Schema()))
-	}
-	err := sp.ipcWriter.Write(rm.record)
-	if err != nil {
-		return nil, err
-	}
-	buf := sp.output.Bytes()
+	batchId := fmt.Sprintf("%d", p.batchId)
+	p.batchId++
 
-	// Reset the buffer
-	sp.output.Reset()
-
-	batchId := fmt.Sprintf("%d", sp.batchId)
-	sp.batchId++
-
-	return &coleventspb.BatchArrowRecords{
-		BatchId: batchId,
-		OtlpArrowPayloads: []*coleventspb.OtlpArrowPayload{
-			{
-				SubStreamId: sp.subStreamId,
-				Type:        rm.payloadType,
-				Schema:      buf,
-			},
-		},
-		DeliveryType: rm.deliveryType,
+	return &colarspb.BatchArrowRecords{
+		BatchId:           batchId,
+		OtlpArrowPayloads: oapl,
+		DeliveryType:      deliveryType,
 	}, nil
 }

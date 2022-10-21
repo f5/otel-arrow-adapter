@@ -73,13 +73,15 @@ func (s *MetricsProfileable) CreateBatch(_ io.Writer, _, _ int) {
 		if err != nil {
 			panic(err)
 		}
-		for _, record := range records {
-			bar, err := s.producer.Produce(arrow_record.NewMetricsMessage(record, v1.DeliveryType_BEST_EFFORT))
-			if err != nil {
-				panic(err)
-			}
-			s.batchArrowRecords = append(s.batchArrowRecords, bar)
+		rms := make([]*arrow_record.RecordMessage, len(records))
+		for i, record := range records {
+			rms[i] = arrow_record.NewMetricsMessage(record, v1.DeliveryType_BEST_EFFORT)
 		}
+		bar, err := s.producer.Produce(rms, v1.DeliveryType_BEST_EFFORT)
+		if err != nil {
+			panic(err)
+		}
+		s.batchArrowRecords = append(s.batchArrowRecords, bar)
 	}
 }
 func (s *MetricsProfileable) Process(io.Writer) string {
