@@ -20,6 +20,7 @@ import (
 
 	"go.opentelemetry.io/collector/pdata/ptrace/ptraceotlp"
 
+	"github.com/lquerel/otel-arrow-adapter/pkg/air/config"
 	"github.com/lquerel/otel-arrow-adapter/pkg/benchmark/dataset"
 	"github.com/lquerel/otel-arrow-adapter/pkg/datagen"
 	"github.com/lquerel/otel-arrow-adapter/pkg/otel/assert"
@@ -67,7 +68,7 @@ func TestConversionFromSyntheticData(t *testing.T) {
 // of the OTLP traces generated from the Arrow records.
 func TestConversionFromRealData(t *testing.T) {
 	t.Parallel()
-	t.Skip("Testing based on production data that is not stored in the")
+	//t.Skip("Testing based on production data that is not stored in the")
 
 	// Load a real OTLP traces request.
 	ds := dataset.NewRealTraceDataset("../../../data/nth_first_otlp_traces.pb", []string{"trace_id"})
@@ -78,7 +79,10 @@ func TestConversionFromRealData(t *testing.T) {
 		expectedRequest := ptraceotlp.NewRequestFromTraces(traces[0])
 
 		// Convert the OTLP traces request to Arrow.
-		otlpArrowProducer := NewOtlpArrowProducer()
+		cfg := config.NewUint16DefaultConfig()
+		cfg.Attribute.Encoding = config.AttributesAsStructs
+		//cfg.Attribute.Encoding = config.AttributesAsListStructs
+		otlpArrowProducer := NewOtlpArrowProducerWith(cfg)
 		records, err := otlpArrowProducer.ProduceFrom(expectedRequest.Traces())
 		if err != nil {
 			t.Fatal(err)

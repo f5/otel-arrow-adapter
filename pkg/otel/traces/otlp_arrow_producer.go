@@ -216,7 +216,7 @@ func GroupScopeSpans(resourceSpans ptrace.ResourceSpans, cfg *config.Config) (sc
 
 		scopeField := common.ScopeField(constants.SCOPE, scopeSpans.Scope(), cfg)
 		scopeField.Normalize()
-		scopeField.WriteSig(&sig)
+		scopeField.WriteSigType(&sig)
 
 		var schemaField *rfield.Field
 		if scopeSpans.SchemaUrl() != "" {
@@ -225,29 +225,40 @@ func GroupScopeSpans(resourceSpans ptrace.ResourceSpans, cfg *config.Config) (sc
 			schemaField.WriteSig(&sig)
 		}
 
-		// Create a new entry in the map if the signature is not already present
-		ssSig := sig.String()
-		ssFields := scopeSpansPerSig[ssSig]
-		if ssFields == nil {
-			ssFields = &SpanGroup{
-				scope:     scopeField,
-				spans:     make([]rfield.Value, 0, 16),
-				schemaUrl: schemaField,
-			}
-			scopeSpansPerSig[ssSig] = ssFields
-		}
+		// Group spans per signature
+		spans := groupSpans(scopeSpans, cfg)
 
-		spans := spans(scopeSpans, cfg)
-		ssFields.spans = append(ssFields.spans, spans...)
+		for spanSig, spanGroup := range spans {
+			sig.WriteByte(',')
+			sig.WriteString(spanSig)
+
+			// Create a new entry in the map if the signature is not already present
+			ssSig := sig.String()
+			ssFields := scopeSpansPerSig[ssSig]
+			if ssFields == nil {
+				ssFields = &SpanGroup{
+					scope:     scopeField,
+					spans:     make([]rfield.Value, 0, 16),
+					schemaUrl: schemaField,
+				}
+				scopeSpansPerSig[ssSig] = ssFields
+			}
+
+			ssFields.spans = append(ssFields.spans, spanGroup...)
+		}
 	}
 	return
 }
 
-// spans converts ptrace.ScopeSpans in their AIR representation.
-func spans(scopeSpans ptrace.ScopeSpans, cfg *config.Config) (spans []rfield.Value) {
-	spans = make([]rfield.Value, 0, scopeSpans.Spans().Len())
-	for k := 0; k < scopeSpans.Spans().Len(); k++ {
-		span := scopeSpans.Spans().At(k)
+// groupSpans converts ptrace.ScopeSpans into their AIR representation and groups them based on a given configuration.
+// A span signature is based on the span attributes (span+events+links) when the attribute encoding configuration is
+// AttributesAsStructs, otherwise it is an empty string.
+func groupSpans(scopeSpans ptrace.ScopeSpans, cfg *config.Config) (spans map[string][]rfield.Value) {
+	scopeSpanList := scopeSpans.Spans()
+	spans = make(map[string][]rfield.Value, scopeSpanList.Len())
+	for k := 0; k < scopeSpanList.Len(); k++ {
+		var spanSig strings.Builder
+		span := scopeSpanList.At(k)
 
 		fields := make([]*rfield.Field, 0, 15)
 		if ts := span.StartTimestamp(); ts > 0 {
@@ -276,6 +287,10 @@ func spans(scopeSpans ptrace.ScopeSpans, cfg *config.Config) (spans []rfield.Val
 		attributes := common.NewAttributes(span.Attributes(), cfg)
 		if attributes != nil {
 			fields = append(fields, attributes)
+			if cfg.Attribute.Encoding == config.AttributesAsStructs {
+				attributes.Normalize()
+				attributes.WriteSigType(&spanSig)
+			}
 		}
 
 		if dc := span.DroppedAttributesCount(); dc > 0 {
@@ -283,18 +298,24 @@ func spans(scopeSpans ptrace.ScopeSpans, cfg *config.Config) (spans []rfield.Val
 		}
 
 		// Events
-		eventsField := events(span.Events(), cfg)
+		eventsSig, eventsField := events(span.Events(), cfg)
 		if eventsField != nil {
 			fields = append(fields, eventsField)
+			if len(eventsSig) > 0 && cfg.Attribute.Encoding == config.AttributesAsStructs {
+				spanSig.WriteString(eventsSig)
+			}
 		}
 		if dc := span.DroppedEventsCount(); dc > 0 {
 			fields = append(fields, rfield.NewU32Field(constants.DROPPED_EVENTS_COUNT, uint32(dc)))
 		}
 
 		// Links
-		linksField := links(span.Links(), cfg)
+		linksSig, linksField := links(span.Links(), cfg)
 		if linksField != nil {
 			fields = append(fields, linksField)
+			if len(linksSig) > 0 && cfg.Attribute.Encoding == config.AttributesAsStructs {
+				spanSig.WriteString(linksSig)
+			}
 		}
 		if dc := span.DroppedLinksCount(); dc > 0 {
 			fields = append(fields, rfield.NewU32Field(constants.DROPPED_LINKS_COUNT, uint32(dc)))
@@ -308,7 +329,16 @@ func spans(scopeSpans ptrace.ScopeSpans, cfg *config.Config) (spans []rfield.Val
 
 		spanValue := rfield.NewStruct(fields)
 
-		spans = append(spans, spanValue)
+		if len(eventsSig) > 0 {
+			spanSig.WriteByte(',')
+			spanSig.WriteString(eventsSig)
+		}
+		if len(linksSig) > 0 {
+			spanSig.WriteByte(',')
+			spanSig.WriteString(linksSig)
+		}
+		ssig := spanSig.String()
+		spans[ssig] = append(spans[ssig], spanValue)
 	}
 	return
 }
@@ -332,11 +362,12 @@ func status(span ptrace.Span) *rfield.Struct {
 }
 
 // events converts OTLP span events into their AIR representation or returns nil when there is no events.
-func events(events ptrace.SpanEventSlice, cfg *config.Config) *rfield.Field {
+func events(events ptrace.SpanEventSlice, cfg *config.Config) (string, *rfield.Field) {
 	if events.Len() == 0 {
-		return nil
+		return "", nil
 	}
 
+	var sig strings.Builder
 	airEvents := make([]rfield.Value, 0, events.Len())
 
 	for i := 0; i < events.Len(); i++ {
@@ -352,6 +383,10 @@ func events(events ptrace.SpanEventSlice, cfg *config.Config) *rfield.Field {
 		attributes := common.NewAttributes(event.Attributes(), cfg)
 		if attributes != nil {
 			fields = append(fields, attributes)
+			if cfg.Attribute.Encoding == config.AttributesAsStructs {
+				attributes.Normalize()
+				attributes.WriteSigType(&sig)
+			}
 		}
 		if dc := event.DroppedAttributesCount(); dc > 0 {
 			fields = append(fields, rfield.NewU32Field(constants.DROPPED_ATTRIBUTES_COUNT, uint32(dc)))
@@ -360,17 +395,18 @@ func events(events ptrace.SpanEventSlice, cfg *config.Config) *rfield.Field {
 			Fields: fields,
 		})
 	}
-	return rfield.NewListField(constants.SPAN_EVENTS, rfield.List{
+	return sig.String(), rfield.NewListField(constants.SPAN_EVENTS, rfield.List{
 		Values: airEvents,
 	})
 }
 
 // links converts OTLP span links into their AIR representation or returns nil when there is no links.
-func links(links ptrace.SpanLinkSlice, cfg *config.Config) *rfield.Field {
+func links(links ptrace.SpanLinkSlice, cfg *config.Config) (string, *rfield.Field) {
 	if links.Len() == 0 {
-		return nil
+		return "", nil
 	}
 
+	var sig strings.Builder
 	airLinks := make([]rfield.Value, 0, links.Len())
 
 	for i := 0; i < links.Len(); i++ {
@@ -389,6 +425,10 @@ func links(links ptrace.SpanLinkSlice, cfg *config.Config) *rfield.Field {
 		attributes := common.NewAttributes(link.Attributes(), cfg)
 		if attributes != nil {
 			fields = append(fields, attributes)
+			if cfg.Attribute.Encoding == config.AttributesAsStructs {
+				attributes.Normalize()
+				attributes.WriteSigType(&sig)
+			}
 		}
 		if dc := link.DroppedAttributesCount(); dc > 0 {
 			fields = append(fields, rfield.NewU32Field(constants.DROPPED_ATTRIBUTES_COUNT, uint32(dc)))
@@ -397,7 +437,7 @@ func links(links ptrace.SpanLinkSlice, cfg *config.Config) *rfield.Field {
 			Fields: fields,
 		})
 	}
-	return rfield.NewListField(constants.SPAN_LINKS, rfield.List{
+	return sig.String(), rfield.NewListField(constants.SPAN_LINKS, rfield.List{
 		Values: airLinks,
 	})
 }
