@@ -80,8 +80,8 @@ func TestConversionFromRealData(t *testing.T) {
 
 		// Convert the OTLP traces request to Arrow.
 		cfg := config.NewUint16DefaultConfig()
-		cfg.Attribute.Encoding = config.AttributesAsStructs
-		//cfg.Attribute.Encoding = config.AttributesAsListStructs
+		//cfg.Attribute.Encoding = config.AttributesAsStructs
+		cfg.Attribute.Encoding = config.AttributesAsListStructs
 		otlpArrowProducer := NewOtlpArrowProducerWith(cfg)
 		records, err := otlpArrowProducer.ProduceFrom(expectedRequest.Traces())
 		if err != nil {

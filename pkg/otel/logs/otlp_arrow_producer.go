@@ -65,7 +65,7 @@ func (p *OtlpArrowProducer) ProduceFrom(logs plog.Logs) ([]arrow.Record, error) 
 	resLogList := logs.ResourceLogs()
 	// Resource logs grouped per signature. The resource log signature is based on the resource attributes, the dropped
 	// attributes count, the schema URL, and the scope logs signature.
-	resLogsPerSig := make(map[string]*ScopeLogGroup)
+	resLogsPerSig := make(map[string]*common.ResourceEntity)
 
 	for rsIdx := 0; rsIdx < resLogList.Len(); rsIdx++ {
 		resLogs := resLogList.At(rsIdx)
@@ -86,17 +86,17 @@ func (p *OtlpArrowProducer) ProduceFrom(logs plog.Logs) ([]arrow.Record, error) 
 		// Create a new entry in the map if the signature is not already present
 		resLogFields := resLogsPerSig[resSig]
 		if resLogFields == nil {
-			resLogFields = NewScopeLogGroup(resField, schemaUrl)
+			resLogFields = common.NewResourceEntity(resField, schemaUrl)
 			resLogsPerSig[resSig] = resLogFields
 		}
 
 		// Merge logs sharing the same scope log signature
 		for sig, sl := range logsPerScopeLogSig {
-			scopeLog := resLogFields.scopeLogs[sig]
+			scopeLog := resLogFields.ScopeEntities[sig]
 			if scopeLog == nil {
-				resLogFields.scopeLogs[sig] = sl
+				resLogFields.ScopeEntities[sig] = sl
 			} else {
-				scopeLog.logs = append(scopeLog.logs, sl.logs...)
+				scopeLog.Entities = append(scopeLog.Entities, sl.Entities...)
 			}
 		}
 	}
@@ -105,7 +105,7 @@ func (p *OtlpArrowProducer) ProduceFrom(logs plog.Logs) ([]arrow.Record, error) 
 	for _, resLogFields := range resLogsPerSig {
 		record := air.NewRecord()
 		record.ListField(constants.RESOURCE_LOGS, rfield.List{Values: []rfield.Value{
-			resLogFields.ResourceLog(),
+			resLogFields.AirValue(constants.SCOPE_LOGS, constants.LOGS),
 		}})
 		p.rr.AddRecord(record)
 	}
@@ -119,72 +119,12 @@ func (p *OtlpArrowProducer) ProduceFrom(logs plog.Logs) ([]arrow.Record, error) 
 	return records, nil
 }
 
-// ScopeLogGroup groups a set of scope logs sharing the same signature.
-type ScopeLogGroup struct {
-	resource  *rfield.Field
-	schemaUrl *rfield.Field
-	scopeLogs map[string]*LogGroup
-}
-
-// NewScopeLogGroup creates a new scope log group for the given resource and schema url.
-func NewScopeLogGroup(resource *rfield.Field, schemaUrl *rfield.Field) *ScopeLogGroup {
-	return &ScopeLogGroup{
-		resource:  resource,
-		scopeLogs: make(map[string]*LogGroup),
-		schemaUrl: schemaUrl,
-	}
-}
-
-// ResourceLogs builds an AIR representation of the current resource log for this group of scope logs.
-// Resource log = resource fields + schema URL + scope logs
-func (slg *ScopeLogGroup) ResourceLog() rfield.Value {
-	fields := make([]*rfield.Field, 0, 3)
-	if slg.resource != nil {
-		fields = append(fields, slg.resource)
-	}
-	if slg.schemaUrl != nil {
-		fields = append(fields, slg.schemaUrl)
-	}
-	if len(slg.scopeLogs) > 0 {
-		scopeSpans := make([]rfield.Value, 0, len(slg.scopeLogs))
-		for _, ss := range slg.scopeLogs {
-			scopeSpans = append(scopeSpans, ss.ScopeLog())
-		}
-		fields = append(fields, rfield.NewListField(constants.SCOPE_LOGS, rfield.List{Values: scopeSpans}))
-	}
-	return rfield.NewStruct(fields)
-}
-
-// LogGroup groups a set of logs sharing the same signature.
-type LogGroup struct {
-	scope     *rfield.Field
-	schemaUrl *rfield.Field
-	logs      []rfield.Value
-}
-
-// ScopeLog builds an AIR representation of the current scope log for this group of logs.
-// Scope log = scope fields + schema URL + logs
-func (lg *LogGroup) ScopeLog() rfield.Value {
-	fields := make([]*rfield.Field, 0, 3)
-	if lg.scope != nil {
-		fields = append(fields, lg.scope)
-	}
-	if lg.schemaUrl != nil {
-		fields = append(fields, lg.schemaUrl)
-	}
-	if len(lg.logs) > 0 {
-		fields = append(fields, rfield.NewListField(constants.LOGS, rfield.List{Values: lg.logs}))
-	}
-
-	return rfield.NewStruct(fields)
-}
-
 // GroupScopeLogs groups logs per signature scope logs signature.
 // A scope log signature is based on the combination of scope attributes, dropped attributes count, the schema URL, and
 // log signatures.
-func GroupScopeLogs(resourceSpans plog.ResourceLogs, cfg *config.Config) (scopeLogsPerSig map[string]*LogGroup) {
+func GroupScopeLogs(resourceSpans plog.ResourceLogs, cfg *config.Config) (scopeLogsPerSig map[string]*common.EntityGroup) {
 	scopeLogList := resourceSpans.ScopeLogs()
-	scopeLogsPerSig = make(map[string]*LogGroup, scopeLogList.Len())
+	scopeLogsPerSig = make(map[string]*common.EntityGroup, scopeLogList.Len())
 
 	for j := 0; j < scopeLogList.Len(); j++ {
 		scopeLogs := scopeLogList.At(j)
@@ -213,15 +153,15 @@ func GroupScopeLogs(resourceSpans plog.ResourceLogs, cfg *config.Config) (scopeL
 			ssSig := sig.String()
 			ssFields := scopeLogsPerSig[ssSig]
 			if ssFields == nil {
-				ssFields = &LogGroup{
-					scope:     scopeField,
-					logs:      make([]rfield.Value, 0, 16),
-					schemaUrl: schemaField,
+				ssFields = &common.EntityGroup{
+					Scope:     scopeField,
+					Entities:  make([]rfield.Value, 0, 16),
+					SchemaUrl: schemaField,
 				}
 				scopeLogsPerSig[ssSig] = ssFields
 			}
 
-			ssFields.logs = append(ssFields.logs, logGroup...)
+			ssFields.Entities = append(ssFields.Entities, logGroup...)
 		}
 	}
 	return

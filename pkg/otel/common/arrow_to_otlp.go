@@ -25,10 +25,73 @@ import (
 	"github.com/apache/arrow/go/v9/arrow/array"
 
 	"github.com/lquerel/otel-arrow-adapter/pkg/air"
+	"github.com/lquerel/otel-arrow-adapter/pkg/air/rfield"
 	"github.com/lquerel/otel-arrow-adapter/pkg/otel/constants"
 
 	"go.opentelemetry.io/collector/pdata/pcommon"
 )
+
+// ResourceEntity groups a set of scope OTLP entities sharing the same resource, schema url, and entity signature.
+type ResourceEntity struct {
+	resource      *rfield.Field
+	schemaUrl     *rfield.Field
+	ScopeEntities map[string]*EntityGroup
+}
+
+// NewResourceEntity creates a new resource OTLP entity for the given resource and schema url.
+func NewResourceEntity(resource *rfield.Field, schemaUrl *rfield.Field) *ResourceEntity {
+	return &ResourceEntity{
+		resource:      resource,
+		ScopeEntities: make(map[string]*EntityGroup),
+		schemaUrl:     schemaUrl,
+	}
+}
+
+// AirValue builds an AIR representation of the current resource OTLP entity for this group of scope entities.
+// Resource entity = resource fields + schema URL + scope entities.
+// Values for scopeEntitiesField: constants.SCOPE_LOGS, constants.SCOPE_SPANS
+// Values for entityField: constants.LOGS, constants.SPANS
+func (slg *ResourceEntity) AirValue(scopeEntitiesField string, entityField string) rfield.Value {
+	fields := make([]*rfield.Field, 0, 3)
+	if slg.resource != nil {
+		fields = append(fields, slg.resource)
+	}
+	if slg.schemaUrl != nil {
+		fields = append(fields, slg.schemaUrl)
+	}
+	if len(slg.ScopeEntities) > 0 {
+		scopeEntities := make([]rfield.Value, 0, len(slg.ScopeEntities))
+		for _, se := range slg.ScopeEntities {
+			scopeEntities = append(scopeEntities, se.ScopeEntity(entityField))
+		}
+		fields = append(fields, rfield.NewListField(scopeEntitiesField, rfield.List{Values: scopeEntities}))
+	}
+	return rfield.NewStruct(fields)
+}
+
+// EntityGroup groups a set of OTLP entities sharing the same signature.
+type EntityGroup struct {
+	Scope     *rfield.Field
+	SchemaUrl *rfield.Field
+	Entities  []rfield.Value
+}
+
+// ScopeEntity builds an AIR representation of the current scope OTLP entity for this group of entities.
+// Scope OTLP entity = scope fields + schema URL + entities
+func (lg *EntityGroup) ScopeEntity(entityField string) rfield.Value {
+	fields := make([]*rfield.Field, 0, 3)
+	if lg.Scope != nil {
+		fields = append(fields, lg.Scope)
+	}
+	if lg.SchemaUrl != nil {
+		fields = append(fields, lg.SchemaUrl)
+	}
+	if len(lg.Entities) > 0 {
+		fields = append(fields, rfield.NewListField(entityField, rfield.List{Values: lg.Entities}))
+	}
+
+	return rfield.NewStruct(fields)
+}
 
 func AttributesId(attrs pcommon.Map) string {
 	var attrsId strings.Builder
