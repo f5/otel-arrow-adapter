@@ -63,28 +63,26 @@ func NewOtlpArrowProducerWith(cfg *config.Config) *OtlpArrowProducer {
 // More details can be found in the OTEL 0156 section XYZ.
 // TODO: add a reference to the OTEP 0156 section that describes this mapping.
 func (p *OtlpArrowProducer) ProduceFrom(traces ptrace.Traces) ([]arrow.Record, error) {
-	// Map maintaining groups of scope spans per resource span signature.
-	// A resource span signature is based on the resource attributes,
-	// the dropped attributes count and the schema URL
+	resSpanList := traces.ResourceSpans()
+	// Resource spans grouped per signature. The resource span signature is based on the resource attributes, the dropped
+	// attributes count, the schema URL, and the scope spans signature.
 	resSpansPerSig := make(map[string]*ScopeSpanGroup)
 
-	for rsIdx := 0; rsIdx < traces.ResourceSpans().Len(); rsIdx++ {
-		resourceSpans := traces.ResourceSpans().At(rsIdx)
+	for rsIdx := 0; rsIdx < resSpanList.Len(); rsIdx++ {
+		resLogs := resSpanList.At(rsIdx)
 
 		// Add resource fields (attributes and dropped attributes count)
-		resField, resSig := common.ResourceFieldWithSig(resourceSpans.Resource(), p.cfg)
+		resField, resSig := common.ResourceFieldWithSig(resLogs.Resource(), p.cfg)
 
 		// Add schema URL
 		var schemaUrl *rfield.Field
-		if resourceSpans.SchemaUrl() != "" {
-			schemaUrl = rfield.NewStringField(constants.SCHEMA_URL, resourceSpans.SchemaUrl())
-			resSig += ",schema_url:" + resourceSpans.SchemaUrl()
+		if resLogs.SchemaUrl() != "" {
+			schemaUrl = rfield.NewStringField(constants.SCHEMA_URL, resLogs.SchemaUrl())
+			resSig += ",schema_url:" + resLogs.SchemaUrl()
 		}
 
-		// TODO explore group span per attribute sig to minimize overall schema complexity
-
 		// Group spans per scope span signature
-		spansPerScopeSpanSig := GroupSpans(resourceSpans, p.cfg)
+		spansPerScopeSpanSig := GroupScopeSpans(resLogs, p.cfg)
 
 		// Create a new entry in the map if the signature is not already present
 		resSpanFields := resSpansPerSig[resSig]
@@ -104,7 +102,6 @@ func (p *OtlpArrowProducer) ProduceFrom(traces ptrace.Traces) ([]arrow.Record, e
 		}
 	}
 
-	// TODO Other way to explore -> create a single Arrow record from a list of resource spans.
 	// All resource spans sharing the same signature are represented as an AIR record.
 	for _, resSpanFields := range resSpansPerSig {
 		record := air.NewRecord()
@@ -113,16 +110,6 @@ func (p *OtlpArrowProducer) ProduceFrom(traces ptrace.Traces) ([]arrow.Record, e
 		}})
 		p.rr.AddRecord(record)
 	}
-	//for _, resSpanFields := range resSpansPerSig {
-	//	resSpans := resSpanFields.ResourceSpans()
-	//	for _, resSpan := range resSpans {
-	//		record := air.NewRecord()
-	//		record.ListField(constants.RESOURCE_SPANS, rfield.List{Values: []rfield.Value{
-	//			resSpan,
-	//		}})
-	//		p.rr.AddRecord(record)
-	//	}
-	//}
 
 	// Build all Arrow records from the AIR records
 	records, err := p.rr.BuildRecords()
@@ -138,7 +125,7 @@ func (p *OtlpArrowProducer) DumpMetadata(writer io.Writer) {
 	p.rr.DumpMetadata(writer)
 }
 
-// ScopeSpanGroup groups a set of scope spans for a specific resource and schema url.
+// ScopeSpanGroup groups a set of scope spans sharing the same signature.
 type ScopeSpanGroup struct {
 	resource   *rfield.Field
 	schemaUrl  *rfield.Field
@@ -191,7 +178,7 @@ func (r *ScopeSpanGroup) ResourceSpans() []rfield.Value {
 	return resSpans
 }
 
-// SpanGroup groups a set of spans for a specific scope span and schema url.
+// SpanGroup groups a set of spans sharing the same signature.
 type SpanGroup struct {
 	scope     *rfield.Field
 	schemaUrl *rfield.Field
@@ -215,12 +202,15 @@ func (s *SpanGroup) ScopeSpan() rfield.Value {
 	return rfield.NewStruct(fields)
 }
 
-// GroupSpans groups spans per signature.
-// A scope span signature is based on the scope attributes, the dropped attributes count and the schema URL.
-func GroupSpans(resourceSpans ptrace.ResourceSpans, cfg *config.Config) (scopeSpansPerSig map[string]*SpanGroup) {
-	scopeSpansPerSig = make(map[string]*SpanGroup)
-	for j := 0; j < resourceSpans.ScopeSpans().Len(); j++ {
-		scopeSpans := resourceSpans.ScopeSpans().At(j)
+// GroupScopeSpans groups spans per signature.
+// A scope span signature is based on the combination of scope attributes, dropped attributes count, the schema URL, and
+// span signatures.
+func GroupScopeSpans(resourceSpans ptrace.ResourceSpans, cfg *config.Config) (scopeSpansPerSig map[string]*SpanGroup) {
+	scopeSpanList := resourceSpans.ScopeSpans()
+	scopeSpansPerSig = make(map[string]*SpanGroup, scopeSpanList.Len())
+
+	for j := 0; j < scopeSpanList.Len(); j++ {
+		scopeSpans := scopeSpanList.At(j)
 
 		var sig strings.Builder
 

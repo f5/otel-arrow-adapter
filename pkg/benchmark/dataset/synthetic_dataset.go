@@ -95,7 +95,7 @@ type FakeTraceDataset struct {
 }
 
 func NewFakeTraceDataset(len int) *FakeTraceDataset {
-	return &FakeTraceDataset{len: len, generator: datagen.NewTraceGenerator(datagen.DefaultResourceAttributes(), datagen.DefaultInstrumentationScopes())}
+	return &FakeTraceDataset{len: len, generator: datagen.NewTracesGenerator(datagen.DefaultResourceAttributes(), datagen.DefaultInstrumentationScopes())}
 }
 
 func (d *FakeTraceDataset) Len() int {

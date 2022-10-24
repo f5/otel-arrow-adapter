@@ -32,7 +32,7 @@ func TestIPCWriter(t *testing.T) {
 	t.Parallel()
 
 	cfg := config.NewUint8DefaultConfig()
-	lg := datagen.NewTraceGenerator(datagen.DefaultResourceAttributes(), datagen.DefaultInstrumentationScopes())
+	lg := datagen.NewTracesGenerator(datagen.DefaultResourceAttributes(), datagen.DefaultInstrumentationScopes())
 
 	request := lg.Generate(10, 100)
 	producer := traces.NewOtlpArrowProducerWith(cfg)

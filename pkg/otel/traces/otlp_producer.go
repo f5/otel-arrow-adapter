@@ -41,14 +41,14 @@ func (p *OtlpProducer) ProduceFrom(record arrow.Record) ([]ptrace.Traces, error)
 	return ArrowRecordToOtlpTraces(record)
 }
 
-// ArrowRecordToOtlpTraces converts an Arrow Record to an OTLP Trace.
+// ArrowRecordToOtlpTraces converts an Arrow Record to an OTLP Traces.
 // TODO: add a reference to the OTEP 0156 section that describes this mapping.
 func ArrowRecordToOtlpTraces(record arrow.Record) ([]ptrace.Traces, error) {
-	// Each first level row in the Arrow Record represents a Traces entity.
-	tracesCount := int(record.NumRows())
-	allTraces := make([]ptrace.Traces, 0, tracesCount)
+	// Each first level row in the Arrow Record represents a resource span entity.
+	resSpanCount := int(record.NumRows())
+	allTraces := make([]ptrace.Traces, 0, resSpanCount)
 
-	for traceIdx := 0; traceIdx < tracesCount; traceIdx++ {
+	for traceIdx := 0; traceIdx < resSpanCount; traceIdx++ {
 		traces := ptrace.NewTraces()
 
 		arrowResSpans, err := air.ListOfStructsFromRecord(record, constants.RESOURCE_SPANS, traceIdx)
