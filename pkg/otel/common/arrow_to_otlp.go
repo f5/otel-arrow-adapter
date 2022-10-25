@@ -19,6 +19,7 @@ package common
 
 import (
 	"fmt"
+	"io"
 	"strings"
 
 	"github.com/apache/arrow/go/v9/arrow"
@@ -47,7 +48,6 @@ type TopLevelEntities[SE ScopeEntities] interface {
 }
 
 type TopLevelEntitiesSlice[SE ScopeEntities] interface {
-	//ScopeEntitiesSlice() ScopeEntitiesSlice[SE]
 	Len() int
 	At(i int) ResourceEntities[SE]
 }
@@ -75,6 +75,13 @@ func NewOtlpArrowProducer[SE ScopeEntities]() *OtlpArrowProducer[SE] {
 	cfg := config.NewUint16DefaultConfig()
 	cfg.Attribute.Encoding = config.AttributesAsListStructs
 
+	return &OtlpArrowProducer[SE]{
+		cfg: cfg,
+		rr:  air.NewRecordRepository(cfg),
+	}
+}
+
+func NewOtlpArrowProducerWithConfig[SE ScopeEntities](cfg *config.Config) *OtlpArrowProducer[SE] {
 	return &OtlpArrowProducer[SE]{
 		cfg: cfg,
 		rr:  air.NewRecordRepository(cfg),
@@ -145,6 +152,11 @@ func (p *OtlpArrowProducer[T]) ProduceFrom(topLevelEntity TopLevelEntities[T]) (
 	}
 
 	return records, nil
+}
+
+// DumpMetadata dumps the metadata of the produced Arrow records.
+func (p *OtlpArrowProducer[T]) DumpMetadata(f io.Writer) {
+	p.rr.DumpMetadata(f)
 }
 
 // GroupScopeEntities groups OTLP entities per signature scope entities signature.

@@ -40,7 +40,7 @@ func TestConversionFromSyntheticData(t *testing.T) {
 
 	// Convert the OTLP logs request to Arrow.
 	otlpArrowProducer := common.NewOtlpArrowProducer[plog.ScopeLogs]()
-	records, err := otlpArrowProducer.ProduceFrom(NewTopLevelLogs(expectedRequest.Logs()))
+	records, err := otlpArrowProducer.ProduceFrom(Wrap(expectedRequest.Logs()))
 	if err != nil {
 		t.Fatal(err)
 	}
