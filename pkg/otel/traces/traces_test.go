@@ -18,12 +18,14 @@ import (
 	"encoding/json"
 	"testing"
 
+	"go.opentelemetry.io/collector/pdata/ptrace"
 	"go.opentelemetry.io/collector/pdata/ptrace/ptraceotlp"
 
 	"github.com/lquerel/otel-arrow-adapter/pkg/air/config"
 	"github.com/lquerel/otel-arrow-adapter/pkg/benchmark/dataset"
 	"github.com/lquerel/otel-arrow-adapter/pkg/datagen"
 	"github.com/lquerel/otel-arrow-adapter/pkg/otel/assert"
+	"github.com/lquerel/otel-arrow-adapter/pkg/otel/common"
 )
 
 // TestConversionFromSyntheticData tests the conversion of OTLP traces to Arrow and back to OTLP.
@@ -39,8 +41,8 @@ func TestConversionFromSyntheticData(t *testing.T) {
 	expectedRequest := ptraceotlp.NewRequestFromTraces(tracesGen.Generate(10, 100))
 
 	// Convert the OTLP traces request to Arrow.
-	otlpArrowProducer := NewOtlpArrowProducer()
-	records, err := otlpArrowProducer.ProduceFrom(expectedRequest.Traces())
+	otlpArrowProducer := common.NewOtlpArrowProducer[ptrace.ScopeSpans]()
+	records, err := otlpArrowProducer.ProduceFrom(Wrap(expectedRequest.Traces()))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -82,8 +84,8 @@ func TestConversionFromRealData(t *testing.T) {
 		cfg := config.NewUint16DefaultConfig()
 		//cfg.Attribute.Encoding = config.AttributesAsStructs
 		cfg.Attribute.Encoding = config.AttributesAsListStructs
-		otlpArrowProducer := NewOtlpArrowProducerWith(cfg)
-		records, err := otlpArrowProducer.ProduceFrom(expectedRequest.Traces())
+		otlpArrowProducer := common.NewOtlpArrowProducerWithConfig[ptrace.ScopeSpans](cfg)
+		records, err := otlpArrowProducer.ProduceFrom(Wrap(expectedRequest.Traces()))
 		if err != nil {
 			t.Fatal(err)
 		}

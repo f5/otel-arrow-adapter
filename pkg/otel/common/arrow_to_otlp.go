@@ -45,6 +45,9 @@ type ScopeEntities interface {
 type TopLevelEntities[SE ScopeEntities] interface {
 	ResourceSlice() TopLevelEntitiesSlice[SE]
 	EntityGrouper(SE, *config.Config) map[string][]rfield.Value
+	ResourceEntitiesLabel() string
+	ScopeEntitiesLabel() string
+	EntitiesLabel() string
 }
 
 type TopLevelEntitiesSlice[SE ScopeEntities] interface {
@@ -95,8 +98,8 @@ func NewOtlpArrowProducerWithConfig[SE ScopeEntities](cfg *config.Config) *OtlpA
 //
 // More details can be found in the OTEL 0156 section XYZ.
 // TODO add a reference to the OTEP 0156 section that describes this mapping.
-func (p *OtlpArrowProducer[T]) ProduceFrom(topLevelEntity TopLevelEntities[T]) ([]arrow.Record, error) {
-	resLogList := topLevelEntity.ResourceSlice()
+func (p *OtlpArrowProducer[T]) ProduceFrom(tle TopLevelEntities[T]) ([]arrow.Record, error) {
+	resLogList := tle.ResourceSlice()
 	// Resource logs grouped per signature. The resource log signature is based on the resource attributes, the dropped
 	// attributes count, the schema URL, and the scope logs signature.
 	resLogsPerSig := make(map[string]*ResourceEntity)
@@ -116,7 +119,7 @@ func (p *OtlpArrowProducer[T]) ProduceFrom(topLevelEntity TopLevelEntities[T]) (
 
 		// Group logs per scope span signature
 		//logsPerScopeLogSig := GroupScopeLogs(resLogs.ScopeLogs(), p.cfg)
-		logsPerScopeLogSig := GroupScopeEntities[T](resLogs.ScopeEntities(), topLevelEntity.EntityGrouper, p.cfg)
+		logsPerScopeLogSig := GroupScopeEntities[T](resLogs.ScopeEntities(), tle.EntityGrouper, p.cfg)
 
 		// Create a new entry in the map if the signature is not already present
 		resLogFields := resLogsPerSig[resSig]
@@ -139,8 +142,8 @@ func (p *OtlpArrowProducer[T]) ProduceFrom(topLevelEntity TopLevelEntities[T]) (
 	// All resource logs sharing the same signature are represented as an AIR record.
 	for _, resLogFields := range resLogsPerSig {
 		record := air.NewRecord()
-		record.ListField(constants.RESOURCE_LOGS, rfield.List{Values: []rfield.Value{
-			resLogFields.AirValue(constants.SCOPE_LOGS, constants.LOGS),
+		record.ListField(tle.ResourceEntitiesLabel(), rfield.List{Values: []rfield.Value{
+			resLogFields.AirValue(tle.ScopeEntitiesLabel(), tle.EntitiesLabel()),
 		}})
 		p.rr.AddRecord(record)
 	}

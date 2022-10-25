@@ -27,30 +27,30 @@ import (
 	"go.opentelemetry.io/collector/pdata/plog"
 )
 
-// A TopLevelWrapper wraps a `plog.Logs` to expose methods of the [common.TopLevelEntities] interface.
+// A TopLevelWrapper wraps a [plog.Logs] to expose methods of the [common.TopLevelEntities] interface.
 type TopLevelWrapper struct {
 	logs plog.Logs
 }
 
-// A ResourceLogsSliceWrapper wraps a `plog.ResourceLogsSlice` to expose methods of the [common.TopLevelEntitiesSlice]
+// A ResourceLogsSliceWrapper wraps a [plog.ResourceLogsSlice] to expose methods of the [common.TopLevelEntitiesSlice]
 // interface.
 type ResourceLogsSliceWrapper struct {
-	resLogs plog.ResourceLogsSlice
+	rls plog.ResourceLogsSlice
 }
 
-// A ResourceLogsWrapper wraps a `plog.ResourceLogs` to expose methods of the [common.ResourceEntities] interface.
+// A ResourceLogsWrapper wraps a [plog.ResourceLogs] to expose methods of the [common.ResourceEntities] interface.
 type ResourceLogsWrapper struct {
-	resLogs plog.ResourceLogs
+	rl plog.ResourceLogs
 }
 
-// Wrap wraps a `plog.Logs` to expose methods of the [common.TopLevelEntities] interface.
+// Wrap wraps a [plog.Logs] to expose methods of the [common.TopLevelEntities] interface.
 func Wrap(logs plog.Logs) TopLevelWrapper {
 	return TopLevelWrapper{logs: logs}
 }
 
 // ResourceSlice returns a [plog.ResourceLogsSlice].
 func (t TopLevelWrapper) ResourceSlice() common.TopLevelEntitiesSlice[plog.ScopeLogs] {
-	return ResourceLogsSliceWrapper{resLogs: t.logs.ResourceLogs()}
+	return ResourceLogsSliceWrapper{rls: t.logs.ResourceLogs()}
 }
 
 // EntityGrouper converts [plog.LogRecord]s of a [plog.ScopeLogs] into their AIR representation and groups them based
@@ -111,27 +111,42 @@ func (t TopLevelWrapper) EntityGrouper(scopeLogs plog.ScopeLogs, cfg *config.Con
 	return logsPerSig
 }
 
+// ResourceEntitiesLabel return the label that will be used to identify the resource entities in the arrow schema.
+func (t TopLevelWrapper) ResourceEntitiesLabel() string {
+	return constants.RESOURCE_LOGS
+}
+
+// ScopeEntitiesLabel return the label that will be used to identify the scope entities in the arrow schema.
+func (t TopLevelWrapper) ScopeEntitiesLabel() string {
+	return constants.SCOPE_LOGS
+}
+
+// EntitiesLabel return the label that will be used to identify the entities in the arrow schema.
+func (t TopLevelWrapper) EntitiesLabel() string {
+	return constants.LOGS
+}
+
 // Len returns the number of elements in the slice.
 func (t ResourceLogsSliceWrapper) Len() int {
-	return t.resLogs.Len()
+	return t.rls.Len()
 }
 
 // At returns the element at the given index.
 func (t ResourceLogsSliceWrapper) At(i int) common.ResourceEntities[plog.ScopeLogs] {
-	return ResourceLogsWrapper{resLogs: t.resLogs.At(i)}
+	return ResourceLogsWrapper{rl: t.rls.At(i)}
 }
 
 // Resource returns the resource associated with the resource logs.
 func (t ResourceLogsWrapper) Resource() pcommon.Resource {
-	return t.resLogs.Resource()
+	return t.rl.Resource()
 }
 
 // SchemaUrl returns the schema URL associated with the resource logs.
 func (t ResourceLogsWrapper) SchemaUrl() string {
-	return t.resLogs.SchemaUrl()
+	return t.rl.SchemaUrl()
 }
 
 // ScopeEntities returns the scope logs associated with the resource logs.
 func (t ResourceLogsWrapper) ScopeEntities() common.ScopeEntitiesSlice[plog.ScopeLogs] {
-	return t.resLogs.ScopeLogs()
+	return t.rl.ScopeLogs()
 }

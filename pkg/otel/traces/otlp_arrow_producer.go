@@ -15,12 +15,10 @@
 package traces
 
 import (
-	"io"
 	"strings"
 
-	"github.com/apache/arrow/go/v9/arrow"
+	"go.opentelemetry.io/collector/pdata/pcommon"
 
-	"github.com/lquerel/otel-arrow-adapter/pkg/air"
 	"github.com/lquerel/otel-arrow-adapter/pkg/air/config"
 	"github.com/lquerel/otel-arrow-adapter/pkg/air/rfield"
 	"github.com/lquerel/otel-arrow-adapter/pkg/otel/common"
@@ -29,156 +27,38 @@ import (
 	"go.opentelemetry.io/collector/pdata/ptrace"
 )
 
-// OtlpArrowProducer produces OTLP Arrow records from OTLP traces.
-type OtlpArrowProducer struct {
-	cfg *config.Config
-	rr  *air.RecordRepository
+// A TopLevelWrapper wraps a [ptrace.Traces] to expose methods of the [common.TopLevelEntities] interface.
+type TopLevelWrapper struct {
+	traces ptrace.Traces
 }
 
-// NewOtlpArrowProducer creates a new OtlpArrowProducer with the default configuration.
-// Note: the default attribute encoding is AttributesAsListStructs
-func NewOtlpArrowProducer() *OtlpArrowProducer {
-	cfg := config.NewUint16DefaultConfig()
-	cfg.Attribute.Encoding = config.AttributesAsListStructs
-
-	return &OtlpArrowProducer{
-		cfg: cfg,
-		rr:  air.NewRecordRepository(cfg),
-	}
+// A ResourceSpansSliceWrapper wraps a [ptrace.ResourceSpansSlice] to expose methods of the [common.TopLevelEntitiesSlice]
+// interface.
+type ResourceSpansSliceWrapper struct {
+	rss ptrace.ResourceSpansSlice
 }
 
-// NewOtlpArrowProducerWith creates a new OtlpArrowProducer with the given configuration.
-func NewOtlpArrowProducerWith(cfg *config.Config) *OtlpArrowProducer {
-	return &OtlpArrowProducer{
-		cfg: cfg,
-		rr:  air.NewRecordRepository(cfg),
-	}
+// A ResourceSpansWrapper wraps a [ptrace.ResourceSpans] to expose methods of the [common.ResourceEntities] interface.
+type ResourceSpansWrapper struct {
+	rs ptrace.ResourceSpans
 }
 
-// ProduceFrom produces Arrow records from the given OTLP traces. The generated schemas of the Arrow records follow
-// the hierarchical organization of the trace protobuf structure.
-//
-// Resource signature = resource attributes sig + dropped attributes count sig + schema URL sig
-//
-// More details can be found in the OTEL 0156 section XYZ.
-// TODO add a reference to the OTEP 0156 section that describes this mapping.
-func (p *OtlpArrowProducer) ProduceFrom(traces ptrace.Traces) ([]arrow.Record, error) {
-	resSpanList := traces.ResourceSpans()
-	// Resource spans grouped per signature. The resource span signature is based on the resource attributes, the dropped
-	// attributes count, the schema URL, and the scope spans signature.
-	resSpansPerSig := make(map[string]*common.ResourceEntity)
-
-	for rsIdx := 0; rsIdx < resSpanList.Len(); rsIdx++ {
-		resLogs := resSpanList.At(rsIdx)
-
-		// Add resource fields (attributes and dropped attributes count)
-		resField, resSig := common.ResourceFieldWithSig(resLogs.Resource(), p.cfg)
-
-		// Add schema URL
-		var schemaUrl *rfield.Field
-		if resLogs.SchemaUrl() != "" {
-			schemaUrl = rfield.NewStringField(constants.SCHEMA_URL, resLogs.SchemaUrl())
-			resSig += ",schema_url:" + resLogs.SchemaUrl()
-		}
-
-		// Group spans per scope span signature
-		spansPerScopeSpanSig := GroupScopeSpans(resLogs, p.cfg)
-
-		// Create a new entry in the map if the signature is not already present
-		resSpanFields := resSpansPerSig[resSig]
-		if resSpanFields == nil {
-			resSpanFields = common.NewResourceEntity(resField, schemaUrl)
-			resSpansPerSig[resSig] = resSpanFields
-		}
-
-		// Merge spans sharing the same scope span signature
-		for sig, ss := range spansPerScopeSpanSig {
-			scopeSpan := resSpanFields.ScopeEntities[sig]
-			if scopeSpan == nil {
-				resSpanFields.ScopeEntities[sig] = ss
-			} else {
-				scopeSpan.Entities = append(scopeSpan.Entities, ss.Entities...)
-			}
-		}
-	}
-
-	// All resource spans sharing the same signature are represented as an AIR record.
-	for _, resSpanFields := range resSpansPerSig {
-		record := air.NewRecord()
-		record.ListField(constants.RESOURCE_SPANS, rfield.List{Values: []rfield.Value{
-			resSpanFields.AirValue(constants.SCOPE_SPANS, constants.SPANS),
-		}})
-		p.rr.AddRecord(record)
-	}
-
-	// Build all Arrow records from the AIR records
-	records, err := p.rr.BuildRecords()
-	if err != nil {
-		return nil, err
-	}
-
-	return records, nil
+// Wrap wraps a [ptrace.Traces] to expose methods of the [common.TopLevelEntities] interface.
+func Wrap(traces ptrace.Traces) TopLevelWrapper {
+	return TopLevelWrapper{traces}
 }
 
-// DumpMetadata dumps the metadata of the underlying AIR record repository.
-func (p *OtlpArrowProducer) DumpMetadata(writer io.Writer) {
-	p.rr.DumpMetadata(writer)
+// ResourceSlice returns a [ptrace.ResourceSpansSlice].
+func (t TopLevelWrapper) ResourceSlice() common.TopLevelEntitiesSlice[ptrace.ScopeSpans] {
+	return ResourceSpansSliceWrapper{rss: t.traces.ResourceSpans()}
 }
 
-// GroupScopeSpans groups spans per signature.
-// A scope span signature is based on the combination of scope attributes, dropped attributes count, the schema URL, and
-// span signatures.
-func GroupScopeSpans(resourceSpans ptrace.ResourceSpans, cfg *config.Config) (scopeSpansPerSig map[string]*common.EntityGroup) {
-	scopeSpanList := resourceSpans.ScopeSpans()
-	scopeSpansPerSig = make(map[string]*common.EntityGroup, scopeSpanList.Len())
-
-	for j := 0; j < scopeSpanList.Len(); j++ {
-		scopeSpans := scopeSpanList.At(j)
-
-		var sig strings.Builder
-
-		scopeField := common.ScopeField(constants.SCOPE, scopeSpans.Scope(), cfg)
-		scopeField.Normalize()
-		scopeField.WriteSigType(&sig)
-
-		var schemaField *rfield.Field
-		if scopeSpans.SchemaUrl() != "" {
-			schemaField = rfield.NewStringField(constants.SCHEMA_URL, scopeSpans.SchemaUrl())
-			sig.WriteString(",")
-			schemaField.WriteSig(&sig)
-		}
-
-		// Group spans per signature
-		spans := groupSpans(scopeSpans, cfg)
-
-		for spanSig, spanGroup := range spans {
-			sig.WriteByte(',')
-			sig.WriteString(spanSig)
-
-			// Create a new entry in the map if the signature is not already present
-			ssSig := sig.String()
-			ssFields := scopeSpansPerSig[ssSig]
-			if ssFields == nil {
-				ssFields = &common.EntityGroup{
-					Scope:     scopeField,
-					Entities:  make([]rfield.Value, 0, 16),
-					SchemaUrl: schemaField,
-				}
-				scopeSpansPerSig[ssSig] = ssFields
-			}
-
-			ssFields.Entities = append(ssFields.Entities, spanGroup...)
-		}
-	}
-	return
-}
-
-// groupSpans converts ptrace.ScopeSpans into their AIR representation and groups them based on a given configuration.
-// A span signature is based on the span attributes (span+events+links) when the attribute encoding configuration is
-// AttributesAsStructs, otherwise it is an empty string.
-func groupSpans(scopeSpans ptrace.ScopeSpans, cfg *config.Config) (spans map[string][]rfield.Value) {
+// EntityGrouper converts [ptrace.Span]s of a [ptrace.ScopeSpans] into their AIR representation and groups them based
+// on a given configuration. A span signature is based on the span, span events, span links attributes when the
+// attribute encoding configuration is AttributesAsStructs, otherwise it is an empty string.
+func (t TopLevelWrapper) EntityGrouper(scopeSpans ptrace.ScopeSpans, cfg *config.Config) map[string][]rfield.Value {
 	scopeSpanList := scopeSpans.Spans()
-	spans = make(map[string][]rfield.Value, scopeSpanList.Len())
+	spans := make(map[string][]rfield.Value, scopeSpanList.Len())
 	for k := 0; k < scopeSpanList.Len(); k++ {
 		var spanSig strings.Builder
 		span := scopeSpanList.At(k)
@@ -263,7 +143,47 @@ func groupSpans(scopeSpans ptrace.ScopeSpans, cfg *config.Config) (spans map[str
 		ssig := spanSig.String()
 		spans[ssig] = append(spans[ssig], spanValue)
 	}
-	return
+	return spans
+}
+
+// ResourceEntitiesLabel return the label that will be used to identify the resource entities in the arrow schema.
+func (t TopLevelWrapper) ResourceEntitiesLabel() string {
+	return constants.RESOURCE_SPANS
+}
+
+// ScopeEntitiesLabel return the label that will be used to identify the scope entities in the arrow schema.
+func (t TopLevelWrapper) ScopeEntitiesLabel() string {
+	return constants.SCOPE_SPANS
+}
+
+// EntitiesLabel return the label that will be used to identify the entities in the arrow schema.
+func (t TopLevelWrapper) EntitiesLabel() string {
+	return constants.SPANS
+}
+
+// Len returns the number of elements in the slice.
+func (t ResourceSpansSliceWrapper) Len() int {
+	return t.rss.Len()
+}
+
+// At returns the element at the given index.
+func (t ResourceSpansSliceWrapper) At(i int) common.ResourceEntities[ptrace.ScopeSpans] {
+	return ResourceSpansWrapper{rs: t.rss.At(i)}
+}
+
+// Resource returns the resource associated with the resource spans.
+func (t ResourceSpansWrapper) Resource() pcommon.Resource {
+	return t.rs.Resource()
+}
+
+// SchemaUrl returns the schema URL associated with the resource spans.
+func (t ResourceSpansWrapper) SchemaUrl() string {
+	return t.rs.SchemaUrl()
+}
+
+// ScopeEntities returns the scope spans associated with the resource spans.
+func (t ResourceSpansWrapper) ScopeEntities() common.ScopeEntitiesSlice[ptrace.ScopeSpans] {
+	return t.rs.ScopeSpans()
 }
 
 // status converts OTLP span status to their AIR representation or returns nil when the status has no field.
