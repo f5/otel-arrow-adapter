@@ -61,7 +61,7 @@ func NewOtlpArrowProducerWith(cfg *config.Config) *OtlpArrowProducer {
 // Resource signature = resource attributes sig + dropped attributes count sig + schema URL sig
 //
 // More details can be found in the OTEL 0156 section XYZ.
-// TODO: add a reference to the OTEP 0156 section that describes this mapping.
+// TODO add a reference to the OTEP 0156 section that describes this mapping.
 func (p *OtlpArrowProducer) ProduceFrom(traces ptrace.Traces) ([]arrow.Record, error) {
 	resSpanList := traces.ResourceSpans()
 	// Resource spans grouped per signature. The resource span signature is based on the resource attributes, the dropped

@@ -18,6 +18,7 @@ import (
 	"strings"
 
 	"github.com/apache/arrow/go/v9/arrow"
+	"go.opentelemetry.io/collector/pdata/pcommon"
 
 	"github.com/lquerel/otel-arrow-adapter/pkg/air"
 	"github.com/lquerel/otel-arrow-adapter/pkg/air/config"
@@ -54,13 +55,57 @@ func NewOtlpArrowProducerWith(cfg *config.Config) *OtlpArrowProducer {
 	}
 }
 
+type TopLevelLogs struct {
+	logs plog.Logs
+}
+
+type TopLevelLogsSlice struct {
+	resLogs plog.ResourceLogsSlice
+}
+
+type ResourceLogsWrapper struct {
+	resLogs plog.ResourceLogs
+}
+
+func NewTopLevelLogs(logs plog.Logs) TopLevelLogs {
+	return TopLevelLogs{logs: logs}
+}
+
+func (t TopLevelLogs) ResourceSlice() TopLevelLogsSlice {
+	return TopLevelLogsSlice{resLogs: t.logs.ResourceLogs()}
+}
+
+func (t TopLevelLogs) EntityGrouper(scopeLogs plog.ScopeLogs, cfg *config.Config) map[string][]rfield.Value {
+	return groupLogs(scopeLogs, cfg)
+}
+
+func (t *TopLevelLogsSlice) Len() int {
+	return t.resLogs.Len()
+}
+
+func (t *TopLevelLogsSlice) At(i int) ResourceLogsWrapper {
+	return ResourceLogsWrapper{resLogs: t.resLogs.At(i)}
+}
+
+func (t *ResourceLogsWrapper) Resource() pcommon.Resource {
+	return t.resLogs.Resource()
+}
+
+func (t *ResourceLogsWrapper) SchemaUrl() string {
+	return t.resLogs.SchemaUrl()
+}
+
+func (t *ResourceLogsWrapper) ScopeEntities() plog.ScopeLogsSlice {
+	return t.resLogs.ScopeLogs()
+}
+
 // ProduceFrom produces Arrow records from the given OTLP logs. The generated schemas of the Arrow records follow
 // the hierarchical organization of the log protobuf structure.
 //
 // Resource signature = resource attributes sig + dropped attributes count sig + schema URL sig
 //
 // More details can be found in the OTEL 0156 section XYZ.
-// TODO: add a reference to the OTEP 0156 section that describes this mapping.
+// TODO add a reference to the OTEP 0156 section that describes this mapping.
 func (p *OtlpArrowProducer) ProduceFrom(logs plog.Logs) ([]arrow.Record, error) {
 	resLogList := logs.ResourceLogs()
 	// Resource logs grouped per signature. The resource log signature is based on the resource attributes, the dropped
@@ -81,7 +126,8 @@ func (p *OtlpArrowProducer) ProduceFrom(logs plog.Logs) ([]arrow.Record, error) 
 		}
 
 		// Group logs per scope span signature
-		logsPerScopeLogSig := GroupScopeLogs(resLogs, p.cfg)
+		//logsPerScopeLogSig := GroupScopeLogs(resLogs.ScopeLogs(), p.cfg)
+		logsPerScopeLogSig := common.GroupScopeEntities[plog.ScopeLogs](resLogs.ScopeLogs(), groupLogs, p.cfg)
 
 		// Create a new entry in the map if the signature is not already present
 		resLogFields := resLogsPerSig[resSig]
@@ -122,8 +168,7 @@ func (p *OtlpArrowProducer) ProduceFrom(logs plog.Logs) ([]arrow.Record, error) 
 // GroupScopeLogs groups logs per signature scope logs signature.
 // A scope log signature is based on the combination of scope attributes, dropped attributes count, the schema URL, and
 // log signatures.
-func GroupScopeLogs(resourceSpans plog.ResourceLogs, cfg *config.Config) (scopeLogsPerSig map[string]*common.EntityGroup) {
-	scopeLogList := resourceSpans.ScopeLogs()
+func GroupScopeLogs(scopeLogList plog.ScopeLogsSlice, cfg *config.Config) (scopeLogsPerSig map[string]*common.EntityGroup) {
 	scopeLogsPerSig = make(map[string]*common.EntityGroup, scopeLogList.Len())
 
 	for j := 0; j < scopeLogList.Len(); j++ {

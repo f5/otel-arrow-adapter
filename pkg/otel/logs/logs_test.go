@@ -18,10 +18,12 @@ import (
 	"encoding/json"
 	"testing"
 
+	"go.opentelemetry.io/collector/pdata/plog"
 	"go.opentelemetry.io/collector/pdata/plog/plogotlp"
 
 	"github.com/lquerel/otel-arrow-adapter/pkg/datagen"
 	"github.com/lquerel/otel-arrow-adapter/pkg/otel/assert"
+	"github.com/lquerel/otel-arrow-adapter/pkg/otel/common"
 )
 
 // TestConversionFromSyntheticData tests the conversion of OTLP logs to Arrow and back to OTLP.
@@ -37,8 +39,8 @@ func TestConversionFromSyntheticData(t *testing.T) {
 	expectedRequest := plogotlp.NewRequestFromLogs(logsGen.Generate(10, 100))
 
 	// Convert the OTLP logs request to Arrow.
-	otlpArrowProducer := NewOtlpArrowProducer()
-	records, err := otlpArrowProducer.ProduceFrom(expectedRequest.Logs())
+	otlpArrowProducer := common.NewOtlpArrowProducer[plog.ScopeLogs]()
+	records, err := otlpArrowProducer.ProduceFrom(NewTopLevelLogs(expectedRequest.Logs()))
 	if err != nil {
 		t.Fatal(err)
 	}
