@@ -20,21 +20,23 @@ import (
 	"go.opentelemetry.io/collector/pdata/ptrace"
 
 	"github.com/lquerel/otel-arrow-adapter/pkg/air"
-	arrow2 "github.com/lquerel/otel-arrow-adapter/pkg/otel/common/arrow"
+	common_arrow "github.com/lquerel/otel-arrow-adapter/pkg/otel/common/arrow"
 	"github.com/lquerel/otel-arrow-adapter/pkg/otel/constants"
 
 	"go.opentelemetry.io/collector/pdata/pcommon"
 )
 
-// Entities is the constraint representing the OTLP entities supported by the generic OTLP producer.
+// Entities is a constraint representing the top level OTLP entities supported by the generic OTLP producer.
 type Entities interface {
 	ptrace.Traces | plog.Logs
 }
 
+// Entity is a constraint representing the bottom level OTLP entities supported by the generic OTLP producer.
 type Entity interface {
 	ptrace.Span | plog.LogRecord
 }
 
+// EntitiesProducer is the main interface used to configure the generic OTLP producer.
 type EntitiesProducer[ES Entities, E Entity] interface {
 	NewTopLevelEntities() TopLevelEntities[ES, E]
 	ResourceEntitiesLabel() string
@@ -43,22 +45,26 @@ type EntitiesProducer[ES Entities, E Entity] interface {
 	EntityProducer(ScopeEntities[E], *air.ListOfStructs, int) error
 }
 
+// TopLevelEntities is the interface representing top level OTLP entities.
 type TopLevelEntities[ES Entities, E Entity] interface {
 	ResourceEntities() ResourceEntitiesSlice[E]
 	Unwrap() ES
 }
 
+// ResourceEntitiesSlice is the interface representing a slice of OTLP resource entities.
 type ResourceEntitiesSlice[E Entity] interface {
 	EnsureCapacity(int)
 	AppendEmpty() ResourceEntities[E]
 }
 
+// ResourceEntities is the interface representing a OTLP resource entities.
 type ResourceEntities[E Entity] interface {
 	Resource() pcommon.Resource
 	SetSchemaUrl(string)
 	ScopeEntities() ScopeEntities[E]
 }
 
+// ScopeEntities is the interface representing a OTLP scope entities.
 type ScopeEntities[E Entity] interface {
 	Scope() pcommon.InstrumentationScope
 	SetSchemaUrl(string)
@@ -66,11 +72,13 @@ type ScopeEntities[E Entity] interface {
 }
 
 // Producer produces OTLP entities from OTLP Arrow traces.
+//
+// Must use New to create new instances.
 type Producer[ES Entities, E Entity] struct {
 	entitiesProducer EntitiesProducer[ES, E]
 }
 
-// New is a constructor to create a new OTLP producer.
+// New is a constructor to create new OTLP producers.
 func New[ES Entities, E Entity](entitiesProducer EntitiesProducer[ES, E]) *Producer[ES, E] {
 	return &Producer[ES, E]{
 		entitiesProducer: entitiesProducer,
@@ -97,7 +105,7 @@ func (p *Producer[ES, E]) ProduceFrom(record arrow.Record) ([]ES, error) {
 		for resEntIdx := arrowResEnts.Start(); resEntIdx < arrowResEnts.End(); resEntIdx++ {
 			resEnt := resEntities.AppendEmpty()
 
-			resource, err := arrow2.NewResourceFrom(arrowResEnts, resEntIdx)
+			resource, err := common_arrow.NewResourceFrom(arrowResEnts, resEntIdx)
 			if err != nil {
 				return allEntities, err
 			}
@@ -116,7 +124,7 @@ func (p *Producer[ES, E]) ProduceFrom(record arrow.Record) ([]ES, error) {
 			for scopeEntIdx := arrowScopeEntities.Start(); scopeEntIdx < arrowScopeEntities.End(); scopeEntIdx++ {
 				scopeEnt := resEnt.ScopeEntities()
 
-				scope, err := arrow2.NewScopeFrom(arrowScopeEntities, scopeEntIdx)
+				scope, err := common_arrow.NewScopeFrom(arrowScopeEntities, scopeEntIdx)
 				if err != nil {
 					return allEntities, err
 				}

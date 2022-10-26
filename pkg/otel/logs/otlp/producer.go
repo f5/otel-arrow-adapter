@@ -18,7 +18,7 @@ import (
 	"fmt"
 
 	"github.com/lquerel/otel-arrow-adapter/pkg/air"
-	arrow2 "github.com/lquerel/otel-arrow-adapter/pkg/otel/common/arrow"
+	common_arrow "github.com/lquerel/otel-arrow-adapter/pkg/otel/common/arrow"
 	"github.com/lquerel/otel-arrow-adapter/pkg/otel/common/otlp"
 	"github.com/lquerel/otel-arrow-adapter/pkg/otel/constants"
 	"github.com/lquerel/otel-arrow-adapter/pkg/otel/logs"
@@ -27,65 +27,90 @@ import (
 	"go.opentelemetry.io/collector/pdata/plog"
 )
 
+// TopLevelWrapper is a wrapper around [plog.Logs] that implements the [otlp.TopLevelEntities] interface.
 type TopLevelWrapper struct {
 	logs plog.Logs
 }
 
+// ResourceEntities returns a wrapper around the [plog.ResourceLogsSlice].
 func (w TopLevelWrapper) ResourceEntities() otlp.ResourceEntitiesSlice[plog.LogRecord] {
 	return ResourceLogsSliceWrapper{slice: w.logs.ResourceLogs()}
 }
 
+// Unwrap returns the underlying [plog.Logs].
 func (w TopLevelWrapper) Unwrap() plog.Logs {
 	return w.logs
 }
 
+// ResourceLogsSliceWrapper is a wrapper around [plog.ResourceLogsSlice] that implements the
+// [otlp.ResourceEntitiesSlice] interface.
 type ResourceLogsSliceWrapper struct {
 	slice plog.ResourceLogsSlice
 }
 
+// EnsureCapacity ensures that the underlying [plog.ResourceLogsSlice] has enough capacity to hold the given number of
+// [plog.ResourceLogs].
 func (s ResourceLogsSliceWrapper) EnsureCapacity(newCap int) {
 	s.slice.EnsureCapacity(newCap)
 }
 
+// AppendEmpty creates a new [plog.ResourceLogs] and appends it to the underlying [plog.ResourceLogsSlice].
 func (s ResourceLogsSliceWrapper) AppendEmpty() otlp.ResourceEntities[plog.LogRecord] {
 	return ResourceLogsWrapper{resourceLogs: s.slice.AppendEmpty()}
 }
 
+// ResourceLogsWrapper is a wrapper around [plog.ResourceLogs] that implements the [otlp.ResourceEntities] interface.
 type ResourceLogsWrapper struct {
 	resourceLogs plog.ResourceLogs
 }
 
+// Resource returns the [pcommon.Resource] of the underlying [plog.ResourceLogs].
 func (w ResourceLogsWrapper) Resource() pcommon.Resource {
 	return w.resourceLogs.Resource()
 }
+
+// SetSchemaUrl sets the schema URL of the underlying [plog.ResourceLogs].
 func (w ResourceLogsWrapper) SetSchemaUrl(schemaUrl string) {
 	w.resourceLogs.SetSchemaUrl(schemaUrl)
 }
+
+// ScopeEntities returns a wrapper around [plog.ScopeLogs] that implements the [otlp.ScopeEntities] interface.
 func (w ResourceLogsWrapper) ScopeEntities() otlp.ScopeEntities[plog.LogRecord] {
 	return ScopeLogsWrapper{scopeLogs: w.resourceLogs.ScopeLogs().AppendEmpty()}
 }
 
+// ScopeLogsWrapper is a wrapper around [plog.ScopeLogs] that implements the [otlp.ScopeEntities] interface.
 type ScopeLogsWrapper struct {
 	scopeLogs plog.ScopeLogs
 }
 
+// Scope returns the [plog.Scope] of the underlying [plog.ScopeLogs].
 func (w ScopeLogsWrapper) Scope() pcommon.InstrumentationScope {
 	return w.scopeLogs.Scope()
 }
+
+// SetSchemaUrl sets the schema URL of the underlying [plog.ScopeLogs].
 func (w ScopeLogsWrapper) SetSchemaUrl(schemaUrl string) {
 	w.scopeLogs.SetSchemaUrl(schemaUrl)
 }
+
+// Entity returns a [plog.LogRecord] and add it to the underlying [plog.ScopeLogs].
 func (w ScopeLogsWrapper) Entity() plog.LogRecord {
 	return w.scopeLogs.LogRecords().AppendEmpty()
 }
 
+// LogsProducer is a [otlp.EntityProducer] that produces [plog.Logs].
 type LogsProducer struct {
 	logs.Constants
 }
 
+// NewTopLevelEntities creates a new [plog.Logs] and returns a wrapper around it that implements the
+// [otlp.TopLevelEntities] interface.
 func (p LogsProducer) NewTopLevelEntities() otlp.TopLevelEntities[plog.Logs, plog.LogRecord] {
 	return TopLevelWrapper{plog.NewLogs()}
 }
+
+// EntityProducer creates [plog.LogRecord]s from their AIR representation.
 func (p LogsProducer) EntityProducer(scopeLog otlp.ScopeEntities[plog.LogRecord], los *air.ListOfStructs, row int) error {
 	log := scopeLog.Entity()
 	timeUnixNano, err := los.U64FieldByName(constants.TIME_UNIX_NANO, row)
@@ -117,7 +142,7 @@ func (p LogsProducer) EntityProducer(scopeLog otlp.ScopeEntities[plog.LogRecord]
 	}
 	bodyArray, ok := los.Field(constants.BODY)
 	if ok {
-		if err := arrow2.CopyValueFrom(log.Body(), bodyArray.DataType(), bodyArray, row); err != nil {
+		if err := common_arrow.CopyValueFrom(log.Body(), bodyArray.DataType(), bodyArray, row); err != nil {
 			return err
 		}
 	}
