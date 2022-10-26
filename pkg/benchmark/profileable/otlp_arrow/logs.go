@@ -10,8 +10,8 @@ import (
 	"github.com/lquerel/otel-arrow-adapter/pkg/benchmark"
 	"github.com/lquerel/otel-arrow-adapter/pkg/benchmark/dataset"
 	"github.com/lquerel/otel-arrow-adapter/pkg/otel/arrow_record"
-	"github.com/lquerel/otel-arrow-adapter/pkg/otel/common"
-	"github.com/lquerel/otel-arrow-adapter/pkg/otel/logs"
+	"github.com/lquerel/otel-arrow-adapter/pkg/otel/common/arrow"
+	arrow2 "github.com/lquerel/otel-arrow-adapter/pkg/otel/logs/arrow"
 
 	"go.opentelemetry.io/collector/pdata/plog"
 )
@@ -21,7 +21,7 @@ type LogsProfileable struct {
 	compression       benchmark.CompressionAlgorithm
 	dataset           dataset.LogsDataset
 	logs              []plog.Logs
-	arrowProducer     *common.OtlpArrowProducer[plog.ScopeLogs]
+	arrowProducer     *arrow.OtlpArrowProducer[plog.ScopeLogs]
 	producer          *arrow_record.Producer
 	batchArrowRecords []*v1.BatchArrowRecords
 	config            *config.Config
@@ -53,7 +53,7 @@ func (s *LogsProfileable) CompressionAlgorithm() benchmark.CompressionAlgorithm 
 	return s.compression
 }
 func (s *LogsProfileable) StartProfiling(_ io.Writer) {
-	s.arrowProducer = common.NewOtlpArrowProducerWithConfig[plog.ScopeLogs](s.config)
+	s.arrowProducer = arrow.NewOtlpArrowProducerWithConfig[plog.ScopeLogs](s.config)
 }
 func (s *LogsProfileable) EndProfiling(writer io.Writer) {
 	s.arrowProducer.DumpMetadata(writer)
@@ -67,7 +67,7 @@ func (s *LogsProfileable) CreateBatch(_ io.Writer, _, _ int) {
 	// Conversion of OTLP metrics to OTLP Arrow Records
 	s.batchArrowRecords = make([]*v1.BatchArrowRecords, 0, len(s.logs))
 	for _, log := range s.logs {
-		records, err := s.arrowProducer.ProduceFrom(logs.Wrap(log))
+		records, err := s.arrowProducer.ProduceFrom(arrow2.Wrap(log))
 		if err != nil {
 			panic(err)
 		}

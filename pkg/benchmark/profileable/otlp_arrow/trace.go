@@ -12,7 +12,7 @@ import (
 	"github.com/lquerel/otel-arrow-adapter/pkg/benchmark"
 	"github.com/lquerel/otel-arrow-adapter/pkg/benchmark/dataset"
 	"github.com/lquerel/otel-arrow-adapter/pkg/otel/arrow_record"
-	"github.com/lquerel/otel-arrow-adapter/pkg/otel/common"
+	"github.com/lquerel/otel-arrow-adapter/pkg/otel/common/arrow"
 )
 
 type TraceProfileable struct {
@@ -20,7 +20,7 @@ type TraceProfileable struct {
 	compression       benchmark.CompressionAlgorithm
 	dataset           dataset.TraceDataset
 	traces            []ptrace.Traces
-	otlpArrowProducer *common.OtlpArrowProducer[ptrace.ScopeSpans]
+	otlpArrowProducer *arrow.OtlpArrowProducer[ptrace.ScopeSpans]
 	producer          *arrow_record.Producer
 	consumer          *arrow_record.Consumer
 	batchArrowRecords []*v1.BatchArrowRecords
@@ -54,7 +54,7 @@ func (s *TraceProfileable) CompressionAlgorithm() benchmark.CompressionAlgorithm
 	return s.compression
 }
 func (s *TraceProfileable) StartProfiling(_ io.Writer) {
-	s.otlpArrowProducer = common.NewOtlpArrowProducerWithConfig[ptrace.ScopeSpans](s.config)
+	s.otlpArrowProducer = arrow.NewOtlpArrowProducerWithConfig[ptrace.ScopeSpans](s.config)
 }
 func (s *TraceProfileable) EndProfiling(writer io.Writer) {
 	s.otlpArrowProducer.DumpMetadata(writer)

@@ -23,14 +23,14 @@ import (
 
 	colarspb "github.com/lquerel/otel-arrow-adapter/api/collector/arrow/v1"
 	"github.com/lquerel/otel-arrow-adapter/pkg/air/config"
-	"github.com/lquerel/otel-arrow-adapter/pkg/otel/common"
-	"github.com/lquerel/otel-arrow-adapter/pkg/otel/traces"
+	"github.com/lquerel/otel-arrow-adapter/pkg/otel/common/arrow"
+	arrow2 "github.com/lquerel/otel-arrow-adapter/pkg/otel/traces/arrow"
 )
 
 // Producer is a BatchArrowRecords producer.
 type Producer struct {
 	streamProducers         map[string]*streamProducer
-	otlpArrowTracesProducer *common.OtlpArrowProducer[ptrace.ScopeSpans]
+	otlpArrowTracesProducer *arrow.OtlpArrowProducer[ptrace.ScopeSpans]
 	batchId                 int64
 }
 
@@ -44,7 +44,7 @@ type streamProducer struct {
 func NewProducer() *Producer {
 	return &Producer{
 		streamProducers:         make(map[string]*streamProducer),
-		otlpArrowTracesProducer: common.NewOtlpArrowProducer[ptrace.ScopeSpans](),
+		otlpArrowTracesProducer: arrow.NewOtlpArrowProducer[ptrace.ScopeSpans](),
 		batchId:                 0,
 	}
 }
@@ -53,14 +53,14 @@ func NewProducer() *Producer {
 func NewProducerWithConfig(cfg *config.Config) *Producer {
 	return &Producer{
 		streamProducers:         make(map[string]*streamProducer),
-		otlpArrowTracesProducer: common.NewOtlpArrowProducerWithConfig[ptrace.ScopeSpans](cfg),
+		otlpArrowTracesProducer: arrow.NewOtlpArrowProducerWithConfig[ptrace.ScopeSpans](cfg),
 		batchId:                 0,
 	}
 }
 
 // BatchArrowRecordsFrom produces a BatchArrowRecords message from a ptrace.Traces messages.
 func (p *Producer) BatchArrowRecordsFrom(ts ptrace.Traces) (*colarspb.BatchArrowRecords, error) {
-	records, err := p.otlpArrowTracesProducer.ProduceFrom(traces.Wrap(ts))
+	records, err := p.otlpArrowTracesProducer.ProduceFrom(arrow2.Wrap(ts))
 	if err != nil {
 		return nil, err
 	}

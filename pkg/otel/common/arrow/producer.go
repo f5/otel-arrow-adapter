@@ -15,7 +15,7 @@
  *
  */
 
-package common
+package arrow
 
 import (
 	"fmt"
@@ -30,6 +30,8 @@ import (
 	"github.com/lquerel/otel-arrow-adapter/pkg/air"
 	"github.com/lquerel/otel-arrow-adapter/pkg/air/config"
 	"github.com/lquerel/otel-arrow-adapter/pkg/air/rfield"
+	"github.com/lquerel/otel-arrow-adapter/pkg/otel/common"
+
 	"github.com/lquerel/otel-arrow-adapter/pkg/otel/constants"
 
 	"go.opentelemetry.io/collector/pdata/pcommon"
@@ -91,8 +93,8 @@ func NewOtlpArrowProducerWithConfig[SE ScopeEntities](cfg *config.Config) *OtlpA
 	}
 }
 
-// ProduceFrom produces Arrow records from the given OTLP logs. The generated schemas of the Arrow records follow
-// the hierarchical organization of the log protobuf structure.
+// ProduceFrom produces Arrow records from the given OTLP entities. The generated schemas of the Arrow records follow
+// the hierarchical organization of the entity protobuf structure (e.g. Traces, Logs protobuf message).
 //
 // Resource signature = resource attributes sig + dropped attributes count sig + schema URL sig
 //
@@ -108,7 +110,7 @@ func (p *OtlpArrowProducer[T]) ProduceFrom(tle TopLevelEntities[T]) ([]arrow.Rec
 		resLogs := resLogList.At(rsIdx)
 
 		// Add resource fields (attributes and dropped attributes count)
-		resField, resSig := ResourceFieldWithSig(resLogs.Resource(), p.cfg)
+		resField, resSig := common.ResourceFieldWithSig(resLogs.Resource(), p.cfg)
 
 		// Add schema URL
 		var schemaUrl *rfield.Field
@@ -176,7 +178,7 @@ func GroupScopeEntities[SE ScopeEntities](scopeEntityList ScopeEntitiesSlice[SE]
 
 		var sig strings.Builder
 
-		scopeField := ScopeField(constants.SCOPE, scopeEntities.Scope(), cfg)
+		scopeField := common.ScopeField(constants.SCOPE, scopeEntities.Scope(), cfg)
 		scopeField.Normalize()
 		scopeField.WriteSigType(&sig)
 

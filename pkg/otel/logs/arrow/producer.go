@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package logs
+package arrow
 
 import (
 	"strings"
@@ -22,6 +22,7 @@ import (
 	"github.com/lquerel/otel-arrow-adapter/pkg/air/config"
 	"github.com/lquerel/otel-arrow-adapter/pkg/air/rfield"
 	"github.com/lquerel/otel-arrow-adapter/pkg/otel/common"
+	"github.com/lquerel/otel-arrow-adapter/pkg/otel/common/arrow"
 	"github.com/lquerel/otel-arrow-adapter/pkg/otel/constants"
 
 	"go.opentelemetry.io/collector/pdata/plog"
@@ -49,7 +50,7 @@ func Wrap(logs plog.Logs) TopLevelWrapper {
 }
 
 // ResourceSlice returns a [plog.ResourceLogsSlice].
-func (t TopLevelWrapper) ResourceSlice() common.TopLevelEntitiesSlice[plog.ScopeLogs] {
+func (t TopLevelWrapper) ResourceSlice() arrow.TopLevelEntitiesSlice[plog.ScopeLogs] {
 	return ResourceLogsSliceWrapper{rls: t.logs.ResourceLogs()}
 }
 
@@ -132,7 +133,7 @@ func (t ResourceLogsSliceWrapper) Len() int {
 }
 
 // At returns the element at the given index.
-func (t ResourceLogsSliceWrapper) At(i int) common.ResourceEntities[plog.ScopeLogs] {
+func (t ResourceLogsSliceWrapper) At(i int) arrow.ResourceEntities[plog.ScopeLogs] {
 	return ResourceLogsWrapper{rl: t.rls.At(i)}
 }
 
@@ -147,6 +148,6 @@ func (t ResourceLogsWrapper) SchemaUrl() string {
 }
 
 // ScopeEntities returns the scope logs associated with the resource logs.
-func (t ResourceLogsWrapper) ScopeEntities() common.ScopeEntitiesSlice[plog.ScopeLogs] {
+func (t ResourceLogsWrapper) ScopeEntities() arrow.ScopeEntitiesSlice[plog.ScopeLogs] {
 	return t.rl.ScopeLogs()
 }

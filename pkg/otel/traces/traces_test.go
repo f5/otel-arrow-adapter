@@ -25,7 +25,10 @@ import (
 	"github.com/lquerel/otel-arrow-adapter/pkg/benchmark/dataset"
 	"github.com/lquerel/otel-arrow-adapter/pkg/datagen"
 	"github.com/lquerel/otel-arrow-adapter/pkg/otel/assert"
-	"github.com/lquerel/otel-arrow-adapter/pkg/otel/common"
+	common_arrow "github.com/lquerel/otel-arrow-adapter/pkg/otel/common/arrow"
+	common_otlp "github.com/lquerel/otel-arrow-adapter/pkg/otel/common/otlp"
+	traces_arrow "github.com/lquerel/otel-arrow-adapter/pkg/otel/traces/arrow"
+	traces_otlp "github.com/lquerel/otel-arrow-adapter/pkg/otel/traces/otlp"
 )
 
 // TestConversionFromSyntheticData tests the conversion of OTLP traces to Arrow and back to OTLP.
@@ -41,14 +44,14 @@ func TestConversionFromSyntheticData(t *testing.T) {
 	expectedRequest := ptraceotlp.NewRequestFromTraces(tracesGen.Generate(10, 100))
 
 	// Convert the OTLP traces request to Arrow.
-	otlpArrowProducer := common.NewOtlpArrowProducer[ptrace.ScopeSpans]()
-	records, err := otlpArrowProducer.ProduceFrom(Wrap(expectedRequest.Traces()))
+	otlpArrowProducer := common_arrow.NewOtlpArrowProducer[ptrace.ScopeSpans]()
+	records, err := otlpArrowProducer.ProduceFrom(traces_arrow.Wrap(expectedRequest.Traces()))
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Convert the Arrow records back to OTLP.
-	otlpProducer := NewOtlpProducer()
+	otlpProducer := common_otlp.New[ptrace.Traces, ptrace.Span](traces_otlp.SpansProducer{})
 	for _, record := range records {
 		traces, err := otlpProducer.ProduceFrom(record)
 		if err != nil {
@@ -84,14 +87,14 @@ func TestConversionFromRealData(t *testing.T) {
 		cfg := config.NewUint16DefaultConfig()
 		//cfg.Attribute.Encoding = config.AttributesAsStructs
 		cfg.Attribute.Encoding = config.AttributesAsListStructs
-		otlpArrowProducer := common.NewOtlpArrowProducerWithConfig[ptrace.ScopeSpans](cfg)
-		records, err := otlpArrowProducer.ProduceFrom(Wrap(expectedRequest.Traces()))
+		otlpArrowProducer := common_arrow.NewOtlpArrowProducerWithConfig[ptrace.ScopeSpans](cfg)
+		records, err := otlpArrowProducer.ProduceFrom(traces_arrow.Wrap(expectedRequest.Traces()))
 		if err != nil {
 			t.Fatal(err)
 		}
 
 		// Convert the Arrow records back to OTLP.
-		otlpProducer := NewOtlpProducer()
+		otlpProducer := common_otlp.New[ptrace.Traces, ptrace.Span](traces_otlp.SpansProducer{})
 		var actualRequests []json.Marshaler
 		for _, record := range records {
 			traces, err := otlpProducer.ProduceFrom(record)

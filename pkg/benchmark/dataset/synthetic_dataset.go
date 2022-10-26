@@ -19,7 +19,7 @@ package dataset
 
 import (
 	"github.com/lquerel/otel-arrow-adapter/pkg/datagen"
-	"github.com/lquerel/otel-arrow-adapter/pkg/otel/common"
+	"github.com/lquerel/otel-arrow-adapter/pkg/otel/common/arrow"
 
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/plog"
@@ -43,7 +43,7 @@ type TraceDataset interface {
 }
 
 func ResourceAndScopeId(r pcommon.Resource, is pcommon.InstrumentationScope) string {
-	return common.ResourceId(r) + "|" + common.ScopeId(is)
+	return arrow.ResourceId(r) + "|" + arrow.ScopeId(is)
 }
 
 // ===== Fake metrics dataset =====

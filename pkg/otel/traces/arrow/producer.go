@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package traces
+package arrow
 
 import (
 	"strings"
@@ -22,6 +22,7 @@ import (
 	"github.com/lquerel/otel-arrow-adapter/pkg/air/config"
 	"github.com/lquerel/otel-arrow-adapter/pkg/air/rfield"
 	"github.com/lquerel/otel-arrow-adapter/pkg/otel/common"
+	"github.com/lquerel/otel-arrow-adapter/pkg/otel/common/arrow"
 	"github.com/lquerel/otel-arrow-adapter/pkg/otel/constants"
 
 	"go.opentelemetry.io/collector/pdata/ptrace"
@@ -49,7 +50,7 @@ func Wrap(traces ptrace.Traces) TopLevelWrapper {
 }
 
 // ResourceSlice returns a [ptrace.ResourceSpansSlice].
-func (t TopLevelWrapper) ResourceSlice() common.TopLevelEntitiesSlice[ptrace.ScopeSpans] {
+func (t TopLevelWrapper) ResourceSlice() arrow.TopLevelEntitiesSlice[ptrace.ScopeSpans] {
 	return ResourceSpansSliceWrapper{rss: t.traces.ResourceSpans()}
 }
 
@@ -167,7 +168,7 @@ func (t ResourceSpansSliceWrapper) Len() int {
 }
 
 // At returns the element at the given index.
-func (t ResourceSpansSliceWrapper) At(i int) common.ResourceEntities[ptrace.ScopeSpans] {
+func (t ResourceSpansSliceWrapper) At(i int) arrow.ResourceEntities[ptrace.ScopeSpans] {
 	return ResourceSpansWrapper{rs: t.rss.At(i)}
 }
 
@@ -182,7 +183,7 @@ func (t ResourceSpansWrapper) SchemaUrl() string {
 }
 
 // ScopeEntities returns the scope spans associated with the resource spans.
-func (t ResourceSpansWrapper) ScopeEntities() common.ScopeEntitiesSlice[ptrace.ScopeSpans] {
+func (t ResourceSpansWrapper) ScopeEntities() arrow.ScopeEntitiesSlice[ptrace.ScopeSpans] {
 	return t.rs.ScopeSpans()
 }
 
