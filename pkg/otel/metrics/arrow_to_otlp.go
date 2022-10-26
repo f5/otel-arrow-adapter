@@ -23,9 +23,9 @@ import (
 	"github.com/apache/arrow/go/v9/arrow"
 	"github.com/apache/arrow/go/v9/arrow/array"
 
-	"github.com/lquerel/otel-arrow-adapter/pkg/air"
-	arrow2 "github.com/lquerel/otel-arrow-adapter/pkg/otel/common/arrow"
-	"github.com/lquerel/otel-arrow-adapter/pkg/otel/constants"
+	"github.com/f5/otel-arrow-adapter/pkg/air"
+	arrow2 "github.com/f5/otel-arrow-adapter/pkg/otel/common/arrow"
+	"github.com/f5/otel-arrow-adapter/pkg/otel/constants"
 
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/pmetric"

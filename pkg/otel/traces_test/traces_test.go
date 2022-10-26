@@ -21,14 +21,14 @@ import (
 	"go.opentelemetry.io/collector/pdata/ptrace"
 	"go.opentelemetry.io/collector/pdata/ptrace/ptraceotlp"
 
-	"github.com/lquerel/otel-arrow-adapter/pkg/air/config"
-	"github.com/lquerel/otel-arrow-adapter/pkg/benchmark/dataset"
-	"github.com/lquerel/otel-arrow-adapter/pkg/datagen"
-	"github.com/lquerel/otel-arrow-adapter/pkg/otel/assert"
-	common_arrow "github.com/lquerel/otel-arrow-adapter/pkg/otel/common/arrow"
-	common_otlp "github.com/lquerel/otel-arrow-adapter/pkg/otel/common/otlp"
-	traces_arrow "github.com/lquerel/otel-arrow-adapter/pkg/otel/traces/arrow"
-	traces_otlp "github.com/lquerel/otel-arrow-adapter/pkg/otel/traces/otlp"
+	"github.com/f5/otel-arrow-adapter/pkg/air/config"
+	"github.com/f5/otel-arrow-adapter/pkg/benchmark/dataset"
+	"github.com/f5/otel-arrow-adapter/pkg/datagen"
+	"github.com/f5/otel-arrow-adapter/pkg/otel/assert"
+	common_arrow "github.com/f5/otel-arrow-adapter/pkg/otel/common/arrow"
+	common_otlp "github.com/f5/otel-arrow-adapter/pkg/otel/common/otlp"
+	traces_arrow "github.com/f5/otel-arrow-adapter/pkg/otel/traces/arrow"
+	traces_otlp "github.com/f5/otel-arrow-adapter/pkg/otel/traces/otlp"
 )
 
 // TestConversionFromSyntheticData tests the conversion of OTLP traces to Arrow and back to OTLP.

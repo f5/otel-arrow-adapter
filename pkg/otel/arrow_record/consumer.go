@@ -23,9 +23,9 @@ import (
 	"github.com/apache/arrow/go/v9/arrow/ipc"
 	"go.opentelemetry.io/collector/pdata/ptrace"
 
-	colarspb "github.com/lquerel/otel-arrow-adapter/api/collector/arrow/v1"
-	common_otlp "github.com/lquerel/otel-arrow-adapter/pkg/otel/common/otlp"
-	traces_otlp "github.com/lquerel/otel-arrow-adapter/pkg/otel/traces/otlp"
+	colarspb "github.com/f5/otel-arrow-adapter/api/collector/arrow/v1"
+	common_otlp "github.com/f5/otel-arrow-adapter/pkg/otel/common/otlp"
+	traces_otlp "github.com/f5/otel-arrow-adapter/pkg/otel/traces/otlp"
 )
 
 // Consumer is a BatchArrowRecords consumer.
