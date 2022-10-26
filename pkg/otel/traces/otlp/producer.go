@@ -20,6 +20,7 @@ import (
 	"github.com/lquerel/otel-arrow-adapter/pkg/air"
 	"github.com/lquerel/otel-arrow-adapter/pkg/otel/common/otlp"
 	"github.com/lquerel/otel-arrow-adapter/pkg/otel/constants"
+	"github.com/lquerel/otel-arrow-adapter/pkg/otel/traces"
 
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/ptrace"
@@ -77,19 +78,12 @@ func (w ScopeSpansWrapper) Entity() ptrace.Span {
 	return w.scopeSpans.Spans().AppendEmpty()
 }
 
-type SpansProducer struct{}
+type SpansProducer struct {
+	traces.Constants
+}
 
 func (p SpansProducer) NewTopLevelEntities() otlp.TopLevelEntities[ptrace.Traces, ptrace.Span] {
 	return TopLevelWrapper{ptrace.NewTraces()}
-}
-func (p SpansProducer) ResourceEntitiesLabel() string {
-	return constants.RESOURCE_SPANS
-}
-func (p SpansProducer) ScopeEntitiesLabel() string {
-	return constants.SCOPE_SPANS
-}
-func (p SpansProducer) EntitiesLabel() string {
-	return constants.SPANS
 }
 func (p SpansProducer) EntityProducer(scopeSpan otlp.ScopeEntities[ptrace.Span], los *air.ListOfStructs, row int) error {
 	span := scopeSpan.Entity()

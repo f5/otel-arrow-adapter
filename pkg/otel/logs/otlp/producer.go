@@ -21,6 +21,7 @@ import (
 	arrow2 "github.com/lquerel/otel-arrow-adapter/pkg/otel/common/arrow"
 	"github.com/lquerel/otel-arrow-adapter/pkg/otel/common/otlp"
 	"github.com/lquerel/otel-arrow-adapter/pkg/otel/constants"
+	"github.com/lquerel/otel-arrow-adapter/pkg/otel/logs"
 
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/plog"
@@ -78,19 +79,12 @@ func (w ScopeLogsWrapper) Entity() plog.LogRecord {
 	return w.scopeLogs.LogRecords().AppendEmpty()
 }
 
-type LogsProducer struct{}
+type LogsProducer struct {
+	logs.Constants
+}
 
 func (p LogsProducer) NewTopLevelEntities() otlp.TopLevelEntities[plog.Logs, plog.LogRecord] {
 	return TopLevelWrapper{plog.NewLogs()}
-}
-func (p LogsProducer) ResourceEntitiesLabel() string {
-	return constants.RESOURCE_LOGS
-}
-func (p LogsProducer) ScopeEntitiesLabel() string {
-	return constants.SCOPE_LOGS
-}
-func (p LogsProducer) EntitiesLabel() string {
-	return constants.LOGS
 }
 func (p LogsProducer) EntityProducer(scopeLog otlp.ScopeEntities[plog.LogRecord], los *air.ListOfStructs, row int) error {
 	log := scopeLog.Entity()

@@ -24,12 +24,14 @@ import (
 	"github.com/lquerel/otel-arrow-adapter/pkg/otel/common"
 	"github.com/lquerel/otel-arrow-adapter/pkg/otel/common/arrow"
 	"github.com/lquerel/otel-arrow-adapter/pkg/otel/constants"
+	"github.com/lquerel/otel-arrow-adapter/pkg/otel/traces"
 
 	"go.opentelemetry.io/collector/pdata/ptrace"
 )
 
 // A TopLevelWrapper wraps a [ptrace.Traces] to expose methods of the [common.TopLevelEntities] interface.
 type TopLevelWrapper struct {
+	traces.Constants
 	traces ptrace.Traces
 }
 
@@ -46,7 +48,7 @@ type ResourceSpansWrapper struct {
 
 // Wrap wraps a [ptrace.Traces] to expose methods of the [common.TopLevelEntities] interface.
 func Wrap(traces ptrace.Traces) TopLevelWrapper {
-	return TopLevelWrapper{traces}
+	return TopLevelWrapper{traces: traces}
 }
 
 // ResourceSlice returns a [ptrace.ResourceSpansSlice].
@@ -145,21 +147,6 @@ func (t TopLevelWrapper) EntityGrouper(scopeSpans ptrace.ScopeSpans, cfg *config
 		spans[ssig] = append(spans[ssig], spanValue)
 	}
 	return spans
-}
-
-// ResourceEntitiesLabel return the label that will be used to identify the resource entities in the arrow schema.
-func (t TopLevelWrapper) ResourceEntitiesLabel() string {
-	return constants.RESOURCE_SPANS
-}
-
-// ScopeEntitiesLabel return the label that will be used to identify the scope entities in the arrow schema.
-func (t TopLevelWrapper) ScopeEntitiesLabel() string {
-	return constants.SCOPE_SPANS
-}
-
-// EntitiesLabel return the label that will be used to identify the entities in the arrow schema.
-func (t TopLevelWrapper) EntitiesLabel() string {
-	return constants.SPANS
 }
 
 // Len returns the number of elements in the slice.

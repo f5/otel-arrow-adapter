@@ -24,12 +24,14 @@ import (
 	"github.com/lquerel/otel-arrow-adapter/pkg/otel/common"
 	"github.com/lquerel/otel-arrow-adapter/pkg/otel/common/arrow"
 	"github.com/lquerel/otel-arrow-adapter/pkg/otel/constants"
+	"github.com/lquerel/otel-arrow-adapter/pkg/otel/logs"
 
 	"go.opentelemetry.io/collector/pdata/plog"
 )
 
 // A TopLevelWrapper wraps a [plog.Logs] to expose methods of the [common.TopLevelEntities] interface.
 type TopLevelWrapper struct {
+	logs.Constants
 	logs plog.Logs
 }
 
@@ -110,21 +112,6 @@ func (t TopLevelWrapper) EntityGrouper(scopeLogs plog.ScopeLogs, cfg *config.Con
 		logsPerSig[lsig] = append(logsPerSig[lsig], logValue)
 	}
 	return logsPerSig
-}
-
-// ResourceEntitiesLabel return the label that will be used to identify the resource entities in the arrow schema.
-func (t TopLevelWrapper) ResourceEntitiesLabel() string {
-	return constants.RESOURCE_LOGS
-}
-
-// ScopeEntitiesLabel return the label that will be used to identify the scope entities in the arrow schema.
-func (t TopLevelWrapper) ScopeEntitiesLabel() string {
-	return constants.SCOPE_LOGS
-}
-
-// EntitiesLabel return the label that will be used to identify the entities in the arrow schema.
-func (t TopLevelWrapper) EntitiesLabel() string {
-	return constants.LOGS
 }
 
 // Len returns the number of elements in the slice.
