@@ -19,9 +19,9 @@ import (
 	"go.opentelemetry.io/collector/pdata/plog"
 	"go.opentelemetry.io/collector/pdata/ptrace"
 
-	"github.com/lquerel/otel-arrow-adapter/pkg/air"
-	common_arrow "github.com/lquerel/otel-arrow-adapter/pkg/otel/common/arrow"
-	"github.com/lquerel/otel-arrow-adapter/pkg/otel/constants"
+	"github.com/f5/otel-arrow-adapter/pkg/air"
+	common_arrow "github.com/f5/otel-arrow-adapter/pkg/otel/common/arrow"
+	"github.com/f5/otel-arrow-adapter/pkg/otel/constants"
 
 	"go.opentelemetry.io/collector/pdata/pcommon"
 )

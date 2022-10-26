@@ -21,12 +21,12 @@ import (
 	"go.opentelemetry.io/collector/pdata/plog"
 	"go.opentelemetry.io/collector/pdata/plog/plogotlp"
 
-	"github.com/lquerel/otel-arrow-adapter/pkg/datagen"
-	"github.com/lquerel/otel-arrow-adapter/pkg/otel/assert"
-	common_arrow "github.com/lquerel/otel-arrow-adapter/pkg/otel/common/arrow"
-	common_otlp "github.com/lquerel/otel-arrow-adapter/pkg/otel/common/otlp"
-	logs_arrow "github.com/lquerel/otel-arrow-adapter/pkg/otel/logs/arrow"
-	logs_otlp "github.com/lquerel/otel-arrow-adapter/pkg/otel/logs/otlp"
+	"github.com/f5/otel-arrow-adapter/pkg/datagen"
+	"github.com/f5/otel-arrow-adapter/pkg/otel/assert"
+	common_arrow "github.com/f5/otel-arrow-adapter/pkg/otel/common/arrow"
+	common_otlp "github.com/f5/otel-arrow-adapter/pkg/otel/common/otlp"
+	logs_arrow "github.com/f5/otel-arrow-adapter/pkg/otel/logs/arrow"
+	logs_otlp "github.com/f5/otel-arrow-adapter/pkg/otel/logs/otlp"
 )
 
 // TestConversionFromSyntheticData tests the conversion of OTLP logs to Arrow and back to OTLP.

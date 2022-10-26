@@ -1,6 +1,6 @@
 package logs
 
-import "github.com/lquerel/otel-arrow-adapter/pkg/otel/constants"
+import "github.com/f5/otel-arrow-adapter/pkg/otel/constants"
 
 type Constants struct{}
 

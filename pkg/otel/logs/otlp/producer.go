@@ -17,11 +17,11 @@ package otlp
 import (
 	"fmt"
 
-	"github.com/lquerel/otel-arrow-adapter/pkg/air"
-	common_arrow "github.com/lquerel/otel-arrow-adapter/pkg/otel/common/arrow"
-	"github.com/lquerel/otel-arrow-adapter/pkg/otel/common/otlp"
-	"github.com/lquerel/otel-arrow-adapter/pkg/otel/constants"
-	"github.com/lquerel/otel-arrow-adapter/pkg/otel/logs"
+	"github.com/f5/otel-arrow-adapter/pkg/air"
+	common_arrow "github.com/f5/otel-arrow-adapter/pkg/otel/common/arrow"
+	"github.com/f5/otel-arrow-adapter/pkg/otel/common/otlp"
+	"github.com/f5/otel-arrow-adapter/pkg/otel/constants"
+	"github.com/f5/otel-arrow-adapter/pkg/otel/logs"
 
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/plog"
