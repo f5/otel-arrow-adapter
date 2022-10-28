@@ -20,8 +20,8 @@ package metrics
 import (
 	"fmt"
 
-	"github.com/apache/arrow/go/v9/arrow"
-	"github.com/apache/arrow/go/v9/arrow/array"
+	"github.com/apache/arrow/go/v10/arrow"
+	"github.com/apache/arrow/go/v10/arrow/array"
 
 	"github.com/f5/otel-arrow-adapter/pkg/air"
 	common_arrow "github.com/f5/otel-arrow-adapter/pkg/otel/common/arrow"
