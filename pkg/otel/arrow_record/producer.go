@@ -24,7 +24,7 @@ import (
 	colarspb "github.com/f5/otel-arrow-adapter/api/collector/arrow/v1"
 	"github.com/f5/otel-arrow-adapter/pkg/air/config"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/arrow"
-	arrow2 "github.com/f5/otel-arrow-adapter/pkg/otel/traces/arrow"
+	traces_arrow "github.com/f5/otel-arrow-adapter/pkg/otel/traces/arrow"
 )
 
 // Producer is a BatchArrowRecords producer.
