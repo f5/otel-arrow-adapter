@@ -11,7 +11,7 @@ import (
 	"github.com/f5/otel-arrow-adapter/pkg/benchmark/dataset"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/arrow_record"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/arrow"
-	arrow2 "github.com/f5/otel-arrow-adapter/pkg/otel/logs/arrow"
+	logs_arrow "github.com/f5/otel-arrow-adapter/pkg/otel/logs/arrow"
 
 	"go.opentelemetry.io/collector/pdata/plog"
 )
