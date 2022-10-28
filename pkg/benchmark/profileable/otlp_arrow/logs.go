@@ -67,7 +67,7 @@ func (s *LogsProfileable) CreateBatch(_ io.Writer, _, _ int) {
 	// Conversion of OTLP metrics to OTLP Arrow Records
 	s.batchArrowRecords = make([]*v1.BatchArrowRecords, 0, len(s.logs))
 	for _, log := range s.logs {
-		records, err := s.arrowProducer.ProduceFrom(arrow2.Wrap(log))
+		records, err := s.arrowProducer.ProduceFrom(logs_arrow.Wrap(log))
 		if err != nil {
 			panic(err)
 		}
