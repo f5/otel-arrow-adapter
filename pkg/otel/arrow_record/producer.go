@@ -60,7 +60,7 @@ func NewProducerWithConfig(cfg *config.Config) *Producer {
 
 // BatchArrowRecordsFrom produces a BatchArrowRecords message from a ptrace.Traces messages.
 func (p *Producer) BatchArrowRecordsFrom(ts ptrace.Traces) (*colarspb.BatchArrowRecords, error) {
-	records, err := p.otlpArrowTracesProducer.ProduceFrom(arrow2.Wrap(ts))
+	records, err := p.otlpArrowTracesProducer.ProduceFrom(traces_arrow.Wrap(ts))
 	if err != nil {
 		return nil, err
 	}
