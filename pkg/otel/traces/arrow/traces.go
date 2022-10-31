@@ -14,7 +14,7 @@ type TracesBuilder struct {
 	released bool
 
 	builder *array.ListBuilder
-	rsp     *ResourceSpansBuilder
+	rsp     *ResourceSpansBuilder // resource spans builder
 }
 
 // NewTracesBuilder creates a new TracesBuilder with a given allocator.
@@ -44,7 +44,7 @@ func (b *TracesBuilder) Build() arrow.Record {
 // Append appends a new set of resource spans to the builder.
 //
 // This method panics if the builder has already been released.
-func (b *TracesBuilder) Append(traces ptrace.Traces) {
+func (b *TracesBuilder) Append(traces ptrace.Traces) error {
 	if b.released {
 		panic("traces builder already released")
 	}
@@ -55,11 +55,14 @@ func (b *TracesBuilder) Append(traces ptrace.Traces) {
 		b.builder.Append(true)
 		b.builder.Reserve(rc)
 		for i := 0; i < rc; i++ {
-			b.rsp.Append(rs.At(i))
+			if err := b.rsp.Append(rs.At(i)); err != nil {
+				return err
+			}
 		}
 	} else {
 		b.builder.AppendNull()
 	}
+	return nil
 }
 
 // Release releases the memory allocated by the builder.

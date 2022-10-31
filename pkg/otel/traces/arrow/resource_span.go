@@ -87,7 +87,9 @@ func (b *ResourceSpansBuilder) Append(ss ptrace.ResourceSpans) error {
 		b.spsb.Append(true)
 		b.spsb.Reserve(sc)
 		for i := 0; i < sc; i++ {
-			b.spb.Append(sspans.At(i))
+			if err := b.spb.Append(sspans.At(i)); err != nil {
+				return err
+			}
 		}
 	} else {
 		b.spsb.Append(false)

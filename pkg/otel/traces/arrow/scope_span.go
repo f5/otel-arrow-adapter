@@ -14,7 +14,7 @@ import (
 var (
 	ScopeSpansDT = arrow.StructOf([]arrow.Field{
 		{Name: constants.SCOPE, Type: acommon.ScopeDT},
-		{Name: constants.SCHEMA_URL, Type: arrow.BinaryTypes.String},
+		{Name: constants.SCHEMA_URL, Type: acommon.Dict16String},
 		{Name: constants.SPANS, Type: arrow.ListOf(SpanDT)},
 	}...)
 )
@@ -25,10 +25,10 @@ type ScopeSpansBuilder struct {
 
 	builder *array.StructBuilder
 
-	scb  *acommon.ScopeBuilder
-	schb *array.StringBuilder
-	ssb  *array.ListBuilder
-	sb   *SpanBuilder
+	scb  *acommon.ScopeBuilder          // scope builder
+	schb *array.BinaryDictionaryBuilder // schema url builder
+	ssb  *array.ListBuilder             // span list builder
+	sb   *SpanBuilder                   // span builder
 }
 
 // NewScopeSpansBuilder creates a new ResourceSpansBuilder with a given allocator.
@@ -45,7 +45,7 @@ func ScopeSpansBuilderFrom(builder *array.StructBuilder) *ScopeSpansBuilder {
 		released: false,
 		builder:  builder,
 		scb:      acommon.ScopeBuilderFrom(builder.FieldBuilder(0).(*array.StructBuilder)),
-		schb:     builder.FieldBuilder(1).(*array.StringBuilder),
+		schb:     builder.FieldBuilder(1).(*array.BinaryDictionaryBuilder),
 		ssb:      builder.FieldBuilder(2).(*array.ListBuilder),
 		sb:       SpanBuilderFrom(builder.FieldBuilder(2).(*array.ListBuilder).ValueBuilder().(*array.StructBuilder)),
 	}
@@ -67,25 +67,35 @@ func (b *ScopeSpansBuilder) Build() *array.Struct {
 // Append appends a new scope spans to the builder.
 //
 // This method panics if the builder has already been released.
-func (b *ScopeSpansBuilder) Append(ss ptrace.ScopeSpans) {
+func (b *ScopeSpansBuilder) Append(ss ptrace.ScopeSpans) error {
 	if b.released {
 		panic("scope spans builder already released")
 	}
 
 	b.builder.Append(true)
 	b.scb.Append(ss.Scope())
-	b.schb.Append(ss.SchemaUrl())
+	schemaUrl := ss.SchemaUrl()
+	if schemaUrl == "" {
+		b.schb.AppendNull()
+	} else {
+		if err := b.schb.AppendString(schemaUrl); err != nil {
+			return err
+		}
+	}
 	spans := ss.Spans()
 	sc := spans.Len()
 	if sc > 0 {
 		b.ssb.Append(true)
 		b.ssb.Reserve(sc)
 		for i := 0; i < sc; i++ {
-			b.sb.Append(spans.At(i))
+			if err := b.sb.Append(spans.At(i)); err != nil {
+				return err
+			}
 		}
 	} else {
 		b.ssb.Append(false)
 	}
+	return nil
 }
 
 // Release releases the memory allocated by the builder.
