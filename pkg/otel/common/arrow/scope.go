@@ -12,7 +12,8 @@ import (
 // ScopeDT is the Arrow Data Type describing a scope.
 var (
 	ScopeDT = arrow.StructOf([]arrow.Field{
-		{Name: constants.NAME, Type: arrow.BinaryTypes.String},
+		{Name: constants.NAME, Type: Dict16String},
+		// TODO: should be a dictionary
 		{Name: constants.VERSION, Type: arrow.BinaryTypes.String},
 		{Name: constants.ATTRIBUTES, Type: AttributesDT},
 		{Name: constants.DROPPED_ATTRIBUTES_COUNT, Type: arrow.PrimitiveTypes.Uint32},
@@ -22,7 +23,7 @@ var (
 type ScopeBuilder struct {
 	released bool
 	builder  *array.StructBuilder
-	nb       *array.StringBuilder
+	nb       *array.BinaryDictionaryBuilder
 	vb       *array.StringBuilder
 	ab       *AttributesBuilder
 	dacb     *array.Uint32Builder
@@ -36,7 +37,7 @@ func ScopeBuilderFrom(sb *array.StructBuilder) *ScopeBuilder {
 	return &ScopeBuilder{
 		released: false,
 		builder:  sb,
-		nb:       sb.FieldBuilder(0).(*array.StringBuilder),
+		nb:       sb.FieldBuilder(0).(*array.BinaryDictionaryBuilder),
 		vb:       sb.FieldBuilder(1).(*array.StringBuilder),
 		ab:       AttributesBuilderFrom(sb.FieldBuilder(2).(*array.MapBuilder)),
 		dacb:     sb.FieldBuilder(3).(*array.Uint32Builder),
@@ -52,7 +53,7 @@ func (b *ScopeBuilder) Append(resource pcommon.InstrumentationScope) {
 	}
 
 	b.builder.Append(true)
-	b.nb.Append(resource.Name())
+	b.nb.AppendString(resource.Name())
 	b.vb.Append(resource.Version())
 	b.ab.Append(resource.Attributes())
 	b.dacb.Append(resource.DroppedAttributesCount())

@@ -14,7 +14,7 @@ import (
 var (
 	EventDT = arrow.StructOf([]arrow.Field{
 		{Name: constants.TIME_UNIX_NANO, Type: arrow.PrimitiveTypes.Uint64},
-		{Name: constants.NAME, Type: arrow.BinaryTypes.String},
+		{Name: constants.NAME, Type: acommon.Dict16String},
 		{Name: constants.ATTRIBUTES, Type: acommon.AttributesDT},
 		{Name: constants.DROPPED_ATTRIBUTES_COUNT, Type: arrow.PrimitiveTypes.Uint32},
 	}...)
@@ -24,7 +24,7 @@ type EventBuilder struct {
 	released bool
 	builder  *array.StructBuilder
 	tunb     *array.Uint64Builder
-	nb       *array.StringBuilder
+	nb       *array.BinaryDictionaryBuilder
 	ab       *acommon.AttributesBuilder
 	dacb     *array.Uint32Builder
 }
@@ -38,7 +38,7 @@ func EventBuilderFrom(eb *array.StructBuilder) *EventBuilder {
 		released: false,
 		builder:  eb,
 		tunb:     eb.FieldBuilder(0).(*array.Uint64Builder),
-		nb:       eb.FieldBuilder(1).(*array.StringBuilder),
+		nb:       eb.FieldBuilder(1).(*array.BinaryDictionaryBuilder),
 		ab:       acommon.AttributesBuilderFrom(eb.FieldBuilder(2).(*array.MapBuilder)),
 		dacb:     eb.FieldBuilder(3).(*array.Uint32Builder),
 	}
@@ -54,7 +54,7 @@ func (b *EventBuilder) Append(event ptrace.SpanEvent) {
 
 	b.builder.Append(true)
 	b.tunb.Append(uint64(event.Timestamp()))
-	b.nb.Append(event.Name())
+	b.nb.AppendString(event.Name())
 	b.ab.Append(event.Attributes())
 	b.dacb.Append(event.DroppedAttributesCount())
 }

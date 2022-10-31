@@ -122,8 +122,17 @@ func DataTypeToId(dt arrow.DataType) string {
 		id += ","
 		id += DataTypeToId(t.ValueType)
 		id += ">"
+	case *arrow.DenseUnionType:
+		// TODO implement
+		id += "DenseUnion<>"
+	case *arrow.SparseUnionType:
+		// TODO implement
+		id += "SparseUnion<>"
+	case *arrow.MapType:
+		// TODO implement
+		id += "Map<>"
 	default:
-		panic("unsupported data type")
+		panic("unsupported data type " + dt.String())
 	}
 
 	return id

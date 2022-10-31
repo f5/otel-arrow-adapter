@@ -15,7 +15,7 @@ var (
 	LinkDT = arrow.StructOf([]arrow.Field{
 		{Name: constants.TRACE_ID, Type: arrow.BinaryTypes.Binary},
 		{Name: constants.SPAN_ID, Type: arrow.BinaryTypes.Binary},
-		{Name: constants.TRACE_STATE, Type: arrow.BinaryTypes.String},
+		{Name: constants.TRACE_STATE, Type: acommon.Dict16String},
 		{Name: constants.ATTRIBUTES, Type: acommon.AttributesDT},
 		{Name: constants.DROPPED_ATTRIBUTES_COUNT, Type: arrow.PrimitiveTypes.Uint32},
 	}...)
@@ -26,7 +26,7 @@ type LinkBuilder struct {
 	builder  *array.StructBuilder
 	tib      *array.BinaryBuilder
 	sib      *array.BinaryBuilder
-	tsb      *array.StringBuilder
+	tsb      *array.BinaryDictionaryBuilder
 	ab       *acommon.AttributesBuilder
 	dacb     *array.Uint32Builder
 }
@@ -41,7 +41,7 @@ func LinkBuilderFrom(lb *array.StructBuilder) *LinkBuilder {
 		builder:  lb,
 		tib:      lb.FieldBuilder(0).(*array.BinaryBuilder),
 		sib:      lb.FieldBuilder(1).(*array.BinaryBuilder),
-		tsb:      lb.FieldBuilder(2).(*array.StringBuilder),
+		tsb:      lb.FieldBuilder(2).(*array.BinaryDictionaryBuilder),
 		ab:       acommon.AttributesBuilderFrom(lb.FieldBuilder(3).(*array.MapBuilder)),
 		dacb:     lb.FieldBuilder(4).(*array.Uint32Builder),
 	}
@@ -60,7 +60,7 @@ func (b *LinkBuilder) Append(link ptrace.SpanLink) {
 	b.tib.Append(tid[:])
 	sid := link.SpanID()
 	b.sib.Append(sid[:])
-	b.tsb.Append(link.TraceState().AsRaw())
+	b.tsb.AppendString(link.TraceState().AsRaw())
 	b.ab.Append(link.Attributes())
 	b.dacb.Append(link.DroppedAttributesCount())
 }

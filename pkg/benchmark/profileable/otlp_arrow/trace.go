@@ -3,16 +3,19 @@ package otlp_arrow
 import (
 	"io"
 
+	"github.com/apache/arrow/go/v10/arrow/memory"
 	"google.golang.org/protobuf/proto"
 
 	"go.opentelemetry.io/collector/pdata/ptrace"
 
+	colarspb "github.com/f5/otel-arrow-adapter/api/collector/arrow/v1"
 	v1 "github.com/f5/otel-arrow-adapter/api/collector/arrow/v1"
 	"github.com/f5/otel-arrow-adapter/pkg/air/config"
 	"github.com/f5/otel-arrow-adapter/pkg/benchmark"
 	"github.com/f5/otel-arrow-adapter/pkg/benchmark/dataset"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/arrow_record"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/arrow"
+	arrow2 "github.com/f5/otel-arrow-adapter/pkg/otel/traces/arrow"
 )
 
 type TraceProfileable struct {
@@ -68,7 +71,15 @@ func (s *TraceProfileable) CreateBatch(_ io.Writer, _, _ int) {
 	// Conversion of OTLP metrics to OTLP Arrow Records
 	s.batchArrowRecords = make([]*v1.BatchArrowRecords, 0, len(s.traces))
 	for _, traceReq := range s.traces {
-		bar, err := s.producer.BatchArrowRecordsFrom(traceReq)
+		pool := memory.NewGoAllocator()
+		tb := arrow2.NewTracesBuilder(pool)
+		tb.Append(traceReq)
+		record := tb.Build()
+		rms := make([]*arrow_record.RecordMessage, 1)
+		rms[0] = arrow_record.NewTraceMessage(record, colarspb.DeliveryType_BEST_EFFORT)
+		bar, err := s.producer.Produce(rms, colarspb.DeliveryType_BEST_EFFORT)
+
+		// TODO a remettre bar, err := s.producer.BatchArrowRecordsFrom(traceReq)
 		if err != nil {
 			panic(err)
 		}

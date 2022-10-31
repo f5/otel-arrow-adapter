@@ -18,9 +18,9 @@ const (
 
 // Array data types used to build the attribute map.
 var (
-	KDT = arrow.BinaryTypes.String
+	KDT = Dict16String
 	IDT = arrow.DenseUnionOf([]arrow.Field{
-		{Name: "string", Type: arrow.BinaryTypes.String},
+		{Name: "string", Type: Dict16String},
 		{Name: "int", Type: arrow.PrimitiveTypes.Int64},
 		{Name: "double", Type: arrow.PrimitiveTypes.Float64},
 		{Name: "bool", Type: arrow.FixedWidthTypes.Boolean},
@@ -40,10 +40,10 @@ type AttributesBuilder struct {
 	released bool
 
 	builder *array.MapBuilder
-	kb      *array.StringBuilder
+	kb      *array.BinaryDictionaryBuilder
 	ib      *array.DenseUnionBuilder
 
-	strBuilder    *array.StringBuilder
+	strBuilder    *array.BinaryDictionaryBuilder
 	intBuilder    *array.Int64Builder
 	doubleBuilder *array.Float64Builder
 	boolBuilder   *array.BooleanBuilder
@@ -62,7 +62,7 @@ func NewAttributesBuilder(pool *memory.GoAllocator) *AttributesBuilder {
 
 func AttributesBuilderFrom(mb *array.MapBuilder) *AttributesBuilder {
 	ib := mb.ItemBuilder().(*array.DenseUnionBuilder)
-	strBuilder := ib.Child(0).(*array.StringBuilder)
+	strBuilder := ib.Child(0).(*array.BinaryDictionaryBuilder)
 	intBuilder := ib.Child(1).(*array.Int64Builder)
 	doubleBuilder := ib.Child(2).(*array.Float64Builder)
 	boolBuilder := ib.Child(3).(*array.BooleanBuilder)
@@ -71,7 +71,7 @@ func AttributesBuilderFrom(mb *array.MapBuilder) *AttributesBuilder {
 	return &AttributesBuilder{
 		released:      false,
 		builder:       mb,
-		kb:            mb.KeyBuilder().(*array.StringBuilder),
+		kb:            mb.KeyBuilder().(*array.BinaryDictionaryBuilder),
 		ib:            ib,
 		strBuilder:    strBuilder,
 		intBuilder:    intBuilder,
@@ -160,35 +160,35 @@ func (b *AttributesBuilder) append0Attrs() {
 
 // appendStr appends a new string attribute to the builder.
 func (b *AttributesBuilder) appendStr(k string, v string) {
-	b.kb.Append(k)
+	b.kb.AppendString(k)
 	b.ib.Append(StrCode)
-	b.strBuilder.Append(v)
+	b.strBuilder.AppendString(v)
 }
 
 // appendInt appends a new int attribute to the builder.
 func (b *AttributesBuilder) appendInt(k string, v int64) {
-	b.kb.Append(k)
+	b.kb.AppendString(k)
 	b.ib.Append(IntCode)
 	b.intBuilder.Append(v)
 }
 
 // appendDouble appends a new double attribute to the builder.
 func (b *AttributesBuilder) appendDouble(k string, v float64) {
-	b.kb.Append(k)
+	b.kb.AppendString(k)
 	b.ib.Append(DoubleCode)
 	b.doubleBuilder.Append(v)
 }
 
 // appendBool appends a new bool attribute to the builder.
 func (b *AttributesBuilder) appendBool(k string, v bool) {
-	b.kb.Append(k)
+	b.kb.AppendString(k)
 	b.ib.Append(BoolCode)
 	b.boolBuilder.Append(v)
 }
 
 // appendBinary appends a new binary attribute to the builder.
 func (b *AttributesBuilder) appendBinary(k string, v []byte) {
-	b.kb.Append(k)
+	b.kb.AppendString(k)
 	b.ib.Append(BinaryCode)
 	b.binaryBuilder.Append(v)
 }
