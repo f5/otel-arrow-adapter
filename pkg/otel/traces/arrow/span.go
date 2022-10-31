@@ -15,11 +15,11 @@ var (
 	SpanDT = arrow.StructOf([]arrow.Field{
 		{Name: constants.START_TIME_UNIX_NANO, Type: arrow.PrimitiveTypes.Uint64},
 		{Name: constants.END_TIME_UNIX_NANO, Type: arrow.PrimitiveTypes.Uint64},
-		{Name: constants.TRACE_ID, Type: arrow.BinaryTypes.Binary},
-		{Name: constants.SPAN_ID, Type: arrow.BinaryTypes.Binary},
-		{Name: constants.TRACE_STATE, Type: arrow.BinaryTypes.String},
-		{Name: constants.PARENT_SPAN_ID, Type: arrow.BinaryTypes.Binary},
-		{Name: constants.NAME, Type: arrow.BinaryTypes.String},
+		{Name: constants.TRACE_ID, Type: acommon.Dict16Fixed16Binary},
+		{Name: constants.SPAN_ID, Type: acommon.Dict16Fixed8Binary},
+		{Name: constants.TRACE_STATE, Type: acommon.Dict16String},
+		{Name: constants.PARENT_SPAN_ID, Type: acommon.Dict16Fixed8Binary},
+		{Name: constants.NAME, Type: acommon.Dict16String},
 		{Name: constants.KIND, Type: arrow.PrimitiveTypes.Int32},
 		{Name: constants.ATTRIBUTES, Type: acommon.AttributesDT},
 		{Name: constants.DROPPED_ATTRIBUTES_COUNT, Type: arrow.PrimitiveTypes.Uint32},
@@ -37,23 +37,23 @@ type SpanBuilder struct {
 
 	builder *array.StructBuilder
 
-	stunb *array.Uint64Builder       // start time unix nano builder
-	etunb *array.Uint64Builder       // end time unix nano builder
-	tib   *array.BinaryBuilder       // trace id builder
-	sib   *array.BinaryBuilder       // span id builder
-	tsb   *array.StringBuilder       // trace state builder
-	psib  *array.BinaryBuilder       // parent span id builder
-	nb    *array.StringBuilder       // name builder
-	kb    *array.Int32Builder        // kind builder
-	ab    *acommon.AttributesBuilder // attributes builder
-	dacb  *array.Uint32Builder       // dropped attributes count builder
-	sesb  *array.ListBuilder         // span event list builder
-	seb   *EventBuilder              // span event builder
-	decb  *array.Uint32Builder       // dropped events count builder
-	slsb  *array.ListBuilder         // span link list builder
-	slb   *LinkBuilder               // span link builder
-	dlcb  *array.Uint32Builder       // dropped links count builder
-	sb    *StatusBuilder             // status builder
+	stunb *array.Uint64Builder                    // start time unix nano builder
+	etunb *array.Uint64Builder                    // end time unix nano builder
+	tib   *array.FixedSizeBinaryDictionaryBuilder // trace id builder
+	sib   *array.FixedSizeBinaryDictionaryBuilder // span id builder
+	tsb   *array.BinaryDictionaryBuilder          // trace state builder
+	psib  *array.FixedSizeBinaryDictionaryBuilder // parent span id builder
+	nb    *array.BinaryDictionaryBuilder          // name builder
+	kb    *array.Int32Builder                     // kind builder
+	ab    *acommon.AttributesBuilder              // attributes builder
+	dacb  *array.Uint32Builder                    // dropped attributes count builder
+	sesb  *array.ListBuilder                      // span event list builder
+	seb   *EventBuilder                           // span event builder
+	decb  *array.Uint32Builder                    // dropped events count builder
+	slsb  *array.ListBuilder                      // span link list builder
+	slb   *LinkBuilder                            // span link builder
+	dlcb  *array.Uint32Builder                    // dropped links count builder
+	sb    *StatusBuilder                          // status builder
 }
 
 // NewScopeSpansBuilder creates a new ResourceSpansBuilder with a given allocator.
@@ -71,11 +71,11 @@ func SpanBuilderFrom(sb *array.StructBuilder) *SpanBuilder {
 		builder:  sb,
 		stunb:    sb.FieldBuilder(0).(*array.Uint64Builder),
 		etunb:    sb.FieldBuilder(1).(*array.Uint64Builder),
-		tib:      sb.FieldBuilder(2).(*array.BinaryBuilder),
-		sib:      sb.FieldBuilder(3).(*array.BinaryBuilder),
-		tsb:      sb.FieldBuilder(4).(*array.StringBuilder),
-		psib:     sb.FieldBuilder(5).(*array.BinaryBuilder),
-		nb:       sb.FieldBuilder(6).(*array.StringBuilder),
+		tib:      sb.FieldBuilder(2).(*array.FixedSizeBinaryDictionaryBuilder),
+		sib:      sb.FieldBuilder(3).(*array.FixedSizeBinaryDictionaryBuilder),
+		tsb:      sb.FieldBuilder(4).(*array.BinaryDictionaryBuilder),
+		psib:     sb.FieldBuilder(5).(*array.FixedSizeBinaryDictionaryBuilder),
+		nb:       sb.FieldBuilder(6).(*array.BinaryDictionaryBuilder),
 		kb:       sb.FieldBuilder(7).(*array.Int32Builder),
 		ab:       acommon.AttributesBuilderFrom(sb.FieldBuilder(8).(*array.MapBuilder)),
 		dacb:     sb.FieldBuilder(9).(*array.Uint32Builder),
@@ -114,13 +114,33 @@ func (b *SpanBuilder) Append(span ptrace.Span) error {
 	b.stunb.Append(uint64(span.StartTimestamp()))
 	b.etunb.Append(uint64(span.EndTimestamp()))
 	tib := span.TraceID()
-	b.tib.Append(tib[:])
+	if err := b.tib.Append(tib[:]); err != nil {
+		return err
+	}
 	sib := span.SpanID()
-	b.sib.Append(sib[:])
-	b.tsb.Append(span.TraceState().AsRaw())
+	if err := b.sib.Append(sib[:]); err != nil {
+		return err
+	}
+	traceState := span.TraceState().AsRaw()
+	if traceState == "" {
+		b.tsb.AppendNull()
+	} else {
+		if err := b.tsb.AppendString(traceState); err != nil {
+			return err
+		}
+	}
 	psib := span.ParentSpanID()
-	b.psib.Append(psib[:])
-	b.nb.Append(span.Name())
+	if err := b.psib.Append(psib[:]); err != nil {
+		return err
+	}
+	name := span.Name()
+	if name == "" {
+		b.nb.AppendNull()
+	} else {
+		if err := b.nb.AppendString(name); err != nil {
+			return err
+		}
+	}
 	b.kb.Append(int32(span.Kind()))
 	if err := b.ab.Append(span.Attributes()); err != nil {
 		return err
@@ -132,25 +152,31 @@ func (b *SpanBuilder) Append(span ptrace.Span) error {
 		b.sesb.Append(true)
 		b.sesb.Reserve(sc)
 		for i := 0; i < sc; i++ {
-			b.seb.Append(evts.At(i))
+			if err := b.seb.Append(evts.At(i)); err != nil {
+				return err
+			}
 		}
 	} else {
 		b.sesb.Append(false)
 	}
 	b.decb.Append(span.DroppedEventsCount())
-	links := span.Links()
-	lc := links.Len()
+	lks := span.Links()
+	lc := lks.Len()
 	if lc > 0 {
 		b.slsb.Append(true)
 		b.slsb.Reserve(lc)
 		for i := 0; i < lc; i++ {
-			b.slb.Append(links.At(i))
+			if err := b.slb.Append(lks.At(i)); err != nil {
+				return err
+			}
 		}
 	} else {
 		b.slsb.Append(false)
 	}
 	b.dlcb.Append(span.DroppedLinksCount())
-	b.sb.Append(span.Status())
+	if err := b.sb.Append(span.Status()); err != nil {
+		return err
+	}
 	return nil
 }
 
