@@ -26,7 +26,7 @@ var (
 		{Name: "int", Type: arrow.PrimitiveTypes.Int64},
 		{Name: "double", Type: arrow.PrimitiveTypes.Float64},
 		{Name: "bool", Type: arrow.FixedWidthTypes.Boolean},
-		{Name: "binary", Type: arrow.BinaryTypes.Binary},
+		{Name: "binary", Type: Dict16Binary},
 	}, []int8{
 		StrCode,
 		IntCode,
@@ -49,7 +49,7 @@ type AttributesBuilder struct {
 	intBuilder    *array.Int64Builder
 	doubleBuilder *array.Float64Builder
 	boolBuilder   *array.BooleanBuilder
-	binaryBuilder *array.BinaryBuilder
+	binaryBuilder *array.BinaryDictionaryBuilder
 }
 
 // NewAttributesBuilder creates a new AttributesBuilder with a given allocator.
@@ -68,7 +68,7 @@ func AttributesBuilderFrom(mb *array.MapBuilder) *AttributesBuilder {
 	intBuilder := ib.Child(1).(*array.Int64Builder)
 	doubleBuilder := ib.Child(2).(*array.Float64Builder)
 	boolBuilder := ib.Child(3).(*array.BooleanBuilder)
-	binaryBuilder := ib.Child(4).(*array.BinaryBuilder)
+	binaryBuilder := ib.Child(4).(*array.BinaryDictionaryBuilder)
 
 	return &AttributesBuilder{
 		released:      false,
@@ -116,19 +116,22 @@ func (b *AttributesBuilder) Append(attrs pcommon.Map) error {
 		case pcommon.ValueTypeEmpty:
 			b.append0Attrs()
 		case pcommon.ValueTypeStr:
-			b.appendStr(key, v.Str())
+			err = b.appendStr(key, v.Str())
 		case pcommon.ValueTypeInt:
-			b.appendInt(key, v.Int())
+			err = b.appendInt(key, v.Int())
 		case pcommon.ValueTypeDouble:
-			b.appendDouble(key, v.Double())
+			err = b.appendDouble(key, v.Double())
 		case pcommon.ValueTypeBool:
-			b.appendBool(key, v.Bool())
+			err = b.appendBool(key, v.Bool())
 		case pcommon.ValueTypeBytes:
-			b.appendBinary(key, v.Bytes().AsRaw())
+			err = b.appendBinary(key, v.Bytes().AsRaw())
 		case pcommon.ValueTypeSlice:
 			// Not yet supported
 		case pcommon.ValueTypeMap:
 			// Not yet supported
+		}
+		if err != nil {
+			return false
 		}
 		return true
 	})
@@ -234,6 +237,12 @@ func (b *AttributesBuilder) appendBinary(k string, v []byte) error {
 		return err
 	}
 	b.ib.Append(BinaryCode)
-	b.binaryBuilder.Append(v)
+	if v == nil {
+		b.binaryBuilder.AppendNull()
+	} else {
+		if err := b.binaryBuilder.Append(v); err != nil {
+			return err
+		}
+	}
 	return nil
 }
