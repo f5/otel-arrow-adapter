@@ -37,23 +37,23 @@ type SpanBuilder struct {
 
 	builder *array.StructBuilder
 
-	stunb *array.Uint64Builder
-	etunb *array.Uint64Builder
-	tib   *array.BinaryBuilder
-	sib   *array.BinaryBuilder
-	tsb   *array.StringBuilder
-	psib  *array.BinaryBuilder
-	nb    *array.StringBuilder
-	kb    *array.Int32Builder
-	ab    *acommon.AttributesBuilder
-	dacb  *array.Uint32Builder
-	sesb  *array.ListBuilder
-	seb   *EventBuilder
-	decb  *array.Uint32Builder
-	slsb  *array.ListBuilder
-	slb   *LinkBuilder
-	dlcb  *array.Uint32Builder
-	sb    *StatusBuilder
+	stunb *array.Uint64Builder       // start time unix nano builder
+	etunb *array.Uint64Builder       // end time unix nano builder
+	tib   *array.BinaryBuilder       // trace id builder
+	sib   *array.BinaryBuilder       // span id builder
+	tsb   *array.StringBuilder       // trace state builder
+	psib  *array.BinaryBuilder       // parent span id builder
+	nb    *array.StringBuilder       // name builder
+	kb    *array.Int32Builder        // kind builder
+	ab    *acommon.AttributesBuilder // attributes builder
+	dacb  *array.Uint32Builder       // dropped attributes count builder
+	sesb  *array.ListBuilder         // span event list builder
+	seb   *EventBuilder              // span event builder
+	decb  *array.Uint32Builder       // dropped events count builder
+	slsb  *array.ListBuilder         // span link list builder
+	slb   *LinkBuilder               // span link builder
+	dlcb  *array.Uint32Builder       // dropped links count builder
+	sb    *StatusBuilder             // status builder
 }
 
 // NewScopeSpansBuilder creates a new ResourceSpansBuilder with a given allocator.
@@ -105,7 +105,7 @@ func (b *SpanBuilder) Build() *array.Struct {
 // Append appends a new span to the builder.
 //
 // This method panics if the builder has already been released.
-func (b *SpanBuilder) Append(span ptrace.Span) {
+func (b *SpanBuilder) Append(span ptrace.Span) error {
 	if b.released {
 		panic("attribute builder already released")
 	}
@@ -122,8 +122,10 @@ func (b *SpanBuilder) Append(span ptrace.Span) {
 	b.psib.Append(psib[:])
 	b.nb.Append(span.Name())
 	b.kb.Append(int32(span.Kind()))
-	b.ab.Append(span.Attributes())
-	b.dacb.Append(uint32(span.DroppedAttributesCount()))
+	if err := b.ab.Append(span.Attributes()); err != nil {
+		return err
+	}
+	b.dacb.Append(span.DroppedAttributesCount())
 	evts := span.Events()
 	sc := evts.Len()
 	if sc > 0 {
@@ -149,6 +151,7 @@ func (b *SpanBuilder) Append(span ptrace.Span) {
 	}
 	b.dlcb.Append(span.DroppedLinksCount())
 	b.sb.Append(span.Status())
+	return nil
 }
 
 // Release releases the memory allocated by the builder.
