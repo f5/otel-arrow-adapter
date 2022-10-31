@@ -73,8 +73,13 @@ func (s *TraceProfileable) CreateBatch(_ io.Writer, _, _ int) {
 	for _, traceReq := range s.traces {
 		pool := memory.NewGoAllocator()
 		tb := arrow2.NewTracesBuilder(pool)
-		tb.Append(traceReq)
-		record := tb.Build()
+		if err := tb.Append(traceReq); err != nil {
+			panic(err)
+		}
+		record, err := tb.Build()
+		if err != nil {
+			panic(err)
+		}
 		rms := make([]*arrow_record.RecordMessage, 1)
 		rms[0] = arrow_record.NewTraceMessage(record, colarspb.DeliveryType_BEST_EFFORT)
 		bar, err := s.producer.Produce(rms, colarspb.DeliveryType_BEST_EFFORT)

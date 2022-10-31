@@ -24,10 +24,12 @@ var (
 	KDT = DictU16String
 	// IDT is the Arrow value data type.
 	IDT = arrow.SparseUnionOf([]arrow.Field{
+		// TODO manage case where the cardinality of the dictionary is too high (> 2^16).
 		{Name: "str", Type: DictU16String},
 		{Name: "i64", Type: arrow.PrimitiveTypes.Int64},
 		{Name: "f64", Type: arrow.PrimitiveTypes.Float64},
 		{Name: "bool", Type: arrow.FixedWidthTypes.Boolean},
+		// TODO manage case where the cardinality of the dictionary is too high (> 2^16).
 		{Name: "binary", Type: DictU16Binary},
 	}, []int8{
 		StrCode,
@@ -90,13 +92,13 @@ func AttributesBuilderFrom(mb *array.MapBuilder) *AttributesBuilder {
 //
 // Once the returned array is no longer needed, Release() must be called to free the
 // memory allocated by the array.
-func (b *AttributesBuilder) Build() *array.Map {
+func (b *AttributesBuilder) Build() (*array.Map, error) {
 	if b.released {
-		panic("attribute builder already released")
+		return nil, fmt.Errorf("attribute builder already released")
 	}
 
 	defer b.Release()
-	return b.builder.NewMapArray()
+	return b.builder.NewMapArray(), nil
 }
 
 // Append appends a new set of attributes to the builder.

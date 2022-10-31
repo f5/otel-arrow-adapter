@@ -17,9 +17,16 @@ func TestStatus(t *testing.T) {
 	pool := memory.NewGoAllocator()
 	sb := arrow.NewStatusBuilder(pool)
 
-	sb.Append(Status1())
-	sb.Append(Status2())
-	arr := sb.Build()
+	if err := sb.Append(Status1()); err != nil {
+		t.Fatal(err)
+	}
+	if err := sb.Append(Status2()); err != nil {
+		t.Fatal(err)
+	}
+	arr, err := sb.Build()
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer arr.Release()
 
 	json, err := arr.MarshalJSON()
@@ -40,9 +47,16 @@ func TestEvent(t *testing.T) {
 	pool := memory.NewGoAllocator()
 	eb := arrow.NewEventBuilder(pool)
 
-	eb.Append(Event1())
-	eb.Append(Event2())
-	arr := eb.Build()
+	if err := eb.Append(Event1()); err != nil {
+		t.Fatal(err)
+	}
+	if err := eb.Append(Event2()); err != nil {
+		t.Fatal(err)
+	}
+	arr, err := eb.Build()
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer arr.Release()
 
 	json, err := arr.MarshalJSON()
@@ -63,9 +77,16 @@ func TestLink(t *testing.T) {
 	pool := memory.NewGoAllocator()
 	lb := arrow.NewLinkBuilder(pool)
 
-	lb.Append(Link1())
-	lb.Append(Link2())
-	arr := lb.Build()
+	if err := lb.Append(Link1()); err != nil {
+		t.Fatal(err)
+	}
+	if err := lb.Append(Link2()); err != nil {
+		t.Fatal(err)
+	}
+	arr, err := lb.Build()
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer arr.Release()
 
 	json, err := arr.MarshalJSON()
@@ -86,9 +107,16 @@ func TestSpan(t *testing.T) {
 	pool := memory.NewGoAllocator()
 	sb := arrow.NewSpanBuilder(pool)
 
-	sb.Append(Span1())
-	sb.Append(Span2())
-	arr := sb.Build()
+	if err := sb.Append(Span1()); err != nil {
+		t.Fatal(err)
+	}
+	if err := sb.Append(Span2()); err != nil {
+		t.Fatal(err)
+	}
+	arr, err := sb.Build()
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer arr.Release()
 
 	json, err := arr.MarshalJSON()
@@ -109,9 +137,16 @@ func TestScopeSpans(t *testing.T) {
 	pool := memory.NewGoAllocator()
 	ssb := arrow.NewScopeSpansBuilder(pool)
 
-	ssb.Append(ScopeSpans1())
-	ssb.Append(ScopeSpans2())
-	arr := ssb.Build()
+	if err := ssb.Append(ScopeSpans1()); err != nil {
+		t.Fatal(err)
+	}
+	if err := ssb.Append(ScopeSpans2()); err != nil {
+		t.Fatal(err)
+	}
+	arr, err := ssb.Build()
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer arr.Release()
 
 	json, err := arr.MarshalJSON()
@@ -132,9 +167,16 @@ func TestResourceSpans(t *testing.T) {
 	pool := memory.NewGoAllocator()
 	rsb := arrow.NewResourceSpansBuilder(pool)
 
-	rsb.Append(ResourceSpans1())
-	rsb.Append(ResourceSpans2())
-	arr := rsb.Build()
+	if err := rsb.Append(ResourceSpans1()); err != nil {
+		t.Fatal(err)
+	}
+	if err := rsb.Append(ResourceSpans2()); err != nil {
+		t.Fatal(err)
+	}
+	arr, err := rsb.Build()
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer arr.Release()
 
 	json, err := arr.MarshalJSON()
@@ -155,8 +197,13 @@ func TestTraces(t *testing.T) {
 	pool := memory.NewGoAllocator()
 	tb := arrow.NewTracesBuilder(pool)
 
-	tb.Append(Traces())
-	record := tb.Build()
+	if err := tb.Append(Traces()); err != nil {
+		t.Fatal(err)
+	}
+	record, err := tb.Build()
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer record.Release()
 
 	json, err := record.MarshalJSON()

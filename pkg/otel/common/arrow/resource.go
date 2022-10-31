@@ -1,6 +1,8 @@
 package arrow
 
 import (
+	"fmt"
+
 	"github.com/apache/arrow/go/v10/arrow"
 	"github.com/apache/arrow/go/v10/arrow/array"
 	"github.com/apache/arrow/go/v10/arrow/memory"
@@ -17,6 +19,7 @@ var (
 	}...)
 )
 
+// ResourceBuilder is an Arrow builder for resources.
 type ResourceBuilder struct {
 	released bool
 	builder  *array.StructBuilder
@@ -24,10 +27,12 @@ type ResourceBuilder struct {
 	dacb     *array.Uint32Builder // Dropped attributes count builder
 }
 
+// NewResourceBuilder creates a new resource builder with a given allocator.
 func NewResourceBuilder(pool *memory.GoAllocator) *ResourceBuilder {
 	return ResourceBuilderFrom(array.NewStructBuilder(pool, ResourceDT))
 }
 
+// ResourceBuilderFrom creates a new resource builder from an existing struct builder.
 func ResourceBuilderFrom(rb *array.StructBuilder) *ResourceBuilder {
 	return &ResourceBuilder{
 		released: false,
@@ -38,11 +43,9 @@ func ResourceBuilderFrom(rb *array.StructBuilder) *ResourceBuilder {
 }
 
 // Append appends a new resource to the builder.
-//
-// This method panics if the builder has already been released.
 func (b *ResourceBuilder) Append(resource pcommon.Resource) error {
 	if b.released {
-		panic("resource builder already released")
+		return fmt.Errorf("resource builder already released")
 	}
 
 	b.builder.Append(true)
@@ -57,9 +60,13 @@ func (b *ResourceBuilder) Append(resource pcommon.Resource) error {
 //
 // Once the array is no longer needed, Release() must be called to free the
 // memory allocated by the array.
-func (b *ResourceBuilder) Build() *array.Struct {
+func (b *ResourceBuilder) Build() (*array.Struct, error) {
+	if b.released {
+		return nil, fmt.Errorf("attribute builder already released")
+	}
+
 	defer b.Release()
-	return b.builder.NewStructArray()
+	return b.builder.NewStructArray(), nil
 }
 
 // Release releases the memory allocated by the builder.

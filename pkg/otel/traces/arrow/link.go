@@ -1,6 +1,8 @@
 package arrow
 
 import (
+	"fmt"
+
 	"github.com/apache/arrow/go/v10/arrow"
 	"github.com/apache/arrow/go/v10/arrow/array"
 	"github.com/apache/arrow/go/v10/arrow/memory"
@@ -14,7 +16,7 @@ import (
 var (
 	LinkDT = arrow.StructOf([]arrow.Field{
 		{Name: constants.TRACE_ID, Type: acommon.DictU16Fixed16Binary},
-		// TODO Not sure a dictionary if needed here
+		// TODO: Not sure a dictionary if needed here
 		{Name: constants.SPAN_ID, Type: acommon.DictU16Fixed8Binary},
 		{Name: constants.TRACE_STATE, Type: acommon.DictU16String},
 		{Name: constants.ATTRIBUTES, Type: acommon.AttributesDT},
@@ -49,11 +51,9 @@ func LinkBuilderFrom(lb *array.StructBuilder) *LinkBuilder {
 }
 
 // Append appends a new link to the builder.
-//
-// This method panics if the builder has already been released.
 func (b *LinkBuilder) Append(link ptrace.SpanLink) error {
 	if b.released {
-		panic("link builder already released")
+		return fmt.Errorf("link builder already released")
 	}
 
 	b.builder.Append(true)
@@ -84,13 +84,13 @@ func (b *LinkBuilder) Append(link ptrace.SpanLink) error {
 //
 // Once the array is no longer needed, Release() must be called to free the
 // memory allocated by the array.
-func (b *LinkBuilder) Build() *array.Struct {
+func (b *LinkBuilder) Build() (*array.Struct, error) {
 	if b.released {
-		panic("link builder already released")
+		return nil, fmt.Errorf("link builder already released")
 	}
 
 	defer b.Release()
-	return b.builder.NewStructArray()
+	return b.builder.NewStructArray(), nil
 }
 
 // Release releases the memory allocated by the builder.

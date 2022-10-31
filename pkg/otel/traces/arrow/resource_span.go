@@ -1,6 +1,8 @@
 package arrow
 
 import (
+	"fmt"
+
 	"github.com/apache/arrow/go/v10/arrow"
 	"github.com/apache/arrow/go/v10/arrow/array"
 	"github.com/apache/arrow/go/v10/arrow/memory"
@@ -18,11 +20,11 @@ var (
 	}...)
 )
 
-// ResourceSpansBuilder is a helper to build a resource spans.
+// ResourceSpansBuilder is a helper to build resource spans.
 type ResourceSpansBuilder struct {
 	released bool
 
-	builder *array.StructBuilder
+	builder *array.StructBuilder // builder for the resource spans struct
 
 	rb   *acommon.ResourceBuilder       // resource builder
 	schb *array.BinaryDictionaryBuilder // schema url builder
@@ -32,13 +34,14 @@ type ResourceSpansBuilder struct {
 
 // NewResourceSpansBuilder creates a new ResourceSpansBuilder with a given allocator.
 //
-// Once the builder is no longer needed, Release() must be called to free the
+// Once the builder is no longer needed, Build() or Release() must be called to free the
 // memory allocated by the builder.
 func NewResourceSpansBuilder(pool *memory.GoAllocator) *ResourceSpansBuilder {
 	builder := array.NewStructBuilder(pool, ResourceSpansDT)
 	return ResourceSpansBuilderFrom(builder)
 }
 
+// ResourceSpansBuilderFrom creates a new ResourceSpansBuilder from an existing builder.
 func ResourceSpansBuilderFrom(builder *array.StructBuilder) *ResourceSpansBuilder {
 	return &ResourceSpansBuilder{
 		released: false,
@@ -54,21 +57,19 @@ func ResourceSpansBuilderFrom(builder *array.StructBuilder) *ResourceSpansBuilde
 //
 // Once the array is no longer needed, Release() must be called to free the
 // memory allocated by the array.
-func (b *ResourceSpansBuilder) Build() *array.Struct {
+func (b *ResourceSpansBuilder) Build() (*array.Struct, error) {
 	if b.released {
-		panic("resource spans builder already released")
+		return nil, fmt.Errorf("resource spans builder already released")
 	}
 
 	defer b.Release()
-	return b.builder.NewStructArray()
+	return b.builder.NewStructArray(), nil
 }
 
 // Append appends a new resource spans to the builder.
-//
-// This method panics if the builder has already been released.
 func (b *ResourceSpansBuilder) Append(ss ptrace.ResourceSpans) error {
 	if b.released {
-		panic("resource spans builder already released")
+		return fmt.Errorf("resource spans builder already released")
 	}
 
 	b.builder.Append(true)

@@ -16,10 +16,19 @@ func TestAttributes(t *testing.T) {
 	pool := memory.NewGoAllocator()
 	ab := acommon.NewAttributesBuilder(pool)
 
-	ab.Append(Attrs1())
-	ab.Append(Attrs2())
-	ab.Append(Attrs3())
-	arr := ab.Build()
+	if err := ab.Append(Attrs1()); err != nil {
+		t.Fatal(err)
+	}
+	if err := ab.Append(Attrs2()); err != nil {
+		t.Fatal(err)
+	}
+	if err := ab.Append(Attrs3()); err != nil {
+		t.Fatal(err)
+	}
+	arr, err := ab.Build()
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer arr.Release()
 
 	json, err := arr.MarshalJSON()
@@ -41,9 +50,16 @@ func TestScope(t *testing.T) {
 	pool := memory.NewGoAllocator()
 	sb := acommon.NewScopeBuilder(pool)
 
-	sb.Append(Scope1())
-	sb.Append(Scope2())
-	arr := sb.Build()
+	if err := sb.Append(Scope1()); err != nil {
+		t.Fatal(err)
+	}
+	if err := sb.Append(Scope2()); err != nil {
+		t.Fatal(err)
+	}
+	arr, err := sb.Build()
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer arr.Release()
 
 	json, err := arr.MarshalJSON()
@@ -64,9 +80,16 @@ func TestResource(t *testing.T) {
 	pool := memory.NewGoAllocator()
 	rb := acommon.NewResourceBuilder(pool)
 
-	rb.Append(Resource1())
-	rb.Append(Resource2())
-	arr := rb.Build()
+	if err := rb.Append(Resource1()); err != nil {
+		t.Fatal(err)
+	}
+	if err := rb.Append(Resource2()); err != nil {
+		t.Fatal(err)
+	}
+	arr, err := rb.Build()
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer arr.Release()
 
 	json, err := arr.MarshalJSON()

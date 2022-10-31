@@ -1,6 +1,8 @@
 package arrow
 
 import (
+	"fmt"
+
 	"github.com/apache/arrow/go/v10/arrow"
 	"github.com/apache/arrow/go/v10/arrow/array"
 	"github.com/apache/arrow/go/v10/arrow/memory"
@@ -93,21 +95,19 @@ func SpanBuilderFrom(sb *array.StructBuilder) *SpanBuilder {
 //
 // Once the array is no longer needed, Release() must be called to free the
 // memory allocated by the array.
-func (b *SpanBuilder) Build() *array.Struct {
+func (b *SpanBuilder) Build() (*array.Struct, error) {
 	if b.released {
-		panic("span builder already released")
+		return nil, fmt.Errorf("span builder already released")
 	}
 
 	defer b.Release()
-	return b.builder.NewStructArray()
+	return b.builder.NewStructArray(), nil
 }
 
 // Append appends a new span to the builder.
-//
-// This method panics if the builder has already been released.
 func (b *SpanBuilder) Append(span ptrace.Span) error {
 	if b.released {
-		panic("attribute builder already released")
+		return fmt.Errorf("attribute builder already released")
 	}
 
 	b.builder.Append(true)

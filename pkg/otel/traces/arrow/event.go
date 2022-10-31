@@ -1,6 +1,8 @@
 package arrow
 
 import (
+	"fmt"
+
 	"github.com/apache/arrow/go/v10/arrow"
 	"github.com/apache/arrow/go/v10/arrow/array"
 	"github.com/apache/arrow/go/v10/arrow/memory"
@@ -45,11 +47,9 @@ func EventBuilderFrom(eb *array.StructBuilder) *EventBuilder {
 }
 
 // Append appends a new event to the builder.
-//
-// This method panics if the builder has already been released.
 func (b *EventBuilder) Append(event ptrace.SpanEvent) error {
 	if b.released {
-		panic("event builder already released")
+		return fmt.Errorf("event builder already released")
 	}
 
 	b.builder.Append(true)
@@ -73,13 +73,13 @@ func (b *EventBuilder) Append(event ptrace.SpanEvent) error {
 //
 // Once the array is no longer needed, Release() must be called to free the
 // memory allocated by the array.
-func (b *EventBuilder) Build() *array.Struct {
+func (b *EventBuilder) Build() (*array.Struct, error) {
 	if b.released {
-		panic("event builder already released")
+		return nil, fmt.Errorf("event builder already released")
 	}
 
 	defer b.Release()
-	return b.builder.NewStructArray()
+	return b.builder.NewStructArray(), nil
 }
 
 // Release releases the memory allocated by the builder.

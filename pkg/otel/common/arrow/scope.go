@@ -1,6 +1,8 @@
 package arrow
 
 import (
+	"fmt"
+
 	"github.com/apache/arrow/go/v10/arrow"
 	"github.com/apache/arrow/go/v10/arrow/array"
 	"github.com/apache/arrow/go/v10/arrow/memory"
@@ -28,10 +30,12 @@ type ScopeBuilder struct {
 	dacb     *array.Uint32Builder           // Dropped attributes count builder
 }
 
+// NewScopeBuilder creates a new instrumentation scope array builder with a given allocator.
 func NewScopeBuilder(pool *memory.GoAllocator) *ScopeBuilder {
 	return ScopeBuilderFrom(array.NewStructBuilder(pool, ScopeDT))
 }
 
+// ScopeBuilderFrom creates a new instrumentation scope array builder from an existing struct builder.
 func ScopeBuilderFrom(sb *array.StructBuilder) *ScopeBuilder {
 	return &ScopeBuilder{
 		released: false,
@@ -44,11 +48,9 @@ func ScopeBuilderFrom(sb *array.StructBuilder) *ScopeBuilder {
 }
 
 // Append appends a new instrumentation scope to the builder.
-//
-// This method panics if the builder has already been released.
 func (b *ScopeBuilder) Append(resource pcommon.InstrumentationScope) error {
 	if b.released {
-		panic("scope builder already released")
+		return fmt.Errorf("scope builder already released")
 	}
 
 	b.builder.Append(true)
@@ -79,13 +81,13 @@ func (b *ScopeBuilder) Append(resource pcommon.InstrumentationScope) error {
 //
 // Once the array is no longer needed, Release() must be called to free the
 // memory allocated by the array.
-func (b *ScopeBuilder) Build() *array.Struct {
+func (b *ScopeBuilder) Build() (*array.Struct, error) {
 	if b.released {
-		panic("scope builder already released")
+		return nil, fmt.Errorf("scope builder already released")
 	}
 
 	defer b.Release()
-	return b.builder.NewStructArray()
+	return b.builder.NewStructArray(), nil
 }
 
 // Release releases the memory allocated by the builder.

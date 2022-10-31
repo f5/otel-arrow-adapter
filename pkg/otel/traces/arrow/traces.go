@@ -1,6 +1,8 @@
 package arrow
 
 import (
+	"fmt"
+
 	"github.com/apache/arrow/go/v10/arrow"
 	"github.com/apache/arrow/go/v10/arrow/array"
 	"github.com/apache/arrow/go/v10/arrow/memory"
@@ -9,11 +11,17 @@ import (
 	"github.com/f5/otel-arrow-adapter/pkg/otel/constants"
 )
 
+var (
+	Schema = arrow.NewSchema([]arrow.Field{
+		{Name: constants.RESOURCE_SPANS, Type: arrow.ListOf(ResourceSpansDT)},
+	}, nil)
+)
+
 // TracesBuilder is a helper to build a list of resource spans.
 type TracesBuilder struct {
 	released bool
 
-	builder *array.ListBuilder
+	builder *array.ListBuilder    // resource spans list builder
 	rsp     *ResourceSpansBuilder // resource spans builder
 }
 
@@ -30,23 +38,22 @@ func NewTracesBuilder(pool *memory.GoAllocator) *TracesBuilder {
 // Build builds an Arrow Record from the builder.
 //
 // Once the array is no longer needed, Release() must be called to free the
-// memory allocated by the array.
-func (b *TracesBuilder) Build() arrow.Record {
+// memory allocated by the record.
+func (b *TracesBuilder) Build() (arrow.Record, error) {
+	if b.released {
+		return nil, fmt.Errorf("resource spans builder already released")
+	}
+
 	defer b.Release()
 
-	schema := arrow.NewSchema([]arrow.Field{
-		{Name: constants.RESOURCE_SPANS, Type: arrow.ListOf(ResourceSpansDT)},
-	}, nil)
 	arr := b.builder.NewArray()
-	return array.NewRecord(schema, []arrow.Array{arr}, int64(arr.Len()))
+	return array.NewRecord(Schema, []arrow.Array{arr}, int64(arr.Len())), nil
 }
 
 // Append appends a new set of resource spans to the builder.
-//
-// This method panics if the builder has already been released.
 func (b *TracesBuilder) Append(traces ptrace.Traces) error {
 	if b.released {
-		panic("traces builder already released")
+		return fmt.Errorf("traces builder already released")
 	}
 
 	rs := traces.ResourceSpans()
@@ -69,7 +76,7 @@ func (b *TracesBuilder) Append(traces ptrace.Traces) error {
 func (b *TracesBuilder) Release() {
 	if !b.released {
 		b.builder.Release()
-		//b.rsp.Release()
+		b.rsp.Release()
 		b.released = true
 	}
 }

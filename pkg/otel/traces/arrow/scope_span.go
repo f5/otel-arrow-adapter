@@ -1,6 +1,8 @@
 package arrow
 
 import (
+	"fmt"
+
 	"github.com/apache/arrow/go/v10/arrow"
 	"github.com/apache/arrow/go/v10/arrow/array"
 	"github.com/apache/arrow/go/v10/arrow/memory"
@@ -55,21 +57,19 @@ func ScopeSpansBuilderFrom(builder *array.StructBuilder) *ScopeSpansBuilder {
 //
 // Once the array is no longer needed, Release() must be called to free the
 // memory allocated by the array.
-func (b *ScopeSpansBuilder) Build() *array.Struct {
+func (b *ScopeSpansBuilder) Build() (*array.Struct, error) {
 	if b.released {
-		panic("scope spans builder already released")
+		return nil, fmt.Errorf("scope spans builder already released")
 	}
 
 	defer b.Release()
-	return b.builder.NewStructArray()
+	return b.builder.NewStructArray(), nil
 }
 
 // Append appends a new scope spans to the builder.
-//
-// This method panics if the builder has already been released.
 func (b *ScopeSpansBuilder) Append(ss ptrace.ScopeSpans) error {
 	if b.released {
-		panic("scope spans builder already released")
+		return fmt.Errorf("scope spans builder already released")
 	}
 
 	b.builder.Append(true)
