@@ -131,6 +131,9 @@ func DataTypeToId(dt arrow.DataType) string {
 	case *arrow.MapType:
 		// TODO implement
 		id += "Map<>"
+	case *arrow.FixedSizeBinaryType:
+		// TODO implement
+		id += "FixedSizeBinary<>"
 	default:
 		panic("unsupported data type " + dt.String())
 	}

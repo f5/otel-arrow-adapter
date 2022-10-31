@@ -14,4 +14,16 @@ var (
 		ValueType: arrow.BinaryTypes.Binary,
 		Ordered:   false,
 	}
+
+	Dict16Fixed16Binary = &arrow.DictionaryType{
+		IndexType: arrow.PrimitiveTypes.Uint16,
+		ValueType: &arrow.FixedSizeBinaryType{ByteWidth: 16},
+		Ordered:   false,
+	}
+
+	Dict16Fixed8Binary = &arrow.DictionaryType{
+		IndexType: arrow.PrimitiveTypes.Uint16,
+		ValueType: &arrow.FixedSizeBinaryType{ByteWidth: 8},
+		Ordered:   false,
+	}
 )
