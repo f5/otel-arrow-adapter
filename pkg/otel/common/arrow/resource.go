@@ -20,8 +20,8 @@ var (
 type ResourceBuilder struct {
 	released bool
 	builder  *array.StructBuilder
-	ab       *AttributesBuilder
-	dacb     *array.Uint32Builder
+	ab       *AttributesBuilder   // Attributes builder
+	dacb     *array.Uint32Builder // Dropped attributes count builder
 }
 
 func NewResourceBuilder(pool *memory.GoAllocator) *ResourceBuilder {
