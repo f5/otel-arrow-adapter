@@ -13,7 +13,7 @@ import (
 var (
 	ResourceSpansDT = arrow.StructOf([]arrow.Field{
 		{Name: constants.RESOURCE, Type: acommon.ResourceDT},
-		{Name: constants.SCHEMA_URL, Type: arrow.BinaryTypes.String},
+		{Name: constants.SCHEMA_URL, Type: acommon.Dict16String},
 		{Name: constants.SCOPE_SPANS, Type: arrow.ListOf(ScopeSpansDT)},
 	}...)
 )
@@ -24,10 +24,10 @@ type ResourceSpansBuilder struct {
 
 	builder *array.StructBuilder
 
-	rb   *acommon.ResourceBuilder
-	schb *array.StringBuilder
-	spsb *array.ListBuilder
-	spb  *ScopeSpansBuilder
+	rb   *acommon.ResourceBuilder       // resource builder
+	schb *array.BinaryDictionaryBuilder // schema url builder
+	spsb *array.ListBuilder             // scope span list builder
+	spb  *ScopeSpansBuilder             // scope span builder
 }
 
 // NewResourceSpansBuilder creates a new ResourceSpansBuilder with a given allocator.
@@ -44,7 +44,7 @@ func ResourceSpansBuilderFrom(builder *array.StructBuilder) *ResourceSpansBuilde
 		released: false,
 		builder:  builder,
 		rb:       acommon.ResourceBuilderFrom(builder.FieldBuilder(0).(*array.StructBuilder)),
-		schb:     builder.FieldBuilder(1).(*array.StringBuilder),
+		schb:     builder.FieldBuilder(1).(*array.BinaryDictionaryBuilder),
 		spsb:     builder.FieldBuilder(2).(*array.ListBuilder),
 		spb:      ScopeSpansBuilderFrom(builder.FieldBuilder(2).(*array.ListBuilder).ValueBuilder().(*array.StructBuilder)),
 	}
@@ -66,14 +66,21 @@ func (b *ResourceSpansBuilder) Build() *array.Struct {
 // Append appends a new resource spans to the builder.
 //
 // This method panics if the builder has already been released.
-func (b *ResourceSpansBuilder) Append(ss ptrace.ResourceSpans) {
+func (b *ResourceSpansBuilder) Append(ss ptrace.ResourceSpans) error {
 	if b.released {
 		panic("resource spans builder already released")
 	}
 
 	b.builder.Append(true)
 	b.rb.Append(ss.Resource())
-	b.schb.Append(ss.SchemaUrl())
+	schemaUrl := ss.SchemaUrl()
+	if schemaUrl == "" {
+		b.schb.AppendNull()
+	} else {
+		if err := b.schb.AppendString(schemaUrl); err != nil {
+			return err
+		}
+	}
 	sspans := ss.ScopeSpans()
 	sc := sspans.Len()
 	if sc > 0 {
@@ -85,6 +92,7 @@ func (b *ResourceSpansBuilder) Append(ss ptrace.ResourceSpans) {
 	} else {
 		b.spsb.Append(false)
 	}
+	return nil
 }
 
 // Release releases the memory allocated by the builder.
