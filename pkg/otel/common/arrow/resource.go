@@ -21,7 +21,7 @@ type ResourceBuilder struct {
 	released bool
 	builder  *array.StructBuilder
 	ab       *AttributesBuilder
-	dacb     *array.Uint32Builder // Dropped attributes count builder
+	dacb     *array.Uint32Builder
 }
 
 func NewResourceBuilder(pool *memory.GoAllocator) *ResourceBuilder {
@@ -46,8 +46,7 @@ func (b *ResourceBuilder) Append(resource pcommon.Resource) error {
 	}
 
 	b.builder.Append(true)
-	err := b.ab.Append(resource.Attributes())
-	if err != nil {
+	if err := b.ab.Append(resource.Attributes()); err != nil {
 		return err
 	}
 	b.dacb.Append(resource.DroppedAttributesCount())

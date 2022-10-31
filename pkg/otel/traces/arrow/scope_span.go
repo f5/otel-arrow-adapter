@@ -73,7 +73,9 @@ func (b *ScopeSpansBuilder) Append(ss ptrace.ScopeSpans) error {
 	}
 
 	b.builder.Append(true)
-	b.scb.Append(ss.Scope())
+	if err := b.scb.Append(ss.Scope()); err != nil {
+		return err
+	}
 	schemaUrl := ss.SchemaUrl()
 	if schemaUrl == "" {
 		b.schb.AppendNull()

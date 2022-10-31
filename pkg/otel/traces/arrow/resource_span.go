@@ -72,7 +72,9 @@ func (b *ResourceSpansBuilder) Append(ss ptrace.ResourceSpans) error {
 	}
 
 	b.builder.Append(true)
-	b.rb.Append(ss.Resource())
+	if err := b.rb.Append(ss.Resource()); err != nil {
+		return err
+	}
 	schemaUrl := ss.SchemaUrl()
 	if schemaUrl == "" {
 		b.schb.AppendNull()

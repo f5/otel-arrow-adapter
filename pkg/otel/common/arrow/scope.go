@@ -24,8 +24,8 @@ type ScopeBuilder struct {
 	builder  *array.StructBuilder
 	nb       *array.BinaryDictionaryBuilder // Name builder
 	vb       *array.BinaryDictionaryBuilder // Version builder
-	ab       *AttributesBuilder
-	dacb     *array.Uint32Builder // Dropped attributes count builder
+	ab       *AttributesBuilder             // Attributes builder
+	dacb     *array.Uint32Builder           // Dropped attributes count builder
 }
 
 func NewScopeBuilder(pool *memory.GoAllocator) *ScopeBuilder {
@@ -52,28 +52,23 @@ func (b *ScopeBuilder) Append(resource pcommon.InstrumentationScope) error {
 	}
 
 	b.builder.Append(true)
-
 	name := resource.Name()
-	version := resource.Version()
-
 	if name == "" {
 		b.nb.AppendNull()
 	} else {
-		err := b.nb.AppendString(name)
-		if err != nil {
+		if err := b.nb.AppendString(name); err != nil {
 			return err
 		}
 	}
+	version := resource.Version()
 	if version == "" {
 		b.vb.AppendNull()
 	} else {
-		err := b.vb.AppendString(version)
-		if err != nil {
+		if err := b.vb.AppendString(version); err != nil {
 			return err
 		}
 	}
-	err := b.ab.Append(resource.Attributes())
-	if err != nil {
+	if err := b.ab.Append(resource.Attributes()); err != nil {
 		return err
 	}
 	b.dacb.Append(resource.DroppedAttributesCount())
@@ -97,10 +92,10 @@ func (b *ScopeBuilder) Build() *array.Struct {
 func (b *ScopeBuilder) Release() {
 	if !b.released {
 		b.builder.Release()
-		//b.nb.Release()
-		//b.vb.Release()
-		//b.ab.Release()
-		//b.dacb.Release()
+		b.nb.Release()
+		b.vb.Release()
+		b.ab.Release()
+		b.dacb.Release()
 
 		b.released = true
 	}
