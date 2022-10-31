@@ -21,7 +21,7 @@ const (
 // Array data types used to build the attribute map.
 var (
 	KDT = Dict16String
-	IDT = arrow.DenseUnionOf([]arrow.Field{
+	IDT = arrow.SparseUnionOf([]arrow.Field{
 		{Name: "string", Type: Dict16String},
 		{Name: "int", Type: arrow.PrimitiveTypes.Int64},
 		{Name: "double", Type: arrow.PrimitiveTypes.Float64},
@@ -43,7 +43,7 @@ type AttributesBuilder struct {
 
 	builder *array.MapBuilder
 	kb      *array.BinaryDictionaryBuilder // key builder
-	ib      *array.DenseUnionBuilder       // item builder
+	ib      *array.SparseUnionBuilder      // item builder
 
 	strBuilder    *array.BinaryDictionaryBuilder
 	intBuilder    *array.Int64Builder
@@ -63,7 +63,7 @@ func NewAttributesBuilder(pool *memory.GoAllocator) *AttributesBuilder {
 }
 
 func AttributesBuilderFrom(mb *array.MapBuilder) *AttributesBuilder {
-	ib := mb.ItemBuilder().(*array.DenseUnionBuilder)
+	ib := mb.ItemBuilder().(*array.SparseUnionBuilder)
 	strBuilder := ib.Child(0).(*array.BinaryDictionaryBuilder)
 	intBuilder := ib.Child(1).(*array.Int64Builder)
 	doubleBuilder := ib.Child(2).(*array.Float64Builder)
@@ -182,6 +182,11 @@ func (b *AttributesBuilder) appendStr(k string, v string) error {
 			return err
 		}
 	}
+	b.intBuilder.AppendNull()
+	b.doubleBuilder.AppendNull()
+	b.boolBuilder.AppendNull()
+	b.binaryBuilder.AppendNull()
+
 	return nil
 }
 
@@ -196,6 +201,12 @@ func (b *AttributesBuilder) appendInt(k string, v int64) error {
 	}
 	b.ib.Append(IntCode)
 	b.intBuilder.Append(v)
+
+	b.strBuilder.AppendNull()
+	b.doubleBuilder.AppendNull()
+	b.boolBuilder.AppendNull()
+	b.binaryBuilder.AppendNull()
+
 	return nil
 }
 
@@ -210,6 +221,12 @@ func (b *AttributesBuilder) appendDouble(k string, v float64) error {
 	}
 	b.ib.Append(DoubleCode)
 	b.doubleBuilder.Append(v)
+
+	b.strBuilder.AppendNull()
+	b.intBuilder.AppendNull()
+	b.boolBuilder.AppendNull()
+	b.binaryBuilder.AppendNull()
+
 	return nil
 }
 
@@ -224,6 +241,12 @@ func (b *AttributesBuilder) appendBool(k string, v bool) error {
 	}
 	b.ib.Append(BoolCode)
 	b.boolBuilder.Append(v)
+
+	b.strBuilder.AppendNull()
+	b.intBuilder.AppendNull()
+	b.doubleBuilder.AppendNull()
+	b.binaryBuilder.AppendNull()
+
 	return nil
 }
 
@@ -244,5 +267,11 @@ func (b *AttributesBuilder) appendBinary(k string, v []byte) error {
 			return err
 		}
 	}
+
+	b.strBuilder.AppendNull()
+	b.intBuilder.AppendNull()
+	b.doubleBuilder.AppendNull()
+	b.boolBuilder.AppendNull()
+
 	return nil
 }
