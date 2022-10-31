@@ -23,10 +23,10 @@ var (
 type EventBuilder struct {
 	released bool
 	builder  *array.StructBuilder
-	tunb     *array.Uint64Builder           // Time Unix Nano builder
-	nb       *array.BinaryDictionaryBuilder // Name builder
-	ab       *acommon.AttributesBuilder     // Attributes builder
-	dacb     *array.Uint32Builder           // Dropped Attributes Count builder
+	tunb     *array.Uint64Builder           // time_unix_nano builder
+	nb       *array.BinaryDictionaryBuilder // name builder
+	ab       *acommon.AttributesBuilder     // attributes builder
+	dacb     *array.Uint32Builder           // dropped_attributes_count builder
 }
 
 func NewEventBuilder(pool *memory.GoAllocator) *EventBuilder {
@@ -58,15 +58,11 @@ func (b *EventBuilder) Append(event ptrace.SpanEvent) error {
 	if name == "" {
 		b.nb.AppendNull()
 	} else {
-		err := b.nb.AppendString(name)
-		if err != nil {
+		if err := b.nb.AppendString(name); err != nil {
 			return err
 		}
 	}
-	err := b.ab.Append(event.Attributes())
-	if err != nil {
-		return err
-	}
+	b.ab.Append(event.Attributes())
 	b.dacb.Append(event.DroppedAttributesCount())
 	return nil
 }
