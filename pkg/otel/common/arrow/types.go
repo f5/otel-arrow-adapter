@@ -8,4 +8,10 @@ var (
 		ValueType: arrow.BinaryTypes.String,
 		Ordered:   false,
 	}
+
+	Dict16Binary = &arrow.DictionaryType{
+		IndexType: arrow.PrimitiveTypes.Uint16,
+		ValueType: arrow.BinaryTypes.Binary,
+		Ordered:   false,
+	}
 )

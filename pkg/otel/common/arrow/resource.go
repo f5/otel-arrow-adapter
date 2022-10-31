@@ -21,7 +21,7 @@ type ResourceBuilder struct {
 	released bool
 	builder  *array.StructBuilder
 	ab       *AttributesBuilder
-	dacb     *array.Uint32Builder
+	dacb     *array.Uint32Builder // Dropped attributes count builder
 }
 
 func NewResourceBuilder(pool *memory.GoAllocator) *ResourceBuilder {
@@ -40,14 +40,18 @@ func ResourceBuilderFrom(rb *array.StructBuilder) *ResourceBuilder {
 // Append appends a new resource to the builder.
 //
 // This method panics if the builder has already been released.
-func (b *ResourceBuilder) Append(resource pcommon.Resource) {
+func (b *ResourceBuilder) Append(resource pcommon.Resource) error {
 	if b.released {
 		panic("resource builder already released")
 	}
 
 	b.builder.Append(true)
-	b.ab.Append(resource.Attributes())
+	err := b.ab.Append(resource.Attributes())
+	if err != nil {
+		return err
+	}
 	b.dacb.Append(resource.DroppedAttributesCount())
+	return nil
 }
 
 // Build builds the resource array struct.

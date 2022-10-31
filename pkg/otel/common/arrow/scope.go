@@ -13,8 +13,7 @@ import (
 var (
 	ScopeDT = arrow.StructOf([]arrow.Field{
 		{Name: constants.NAME, Type: Dict16String},
-		// TODO: should be a dictionary
-		{Name: constants.VERSION, Type: arrow.BinaryTypes.String},
+		{Name: constants.VERSION, Type: Dict16String},
 		{Name: constants.ATTRIBUTES, Type: AttributesDT},
 		{Name: constants.DROPPED_ATTRIBUTES_COUNT, Type: arrow.PrimitiveTypes.Uint32},
 	}...)
@@ -23,10 +22,10 @@ var (
 type ScopeBuilder struct {
 	released bool
 	builder  *array.StructBuilder
-	nb       *array.BinaryDictionaryBuilder
-	vb       *array.StringBuilder
+	nb       *array.BinaryDictionaryBuilder // Name builder
+	vb       *array.BinaryDictionaryBuilder // Version builder
 	ab       *AttributesBuilder
-	dacb     *array.Uint32Builder
+	dacb     *array.Uint32Builder // Dropped attributes count builder
 }
 
 func NewScopeBuilder(pool *memory.GoAllocator) *ScopeBuilder {
@@ -38,7 +37,7 @@ func ScopeBuilderFrom(sb *array.StructBuilder) *ScopeBuilder {
 		released: false,
 		builder:  sb,
 		nb:       sb.FieldBuilder(0).(*array.BinaryDictionaryBuilder),
-		vb:       sb.FieldBuilder(1).(*array.StringBuilder),
+		vb:       sb.FieldBuilder(1).(*array.BinaryDictionaryBuilder),
 		ab:       AttributesBuilderFrom(sb.FieldBuilder(2).(*array.MapBuilder)),
 		dacb:     sb.FieldBuilder(3).(*array.Uint32Builder),
 	}
@@ -47,16 +46,38 @@ func ScopeBuilderFrom(sb *array.StructBuilder) *ScopeBuilder {
 // Append appends a new instrumentation scope to the builder.
 //
 // This method panics if the builder has already been released.
-func (b *ScopeBuilder) Append(resource pcommon.InstrumentationScope) {
+func (b *ScopeBuilder) Append(resource pcommon.InstrumentationScope) error {
 	if b.released {
 		panic("scope builder already released")
 	}
 
 	b.builder.Append(true)
-	b.nb.AppendString(resource.Name())
-	b.vb.Append(resource.Version())
-	b.ab.Append(resource.Attributes())
+
+	name := resource.Name()
+	version := resource.Version()
+
+	if name == "" {
+		b.nb.AppendNull()
+	} else {
+		err := b.nb.AppendString(name)
+		if err != nil {
+			return err
+		}
+	}
+	if version == "" {
+		b.vb.AppendNull()
+	} else {
+		err := b.vb.AppendString(version)
+		if err != nil {
+			return err
+		}
+	}
+	err := b.ab.Append(resource.Attributes())
+	if err != nil {
+		return err
+	}
 	b.dacb.Append(resource.DroppedAttributesCount())
+	return nil
 }
 
 // Build builds the instrumentation scope array struct.
@@ -76,10 +97,10 @@ func (b *ScopeBuilder) Build() *array.Struct {
 func (b *ScopeBuilder) Release() {
 	if !b.released {
 		b.builder.Release()
-		b.nb.Release()
-		b.vb.Release()
-		b.ab.Release()
-		b.dacb.Release()
+		//b.nb.Release()
+		//b.vb.Release()
+		//b.ab.Release()
+		//b.dacb.Release()
 
 		b.released = true
 	}

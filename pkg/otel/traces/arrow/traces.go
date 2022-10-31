@@ -66,7 +66,7 @@ func (b *TracesBuilder) Append(traces ptrace.Traces) {
 func (b *TracesBuilder) Release() {
 	if !b.released {
 		b.builder.Release()
-		b.rsp.Release()
+		//b.rsp.Release()
 		b.released = true
 	}
 }

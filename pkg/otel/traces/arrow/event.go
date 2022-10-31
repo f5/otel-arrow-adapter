@@ -23,10 +23,10 @@ var (
 type EventBuilder struct {
 	released bool
 	builder  *array.StructBuilder
-	tunb     *array.Uint64Builder
-	nb       *array.BinaryDictionaryBuilder
-	ab       *acommon.AttributesBuilder
-	dacb     *array.Uint32Builder
+	tunb     *array.Uint64Builder           // Time Unix Nano builder
+	nb       *array.BinaryDictionaryBuilder // Name builder
+	ab       *acommon.AttributesBuilder     // Attributes builder
+	dacb     *array.Uint32Builder           // Dropped Attributes Count builder
 }
 
 func NewEventBuilder(pool *memory.GoAllocator) *EventBuilder {
@@ -47,16 +47,28 @@ func EventBuilderFrom(eb *array.StructBuilder) *EventBuilder {
 // Append appends a new event to the builder.
 //
 // This method panics if the builder has already been released.
-func (b *EventBuilder) Append(event ptrace.SpanEvent) {
+func (b *EventBuilder) Append(event ptrace.SpanEvent) error {
 	if b.released {
 		panic("event builder already released")
 	}
 
 	b.builder.Append(true)
 	b.tunb.Append(uint64(event.Timestamp()))
-	b.nb.AppendString(event.Name())
-	b.ab.Append(event.Attributes())
+	name := event.Name()
+	if name == "" {
+		b.nb.AppendNull()
+	} else {
+		err := b.nb.AppendString(name)
+		if err != nil {
+			return err
+		}
+	}
+	err := b.ab.Append(event.Attributes())
+	if err != nil {
+		return err
+	}
 	b.dacb.Append(event.DroppedAttributesCount())
+	return nil
 }
 
 // Build builds the event array struct.
