@@ -107,11 +107,11 @@ func TestScopeSpans(t *testing.T) {
 	t.Parallel()
 
 	pool := memory.NewGoAllocator()
-	sb := arrow.NewScopeSpansBuilder(pool)
+	ssb := arrow.NewScopeSpansBuilder(pool)
 
-	sb.Append(ScopeSpans1())
-	sb.Append(ScopeSpans2())
-	arr := sb.Build()
+	ssb.Append(ScopeSpans1())
+	ssb.Append(ScopeSpans2())
+	arr := ssb.Build()
 	defer arr.Release()
 
 	json, err := arr.MarshalJSON()
@@ -121,6 +121,50 @@ func TestScopeSpans(t *testing.T) {
 
 	expected := `[{"schema_url":"schema1","scope":{"attributes":[{"key":"str","value":[0,"string1"]},{"key":"int","value":[1,1]},{"key":"double","value":[2,1]},{"key":"bool","value":[3,true]},{"key":"bytes","value":[4,"Ynl0ZXMx"]}],"dropped_attributes_count":0,"name":"scope1","version":"1.0.1"},"spans":[{"attributes":[{"key":"str","value":[0,"string1"]},{"key":"int","value":[1,1]},{"key":"double","value":[2,1]}],"dropped_attributes_count":0,"dropped_events_count":0,"dropped_links_count":0,"end_time_unix_nano":2,"events":[{"attributes":[{"key":"str","value":[0,"string1"]},{"key":"int","value":[1,1]},{"key":"double","value":[2,1]},{"key":"bool","value":[3,true]}],"dropped_attributes_count":0,"name":"event1","time_unix_nano":1},{"attributes":[{"key":"str","value":[0,"string2"]},{"key":"int","value":[1,2]},{"key":"double","value":[2,2]}],"dropped_attributes_count":1,"name":"event2","time_unix_nano":2}],"kind":3,"links":[{"attributes":[{"key":"str","value":[0,"string1"]},{"key":"int","value":[1,1]},{"key":"double","value":[2,1]},{"key":"bool","value":[3,true]}],"dropped_attributes_count":0,"span_id":"qgAAAAAAAAA=","trace_id":"qgAAAAAAAAAAAAAAAAAAAA==","trace_state":"key1=value1"},{"attributes":[{"key":"str","value":[0,"string2"]},{"key":"int","value":[1,2]},{"key":"double","value":[2,2]},{"key":"bool","value":[3,false]}],"dropped_attributes_count":1,"span_id":"qgAAAAAAAAA=","trace_id":"qgAAAAAAAAAAAAAAAAAAAA==","trace_state":"key2=value2"}],"name":"span1","parent_span_id":"qgAAAAAAAAA=","span_id":"qgAAAAAAAAA=","start_time_unix_nano":1,"status":{"code":1,"status_message":"message1"},"trace_id":"qgAAAAAAAAAAAAAAAAAAAA==","trace_state":"key1=value1"},{"attributes":[{"key":"str","value":[0,"string2"]},{"key":"int","value":[1,2]},{"key":"double","value":[2,2]}],"dropped_attributes_count":1,"dropped_events_count":1,"dropped_links_count":1,"end_time_unix_nano":4,"events":[{"attributes":[{"key":"str","value":[0,"string1"]},{"key":"int","value":[1,1]},{"key":"double","value":[2,1]},{"key":"bool","value":[3,true]}],"dropped_attributes_count":0,"name":"event1","time_unix_nano":1}],"kind":3,"links":[{"attributes":[{"key":"str","value":[0,"string2"]},{"key":"int","value":[1,2]},{"key":"double","value":[2,2]},{"key":"bool","value":[3,false]}],"dropped_attributes_count":1,"span_id":"qgAAAAAAAAA=","trace_id":"qgAAAAAAAAAAAAAAAAAAAA==","trace_state":"key2=value2"}],"name":"span2","parent_span_id":"qgAAAAAAAAA=","span_id":"qgAAAAAAAAA=","start_time_unix_nano":3,"status":{"code":2,"status_message":"message2"},"trace_id":"qgAAAAAAAAAAAAAAAAAAAA==","trace_state":"key1=value2"}]}
 ,{"schema_url":"schema2","scope":{"attributes":[{"key":"str","value":[0,"string2"]},{"key":"int","value":[1,2]},{"key":"double","value":[2,2]},{"key":"bytes","value":[4,"Ynl0ZXMy"]}],"dropped_attributes_count":1,"name":"scope2","version":"1.0.2"},"spans":[{"attributes":[{"key":"str","value":[0,"string2"]},{"key":"int","value":[1,2]},{"key":"double","value":[2,2]}],"dropped_attributes_count":1,"dropped_events_count":1,"dropped_links_count":1,"end_time_unix_nano":4,"events":[{"attributes":[{"key":"str","value":[0,"string1"]},{"key":"int","value":[1,1]},{"key":"double","value":[2,1]},{"key":"bool","value":[3,true]}],"dropped_attributes_count":0,"name":"event1","time_unix_nano":1}],"kind":3,"links":[{"attributes":[{"key":"str","value":[0,"string2"]},{"key":"int","value":[1,2]},{"key":"double","value":[2,2]},{"key":"bool","value":[3,false]}],"dropped_attributes_count":1,"span_id":"qgAAAAAAAAA=","trace_id":"qgAAAAAAAAAAAAAAAAAAAA==","trace_state":"key2=value2"}],"name":"span2","parent_span_id":"qgAAAAAAAAA=","span_id":"qgAAAAAAAAA=","start_time_unix_nano":3,"status":{"code":2,"status_message":"message2"},"trace_id":"qgAAAAAAAAAAAAAAAAAAAA==","trace_state":"key1=value2"}]}
+]`
+
+	require.JSONEq(t, expected, string(json))
+}
+
+func TestResourceSpans(t *testing.T) {
+	t.Parallel()
+
+	pool := memory.NewGoAllocator()
+	rsb := arrow.NewResourceSpansBuilder(pool)
+
+	rsb.Append(ResourceSpans1())
+	rsb.Append(ResourceSpans2())
+	arr := rsb.Build()
+	defer arr.Release()
+
+	json, err := arr.MarshalJSON()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := `[{"resource":{"attributes":[{"key":"str","value":[0,"string1"]},{"key":"int","value":[1,1]},{"key":"double","value":[2,1]},{"key":"bool","value":[3,true]},{"key":"bytes","value":[4,"Ynl0ZXMx"]}],"dropped_attributes_count":0},"schema_url":"schema1","scope_spans":[{"schema_url":"schema1","scope":{"attributes":[{"key":"str","value":[0,"string1"]},{"key":"int","value":[1,1]},{"key":"double","value":[2,1]},{"key":"bool","value":[3,true]},{"key":"bytes","value":[4,"Ynl0ZXMx"]}],"dropped_attributes_count":0,"name":"scope1","version":"1.0.1"},"spans":[{"attributes":[{"key":"str","value":[0,"string1"]},{"key":"int","value":[1,1]},{"key":"double","value":[2,1]}],"dropped_attributes_count":0,"dropped_events_count":0,"dropped_links_count":0,"end_time_unix_nano":2,"events":[{"attributes":[{"key":"str","value":[0,"string1"]},{"key":"int","value":[1,1]},{"key":"double","value":[2,1]},{"key":"bool","value":[3,true]}],"dropped_attributes_count":0,"name":"event1","time_unix_nano":1},{"attributes":[{"key":"str","value":[0,"string2"]},{"key":"int","value":[1,2]},{"key":"double","value":[2,2]}],"dropped_attributes_count":1,"name":"event2","time_unix_nano":2}],"kind":3,"links":[{"attributes":[{"key":"str","value":[0,"string1"]},{"key":"int","value":[1,1]},{"key":"double","value":[2,1]},{"key":"bool","value":[3,true]}],"dropped_attributes_count":0,"span_id":"qgAAAAAAAAA=","trace_id":"qgAAAAAAAAAAAAAAAAAAAA==","trace_state":"key1=value1"},{"attributes":[{"key":"str","value":[0,"string2"]},{"key":"int","value":[1,2]},{"key":"double","value":[2,2]},{"key":"bool","value":[3,false]}],"dropped_attributes_count":1,"span_id":"qgAAAAAAAAA=","trace_id":"qgAAAAAAAAAAAAAAAAAAAA==","trace_state":"key2=value2"}],"name":"span1","parent_span_id":"qgAAAAAAAAA=","span_id":"qgAAAAAAAAA=","start_time_unix_nano":1,"status":{"code":1,"status_message":"message1"},"trace_id":"qgAAAAAAAAAAAAAAAAAAAA==","trace_state":"key1=value1"},{"attributes":[{"key":"str","value":[0,"string2"]},{"key":"int","value":[1,2]},{"key":"double","value":[2,2]}],"dropped_attributes_count":1,"dropped_events_count":1,"dropped_links_count":1,"end_time_unix_nano":4,"events":[{"attributes":[{"key":"str","value":[0,"string1"]},{"key":"int","value":[1,1]},{"key":"double","value":[2,1]},{"key":"bool","value":[3,true]}],"dropped_attributes_count":0,"name":"event1","time_unix_nano":1}],"kind":3,"links":[{"attributes":[{"key":"str","value":[0,"string2"]},{"key":"int","value":[1,2]},{"key":"double","value":[2,2]},{"key":"bool","value":[3,false]}],"dropped_attributes_count":1,"span_id":"qgAAAAAAAAA=","trace_id":"qgAAAAAAAAAAAAAAAAAAAA==","trace_state":"key2=value2"}],"name":"span2","parent_span_id":"qgAAAAAAAAA=","span_id":"qgAAAAAAAAA=","start_time_unix_nano":3,"status":{"code":2,"status_message":"message2"},"trace_id":"qgAAAAAAAAAAAAAAAAAAAA==","trace_state":"key1=value2"}]},{"schema_url":"schema2","scope":{"attributes":[{"key":"str","value":[0,"string2"]},{"key":"int","value":[1,2]},{"key":"double","value":[2,2]},{"key":"bytes","value":[4,"Ynl0ZXMy"]}],"dropped_attributes_count":1,"name":"scope2","version":"1.0.2"},"spans":[{"attributes":[{"key":"str","value":[0,"string2"]},{"key":"int","value":[1,2]},{"key":"double","value":[2,2]}],"dropped_attributes_count":1,"dropped_events_count":1,"dropped_links_count":1,"end_time_unix_nano":4,"events":[{"attributes":[{"key":"str","value":[0,"string1"]},{"key":"int","value":[1,1]},{"key":"double","value":[2,1]},{"key":"bool","value":[3,true]}],"dropped_attributes_count":0,"name":"event1","time_unix_nano":1}],"kind":3,"links":[{"attributes":[{"key":"str","value":[0,"string2"]},{"key":"int","value":[1,2]},{"key":"double","value":[2,2]},{"key":"bool","value":[3,false]}],"dropped_attributes_count":1,"span_id":"qgAAAAAAAAA=","trace_id":"qgAAAAAAAAAAAAAAAAAAAA==","trace_state":"key2=value2"}],"name":"span2","parent_span_id":"qgAAAAAAAAA=","span_id":"qgAAAAAAAAA=","start_time_unix_nano":3,"status":{"code":2,"status_message":"message2"},"trace_id":"qgAAAAAAAAAAAAAAAAAAAA==","trace_state":"key1=value2"}]}]}
+,{"resource":{"attributes":[{"key":"str","value":[0,"string2"]},{"key":"int","value":[1,2]},{"key":"double","value":[2,2]},{"key":"bytes","value":[4,"Ynl0ZXMy"]}],"dropped_attributes_count":1},"schema_url":"schema2","scope_spans":[{"schema_url":"schema2","scope":{"attributes":[{"key":"str","value":[0,"string2"]},{"key":"int","value":[1,2]},{"key":"double","value":[2,2]},{"key":"bytes","value":[4,"Ynl0ZXMy"]}],"dropped_attributes_count":1,"name":"scope2","version":"1.0.2"},"spans":[{"attributes":[{"key":"str","value":[0,"string2"]},{"key":"int","value":[1,2]},{"key":"double","value":[2,2]}],"dropped_attributes_count":1,"dropped_events_count":1,"dropped_links_count":1,"end_time_unix_nano":4,"events":[{"attributes":[{"key":"str","value":[0,"string1"]},{"key":"int","value":[1,1]},{"key":"double","value":[2,1]},{"key":"bool","value":[3,true]}],"dropped_attributes_count":0,"name":"event1","time_unix_nano":1}],"kind":3,"links":[{"attributes":[{"key":"str","value":[0,"string2"]},{"key":"int","value":[1,2]},{"key":"double","value":[2,2]},{"key":"bool","value":[3,false]}],"dropped_attributes_count":1,"span_id":"qgAAAAAAAAA=","trace_id":"qgAAAAAAAAAAAAAAAAAAAA==","trace_state":"key2=value2"}],"name":"span2","parent_span_id":"qgAAAAAAAAA=","span_id":"qgAAAAAAAAA=","start_time_unix_nano":3,"status":{"code":2,"status_message":"message2"},"trace_id":"qgAAAAAAAAAAAAAAAAAAAA==","trace_state":"key1=value2"}]}]}
+]`
+
+	require.JSONEq(t, expected, string(json))
+}
+
+func TestTraces(t *testing.T) {
+	t.Parallel()
+
+	pool := memory.NewGoAllocator()
+	tb := arrow.NewTracesBuilder(pool)
+
+	tb.Append(Traces())
+	arr := tb.Build()
+	defer arr.Release()
+
+	json, err := arr.MarshalJSON()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := `[[{"resource":{"attributes":[{"key":"str","value":[0,"string1"]},{"key":"int","value":[1,1]},{"key":"double","value":[2,1]},{"key":"bool","value":[3,true]},{"key":"bytes","value":[4,"Ynl0ZXMx"]}],"dropped_attributes_count":0},"schema_url":"schema1","scope_spans":[{"schema_url":"schema1","scope":{"attributes":[{"key":"str","value":[0,"string1"]},{"key":"int","value":[1,1]},{"key":"double","value":[2,1]},{"key":"bool","value":[3,true]},{"key":"bytes","value":[4,"Ynl0ZXMx"]}],"dropped_attributes_count":0,"name":"scope1","version":"1.0.1"},"spans":[{"attributes":[{"key":"str","value":[0,"string1"]},{"key":"int","value":[1,1]},{"key":"double","value":[2,1]}],"dropped_attributes_count":0,"dropped_events_count":0,"dropped_links_count":0,"end_time_unix_nano":2,"events":[{"attributes":[{"key":"str","value":[0,"string1"]},{"key":"int","value":[1,1]},{"key":"double","value":[2,1]},{"key":"bool","value":[3,true]}],"dropped_attributes_count":0,"name":"event1","time_unix_nano":1},{"attributes":[{"key":"str","value":[0,"string2"]},{"key":"int","value":[1,2]},{"key":"double","value":[2,2]}],"dropped_attributes_count":1,"name":"event2","time_unix_nano":2}],"kind":3,"links":[{"attributes":[{"key":"str","value":[0,"string1"]},{"key":"int","value":[1,1]},{"key":"double","value":[2,1]},{"key":"bool","value":[3,true]}],"dropped_attributes_count":0,"span_id":"qgAAAAAAAAA=","trace_id":"qgAAAAAAAAAAAAAAAAAAAA==","trace_state":"key1=value1"},{"attributes":[{"key":"str","value":[0,"string2"]},{"key":"int","value":[1,2]},{"key":"double","value":[2,2]},{"key":"bool","value":[3,false]}],"dropped_attributes_count":1,"span_id":"qgAAAAAAAAA=","trace_id":"qgAAAAAAAAAAAAAAAAAAAA==","trace_state":"key2=value2"}],"name":"span1","parent_span_id":"qgAAAAAAAAA=","span_id":"qgAAAAAAAAA=","start_time_unix_nano":1,"status":{"code":1,"status_message":"message1"},"trace_id":"qgAAAAAAAAAAAAAAAAAAAA==","trace_state":"key1=value1"},{"attributes":[{"key":"str","value":[0,"string2"]},{"key":"int","value":[1,2]},{"key":"double","value":[2,2]}],"dropped_attributes_count":1,"dropped_events_count":1,"dropped_links_count":1,"end_time_unix_nano":4,"events":[{"attributes":[{"key":"str","value":[0,"string1"]},{"key":"int","value":[1,1]},{"key":"double","value":[2,1]},{"key":"bool","value":[3,true]}],"dropped_attributes_count":0,"name":"event1","time_unix_nano":1}],"kind":3,"links":[{"attributes":[{"key":"str","value":[0,"string2"]},{"key":"int","value":[1,2]},{"key":"double","value":[2,2]},{"key":"bool","value":[3,false]}],"dropped_attributes_count":1,"span_id":"qgAAAAAAAAA=","trace_id":"qgAAAAAAAAAAAAAAAAAAAA==","trace_state":"key2=value2"}],"name":"span2","parent_span_id":"qgAAAAAAAAA=","span_id":"qgAAAAAAAAA=","start_time_unix_nano":3,"status":{"code":2,"status_message":"message2"},"trace_id":"qgAAAAAAAAAAAAAAAAAAAA==","trace_state":"key1=value2"}]},{"schema_url":"schema2","scope":{"attributes":[{"key":"str","value":[0,"string2"]},{"key":"int","value":[1,2]},{"key":"double","value":[2,2]},{"key":"bytes","value":[4,"Ynl0ZXMy"]}],"dropped_attributes_count":1,"name":"scope2","version":"1.0.2"},"spans":[{"attributes":[{"key":"str","value":[0,"string2"]},{"key":"int","value":[1,2]},{"key":"double","value":[2,2]}],"dropped_attributes_count":1,"dropped_events_count":1,"dropped_links_count":1,"end_time_unix_nano":4,"events":[{"attributes":[{"key":"str","value":[0,"string1"]},{"key":"int","value":[1,1]},{"key":"double","value":[2,1]},{"key":"bool","value":[3,true]}],"dropped_attributes_count":0,"name":"event1","time_unix_nano":1}],"kind":3,"links":[{"attributes":[{"key":"str","value":[0,"string2"]},{"key":"int","value":[1,2]},{"key":"double","value":[2,2]},{"key":"bool","value":[3,false]}],"dropped_attributes_count":1,"span_id":"qgAAAAAAAAA=","trace_id":"qgAAAAAAAAAAAAAAAAAAAA==","trace_state":"key2=value2"}],"name":"span2","parent_span_id":"qgAAAAAAAAA=","span_id":"qgAAAAAAAAA=","start_time_unix_nano":3,"status":{"code":2,"status_message":"message2"},"trace_id":"qgAAAAAAAAAAAAAAAAAAAA==","trace_state":"key1=value2"}]}]},{"resource":{"attributes":[{"key":"str","value":[0,"string2"]},{"key":"int","value":[1,2]},{"key":"double","value":[2,2]},{"key":"bytes","value":[4,"Ynl0ZXMy"]}],"dropped_attributes_count":1},"schema_url":"schema2","scope_spans":[{"schema_url":"schema2","scope":{"attributes":[{"key":"str","value":[0,"string2"]},{"key":"int","value":[1,2]},{"key":"double","value":[2,2]},{"key":"bytes","value":[4,"Ynl0ZXMy"]}],"dropped_attributes_count":1,"name":"scope2","version":"1.0.2"},"spans":[{"attributes":[{"key":"str","value":[0,"string2"]},{"key":"int","value":[1,2]},{"key":"double","value":[2,2]}],"dropped_attributes_count":1,"dropped_events_count":1,"dropped_links_count":1,"end_time_unix_nano":4,"events":[{"attributes":[{"key":"str","value":[0,"string1"]},{"key":"int","value":[1,1]},{"key":"double","value":[2,1]},{"key":"bool","value":[3,true]}],"dropped_attributes_count":0,"name":"event1","time_unix_nano":1}],"kind":3,"links":[{"attributes":[{"key":"str","value":[0,"string2"]},{"key":"int","value":[1,2]},{"key":"double","value":[2,2]},{"key":"bool","value":[3,false]}],"dropped_attributes_count":1,"span_id":"qgAAAAAAAAA=","trace_id":"qgAAAAAAAAAAAAAAAAAAAA==","trace_state":"key2=value2"}],"name":"span2","parent_span_id":"qgAAAAAAAAA=","span_id":"qgAAAAAAAAA=","start_time_unix_nano":3,"status":{"code":2,"status_message":"message2"},"trace_id":"qgAAAAAAAAAAAAAAAAAAAA==","trace_state":"key1=value2"}]}]}]
 ]`
 
 	require.JSONEq(t, expected, string(json))
@@ -294,6 +338,22 @@ func Scope2() pcommon.InstrumentationScope {
 	return scope
 }
 
+func Resource1() pcommon.Resource {
+	resource := pcommon.NewResource()
+	resourceAttrs := resource.Attributes()
+	Attrs1().CopyTo(resourceAttrs)
+	resource.SetDroppedAttributesCount(0)
+	return resource
+}
+
+func Resource2() pcommon.Resource {
+	resource := pcommon.NewResource()
+	resourceAttrs := resource.Attributes()
+	Attrs2().CopyTo(resourceAttrs)
+	resource.SetDroppedAttributesCount(1)
+	return resource
+}
+
 func ScopeSpans1() ptrace.ScopeSpans {
 	scopeSpans := ptrace.NewScopeSpans()
 	scope := scopeSpans.Scope()
@@ -316,4 +376,38 @@ func ScopeSpans2() ptrace.ScopeSpans {
 	span := spans.AppendEmpty()
 	Span2().CopyTo(span)
 	return scopeSpans
+}
+
+func ResourceSpans1() ptrace.ResourceSpans {
+	rs := ptrace.NewResourceSpans()
+	resource := rs.Resource()
+	Resource1().CopyTo(resource)
+	scopeSpansSlice := rs.ScopeSpans()
+	scopeSpans := scopeSpansSlice.AppendEmpty()
+	ScopeSpans1().CopyTo(scopeSpans)
+	scopeSpans = scopeSpansSlice.AppendEmpty()
+	ScopeSpans2().CopyTo(scopeSpans)
+	rs.SetSchemaUrl("schema1")
+	return rs
+}
+
+func ResourceSpans2() ptrace.ResourceSpans {
+	rs := ptrace.NewResourceSpans()
+	resource := rs.Resource()
+	Resource2().CopyTo(resource)
+	scopeSpansSlice := rs.ScopeSpans()
+	scopeSpans := scopeSpansSlice.AppendEmpty()
+	ScopeSpans2().CopyTo(scopeSpans)
+	rs.SetSchemaUrl("schema2")
+	return rs
+}
+
+func Traces() ptrace.Traces {
+	traces := ptrace.NewTraces()
+	resourceSpansSlice := traces.ResourceSpans()
+	resourceSpans := resourceSpansSlice.AppendEmpty()
+	ResourceSpans1().CopyTo(resourceSpans)
+	resourceSpans = resourceSpansSlice.AppendEmpty()
+	ResourceSpans2().CopyTo(resourceSpans)
+	return traces
 }

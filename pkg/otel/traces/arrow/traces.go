@@ -24,7 +24,7 @@ func NewTracesBuilder(pool *memory.GoAllocator) *TracesBuilder {
 	}
 }
 
-// Build builds the resource span list.
+// Build builds the resource spans list.
 //
 // Once the array is no longer needed, Release() must be called to free the
 // memory allocated by the array.
@@ -33,7 +33,7 @@ func (b *TracesBuilder) Build() *array.List {
 	return b.builder.NewListArray()
 }
 
-// Append appends a new set of attributes to the builder.
+// Append appends a new set of resource spans to the builder.
 //
 // This method panics if the builder has already been released.
 func (b *TracesBuilder) Append(traces ptrace.Traces) {
@@ -41,7 +41,17 @@ func (b *TracesBuilder) Append(traces ptrace.Traces) {
 		panic("traces builder already released")
 	}
 
-	// TODO: Implement
+	rs := traces.ResourceSpans()
+	rc := rs.Len()
+	if rc > 0 {
+		b.builder.Append(true)
+		b.builder.Reserve(rc)
+		for i := 0; i < rc; i++ {
+			b.rsp.Append(rs.At(i))
+		}
+	} else {
+		b.builder.AppendNull()
+	}
 }
 
 // Release releases the memory allocated by the builder.
