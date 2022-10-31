@@ -1,8 +1,6 @@
 package arrow
 
 import (
-	"fmt"
-
 	"github.com/apache/arrow/go/v10/arrow"
 	"github.com/apache/arrow/go/v10/arrow/array"
 	"github.com/apache/arrow/go/v10/arrow/memory"
@@ -104,11 +102,21 @@ func (b *AttributesBuilder) Append(attrs pcommon.Map) error {
 		panic("attribute builder already released")
 	}
 
-	if attrs.Len() == 0 {
+	// Count the number of non-empty key.
+	nonEmptyKeyCount := 0
+	attrs.Range(func(key string, v pcommon.Value) bool {
+		if key != "" {
+			nonEmptyKeyCount++
+		}
+		return true
+	})
+
+	if nonEmptyKeyCount == 0 {
 		b.append0Attrs()
 		return nil
 	}
 	b.appendNAttrs()
+	b.builder.Reserve(nonEmptyKeyCount)
 
 	var err error
 	attrs.Range(func(key string, v pcommon.Value) bool {
@@ -167,8 +175,9 @@ func (b *AttributesBuilder) append0Attrs() {
 
 // appendStr appends a new string attribute to the builder.
 func (b *AttributesBuilder) appendStr(k string, v string) error {
+	// Skip empty key.
 	if k == "" {
-		return fmt.Errorf("empty key")
+		return nil
 	}
 	err := b.kb.AppendString(k)
 	if err != nil {
@@ -192,8 +201,9 @@ func (b *AttributesBuilder) appendStr(k string, v string) error {
 
 // appendInt appends a new int attribute to the builder.
 func (b *AttributesBuilder) appendInt(k string, v int64) error {
+	// Skip empty key.
 	if k == "" {
-		return fmt.Errorf("empty key")
+		return nil
 	}
 	err := b.kb.AppendString(k)
 	if err != nil {
@@ -212,8 +222,9 @@ func (b *AttributesBuilder) appendInt(k string, v int64) error {
 
 // appendDouble appends a new double attribute to the builder.
 func (b *AttributesBuilder) appendDouble(k string, v float64) error {
+	// Skip empty key.
 	if k == "" {
-		return fmt.Errorf("empty key")
+		return nil
 	}
 	err := b.kb.AppendString(k)
 	if err != nil {
@@ -232,8 +243,9 @@ func (b *AttributesBuilder) appendDouble(k string, v float64) error {
 
 // appendBool appends a new bool attribute to the builder.
 func (b *AttributesBuilder) appendBool(k string, v bool) error {
+	// Skip empty key.
 	if k == "" {
-		return fmt.Errorf("empty key")
+		return nil
 	}
 	err := b.kb.AppendString(k)
 	if err != nil {
@@ -252,8 +264,9 @@ func (b *AttributesBuilder) appendBool(k string, v bool) error {
 
 // appendBinary appends a new binary attribute to the builder.
 func (b *AttributesBuilder) appendBinary(k string, v []byte) error {
+	// Skip empty key.
 	if k == "" {
-		return fmt.Errorf("empty key")
+		return nil
 	}
 	err := b.kb.AppendString(k)
 	if err != nil {

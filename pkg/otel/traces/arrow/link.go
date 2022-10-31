@@ -73,7 +73,9 @@ func (b *LinkBuilder) Append(link ptrace.SpanLink) error {
 			return err
 		}
 	}
-	b.ab.Append(link.Attributes())
+	if err := b.ab.Append(link.Attributes()); err != nil {
+		return err
+	}
 	b.dacb.Append(link.DroppedAttributesCount())
 	return nil
 }

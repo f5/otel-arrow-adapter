@@ -62,7 +62,9 @@ func (b *EventBuilder) Append(event ptrace.SpanEvent) error {
 			return err
 		}
 	}
-	b.ab.Append(event.Attributes())
+	if err := b.ab.Append(event.Attributes()); err != nil {
+		return err
+	}
 	b.dacb.Append(event.DroppedAttributesCount())
 	return nil
 }
