@@ -1,21 +1,20 @@
-package arrow_test
+package arrow
 
 import (
 	"testing"
 
 	"github.com/apache/arrow/go/v10/arrow/memory"
 	"github.com/stretchr/testify/require"
-	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/ptrace"
 
-	"github.com/f5/otel-arrow-adapter/pkg/otel/traces/arrow"
+	"github.com/f5/otel-arrow-adapter/pkg/otel/internal"
 )
 
 func TestStatus(t *testing.T) {
 	t.Parallel()
 
 	pool := memory.NewGoAllocator()
-	sb := arrow.NewStatusBuilder(pool)
+	sb := NewStatusBuilder(pool)
 
 	if err := sb.Append(Status1()); err != nil {
 		t.Fatal(err)
@@ -45,7 +44,7 @@ func TestEvent(t *testing.T) {
 	t.Parallel()
 
 	pool := memory.NewGoAllocator()
-	eb := arrow.NewEventBuilder(pool)
+	eb := NewEventBuilder(pool)
 
 	if err := eb.Append(Event1()); err != nil {
 		t.Fatal(err)
@@ -75,7 +74,7 @@ func TestLink(t *testing.T) {
 	t.Parallel()
 
 	pool := memory.NewGoAllocator()
-	lb := arrow.NewLinkBuilder(pool)
+	lb := NewLinkBuilder(pool)
 
 	if err := lb.Append(Link1()); err != nil {
 		t.Fatal(err)
@@ -105,7 +104,7 @@ func TestSpan(t *testing.T) {
 	t.Parallel()
 
 	pool := memory.NewGoAllocator()
-	sb := arrow.NewSpanBuilder(pool)
+	sb := NewSpanBuilder(pool)
 
 	if err := sb.Append(Span1()); err != nil {
 		t.Fatal(err)
@@ -135,7 +134,7 @@ func TestScopeSpans(t *testing.T) {
 	t.Parallel()
 
 	pool := memory.NewGoAllocator()
-	ssb := arrow.NewScopeSpansBuilder(pool)
+	ssb := NewScopeSpansBuilder(pool)
 
 	if err := ssb.Append(ScopeSpans1()); err != nil {
 		t.Fatal(err)
@@ -165,7 +164,7 @@ func TestResourceSpans(t *testing.T) {
 	t.Parallel()
 
 	pool := memory.NewGoAllocator()
-	rsb := arrow.NewResourceSpansBuilder(pool)
+	rsb := NewResourceSpansBuilder(pool)
 
 	if err := rsb.Append(ResourceSpans1()); err != nil {
 		t.Fatal(err)
@@ -195,7 +194,7 @@ func TestTraces(t *testing.T) {
 	t.Parallel()
 
 	pool := memory.NewGoAllocator()
-	tb := arrow.NewTracesBuilder(pool)
+	tb := NewTracesBuilder(pool)
 
 	if err := tb.Append(Traces()); err != nil {
 		t.Fatal(err)
@@ -344,67 +343,10 @@ func Span2() ptrace.Span {
 	return span
 }
 
-func Attrs1() pcommon.Map {
-	attrs := pcommon.NewMap()
-	attrs.PutStr("str", "string1")
-	attrs.PutInt("int", 1)
-	attrs.PutDouble("double", 1.0)
-	attrs.PutBool("bool", true)
-	bytes := attrs.PutEmptyBytes("bytes")
-	bytes.Append([]byte("bytes1")...)
-	return attrs
-}
-
-func Attrs2() pcommon.Map {
-	attrs := pcommon.NewMap()
-	attrs.PutStr("str", "string2")
-	attrs.PutInt("int", 2)
-	attrs.PutDouble("double", 2.0)
-	bytes := attrs.PutEmptyBytes("bytes")
-	bytes.Append([]byte("bytes2")...)
-	return attrs
-}
-
-func Scope1() pcommon.InstrumentationScope {
-	scope := pcommon.NewInstrumentationScope()
-	scope.SetName("scope1")
-	scope.SetVersion("1.0.1")
-	scopeAttrs := scope.Attributes()
-	Attrs1().CopyTo(scopeAttrs)
-	scope.SetDroppedAttributesCount(0)
-	return scope
-}
-
-func Scope2() pcommon.InstrumentationScope {
-	scope := pcommon.NewInstrumentationScope()
-	scope.SetName("scope2")
-	scope.SetVersion("1.0.2")
-	scopeAttrs := scope.Attributes()
-	Attrs2().CopyTo(scopeAttrs)
-	scope.SetDroppedAttributesCount(1)
-	return scope
-}
-
-func Resource1() pcommon.Resource {
-	resource := pcommon.NewResource()
-	resourceAttrs := resource.Attributes()
-	Attrs1().CopyTo(resourceAttrs)
-	resource.SetDroppedAttributesCount(0)
-	return resource
-}
-
-func Resource2() pcommon.Resource {
-	resource := pcommon.NewResource()
-	resourceAttrs := resource.Attributes()
-	Attrs2().CopyTo(resourceAttrs)
-	resource.SetDroppedAttributesCount(1)
-	return resource
-}
-
 func ScopeSpans1() ptrace.ScopeSpans {
 	scopeSpans := ptrace.NewScopeSpans()
 	scope := scopeSpans.Scope()
-	Scope1().CopyTo(scope)
+	internal.Scope1().CopyTo(scope)
 	scopeSpans.SetSchemaUrl("schema1")
 	spans := scopeSpans.Spans()
 	span := spans.AppendEmpty()
@@ -417,7 +359,7 @@ func ScopeSpans1() ptrace.ScopeSpans {
 func ScopeSpans2() ptrace.ScopeSpans {
 	scopeSpans := ptrace.NewScopeSpans()
 	scope := scopeSpans.Scope()
-	Scope2().CopyTo(scope)
+	internal.Scope2().CopyTo(scope)
 	scopeSpans.SetSchemaUrl("schema2")
 	spans := scopeSpans.Spans()
 	span := spans.AppendEmpty()
@@ -428,7 +370,7 @@ func ScopeSpans2() ptrace.ScopeSpans {
 func ResourceSpans1() ptrace.ResourceSpans {
 	rs := ptrace.NewResourceSpans()
 	resource := rs.Resource()
-	Resource1().CopyTo(resource)
+	internal.Resource1().CopyTo(resource)
 	scopeSpansSlice := rs.ScopeSpans()
 	scopeSpans := scopeSpansSlice.AppendEmpty()
 	ScopeSpans1().CopyTo(scopeSpans)
@@ -441,7 +383,7 @@ func ResourceSpans1() ptrace.ResourceSpans {
 func ResourceSpans2() ptrace.ResourceSpans {
 	rs := ptrace.NewResourceSpans()
 	resource := rs.Resource()
-	Resource2().CopyTo(resource)
+	internal.Resource2().CopyTo(resource)
 	scopeSpansSlice := rs.ScopeSpans()
 	scopeSpans := scopeSpansSlice.AppendEmpty()
 	ScopeSpans2().CopyTo(scopeSpans)

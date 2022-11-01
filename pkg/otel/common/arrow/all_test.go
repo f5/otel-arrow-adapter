@@ -1,28 +1,27 @@
-package arrow_test
+package arrow
 
 import (
 	"testing"
 
 	"github.com/apache/arrow/go/v10/arrow/memory"
 	"github.com/stretchr/testify/require"
-	"go.opentelemetry.io/collector/pdata/pcommon"
 
-	acommon "github.com/f5/otel-arrow-adapter/pkg/otel/common/arrow"
+	"github.com/f5/otel-arrow-adapter/pkg/otel/internal"
 )
 
 func TestAttributes(t *testing.T) {
 	t.Parallel()
 
 	pool := memory.NewGoAllocator()
-	ab := acommon.NewAttributesBuilder(pool)
+	ab := NewAttributesBuilder(pool)
 
-	if err := ab.Append(Attrs1()); err != nil {
+	if err := ab.Append(internal.Attrs1()); err != nil {
 		t.Fatal(err)
 	}
-	if err := ab.Append(Attrs2()); err != nil {
+	if err := ab.Append(internal.Attrs2()); err != nil {
 		t.Fatal(err)
 	}
-	if err := ab.Append(Attrs3()); err != nil {
+	if err := ab.Append(internal.Attrs3()); err != nil {
 		t.Fatal(err)
 	}
 	arr, err := ab.Build()
@@ -48,12 +47,12 @@ func TestScope(t *testing.T) {
 	t.Parallel()
 
 	pool := memory.NewGoAllocator()
-	sb := acommon.NewScopeBuilder(pool)
+	sb := NewScopeBuilder(pool)
 
-	if err := sb.Append(Scope1()); err != nil {
+	if err := sb.Append(internal.Scope1()); err != nil {
 		t.Fatal(err)
 	}
-	if err := sb.Append(Scope2()); err != nil {
+	if err := sb.Append(internal.Scope2()); err != nil {
 		t.Fatal(err)
 	}
 	arr, err := sb.Build()
@@ -78,12 +77,12 @@ func TestResource(t *testing.T) {
 	t.Parallel()
 
 	pool := memory.NewGoAllocator()
-	rb := acommon.NewResourceBuilder(pool)
+	rb := NewResourceBuilder(pool)
 
-	if err := rb.Append(Resource1()); err != nil {
+	if err := rb.Append(internal.Resource1()); err != nil {
 		t.Fatal(err)
 	}
-	if err := rb.Append(Resource2()); err != nil {
+	if err := rb.Append(internal.Resource2()); err != nil {
 		t.Fatal(err)
 	}
 	arr, err := rb.Build()
@@ -102,71 +101,4 @@ func TestResource(t *testing.T) {
 ]`
 
 	require.JSONEq(t, expected, string(json))
-}
-
-func Attrs1() pcommon.Map {
-	attrs := pcommon.NewMap()
-	attrs.PutStr("str", "string1")
-	attrs.PutInt("int", 1)
-	attrs.PutDouble("double", 1.0)
-	attrs.PutBool("bool", true)
-	bytes := attrs.PutEmptyBytes("bytes")
-	bytes.Append([]byte("bytes1")...)
-	return attrs
-}
-
-func Attrs2() pcommon.Map {
-	attrs := pcommon.NewMap()
-	attrs.PutStr("str", "string2")
-	attrs.PutInt("int", 2)
-	attrs.PutDouble("double", 2.0)
-	bytes := attrs.PutEmptyBytes("bytes")
-	bytes.Append([]byte("bytes2")...)
-	return attrs
-}
-
-func Attrs3() pcommon.Map {
-	attrs := pcommon.NewMap()
-	attrs.PutStr("str", "string3")
-	attrs.PutDouble("double", 3.0)
-	attrs.PutBool("bool", false)
-	bytes := attrs.PutEmptyBytes("bytes")
-	bytes.Append([]byte("bytes3")...)
-	return attrs
-}
-
-func Resource1() pcommon.Resource {
-	resource := pcommon.NewResource()
-	resourceAttrs := resource.Attributes()
-	Attrs1().CopyTo(resourceAttrs)
-	resource.SetDroppedAttributesCount(0)
-	return resource
-}
-
-func Resource2() pcommon.Resource {
-	resource := pcommon.NewResource()
-	resourceAttrs := resource.Attributes()
-	Attrs2().CopyTo(resourceAttrs)
-	resource.SetDroppedAttributesCount(1)
-	return resource
-}
-
-func Scope1() pcommon.InstrumentationScope {
-	scope := pcommon.NewInstrumentationScope()
-	scope.SetName("scope1")
-	scope.SetVersion("1.0.1")
-	scopeAttrs := scope.Attributes()
-	Attrs1().CopyTo(scopeAttrs)
-	scope.SetDroppedAttributesCount(0)
-	return scope
-}
-
-func Scope2() pcommon.InstrumentationScope {
-	scope := pcommon.NewInstrumentationScope()
-	scope.SetName("scope2")
-	scope.SetVersion("1.0.2")
-	scopeAttrs := scope.Attributes()
-	Attrs2().CopyTo(scopeAttrs)
-	scope.SetDroppedAttributesCount(1)
-	return scope
 }

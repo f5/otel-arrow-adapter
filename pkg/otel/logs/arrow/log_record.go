@@ -121,73 +121,35 @@ func (b *LogRecordBuilder) Append(log plog.LogRecord) error {
 		return fmt.Errorf("log record builder already released")
 	}
 
-	//b.builder.Append(true)
-	//b.stunb.Append(uint64(log.StartTimestamp()))
-	//b.etunb.Append(uint64(log.EndTimestamp()))
-	//tib := log.TraceID()
-	//if err := b.tib.Append(tib[:]); err != nil {
-	//	return err
-	//}
-	//sib := log.SpanID()
-	//if err := b.sib.Append(sib[:]); err != nil {
-	//	return err
-	//}
-	//traceState := log.TraceState().AsRaw()
-	//if traceState == "" {
-	//	b.tsb.AppendNull()
-	//} else {
-	//	if err := b.tsb.AppendString(traceState); err != nil {
-	//		return err
-	//	}
-	//}
-	//psib := log.ParentSpanID()
-	//if err := b.psib.Append(psib[:]); err != nil {
-	//	return err
-	//}
-	//name := log.Name()
-	//if name == "" {
-	//	b.nb.AppendNull()
-	//} else {
-	//	if err := b.nb.AppendString(name); err != nil {
-	//		return err
-	//	}
-	//}
-	//b.kb.Append(int32(log.Kind()))
-	//if err := b.ab.Append(log.Attributes()); err != nil {
-	//	return err
-	//}
-	//b.dacb.Append(log.DroppedAttributesCount())
-	//evts := log.Events()
-	//sc := evts.Len()
-	//if sc > 0 {
-	//	b.sesb.Append(true)
-	//	b.sesb.Reserve(sc)
-	//	for i := 0; i < sc; i++ {
-	//		if err := b.seb.Append(evts.At(i)); err != nil {
-	//			return err
-	//		}
-	//	}
-	//} else {
-	//	b.sesb.Append(false)
-	//}
-	//b.decb.Append(log.DroppedEventsCount())
-	//lks := log.Links()
-	//lc := lks.Len()
-	//if lc > 0 {
-	//	b.slsb.Append(true)
-	//	b.slsb.Reserve(lc)
-	//	for i := 0; i < lc; i++ {
-	//		if err := b.slb.Append(lks.At(i)); err != nil {
-	//			return err
-	//		}
-	//	}
-	//} else {
-	//	b.slsb.Append(false)
-	//}
-	//b.dlcb.Append(log.DroppedLinksCount())
-	//if err := b.sb.Append(log.Status()); err != nil {
-	//	return err
-	//}
+	b.builder.Append(true)
+	b.tunb.Append(uint64(log.Timestamp()))
+	b.otunb.Append(uint64(log.ObservedTimestamp()))
+	tib := log.TraceID()
+	if err := b.tib.Append(tib[:]); err != nil {
+		return err
+	}
+	sib := log.SpanID()
+	if err := b.sib.Append(sib[:]); err != nil {
+		return err
+	}
+	b.snb.Append(int32(log.SeverityNumber()))
+	severityText := log.SeverityText()
+	if severityText == "" {
+		b.stb.AppendNull()
+	} else {
+		if err := b.stb.AppendString(severityText); err != nil {
+			return err
+		}
+	}
+	if err := b.bb.Append(log.Body()); err != nil {
+		return err
+	}
+	if err := b.ab.Append(log.Attributes()); err != nil {
+		return err
+	}
+	b.dacb.Append(log.DroppedAttributesCount())
+	b.fb.Append(uint32(log.Flags()))
+
 	return nil
 }
 
