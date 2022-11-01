@@ -11,6 +11,7 @@ import (
 	"github.com/f5/otel-arrow-adapter/pkg/otel/constants"
 )
 
+// Schema is the Arrow schema for the OTLP Arrow Traces record.
 var (
 	Schema = arrow.NewSchema([]arrow.Field{
 		{Name: constants.RESOURCE_SPANS, Type: arrow.ListOf(ResourceSpansDT)},

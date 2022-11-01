@@ -9,37 +9,13 @@ import (
 	"go.opentelemetry.io/collector/pdata/pcommon"
 )
 
-// Constants used to identify the type of value in the union.
-const (
-	StrCode    int8 = 0
-	I64Code    int8 = 1
-	F64Code    int8 = 2
-	BoolCode   int8 = 3
-	BinaryCode int8 = 4
-)
-
 // Arrow data types used to build the attribute map.
 var (
 	// KDT is the Arrow key data type.
 	KDT = DictU16String
-	// IDT is the Arrow value data type.
-	IDT = arrow.SparseUnionOf([]arrow.Field{
-		// TODO manage case where the cardinality of the dictionary is too high (> 2^16).
-		{Name: "str", Type: DictU16String},
-		{Name: "i64", Type: arrow.PrimitiveTypes.Int64},
-		{Name: "f64", Type: arrow.PrimitiveTypes.Float64},
-		{Name: "bool", Type: arrow.FixedWidthTypes.Boolean},
-		// TODO manage case where the cardinality of the dictionary is too high (> 2^16).
-		{Name: "binary", Type: DictU16Binary},
-	}, []int8{
-		StrCode,
-		I64Code,
-		F64Code,
-		BoolCode,
-		BinaryCode,
-	})
+
 	// AttributesDT is the Arrow attribute data type.
-	AttributesDT = arrow.MapOf(KDT, IDT)
+	AttributesDT = arrow.MapOf(KDT, AnyValueDT)
 )
 
 // AttributesBuilder is a helper to build a map of attributes.
@@ -62,7 +38,7 @@ type AttributesBuilder struct {
 // Once the builder is no longer needed, Build() or Release() must be called to free the
 // memory allocated by the builder.
 func NewAttributesBuilder(pool *memory.GoAllocator) *AttributesBuilder {
-	mb := array.NewMapBuilder(pool, KDT, IDT, false)
+	mb := array.NewMapBuilder(pool, KDT, AnyValueDT, false)
 	return AttributesBuilderFrom(mb)
 }
 

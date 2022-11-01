@@ -33,7 +33,7 @@ var (
 	}...)
 )
 
-// ResourceSpansBuilder is a helper to build a span.
+// SpanBuilder is a helper to build a span.
 type SpanBuilder struct {
 	released bool
 
@@ -58,7 +58,7 @@ type SpanBuilder struct {
 	sb    *StatusBuilder                          // status builder
 }
 
-// NewScopeSpansBuilder creates a new ResourceSpansBuilder with a given allocator.
+// NewSpanBuilder creates a new SpansBuilder with a given allocator.
 //
 // Once the builder is no longer needed, Release() must be called to free the
 // memory allocated by the builder.
@@ -91,7 +91,7 @@ func SpanBuilderFrom(sb *array.StructBuilder) *SpanBuilder {
 	}
 }
 
-// Build builds the span array map.
+// Build builds the span array.
 //
 // Once the array is no longer needed, Release() must be called to free the
 // memory allocated by the array.
@@ -107,7 +107,7 @@ func (b *SpanBuilder) Build() (*array.Struct, error) {
 // Append appends a new span to the builder.
 func (b *SpanBuilder) Append(span ptrace.Span) error {
 	if b.released {
-		return fmt.Errorf("attribute builder already released")
+		return fmt.Errorf("span builder already released")
 	}
 
 	b.builder.Append(true)

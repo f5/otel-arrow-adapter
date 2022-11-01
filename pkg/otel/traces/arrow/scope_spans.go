@@ -21,7 +21,7 @@ var (
 	}...)
 )
 
-// ResourceSpansBuilder is a helper to build a scope spans.
+// ScopeSpansBuilder is a helper to build a scope spans.
 type ScopeSpansBuilder struct {
 	released bool
 
