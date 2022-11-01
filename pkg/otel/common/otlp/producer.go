@@ -19,8 +19,7 @@ import (
 	"go.opentelemetry.io/collector/pdata/plog"
 	"go.opentelemetry.io/collector/pdata/ptrace"
 
-	"github.com/f5/otel-arrow-adapter/pkg/air"
-	common_arrow "github.com/f5/otel-arrow-adapter/pkg/otel/common/arrow"
+	arrow2 "github.com/f5/otel-arrow-adapter/pkg/arrow"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/constants"
 
 	"go.opentelemetry.io/collector/pdata/pcommon"
@@ -42,7 +41,7 @@ type EntitiesProducer[ES Entities, E Entity] interface {
 	ResourceEntitiesLabel() string
 	ScopeEntitiesLabel() string
 	EntitiesLabel() string
-	EntityProducer(ScopeEntities[E], *air.ListOfStructs, int) error
+	EntityProducer(ScopeEntities[E], *arrow2.ListOfStructs, int) error
 }
 
 // TopLevelEntities is the interface representing top level OTLP entities.
@@ -95,7 +94,7 @@ func (p *Producer[ES, E]) ProduceFrom(record arrow.Record) ([]ES, error) {
 	for entityIdx := 0; entityIdx < resEntCount; entityIdx++ {
 		entities := p.entitiesProducer.NewTopLevelEntities()
 
-		arrowResEnts, err := air.ListOfStructsFromRecord(record, p.entitiesProducer.ResourceEntitiesLabel(), entityIdx)
+		arrowResEnts, err := arrow2.ListOfStructsFromRecord(record, p.entitiesProducer.ResourceEntitiesLabel(), entityIdx)
 		if err != nil {
 			return allEntities, err
 		}
@@ -105,7 +104,7 @@ func (p *Producer[ES, E]) ProduceFrom(record arrow.Record) ([]ES, error) {
 		for resEntIdx := arrowResEnts.Start(); resEntIdx < arrowResEnts.End(); resEntIdx++ {
 			resEnt := resEntities.AppendEmpty()
 
-			resource, err := common_arrow.NewResourceFrom(arrowResEnts, resEntIdx)
+			resource, err := NewResourceFrom(arrowResEnts, resEntIdx)
 			if err != nil {
 				return allEntities, err
 			}
@@ -124,7 +123,7 @@ func (p *Producer[ES, E]) ProduceFrom(record arrow.Record) ([]ES, error) {
 			for scopeEntIdx := arrowScopeEntities.Start(); scopeEntIdx < arrowScopeEntities.End(); scopeEntIdx++ {
 				scopeEnt := resEnt.ScopeEntities()
 
-				scope, err := common_arrow.NewScopeFrom(arrowScopeEntities, scopeEntIdx)
+				scope, err := NewScopeFromArray(arrowScopeEntities, scopeEntIdx)
 				if err != nil {
 					return allEntities, err
 				}

@@ -15,7 +15,7 @@
  *
  */
 
-package air
+package arrow
 
 import (
 	"fmt"

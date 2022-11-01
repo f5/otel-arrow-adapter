@@ -17,7 +17,7 @@ package otlp
 import (
 	"fmt"
 
-	"github.com/f5/otel-arrow-adapter/pkg/air"
+	"github.com/f5/otel-arrow-adapter/pkg/arrow"
 	common_arrow "github.com/f5/otel-arrow-adapter/pkg/otel/common/arrow"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/otlp"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/constants"
@@ -111,7 +111,7 @@ func (p LogsProducer) NewTopLevelEntities() otlp.TopLevelEntities[plog.Logs, plo
 }
 
 // EntityProducer creates [plog.LogRecord]s from their AIR representation.
-func (p LogsProducer) EntityProducer(scopeLog otlp.ScopeEntities[plog.LogRecord], los *air.ListOfStructs, row int) error {
+func (p LogsProducer) EntityProducer(scopeLog otlp.ScopeEntities[plog.LogRecord], los *arrow.ListOfStructs, row int) error {
 	log := scopeLog.Entity()
 	timeUnixNano, err := los.U64FieldByName(constants.TIME_UNIX_NANO, row)
 	if err != nil {

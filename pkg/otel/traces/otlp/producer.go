@@ -17,7 +17,7 @@ package otlp
 import (
 	"fmt"
 
-	"github.com/f5/otel-arrow-adapter/pkg/air"
+	"github.com/f5/otel-arrow-adapter/pkg/arrow"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/otlp"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/constants"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/traces"
@@ -85,7 +85,7 @@ type SpansProducer struct {
 func (p SpansProducer) NewTopLevelEntities() otlp.TopLevelEntities[ptrace.Traces, ptrace.Span] {
 	return TopLevelWrapper{ptrace.NewTraces()}
 }
-func (p SpansProducer) EntityProducer(scopeSpan otlp.ScopeEntities[ptrace.Span], los *air.ListOfStructs, row int) error {
+func (p SpansProducer) EntityProducer(scopeSpan otlp.ScopeEntities[ptrace.Span], los *arrow.ListOfStructs, row int) error {
 	span := scopeSpan.Entity()
 	traceId, err := los.BinaryFieldByName(constants.TRACE_ID, row)
 	if err != nil {
@@ -146,13 +146,13 @@ func (p SpansProducer) EntityProducer(scopeSpan otlp.ScopeEntities[ptrace.Span],
 	}
 	if statusDt != nil {
 		// Status exists
-		message, err := air.StringFromStruct(statusDt, statusArr, row, constants.STATUS_MESSAGE)
+		message, err := arrow.StringFromStruct(statusDt, statusArr, row, constants.STATUS_MESSAGE)
 		if err != nil {
 			return err
 		}
 		span.Status().SetMessage(message)
 
-		code, err := air.I32FromStruct(statusDt, statusArr, row, constants.STATUS_CODE)
+		code, err := arrow.I32FromStruct(statusDt, statusArr, row, constants.STATUS_CODE)
 		if err != nil {
 			return err
 		}
@@ -193,7 +193,7 @@ func (p SpansProducer) EntityProducer(scopeSpan otlp.ScopeEntities[ptrace.Span],
 }
 
 // CopyEventsFrom initializes a Span's Events from an Arrow representation.
-func CopyEventsFrom(result ptrace.SpanEventSlice, los *air.ListOfStructs, row int) error {
+func CopyEventsFrom(result ptrace.SpanEventSlice, los *arrow.ListOfStructs, row int) error {
 	eventLos, err := los.ListOfStructsByName(constants.SPAN_EVENTS, row)
 
 	if err != nil {
@@ -251,7 +251,7 @@ func CopyEventsFrom(result ptrace.SpanEventSlice, los *air.ListOfStructs, row in
 }
 
 // CopyLinksFrom initializes a Span's Links from an Arrow representation.
-func CopyLinksFrom(result ptrace.SpanLinkSlice, los *air.ListOfStructs, row int) error {
+func CopyLinksFrom(result ptrace.SpanLinkSlice, los *arrow.ListOfStructs, row int) error {
 	linkLos, err := los.ListOfStructsByName(constants.SPAN_LINKS, row)
 
 	if err != nil {

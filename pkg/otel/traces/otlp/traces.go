@@ -4,11 +4,12 @@ import (
 	"github.com/apache/arrow/go/v10/arrow"
 	"go.opentelemetry.io/collector/pdata/ptrace"
 
-	"github.com/f5/otel-arrow-adapter/pkg/air"
-	common_arrow "github.com/f5/otel-arrow-adapter/pkg/otel/common/arrow"
+	arrow_utils "github.com/f5/otel-arrow-adapter/pkg/arrow"
+	"github.com/f5/otel-arrow-adapter/pkg/otel/common/otlp"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/constants"
 )
 
+// TracesFrom creates a [ptrace.Traces] from the given Arrow Record.
 func TracesFrom(record arrow.Record) (ptrace.Traces, error) {
 	traces := ptrace.NewTraces()
 	resSpansSlice := traces.ResourceSpans()
@@ -16,7 +17,7 @@ func TracesFrom(record arrow.Record) (ptrace.Traces, error) {
 	resSpansSlice.EnsureCapacity(resSpansCount)
 
 	for traceIdx := 0; traceIdx < resSpansCount; traceIdx++ {
-		arrowResEnts, err := air.ListOfStructsFromRecord(record, constants.RESOURCE_SPANS, traceIdx)
+		arrowResEnts, err := arrow_utils.ListOfStructsFromRecord(record, constants.RESOURCE_SPANS, traceIdx)
 		if err != nil {
 			return traces, err
 		}
@@ -25,7 +26,7 @@ func TracesFrom(record arrow.Record) (ptrace.Traces, error) {
 		for resSpansIdx := arrowResEnts.Start(); resSpansIdx < arrowResEnts.End(); resSpansIdx++ {
 			resSpans := resSpansSlice.AppendEmpty()
 
-			resource, err := common_arrow.NewResourceFrom(arrowResEnts, resSpansIdx)
+			resource, err := otlp.NewResourceFrom(arrowResEnts, resSpansIdx)
 			if err != nil {
 				return traces, err
 			}
@@ -45,7 +46,7 @@ func TracesFrom(record arrow.Record) (ptrace.Traces, error) {
 			for scopeSpansIdx := arrowScopeSpans.Start(); scopeSpansIdx < arrowScopeSpans.End(); scopeSpansIdx++ {
 				scopeSpans := scopeSpansSlice.AppendEmpty()
 
-				scope, err := common_arrow.NewScopeFrom(arrowScopeSpans, scopeSpansIdx)
+				scope, err := otlp.NewScopeFromArray(arrowScopeSpans, scopeSpansIdx)
 				if err != nil {
 					return traces, err
 				}

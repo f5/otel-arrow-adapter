@@ -30,6 +30,7 @@ import (
 	"github.com/f5/otel-arrow-adapter/pkg/air"
 	"github.com/f5/otel-arrow-adapter/pkg/air/config"
 	"github.com/f5/otel-arrow-adapter/pkg/air/rfield"
+	arrow2 "github.com/f5/otel-arrow-adapter/pkg/arrow"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common"
 
 	"github.com/f5/otel-arrow-adapter/pkg/otel/constants"
@@ -296,15 +297,15 @@ func AttributesId(attrs pcommon.Map) string {
 // TODO replace this implementation with the one used for traces.
 func NewResourceFromOld(record arrow.Record, row int) (pcommon.Resource, error) {
 	r := pcommon.NewResource()
-	resourceField, resourceArray, err := air.StructFromRecord(record, constants.RESOURCE)
+	resourceField, resourceArray, err := arrow2.StructFromRecord(record, constants.RESOURCE)
 	if err != nil {
 		return r, err
 	}
-	droppedAttributesCount, err := air.U32FromStruct(resourceField, resourceArray, row, constants.DROPPED_ATTRIBUTES_COUNT)
+	droppedAttributesCount, err := arrow2.U32FromStruct(resourceField, resourceArray, row, constants.DROPPED_ATTRIBUTES_COUNT)
 	if err != nil {
 		return r, err
 	}
-	attrField, attrArray, err := air.FieldArrayOfStruct(resourceField, resourceArray, constants.ATTRIBUTES)
+	attrField, attrArray, err := arrow2.FieldArrayOfStruct(resourceField, resourceArray, constants.ATTRIBUTES)
 	if err != nil {
 		return r, err
 	}
@@ -315,98 +316,6 @@ func NewResourceFromOld(record arrow.Record, row int) (pcommon.Resource, error) 
 	}
 	r.SetDroppedAttributesCount(droppedAttributesCount)
 	return r, nil
-}
-
-// NewResourceFrom creates a new Resource from the given array and row.
-func NewResourceFrom(resList *air.ListOfStructs, row int) (pcommon.Resource, error) {
-	r := pcommon.NewResource()
-	resDt, resArr, err := resList.StructArray(constants.RESOURCE, row)
-	if err != nil {
-		return r, err
-	}
-
-	// Read dropped attributes count
-	droppedAttributesCount, err := air.U32FromStruct(resDt, resArr, row, constants.DROPPED_ATTRIBUTES_COUNT)
-	if err != nil {
-		return r, err
-	}
-	r.SetDroppedAttributesCount(droppedAttributesCount)
-
-	// Read attributes
-	attrs, err := air.ListOfStructsFromStruct(resDt, resArr, row, constants.ATTRIBUTES)
-	if err != nil {
-		return r, err
-	}
-	if attrs != nil {
-		err = attrs.CopyAttributesFrom(r.Attributes())
-	}
-
-	return r, err
-}
-
-func NewScopeFrom(listOfStructs *air.ListOfStructs, row int) (pcommon.InstrumentationScope, error) {
-	s := pcommon.NewInstrumentationScope()
-	scopeField, scopeArray, err := listOfStructs.StructArray(constants.SCOPE, row)
-	if err != nil {
-		return s, err
-	}
-	name, err := air.StringFromStruct(scopeField, scopeArray, row, constants.NAME)
-	if err != nil {
-		return s, err
-	}
-	version, err := air.StringFromStruct(scopeField, scopeArray, row, constants.VERSION)
-	if err != nil {
-		return s, err
-	}
-	droppedAttributesCount, err := air.U32FromStruct(scopeField, scopeArray, row, constants.DROPPED_ATTRIBUTES_COUNT)
-	if err != nil {
-		return s, err
-	}
-
-	attrs, err := air.ListOfStructsFromStruct(scopeField, scopeArray, row, constants.ATTRIBUTES)
-	if err != nil {
-		return s, err
-	}
-	if attrs != nil {
-		err = attrs.CopyAttributesFrom(s.Attributes())
-	}
-	s.SetName(name)
-	s.SetVersion(version)
-	s.SetDroppedAttributesCount(droppedAttributesCount)
-	return s, nil
-}
-
-func NewInstrumentationScopeFrom(record arrow.Record, row int, scope string) (pcommon.InstrumentationScope, error) {
-	s := pcommon.NewInstrumentationScope()
-	scopeField, scopeArray, err := air.StructFromRecord(record, scope)
-	if err != nil {
-		return s, err
-	}
-	name, err := air.StringFromStruct(scopeField, scopeArray, row, constants.NAME)
-	if err != nil {
-		return s, err
-	}
-	version, err := air.StringFromStruct(scopeField, scopeArray, row, constants.VERSION)
-	if err != nil {
-		return s, err
-	}
-	droppedAttributesCount, err := air.U32FromStruct(scopeField, scopeArray, row, constants.DROPPED_ATTRIBUTES_COUNT)
-	if err != nil {
-		return s, err
-	}
-	attrField, attrArray, err := air.FieldArrayOfStruct(scopeField, scopeArray, constants.ATTRIBUTES)
-	if err != nil {
-		return s, err
-	}
-	if attrField != nil {
-		if err = CopyAttributesFrom(s.Attributes(), attrField.Type, attrArray, row); err != nil {
-			return s, err
-		}
-	}
-	s.SetName(name)
-	s.SetVersion(version)
-	s.SetDroppedAttributesCount(droppedAttributesCount)
-	return s, nil
 }
 
 func ResourceId(r pcommon.Resource) string {
@@ -470,35 +379,35 @@ func CopyAttributesFrom(a pcommon.Map, dt arrow.DataType, arr arrow.Array, row i
 func CopyValueFrom(dest pcommon.Value, dt arrow.DataType, arr arrow.Array, row int) error {
 	switch t := dt.(type) {
 	case *arrow.BooleanType:
-		v, err := air.BoolFromArray(arr, row)
+		v, err := arrow2.BoolFromArray(arr, row)
 		if err != nil {
 			return err
 		}
 		dest.SetBool(v)
 		return nil
 	case *arrow.Float64Type:
-		v, err := air.F64FromArray(arr, row)
+		v, err := arrow2.F64FromArray(arr, row)
 		if err != nil {
 			return err
 		}
 		dest.SetDouble(v)
 		return nil
 	case *arrow.Int64Type:
-		v, err := air.I64FromArray(arr, row)
+		v, err := arrow2.I64FromArray(arr, row)
 		if err != nil {
 			return err
 		}
 		dest.SetInt(v)
 		return nil
 	case *arrow.StringType:
-		v, err := air.StringFromArray(arr, row)
+		v, err := arrow2.StringFromArray(arr, row)
 		if err != nil {
 			return err
 		}
 		dest.SetStr(v)
 		return nil
 	case *arrow.BinaryType:
-		v, err := air.BinaryFromArray(arr, row)
+		v, err := arrow2.BinaryFromArray(arr, row)
 		if err != nil {
 			return err
 		}
@@ -521,14 +430,14 @@ func CopyValueFrom(dest pcommon.Value, dt arrow.DataType, arr arrow.Array, row i
 	case *arrow.DictionaryType:
 		switch t.ValueType.(type) {
 		case *arrow.StringType:
-			v, err := air.StringFromArray(arr, row)
+			v, err := arrow2.StringFromArray(arr, row)
 			if err != nil {
 				return err
 			}
 			dest.SetStr(v)
 			return nil
 		case *arrow.BinaryType:
-			v, err := air.BinaryFromArray(arr, row)
+			v, err := arrow2.BinaryFromArray(arr, row)
 			if err != nil {
 				return err
 			}
