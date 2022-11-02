@@ -712,10 +712,6 @@ func BoolFromArray(arr arrow.Array, row int) (bool, error) {
 	}
 }
 
-//func BoolFromRecord(record arrow.Record, row int, column string) (bool, error) {
-//	return BoolFromArray(Array(record, column), row)
-//}
-
 func F64FromArray(arr arrow.Array, row int) (float64, error) {
 	if arr == nil {
 		return 0.0, nil
@@ -732,10 +728,6 @@ func F64FromArray(arr arrow.Array, row int) (float64, error) {
 		}
 	}
 }
-
-//func F64FromRecord(record arrow.Record, row int, column string) (float64, error) {
-//	return F64FromArray(Array(record, column), row)
-//}
 
 func U64FromArray(arr arrow.Array, row int) (uint64, error) {
 	if arr == nil {
@@ -837,10 +829,6 @@ func I64FromArray(arr arrow.Array, row int) (int64, error) {
 	}
 }
 
-//func I64FromRecord(record arrow.Record, row int, column string) (int64, error) {
-//	return I64FromArray(Array(record, column), row)
-//}
-
 func StringFromArray(arr arrow.Array, row int) (string, error) {
 	if arr == nil {
 		return "", nil
@@ -878,18 +866,6 @@ func StringFromStruct(arr arrow.Array, row int, id int) (string, error) {
 		return StringFromArray(structArr.Field(id), row)
 	} else {
 		return "", fmt.Errorf("column array is not of type struct")
-	}
-}
-
-func OldI32FromStruct(fieldType *arrow.StructType, arr arrow.Array, row int, column string) (int32, error) {
-	if structArr := arr.(*array.Struct); structArr != nil {
-		_, id, found := FieldOfStruct(fieldType, column)
-		if !found {
-			return 0, nil
-		}
-		return I32FromArray(structArr.Field(id), row)
-	} else {
-		return 0, fmt.Errorf("column array is not of type struct")
 	}
 }
 

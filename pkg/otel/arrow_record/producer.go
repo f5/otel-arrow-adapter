@@ -19,6 +19,7 @@ import (
 	"fmt"
 
 	"github.com/apache/arrow/go/v10/arrow/ipc"
+	"github.com/apache/arrow/go/v10/arrow/memory"
 	"go.opentelemetry.io/collector/pdata/ptrace"
 
 	colarspb "github.com/f5/otel-arrow-adapter/api/collector/arrow/v1"
@@ -29,6 +30,7 @@ import (
 
 // Producer is a BatchArrowRecords producer.
 type Producer struct {
+	pool                    *memory.GoAllocator
 	streamProducers         map[string]*streamProducer
 	otlpArrowTracesProducer *arrow.OtlpArrowProducer[ptrace.ScopeSpans]
 	batchId                 int64
@@ -43,6 +45,7 @@ type streamProducer struct {
 // NewProducer creates a new BatchArrowRecords producer.
 func NewProducer() *Producer {
 	return &Producer{
+		pool:                    memory.NewGoAllocator(),
 		streamProducers:         make(map[string]*streamProducer),
 		otlpArrowTracesProducer: arrow.NewOtlpArrowProducer[ptrace.ScopeSpans](),
 		batchId:                 0,
@@ -60,15 +63,16 @@ func NewProducerWithConfig(cfg *config.Config) *Producer {
 
 // BatchArrowRecordsFrom produces a BatchArrowRecords message from a ptrace.Traces messages.
 func (p *Producer) BatchArrowRecordsFrom(ts ptrace.Traces) (*colarspb.BatchArrowRecords, error) {
-	records, err := p.otlpArrowTracesProducer.ProduceFrom(traces_arrow.Wrap(ts))
+	tb := traces_arrow.NewTracesBuilder(p.pool)
+	if err := tb.Append(ts); err != nil {
+		return nil, err
+	}
+	record, err := tb.Build()
 	if err != nil {
 		return nil, err
 	}
 
-	rms := make([]*RecordMessage, len(records))
-	for i, record := range records {
-		rms[i] = NewTraceMessage(record, colarspb.DeliveryType_BEST_EFFORT)
-	}
+	rms := []*RecordMessage{NewTraceMessage(record, colarspb.DeliveryType_BEST_EFFORT)}
 
 	bar, err := p.Produce(rms, colarspb.DeliveryType_BEST_EFFORT)
 	if err != nil {
@@ -97,6 +101,7 @@ func (p *Producer) Produce(rms []*RecordMessage, deliveryType colarspb.DeliveryT
 			sp.ipcWriter = ipc.NewWriter(&sp.output, ipc.WithSchema(rm.record.Schema()))
 		}
 		err := sp.ipcWriter.Write(rm.record)
+		rm.record.Release()
 		if err != nil {
 			return nil, err
 		}

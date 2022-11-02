@@ -24,14 +24,12 @@ import (
 	"go.opentelemetry.io/collector/pdata/ptrace"
 
 	colarspb "github.com/f5/otel-arrow-adapter/api/collector/arrow/v1"
-	common_otlp "github.com/f5/otel-arrow-adapter/pkg/otel/common/otlp"
 	traces_otlp "github.com/f5/otel-arrow-adapter/pkg/otel/traces/otlp"
 )
 
 // Consumer is a BatchArrowRecords consumer.
 type Consumer struct {
-	streamConsumers   map[string]*streamConsumer
-	otlpTraceProducer *common_otlp.Producer[ptrace.Traces, ptrace.Span]
+	streamConsumers map[string]*streamConsumer
 }
 
 type streamConsumer struct {
@@ -42,8 +40,7 @@ type streamConsumer struct {
 // NewConsumer creates a new BatchArrowRecords consumer.
 func NewConsumer() *Consumer {
 	return &Consumer{
-		streamConsumers:   make(map[string]*streamConsumer),
-		otlpTraceProducer: common_otlp.New[ptrace.Traces, ptrace.Span](traces_otlp.SpansProducer{}),
+		streamConsumers: make(map[string]*streamConsumer),
 	}
 }
 
@@ -57,11 +54,12 @@ func (c *Consumer) TracesFrom(bar *colarspb.BatchArrowRecords) ([]ptrace.Traces,
 	var result []ptrace.Traces
 	for i := 1; i < len(records); i++ {
 		record := records[i]
-		tracesArr, err := c.otlpTraceProducer.ProduceFrom(record.record)
+		traces, err := traces_otlp.TracesFrom(record.record)
+		record.record.Release()
 		if err != nil {
 			return nil, err
 		}
-		result = append(result, tracesArr...)
+		result = append(result, traces)
 	}
 	return result, nil
 }
