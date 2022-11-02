@@ -3,11 +3,50 @@ package otlp
 import (
 	"github.com/apache/arrow/go/v10/arrow"
 	"go.opentelemetry.io/collector/pdata/pcommon"
+	"go.opentelemetry.io/collector/pdata/ptrace"
 
 	arrow_utils "github.com/f5/otel-arrow-adapter/pkg/arrow"
 	carrow "github.com/f5/otel-arrow-adapter/pkg/otel/common/arrow"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/constants"
 )
+
+type ScopeIds struct {
+	Id                     int
+	Name                   int
+	Version                int
+	Attributes             *AttributeIds
+	DroppedAttributesCount int
+}
+
+func NewScopeIds(resSpansDT *arrow.StructType) (*ScopeIds, error) {
+	scopeId, scopeDT, err := arrow_utils.StructFieldIdFromStruct(resSpansDT, constants.SCOPE)
+	if err != nil {
+		return nil, err
+	}
+	nameId, _, err := arrow_utils.FieldIdFromStruct(scopeDT, constants.NAME)
+	if err != nil {
+		return nil, err
+	}
+	versionId, _, err := arrow_utils.FieldIdFromStruct(scopeDT, constants.VERSION)
+	if err != nil {
+		return nil, err
+	}
+	droppedAttributesCountId, _, err := arrow_utils.FieldIdFromStruct(scopeDT, constants.DROPPED_ATTRIBUTES_COUNT)
+	if err != nil {
+		return nil, err
+	}
+	attributeIds, err := NewAttributeIds(scopeDT)
+	if err != nil {
+		return nil, err
+	}
+	return &ScopeIds{
+		Id:                     scopeId,
+		Name:                   nameId,
+		Version:                versionId,
+		DroppedAttributesCount: droppedAttributesCountId,
+		Attributes:             attributeIds,
+	}, nil
+}
 
 func NewScopeFromArray(listOfStructs *arrow_utils.ListOfStructs, row int) (pcommon.InstrumentationScope, error) {
 	s := pcommon.NewInstrumentationScope()
@@ -15,15 +54,15 @@ func NewScopeFromArray(listOfStructs *arrow_utils.ListOfStructs, row int) (pcomm
 	if err != nil {
 		return s, err
 	}
-	name, err := arrow_utils.StringFromStruct(scopeField, scopeArray, row, constants.NAME)
+	name, err := arrow_utils.OldStringFromStruct(scopeField, scopeArray, row, constants.NAME)
 	if err != nil {
 		return s, err
 	}
-	version, err := arrow_utils.StringFromStruct(scopeField, scopeArray, row, constants.VERSION)
+	version, err := arrow_utils.OldStringFromStruct(scopeField, scopeArray, row, constants.VERSION)
 	if err != nil {
 		return s, err
 	}
-	droppedAttributesCount, err := arrow_utils.U32FromStruct(scopeField, scopeArray, row, constants.DROPPED_ATTRIBUTES_COUNT)
+	droppedAttributesCount, err := arrow_utils.U32FromStructOld(scopeField, scopeArray, row, constants.DROPPED_ATTRIBUTES_COUNT)
 	if err != nil {
 		return s, err
 	}
@@ -41,21 +80,51 @@ func NewScopeFromArray(listOfStructs *arrow_utils.ListOfStructs, row int) (pcomm
 	return s, nil
 }
 
+// AppendScopeInto appends a scope into a given scope spans from an Arrow list of structs.
+func AppendScopeInto(scopeSpans ptrace.ScopeSpans, listOfStructs *arrow_utils.ListOfStructs, row int, ids *ScopeIds) error {
+	s := scopeSpans.Scope()
+	_, scopeArray, err := listOfStructs.StructById(ids.Id, row)
+	if err != nil {
+		return err
+	}
+	name, err := arrow_utils.StringFromStruct(scopeArray, row, ids.Name)
+	if err != nil {
+		return err
+	}
+	version, err := arrow_utils.StringFromStruct(scopeArray, row, ids.Version)
+	if err != nil {
+		return err
+	}
+	droppedAttributesCount, err := arrow_utils.U32FromStruct(scopeArray, row, ids.DroppedAttributesCount)
+	if err != nil {
+		return err
+	}
+
+	err = AppendAttributesInto(s.Attributes(), scopeArray, row, ids.Attributes)
+	if err != nil {
+		return err
+	}
+	s.SetName(name)
+	s.SetVersion(version)
+	s.SetDroppedAttributesCount(droppedAttributesCount)
+	return nil
+}
+
 func NewScopeFromRecord(record arrow.Record, row int, scope string) (pcommon.InstrumentationScope, error) {
 	s := pcommon.NewInstrumentationScope()
 	scopeField, scopeArray, err := arrow_utils.StructFromRecord(record, scope)
 	if err != nil {
 		return s, err
 	}
-	name, err := arrow_utils.StringFromStruct(scopeField, scopeArray, row, constants.NAME)
+	name, err := arrow_utils.OldStringFromStruct(scopeField, scopeArray, row, constants.NAME)
 	if err != nil {
 		return s, err
 	}
-	version, err := arrow_utils.StringFromStruct(scopeField, scopeArray, row, constants.VERSION)
+	version, err := arrow_utils.OldStringFromStruct(scopeField, scopeArray, row, constants.VERSION)
 	if err != nil {
 		return s, err
 	}
-	droppedAttributesCount, err := arrow_utils.U32FromStruct(scopeField, scopeArray, row, constants.DROPPED_ATTRIBUTES_COUNT)
+	droppedAttributesCount, err := arrow_utils.U32FromStructOld(scopeField, scopeArray, row, constants.DROPPED_ATTRIBUTES_COUNT)
 	if err != nil {
 		return s, err
 	}

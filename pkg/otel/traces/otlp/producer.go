@@ -146,13 +146,13 @@ func (p SpansProducer) EntityProducer(scopeSpan otlp.ScopeEntities[ptrace.Span],
 	}
 	if statusDt != nil {
 		// Status exists
-		message, err := arrow.StringFromStruct(statusDt, statusArr, row, constants.STATUS_MESSAGE)
+		message, err := arrow.OldStringFromStruct(statusDt, statusArr, row, constants.STATUS_MESSAGE)
 		if err != nil {
 			return err
 		}
 		span.Status().SetMessage(message)
 
-		code, err := arrow.I32FromStruct(statusDt, statusArr, row, constants.STATUS_CODE)
+		code, err := arrow.OldI32FromStruct(statusDt, statusArr, row, constants.STATUS_CODE)
 		if err != nil {
 			return err
 		}
@@ -231,7 +231,7 @@ func CopyEventsFrom(result ptrace.SpanEventSlice, los *arrow.ListOfStructs, row 
 			event.SetName(value)
 		}
 		if attributesFound {
-			attrs, err := eventLos.ListOfStructsById(eventIdx, attributesId, constants.ATTRIBUTES)
+			attrs, err := eventLos.OldListOfStructsById(eventIdx, attributesId, constants.ATTRIBUTES)
 			if err != nil {
 				return err
 			}
@@ -276,7 +276,7 @@ func CopyLinksFrom(result ptrace.SpanLinkSlice, los *arrow.ListOfStructs, row in
 		}
 
 		if traceIdFound {
-			value, err := linkLos.BinaryFieldById(traceIdId, linkIdx)
+			value, err := linkLos.FixedSizeBinaryFieldById(traceIdId, linkIdx)
 			if err != nil {
 				return err
 			}
@@ -289,7 +289,7 @@ func CopyLinksFrom(result ptrace.SpanLinkSlice, los *arrow.ListOfStructs, row in
 			}
 		}
 		if spanIdFound {
-			value, err := linkLos.BinaryFieldById(spanIdId, linkIdx)
+			value, err := linkLos.FixedSizeBinaryFieldById(spanIdId, linkIdx)
 			if err != nil {
 				return err
 			}
@@ -309,7 +309,7 @@ func CopyLinksFrom(result ptrace.SpanLinkSlice, los *arrow.ListOfStructs, row in
 			link.TraceState().FromRaw(value)
 		}
 		if attributesFound {
-			attrs, err := linkLos.ListOfStructsById(linkIdx, attributesId, constants.ATTRIBUTES)
+			attrs, err := linkLos.OldListOfStructsById(linkIdx, attributesId, constants.ATTRIBUTES)
 			if err != nil {
 				return err
 			}

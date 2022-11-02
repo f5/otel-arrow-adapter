@@ -301,7 +301,7 @@ func NewResourceFromOld(record arrow.Record, row int) (pcommon.Resource, error) 
 	if err != nil {
 		return r, err
 	}
-	droppedAttributesCount, err := arrow2.U32FromStruct(resourceField, resourceArray, row, constants.DROPPED_ATTRIBUTES_COUNT)
+	droppedAttributesCount, err := arrow2.U32FromStructOld(resourceField, resourceArray, row, constants.DROPPED_ATTRIBUTES_COUNT)
 	if err != nil {
 		return r, err
 	}

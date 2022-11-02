@@ -141,6 +141,62 @@ func DataTypeToId(dt arrow.DataType) string {
 	return id
 }
 
+func ListOfStructsFieldIdFromSchema(schema *arrow.Schema, fieldName string) (int, *arrow.StructType, error) {
+	ids := schema.FieldIndices(fieldName)
+	if len(ids) == 0 {
+		return 0, nil, fmt.Errorf("no field %q in schema", fieldName)
+	}
+	if len(ids) > 1 {
+		return 0, nil, fmt.Errorf("more than one field %q in schema", fieldName)
+	}
+	if lt, ok := schema.Field(ids[0]).Type.(*arrow.ListType); ok {
+		st, ok := lt.ElemField().Type.(*arrow.StructType)
+		if !ok {
+			return 0, nil, fmt.Errorf("field %q is not a list of structs", fieldName)
+		}
+		return ids[0], st, nil
+	} else {
+		return 0, nil, fmt.Errorf("field %q is not a list", fieldName)
+	}
+}
+
+func ListOfStructsFieldIdFromStruct(dt *arrow.StructType, fieldName string) (int, *arrow.StructType, error) {
+	id, ok := dt.FieldIdx(fieldName)
+	if !ok {
+		return 0, nil, fmt.Errorf("field %q not found", fieldName)
+	}
+	if lt, ok := dt.Field(id).Type.(*arrow.ListType); ok {
+		st, ok := lt.ElemField().Type.(*arrow.StructType)
+		if !ok {
+			return 0, nil, fmt.Errorf("field %q is not a list of structs", fieldName)
+		}
+		return id, st, nil
+	} else {
+		return 0, nil, fmt.Errorf("field %q is not a list", fieldName)
+	}
+}
+
+func StructFieldIdFromStruct(dt *arrow.StructType, fieldName string) (int, *arrow.StructType, error) {
+	id, found := dt.FieldIdx(fieldName)
+	if !found {
+		return 0, nil, fmt.Errorf("no field %q in struct type", fieldName)
+	}
+	if st, ok := dt.Field(id).Type.(*arrow.StructType); ok {
+		return id, st, nil
+	} else {
+		return 0, nil, fmt.Errorf("field %q is not a struct", fieldName)
+	}
+}
+
+func FieldIdFromStruct(dt *arrow.StructType, fieldName string) (int, *arrow.DataType, error) {
+	id, found := dt.FieldIdx(fieldName)
+	if !found {
+		return 0, nil, fmt.Errorf("no field %q in struct type", fieldName)
+	}
+	field := dt.Field(id)
+	return id, &field.Type, nil
+}
+
 func FieldArray(record arrow.Record, column string) (*arrow.Field, arrow.Array, error) {
 	fieldIdsWithSameName := record.Schema().FieldIndices(column)
 	if fieldIdsWithSameName == nil {
@@ -233,6 +289,36 @@ func ListOfStructsFromRecord(record arrow.Record, field string, row int) (*ListO
 	}
 }
 
+// TODO remove bis once the other implementation is no longer used
+
+// ListOfStructsFromRecordBis returns the struct type and an array of structs for a given field id.
+func ListOfStructsFromRecordBis(record arrow.Record, fieldId int, row int) (*ListOfStructs, error) {
+	arr := record.Column(fieldId)
+	switch listArr := arr.(type) {
+	case *array.List:
+		if listArr.IsNull(row) {
+			return nil, nil
+		}
+		switch structArr := listArr.ListValues().(type) {
+		case *array.Struct:
+			dt := structArr.DataType().(*arrow.StructType)
+			start := int(listArr.Offsets()[row])
+			end := int(listArr.Offsets()[row+1])
+
+			return &ListOfStructs{
+				dt:    dt,
+				arr:   structArr,
+				start: start,
+				end:   end,
+			}, nil
+		default:
+			return nil, fmt.Errorf("field id %d is not a list of structs", fieldId)
+		}
+	default:
+		return nil, fmt.Errorf("field id %d is not a list", fieldId)
+	}
+}
+
 func (los *ListOfStructs) Start() int {
 	return los.start
 }
@@ -291,6 +377,11 @@ func (los *ListOfStructs) BoolFieldById(fieldId int, row int) (bool, error) {
 func (los *ListOfStructs) BinaryFieldById(fieldId int, row int) ([]byte, error) {
 	column := los.arr.Field(fieldId)
 	return BinaryFromArray(column, row)
+}
+
+func (los *ListOfStructs) FixedSizeBinaryFieldById(fieldId int, row int) ([]byte, error) {
+	column := los.arr.Field(fieldId)
+	return FixedSizeBinaryFromArray(column, row)
 }
 
 func (los *ListOfStructs) StringFieldByName(name string, row int) (string, error) {
@@ -365,6 +456,15 @@ func (los *ListOfStructs) BinaryFieldByName(name string, row int) ([]byte, error
 	return BinaryFromArray(column, row)
 }
 
+func (los *ListOfStructs) FixedSizeBinaryFieldByName(name string, row int) ([]byte, error) {
+	fieldId, found := los.dt.FieldIdx(name)
+	if !found {
+		return nil, nil
+	}
+	column := los.arr.Field(fieldId)
+	return FixedSizeBinaryFromArray(column, row)
+}
+
 func (los *ListOfStructs) StructArray(name string, row int) (*arrow.StructType, *array.Struct, error) {
 	fieldId, found := los.dt.FieldIdx(name)
 	if !found {
@@ -379,6 +479,19 @@ func (los *ListOfStructs) StructArray(name string, row int) (*arrow.StructType, 
 		return structArr.DataType().(*arrow.StructType), structArr, nil
 	default:
 		return nil, nil, fmt.Errorf("field %q is not a struct", name)
+	}
+}
+
+func (los *ListOfStructs) StructById(fieldId int, row int) (*arrow.StructType, *array.Struct, error) {
+	column := los.arr.Field(fieldId)
+	switch structArr := column.(type) {
+	case *array.Struct:
+		if structArr.IsNull(row) {
+			return nil, nil, nil
+		}
+		return structArr.DataType().(*arrow.StructType), structArr, nil
+	default:
+		return nil, nil, fmt.Errorf("field id %d is not a struct", fieldId)
 	}
 }
 
@@ -437,7 +550,8 @@ func (los *ListOfStructs) CopyAttributesFrom(attr pcommon.Map) error {
 	return nil
 }
 
-func (los *ListOfStructs) ListOfStructsById(row int, fieldId int, fieldName string) (*ListOfStructs, error) {
+// TODO remove this function
+func (los *ListOfStructs) OldListOfStructsById(row int, fieldId int, fieldName string) (*ListOfStructs, error) {
 	column := los.arr.Field(fieldId)
 	switch listArr := column.(type) {
 	case *array.List:
@@ -464,12 +578,47 @@ func (los *ListOfStructs) ListOfStructsById(row int, fieldId int, fieldName stri
 	}
 }
 
+func (los *ListOfStructs) ListOfStructsById(row int, fieldId int) (*ListOfStructs, error) {
+	column := los.arr.Field(fieldId)
+	switch listArr := column.(type) {
+	case *array.List:
+		if listArr.IsNull(row) {
+			return nil, nil
+		}
+		switch structArr := listArr.ListValues().(type) {
+		case *array.Struct:
+			dt := structArr.DataType().(*arrow.StructType)
+			start := int(listArr.Offsets()[row])
+			end := int(listArr.Offsets()[row+1])
+
+			return &ListOfStructs{
+				dt:    dt,
+				arr:   structArr,
+				start: start,
+				end:   end,
+			}, nil
+		default:
+			return nil, fmt.Errorf("field id %d is not a list of structs", fieldId)
+		}
+	default:
+		return nil, fmt.Errorf("field id %d is not a list", fieldId)
+	}
+}
+
 func (los *ListOfStructs) ListOfStructsByName(name string, row int) (*ListOfStructs, error) {
 	fieldId, found := los.dt.FieldIdx(name)
 	if !found {
 		return nil, nil
 	}
-	return los.ListOfStructsById(row, fieldId, name)
+	return los.OldListOfStructsById(row, fieldId, name)
+}
+
+func (los *ListOfStructs) DataType() *arrow.StructType {
+	return los.dt
+}
+
+func (los *ListOfStructs) Array() *array.Struct {
+	return los.arr
 }
 
 func ListOfStructsFromStruct(fieldType *arrow.StructType, structArr *array.Struct, row int, name string) (*ListOfStructs, error) {
@@ -630,14 +779,6 @@ func U32FromArray(arr arrow.Array, row int) (uint32, error) {
 	}
 }
 
-func U32FromRecord(record arrow.Record, row int, column string) (uint32, error) {
-	arr, err := Array(record, column)
-	if err != nil {
-		return 0, err
-	}
-	return U32FromArray(arr, row)
-}
-
 func OptionalU32FromRecord(record arrow.Record, row int, column string) (uint32, error) {
 	arr, err := OptionalArray(record, column)
 	if err != nil {
@@ -649,12 +790,17 @@ func OptionalU32FromRecord(record arrow.Record, row int, column string) (uint32,
 	return U32FromArray(arr, row)
 }
 
-func U32FromStruct(fieldType *arrow.StructType, structArr *array.Struct, row int, column string) (uint32, error) {
+// TODO remove this function
+func U32FromStructOld(fieldType *arrow.StructType, structArr *array.Struct, row int, column string) (uint32, error) {
 	_, id, found := FieldOfStruct(fieldType, column)
 	if !found {
 		return 0, nil
 	}
 	return U32FromArray(structArr.Field(id), row)
+}
+
+func U32FromStruct(structArr *array.Struct, row int, fieldId int) (uint32, error) {
+	return U32FromArray(structArr.Field(fieldId), row)
 }
 
 func I32FromArray(arr arrow.Array, row int) (int32, error) {
@@ -672,14 +818,6 @@ func I32FromArray(arr arrow.Array, row int) (int32, error) {
 			return 0, fmt.Errorf("column is not of type int32")
 		}
 	}
-}
-
-func I32FromRecord(record arrow.Record, row int, column string) (int32, error) {
-	arr, err := Array(record, column)
-	if err != nil {
-		return 0, err
-	}
-	return I32FromArray(arr, row)
 }
 
 func I64FromArray(arr arrow.Array, row int) (int64, error) {
@@ -722,16 +860,8 @@ func StringFromArray(arr arrow.Array, row int) (string, error) {
 	}
 }
 
-func StringFromRecord(record arrow.Record, row int, column string) (string, error) {
-	arr, err := Array(record, column)
-	if err != nil {
-		return "", err
-	}
-
-	return StringFromArray(arr, row)
-}
-
-func StringFromStruct(fieldType *arrow.StructType, arr arrow.Array, row int, column string) (string, error) {
+// TODO remove this function
+func OldStringFromStruct(fieldType *arrow.StructType, arr arrow.Array, row int, column string) (string, error) {
 	if structArr := arr.(*array.Struct); structArr != nil {
 		_, id, found := FieldOfStruct(fieldType, column)
 		if !found {
@@ -743,12 +873,28 @@ func StringFromStruct(fieldType *arrow.StructType, arr arrow.Array, row int, col
 	}
 }
 
-func I32FromStruct(fieldType *arrow.StructType, arr arrow.Array, row int, column string) (int32, error) {
+func StringFromStruct(arr arrow.Array, row int, id int) (string, error) {
+	if structArr := arr.(*array.Struct); structArr != nil {
+		return StringFromArray(structArr.Field(id), row)
+	} else {
+		return "", fmt.Errorf("column array is not of type struct")
+	}
+}
+
+func OldI32FromStruct(fieldType *arrow.StructType, arr arrow.Array, row int, column string) (int32, error) {
 	if structArr := arr.(*array.Struct); structArr != nil {
 		_, id, found := FieldOfStruct(fieldType, column)
 		if !found {
 			return 0, nil
 		}
+		return I32FromArray(structArr.Field(id), row)
+	} else {
+		return 0, fmt.Errorf("column array is not of type struct")
+	}
+}
+
+func I32FromStruct(arr arrow.Array, row int, id int) (int32, error) {
+	if structArr := arr.(*array.Struct); structArr != nil {
 		return I32FromArray(structArr.Field(id), row)
 	} else {
 		return 0, fmt.Errorf("column array is not of type struct")
@@ -774,10 +920,21 @@ func BinaryFromArray(arr arrow.Array, row int) ([]byte, error) {
 	}
 }
 
-func BinaryFromRecord(record arrow.Record, row int, column string) ([]byte, error) {
-	arr, err := Array(record, column)
-	if err != nil {
-		return nil, err
+func FixedSizeBinaryFromArray(arr arrow.Array, row int) ([]byte, error) {
+	if arr == nil {
+		return nil, nil
+	} else {
+		if arr.IsNull(row) {
+			return nil, nil
+		}
+
+		switch arr := arr.(type) {
+		case *array.FixedSizeBinary:
+			return arr.Value(row), nil
+		case *array.Dictionary:
+			return arr.Dictionary().(*array.FixedSizeBinary).Value(arr.GetValueIndex(row)), nil
+		default:
+			return nil, fmt.Errorf("column is not of type binary")
+		}
 	}
-	return BinaryFromArray(arr, row)
 }

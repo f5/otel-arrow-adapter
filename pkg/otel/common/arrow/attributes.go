@@ -68,28 +68,14 @@ func (b *AttributesBuilder) Append(attrs pcommon.Map) error {
 		return fmt.Errorf("attribute builder already released")
 	}
 
-	// Count the number of non-empty key.
-	nonEmptyKeyCount := 0
-	attrs.Range(func(key string, v pcommon.Value) bool {
-		if key != "" {
-			nonEmptyKeyCount++
-		}
-		return true
-	})
-
-	if nonEmptyKeyCount == 0 {
+	if attrs.Len() == 0 {
 		b.append0Attrs()
 		return nil
 	}
-	b.appendNAttrs(nonEmptyKeyCount)
+	b.appendNAttrs(attrs.Len())
 
 	var err error
 	attrs.Range(func(key string, v pcommon.Value) bool {
-		// Skip empty key.
-		if key == "" {
-			return true
-		}
-
 		// Append the key
 		err := b.kb.AppendString(key)
 		if err != nil {

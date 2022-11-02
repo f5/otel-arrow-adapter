@@ -12,16 +12,6 @@ import (
 	"github.com/f5/otel-arrow-adapter/pkg/otel/constants"
 )
 
-// Constants used to identify the type of value in the union.
-const (
-	StrCode    int8 = 0
-	I64Code    int8 = 1
-	F64Code    int8 = 2
-	BoolCode   int8 = 3
-	BinaryCode int8 = 4
-	// Future extension CborCode   int8 = 5
-)
-
 // Arrow Data Types describing log record and body.
 var (
 	// LogRecordDT is the Arrow Data Type describing a log record.
@@ -32,30 +22,11 @@ var (
 		{Name: constants.SPAN_ID, Type: acommon.DictU16Fixed8Binary},
 		{Name: constants.SEVERITY_NUMBER, Type: arrow.PrimitiveTypes.Int32},
 		{Name: constants.SEVERITY_TEXT, Type: acommon.DictU16String},
-		{Name: constants.BODY, Type: BodyDT},
+		{Name: constants.BODY, Type: acommon.AnyValueDT},
 		{Name: constants.ATTRIBUTES, Type: acommon.AttributesDT},
 		{Name: constants.DROPPED_ATTRIBUTES_COUNT, Type: arrow.PrimitiveTypes.Uint32},
 		{Name: constants.FLAGS, Type: arrow.PrimitiveTypes.Uint32},
 	}...)
-
-	// BodyDT is the Arrow Data Type describing a log record body.
-	BodyDT = arrow.SparseUnionOf([]arrow.Field{
-		// TODO manage case where the cardinality of the dictionary is too high (> 2^16).
-		{Name: "str", Type: acommon.DictU16String},
-		{Name: "i64", Type: arrow.PrimitiveTypes.Int64},
-		{Name: "f64", Type: arrow.PrimitiveTypes.Float64},
-		{Name: "bool", Type: arrow.FixedWidthTypes.Boolean},
-		// TODO manage case where the cardinality of the dictionary is too high (> 2^16).
-		{Name: "binary", Type: acommon.DictU16Binary},
-		// Future extension {Name: "cbor", Type: acommon.DictU16Binary},
-	}, []int8{
-		StrCode,
-		I64Code,
-		F64Code,
-		BoolCode,
-		BinaryCode,
-		// Futuee extension CborCode,
-	})
 )
 
 // LogRecordBuilder is a helper to build a log record.
