@@ -28,7 +28,7 @@ type ResourceBuilder struct {
 }
 
 // NewResourceBuilder creates a new resource builder with a given allocator.
-func NewResourceBuilder(pool *memory.GoAllocator) *ResourceBuilder {
+func NewResourceBuilder(pool memory.Allocator) *ResourceBuilder {
 	return ResourceBuilderFrom(array.NewStructBuilder(pool, ResourceDT))
 }
 

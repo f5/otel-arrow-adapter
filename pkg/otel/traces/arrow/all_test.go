@@ -13,7 +13,8 @@ import (
 func TestStatus(t *testing.T) {
 	t.Parallel()
 
-	pool := memory.NewGoAllocator()
+	pool := memory.NewCheckedAllocator(memory.NewGoAllocator())
+	defer pool.AssertSize(t, 0)
 	sb := NewStatusBuilder(pool)
 
 	if err := sb.Append(Status1()); err != nil {
@@ -43,7 +44,8 @@ func TestStatus(t *testing.T) {
 func TestEvent(t *testing.T) {
 	t.Parallel()
 
-	pool := memory.NewGoAllocator()
+	pool := memory.NewCheckedAllocator(memory.NewGoAllocator())
+	defer pool.AssertSize(t, 0)
 	eb := NewEventBuilder(pool)
 
 	if err := eb.Append(Event1()); err != nil {
@@ -73,7 +75,8 @@ func TestEvent(t *testing.T) {
 func TestLink(t *testing.T) {
 	t.Parallel()
 
-	pool := memory.NewGoAllocator()
+	pool := memory.NewCheckedAllocator(memory.NewGoAllocator())
+	defer pool.AssertSize(t, 0)
 	lb := NewLinkBuilder(pool)
 
 	if err := lb.Append(Link1()); err != nil {
@@ -103,7 +106,8 @@ func TestLink(t *testing.T) {
 func TestSpan(t *testing.T) {
 	t.Parallel()
 
-	pool := memory.NewGoAllocator()
+	pool := memory.NewCheckedAllocator(memory.NewGoAllocator())
+	defer pool.AssertSize(t, 0)
 	sb := NewSpanBuilder(pool)
 
 	if err := sb.Append(Span1()); err != nil {
@@ -133,7 +137,8 @@ func TestSpan(t *testing.T) {
 func TestScopeSpans(t *testing.T) {
 	t.Parallel()
 
-	pool := memory.NewGoAllocator()
+	pool := memory.NewCheckedAllocator(memory.NewGoAllocator())
+	defer pool.AssertSize(t, 0)
 	ssb := NewScopeSpansBuilder(pool)
 
 	if err := ssb.Append(ScopeSpans1()); err != nil {
@@ -163,7 +168,8 @@ func TestScopeSpans(t *testing.T) {
 func TestResourceSpans(t *testing.T) {
 	t.Parallel()
 
-	pool := memory.NewGoAllocator()
+	pool := memory.NewCheckedAllocator(memory.NewGoAllocator())
+	defer pool.AssertSize(t, 0)
 	rsb := NewResourceSpansBuilder(pool)
 
 	if err := rsb.Append(ResourceSpans1()); err != nil {
@@ -193,7 +199,8 @@ func TestResourceSpans(t *testing.T) {
 func TestTraces(t *testing.T) {
 	t.Parallel()
 
-	pool := memory.NewGoAllocator()
+	pool := memory.NewCheckedAllocator(memory.NewGoAllocator())
+	defer pool.AssertSize(t, 0)
 	tb := NewTracesBuilder(pool)
 
 	if err := tb.Append(Traces()); err != nil {

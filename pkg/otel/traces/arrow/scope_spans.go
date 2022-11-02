@@ -37,7 +37,7 @@ type ScopeSpansBuilder struct {
 //
 // Once the builder is no longer needed, Release() must be called to free the
 // memory allocated by the builder.
-func NewScopeSpansBuilder(pool *memory.GoAllocator) *ScopeSpansBuilder {
+func NewScopeSpansBuilder(pool memory.Allocator) *ScopeSpansBuilder {
 	builder := array.NewStructBuilder(pool, ScopeSpansDT)
 	return ScopeSpansBuilderFrom(builder)
 }

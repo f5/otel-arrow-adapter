@@ -13,7 +13,8 @@ import (
 func TestLogRecord(t *testing.T) {
 	t.Parallel()
 
-	pool := memory.NewGoAllocator()
+	pool := memory.NewCheckedAllocator(memory.NewGoAllocator())
+	defer pool.AssertSize(t, 0)
 	sb := NewLogRecordBuilder(pool)
 
 	if err := sb.Append(LogRecord1()); err != nil {
@@ -43,7 +44,8 @@ func TestLogRecord(t *testing.T) {
 func TestScopeLogs(t *testing.T) {
 	t.Parallel()
 
-	pool := memory.NewGoAllocator()
+	pool := memory.NewCheckedAllocator(memory.NewGoAllocator())
+	defer pool.AssertSize(t, 0)
 	ssb := NewScopeLogsBuilder(pool)
 
 	if err := ssb.Append(ScopeLogs1()); err != nil {
@@ -73,7 +75,8 @@ func TestScopeLogs(t *testing.T) {
 func TestResourceLogs(t *testing.T) {
 	t.Parallel()
 
-	pool := memory.NewGoAllocator()
+	pool := memory.NewCheckedAllocator(memory.NewGoAllocator())
+	defer pool.AssertSize(t, 0)
 	rsb := NewResourceLogsBuilder(pool)
 
 	if err := rsb.Append(ResourceLogs1()); err != nil {
@@ -103,7 +106,8 @@ func TestResourceLogs(t *testing.T) {
 func TestLogs(t *testing.T) {
 	t.Parallel()
 
-	pool := memory.NewGoAllocator()
+	pool := memory.NewCheckedAllocator(memory.NewGoAllocator())
+	defer pool.AssertSize(t, 0)
 	tb := NewLogsBuilder(pool)
 
 	if err := tb.Append(Logs()); err != nil {

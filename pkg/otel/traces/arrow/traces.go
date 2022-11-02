@@ -27,7 +27,7 @@ type TracesBuilder struct {
 }
 
 // NewTracesBuilder creates a new TracesBuilder with a given allocator.
-func NewTracesBuilder(pool *memory.GoAllocator) *TracesBuilder {
+func NewTracesBuilder(pool memory.Allocator) *TracesBuilder {
 	rsb := array.NewListBuilder(pool, ResourceSpansDT)
 	return &TracesBuilder{
 		released: false,
@@ -48,6 +48,7 @@ func (b *TracesBuilder) Build() (arrow.Record, error) {
 	defer b.Release()
 
 	arr := b.builder.NewArray()
+	defer arr.Release()
 	return array.NewRecord(Schema, []arrow.Array{arr}, int64(arr.Len())), nil
 }
 

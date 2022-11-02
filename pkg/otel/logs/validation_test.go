@@ -40,7 +40,8 @@ func TestConversionFromSyntheticData(t *testing.T) {
 	expectedRequest := plogotlp.NewRequestFromLogs(logsGen.Generate(10, 100))
 
 	// Convert the OTLP logs request to Arrow.
-	pool := memory.NewGoAllocator()
+	pool := memory.NewCheckedAllocator(memory.NewGoAllocator())
+	defer pool.AssertSize(t, 0)
 	lb := logs_arrow.NewLogsBuilder(pool)
 	err := lb.Append(expectedRequest.Logs())
 	if err != nil {

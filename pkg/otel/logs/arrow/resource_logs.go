@@ -36,7 +36,7 @@ type ResourceLogsBuilder struct {
 //
 // Once the builder is no longer needed, Build() or Release() must be called to free the
 // memory allocated by the builder.
-func NewResourceLogsBuilder(pool *memory.GoAllocator) *ResourceLogsBuilder {
+func NewResourceLogsBuilder(pool memory.Allocator) *ResourceLogsBuilder {
 	builder := array.NewStructBuilder(pool, ResourceLogsDT)
 	return ResourceLogsBuilderFrom(builder)
 }

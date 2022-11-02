@@ -9,10 +9,11 @@ import (
 	"github.com/f5/otel-arrow-adapter/pkg/otel/internal"
 )
 
-func TestAttributes(t *testing.T) {
+func TestAttributesBuilder(t *testing.T) {
 	t.Parallel()
 
-	pool := memory.NewGoAllocator()
+	pool := memory.NewCheckedAllocator(memory.NewGoAllocator())
+	defer pool.AssertSize(t, 0)
 	ab := NewAttributesBuilder(pool)
 
 	if err := ab.Append(internal.Attrs1()); err != nil {
@@ -43,10 +44,11 @@ func TestAttributes(t *testing.T) {
 	require.JSONEq(t, expected, string(json))
 }
 
-func TestScope(t *testing.T) {
+func TestScopeBuilder(t *testing.T) {
 	t.Parallel()
 
-	pool := memory.NewGoAllocator()
+	pool := memory.NewCheckedAllocator(memory.NewGoAllocator())
+	defer pool.AssertSize(t, 0)
 	sb := NewScopeBuilder(pool)
 
 	if err := sb.Append(internal.Scope1()); err != nil {
@@ -73,10 +75,11 @@ func TestScope(t *testing.T) {
 	require.JSONEq(t, expected, string(json))
 }
 
-func TestResource(t *testing.T) {
+func TestResourceBuilder(t *testing.T) {
 	t.Parallel()
 
-	pool := memory.NewGoAllocator()
+	pool := memory.NewCheckedAllocator(memory.NewGoAllocator())
+	defer pool.AssertSize(t, 0)
 	rb := NewResourceBuilder(pool)
 
 	if err := rb.Append(internal.Resource1()); err != nil {

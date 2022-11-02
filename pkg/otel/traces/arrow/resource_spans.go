@@ -36,7 +36,7 @@ type ResourceSpansBuilder struct {
 //
 // Once the builder is no longer needed, Build() or Release() must be called to free the
 // memory allocated by the builder.
-func NewResourceSpansBuilder(pool *memory.GoAllocator) *ResourceSpansBuilder {
+func NewResourceSpansBuilder(pool memory.Allocator) *ResourceSpansBuilder {
 	builder := array.NewStructBuilder(pool, ResourceSpansDT)
 	return ResourceSpansBuilderFrom(builder)
 }

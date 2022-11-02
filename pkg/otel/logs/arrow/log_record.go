@@ -51,7 +51,7 @@ type LogRecordBuilder struct {
 //
 // Once the builder is no longer needed, Release() must be called to free the
 // memory allocated by the builder.
-func NewLogRecordBuilder(pool *memory.GoAllocator) *LogRecordBuilder {
+func NewLogRecordBuilder(pool memory.Allocator) *LogRecordBuilder {
 	sb := array.NewStructBuilder(pool, LogRecordDT)
 	return LogRecordBuilderFrom(sb)
 }

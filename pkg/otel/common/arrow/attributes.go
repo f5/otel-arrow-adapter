@@ -31,7 +31,7 @@ type AttributesBuilder struct {
 //
 // Once the builder is no longer needed, Build() or Release() must be called to free the
 // memory allocated by the builder.
-func NewAttributesBuilder(pool *memory.GoAllocator) *AttributesBuilder {
+func NewAttributesBuilder(pool memory.Allocator) *AttributesBuilder {
 	mb := array.NewMapBuilder(pool, KDT, AnyValueDT, false)
 	return AttributesBuilderFrom(mb)
 }

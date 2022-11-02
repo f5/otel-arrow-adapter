@@ -62,7 +62,7 @@ type SpanBuilder struct {
 //
 // Once the builder is no longer needed, Release() must be called to free the
 // memory allocated by the builder.
-func NewSpanBuilder(pool *memory.GoAllocator) *SpanBuilder {
+func NewSpanBuilder(pool memory.Allocator) *SpanBuilder {
 	sb := array.NewStructBuilder(pool, SpanDT)
 	return SpanBuilderFrom(sb)
 }

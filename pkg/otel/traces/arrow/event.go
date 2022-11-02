@@ -31,7 +31,7 @@ type EventBuilder struct {
 	dacb     *array.Uint32Builder           // dropped_attributes_count builder
 }
 
-func NewEventBuilder(pool *memory.GoAllocator) *EventBuilder {
+func NewEventBuilder(pool memory.Allocator) *EventBuilder {
 	return EventBuilderFrom(array.NewStructBuilder(pool, EventDT))
 }
 

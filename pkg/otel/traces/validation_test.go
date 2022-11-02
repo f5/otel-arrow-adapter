@@ -41,7 +41,8 @@ func TestConversionFromSyntheticData(t *testing.T) {
 	expectedRequest := ptraceotlp.NewRequestFromTraces(tracesGen.Generate(10, 100))
 
 	// Convert the OTLP traces request to Arrow.
-	pool := memory.NewGoAllocator()
+	pool := memory.NewCheckedAllocator(memory.NewGoAllocator())
+	defer pool.AssertSize(t, 0)
 	tb := traces_arrow.NewTracesBuilder(pool)
 	err := tb.Append(expectedRequest.Traces())
 	if err != nil {
@@ -78,23 +79,28 @@ func TestConversionFromRealData(t *testing.T) {
 		expectedRequest := ptraceotlp.NewRequestFromTraces(tracesList[0])
 
 		// Convert the OTLP traces request to Arrow.
-		pool := memory.NewGoAllocator()
-		tb := traces_arrow.NewTracesBuilder(pool)
-		err := tb.Append(expectedRequest.Traces())
-		if err != nil {
-			t.Fatal(err)
-		}
-		record, err := tb.Build()
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		// Convert the Arrow records back to OTLP.
-		traces, err := traces_otlp.TracesFrom(record)
-		record.Release()
-		if err != nil {
-			t.Fatal(err)
-		}
-		assert.Equiv(t, []json.Marshaler{expectedRequest}, []json.Marshaler{ptraceotlp.NewRequestFromTraces(traces)})
+		checkTracesConversion(t, expectedRequest)
 	}
+}
+
+func checkTracesConversion(t *testing.T, expectedRequest ptraceotlp.Request) {
+	pool := memory.NewCheckedAllocator(memory.NewGoAllocator())
+	defer pool.AssertSize(t, 0)
+	tb := traces_arrow.NewTracesBuilder(pool)
+	err := tb.Append(expectedRequest.Traces())
+	if err != nil {
+		t.Fatal(err)
+	}
+	record, err := tb.Build()
+	defer record.Release()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Convert the Arrow records back to OTLP.
+	traces, err := traces_otlp.TracesFrom(record)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assert.Equiv(t, []json.Marshaler{expectedRequest}, []json.Marshaler{ptraceotlp.NewRequestFromTraces(traces)})
 }

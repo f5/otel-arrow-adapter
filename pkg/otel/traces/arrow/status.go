@@ -27,7 +27,7 @@ type StatusBuilder struct {
 	smb      *array.BinaryDictionaryBuilder // status message builder
 }
 
-func NewStatusBuilder(pool *memory.GoAllocator) *StatusBuilder {
+func NewStatusBuilder(pool memory.Allocator) *StatusBuilder {
 	return StatusBuilderFrom(array.NewStructBuilder(pool, StatusDT))
 }
 

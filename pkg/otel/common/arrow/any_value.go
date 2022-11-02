@@ -5,7 +5,6 @@ import (
 
 	"github.com/apache/arrow/go/v10/arrow"
 	"github.com/apache/arrow/go/v10/arrow/array"
-	"github.com/apache/arrow/go/v10/arrow/memory"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 )
 
@@ -20,7 +19,8 @@ const (
 )
 
 var (
-	// AnyValueDT is the Arrow value data type.
+	// AnyValueDT is an Arrow Data Type representing an OTLP Any Value.
+	// Any values are represented as a sparse union of the following variants: str, i64, f64, bool, binary.
 	AnyValueDT = arrow.SparseUnionOf([]arrow.Field{
 		// TODO manage case where the cardinality of the dictionary is too high (> 2^16).
 		{Name: "str", Type: DictU16String},
@@ -40,7 +40,7 @@ var (
 	})
 )
 
-// AnyValueBuilder is a helper to build an OTLP "any value".
+// AnyValueBuilder is a helper to build an Arrow array containing a collection of OTLP Any Value.
 type AnyValueBuilder struct {
 	released bool
 
@@ -53,41 +53,26 @@ type AnyValueBuilder struct {
 	binaryBuilder *array.BinaryDictionaryBuilder // binary builder
 }
 
-// NewAnyValueBuilder creates a new AnyValueBuilder with a given allocator.
-//
-// Once the builder is no longer needed, Build() or Release() must be called to free the
-// memory allocated by the builder.
-func NewAnyValueBuilder(pool *memory.GoAllocator) *AnyValueBuilder {
-	av := array.NewSparseUnionBuilder(pool, AnyValueDT)
-	return AnyValueBuilderFrom(av)
-}
-
 // AnyValueBuilderFrom creates a new AnyValueBuilder from an existing SparseUnionBuilder.
 func AnyValueBuilderFrom(av *array.SparseUnionBuilder) *AnyValueBuilder {
-	strBuilder := av.Child(0).(*array.BinaryDictionaryBuilder)
-	intBuilder := av.Child(1).(*array.Int64Builder)
-	doubleBuilder := av.Child(2).(*array.Float64Builder)
-	boolBuilder := av.Child(3).(*array.BooleanBuilder)
-	binaryBuilder := av.Child(4).(*array.BinaryDictionaryBuilder)
-
 	return &AnyValueBuilder{
 		released:      false,
 		builder:       av,
-		strBuilder:    strBuilder,
-		i64Builder:    intBuilder,
-		f64Builder:    doubleBuilder,
-		boolBuilder:   boolBuilder,
-		binaryBuilder: binaryBuilder,
+		strBuilder:    av.Child(0).(*array.BinaryDictionaryBuilder),
+		i64Builder:    av.Child(1).(*array.Int64Builder),
+		f64Builder:    av.Child(2).(*array.Float64Builder),
+		boolBuilder:   av.Child(3).(*array.BooleanBuilder),
+		binaryBuilder: av.Child(4).(*array.BinaryDictionaryBuilder),
 	}
 }
 
-// Build builds the "any value" array.
+// Build builds the "any value" Arrow array.
 //
 // Once the returned array is no longer needed, Release() must be called to free the
 // memory allocated by the array.
 func (b *AnyValueBuilder) Build() (*array.SparseUnion, error) {
 	if b.released {
-		return nil, fmt.Errorf("sparse union builder already released")
+		return nil, fmt.Errorf("any value builder already released")
 	}
 
 	defer b.Release()
@@ -115,8 +100,10 @@ func (b *AnyValueBuilder) Append(av pcommon.Value) error {
 	case pcommon.ValueTypeBytes:
 		err = b.appendBinary(av.Bytes().AsRaw())
 	case pcommon.ValueTypeSlice:
+		// TODO implement this with CBOR encoding
 		err = fmt.Errorf("slice value type not yet supported")
 	case pcommon.ValueTypeMap:
+		// TODO implement this with CBOR encoding
 		err = fmt.Errorf("map value type not yet supported")
 	}
 

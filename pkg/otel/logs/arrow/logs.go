@@ -27,7 +27,7 @@ type LogsBuilder struct {
 }
 
 // NewLogsBuilder creates a new LogsBuilder with a given allocator.
-func NewLogsBuilder(pool *memory.GoAllocator) *LogsBuilder {
+func NewLogsBuilder(pool memory.Allocator) *LogsBuilder {
 	rlb := array.NewListBuilder(pool, ResourceLogsDT)
 	return &LogsBuilder{
 		released: false,
@@ -48,6 +48,7 @@ func (b *LogsBuilder) Build() (arrow.Record, error) {
 	defer b.Release()
 
 	arr := b.builder.NewArray()
+	defer arr.Release()
 	return array.NewRecord(Schema, []arrow.Array{arr}, int64(arr.Len())), nil
 }
 

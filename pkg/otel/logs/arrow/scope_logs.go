@@ -37,7 +37,7 @@ type ScopeLogsBuilder struct {
 //
 // Once the builder is no longer needed, Release() must be called to free the
 // memory allocated by the builder.
-func NewScopeLogsBuilder(pool *memory.GoAllocator) *ScopeLogsBuilder {
+func NewScopeLogsBuilder(pool memory.Allocator) *ScopeLogsBuilder {
 	builder := array.NewStructBuilder(pool, ScopeLogsDT)
 	return ScopeLogsBuilderFrom(builder)
 }

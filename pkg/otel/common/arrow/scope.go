@@ -31,7 +31,7 @@ type ScopeBuilder struct {
 }
 
 // NewScopeBuilder creates a new instrumentation scope array builder with a given allocator.
-func NewScopeBuilder(pool *memory.GoAllocator) *ScopeBuilder {
+func NewScopeBuilder(pool memory.Allocator) *ScopeBuilder {
 	return ScopeBuilderFrom(array.NewStructBuilder(pool, ScopeDT))
 }
 

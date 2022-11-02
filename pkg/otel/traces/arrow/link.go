@@ -34,7 +34,7 @@ type LinkBuilder struct {
 	dacb     *array.Uint32Builder                    // dropped attributes count builder
 }
 
-func NewLinkBuilder(pool *memory.GoAllocator) *LinkBuilder {
+func NewLinkBuilder(pool memory.Allocator) *LinkBuilder {
 	return LinkBuilderFrom(array.NewStructBuilder(pool, LinkDT))
 }
 
