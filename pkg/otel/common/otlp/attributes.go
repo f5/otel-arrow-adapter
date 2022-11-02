@@ -8,7 +8,6 @@ import (
 	"go.opentelemetry.io/collector/pdata/pcommon"
 
 	arrow_utils "github.com/f5/otel-arrow-adapter/pkg/arrow"
-	common_arrow "github.com/f5/otel-arrow-adapter/pkg/otel/common/arrow"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/constants"
 )
 
@@ -42,31 +41,9 @@ func AppendAttributesInto(attrs pcommon.Map, parentArr *array.Struct, row int, a
 		if err != nil {
 			return err
 		}
-		tcode := int8(values.ChildID(i))
-		switch tcode {
-		case common_arrow.StrCode:
-			val, err := arrow_utils.StringFromArray(values.Field(int(tcode)), i)
-			if err != nil {
-				return err
-			}
-			attrs.PutStr(key, val)
-		case common_arrow.I64Code:
-			val := values.Field(int(tcode)).(*array.Int64).Value(i)
-			attrs.PutInt(key, val)
-		case common_arrow.F64Code:
-			val := values.Field(int(tcode)).(*array.Float64).Value(i)
-			attrs.PutDouble(key, val)
-		case common_arrow.BoolCode:
-			val := values.Field(int(tcode)).(*array.Boolean).Value(i)
-			attrs.PutBool(key, val)
-		case common_arrow.BinaryCode:
-			val, err := arrow_utils.BinaryFromArray(values.Field(int(tcode)), i)
-			if err != nil {
-				return err
-			}
-			attrs.PutEmptyBytes(key).Append(val...)
-		default:
-			return fmt.Errorf("unknow type code `%d` in attributes union array", tcode)
+
+		if err := UpdateValueFrom(attrs.PutEmpty(key), values, i); err != nil {
+			return err
 		}
 	}
 	return nil

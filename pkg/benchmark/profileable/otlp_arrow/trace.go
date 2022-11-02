@@ -14,8 +14,7 @@ import (
 	"github.com/f5/otel-arrow-adapter/pkg/benchmark"
 	"github.com/f5/otel-arrow-adapter/pkg/benchmark/dataset"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/arrow_record"
-	"github.com/f5/otel-arrow-adapter/pkg/otel/common/arrow"
-	arrow2 "github.com/f5/otel-arrow-adapter/pkg/otel/traces/arrow"
+	traces_arrow "github.com/f5/otel-arrow-adapter/pkg/otel/traces/arrow"
 )
 
 type TraceProfileable struct {
@@ -23,11 +22,11 @@ type TraceProfileable struct {
 	compression       benchmark.CompressionAlgorithm
 	dataset           dataset.TraceDataset
 	traces            []ptrace.Traces
-	otlpArrowProducer *arrow.OtlpArrowProducer[ptrace.ScopeSpans]
 	producer          *arrow_record.Producer
 	consumer          *arrow_record.Consumer
 	batchArrowRecords []*v1.BatchArrowRecords
 	config            *config.Config
+	pool              *memory.GoAllocator
 }
 
 func NewTraceProfileable(tags []string, dataset dataset.TraceDataset, config *config.Config, compression benchmark.CompressionAlgorithm) *TraceProfileable {
@@ -35,11 +34,11 @@ func NewTraceProfileable(tags []string, dataset dataset.TraceDataset, config *co
 		tags:              tags,
 		dataset:           dataset,
 		compression:       compression,
-		otlpArrowProducer: nil,
 		producer:          arrow_record.NewProducerWithConfig(config),
 		consumer:          arrow_record.NewConsumer(),
 		batchArrowRecords: make([]*v1.BatchArrowRecords, 0, 10),
 		config:            config,
+		pool:              memory.NewGoAllocator(),
 	}
 }
 
@@ -56,13 +55,8 @@ func (s *TraceProfileable) DatasetSize() int { return s.dataset.Len() }
 func (s *TraceProfileable) CompressionAlgorithm() benchmark.CompressionAlgorithm {
 	return s.compression
 }
-func (s *TraceProfileable) StartProfiling(_ io.Writer) {
-	s.otlpArrowProducer = arrow.NewOtlpArrowProducerWithConfig[ptrace.ScopeSpans](s.config)
-}
-func (s *TraceProfileable) EndProfiling(writer io.Writer) {
-	s.otlpArrowProducer.DumpMetadata(writer)
-	s.otlpArrowProducer = nil
-}
+func (s *TraceProfileable) StartProfiling(_ io.Writer)       {}
+func (s *TraceProfileable) EndProfiling(_ io.Writer)         {}
 func (s *TraceProfileable) InitBatchSize(_ io.Writer, _ int) {}
 func (s *TraceProfileable) PrepareBatch(_ io.Writer, startAt, size int) {
 	s.traces = s.dataset.Traces(startAt, size)
@@ -71,8 +65,7 @@ func (s *TraceProfileable) CreateBatch(_ io.Writer, _, _ int) {
 	// Conversion of OTLP metrics to OTLP Arrow Records
 	s.batchArrowRecords = make([]*v1.BatchArrowRecords, 0, len(s.traces))
 	for _, traceReq := range s.traces {
-		pool := memory.NewGoAllocator()
-		tb := arrow2.NewTracesBuilder(pool)
+		tb := traces_arrow.NewTracesBuilder(s.pool)
 		if err := tb.Append(traceReq); err != nil {
 			panic(err)
 		}
@@ -80,11 +73,10 @@ func (s *TraceProfileable) CreateBatch(_ io.Writer, _, _ int) {
 		if err != nil {
 			panic(err)
 		}
-		rms := make([]*arrow_record.RecordMessage, 1)
-		rms[0] = arrow_record.NewTraceMessage(record, colarspb.DeliveryType_BEST_EFFORT)
+		rms := []*arrow_record.RecordMessage{
+			arrow_record.NewTraceMessage(record, colarspb.DeliveryType_BEST_EFFORT),
+		}
 		bar, err := s.producer.Produce(rms, colarspb.DeliveryType_BEST_EFFORT)
-
-		// TODO a remettre bar, err := s.producer.BatchArrowRecordsFrom(traceReq)
 		if err != nil {
 			panic(err)
 		}
@@ -126,7 +118,7 @@ func (s *TraceProfileable) Deserialize(_ io.Writer, buffers [][]byte) {
 		//	if err != nil {
 		//		panic(err)
 		//	}
-		//	if len(request.ResourceSpans) == 0 {
+		//	if len(request.ResourceLogs) == 0 {
 		//		panic("no resource spans")
 		//	}
 		//}

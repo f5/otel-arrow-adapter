@@ -258,37 +258,6 @@ type ListOfStructs struct {
 	end   int
 }
 
-// ListOfStructsFromRecord returns the struct type and an array of structs for a given field name.
-func ListOfStructsFromRecord(record arrow.Record, field string, row int) (*ListOfStructs, error) {
-	arr, err := Array(record, field)
-	if err != nil {
-		return nil, err
-	}
-	switch listArr := arr.(type) {
-	case *array.List:
-		if listArr.IsNull(row) {
-			return nil, nil
-		}
-		switch structArr := listArr.ListValues().(type) {
-		case *array.Struct:
-			dt := structArr.DataType().(*arrow.StructType)
-			start := int(listArr.Offsets()[row])
-			end := int(listArr.Offsets()[row+1])
-
-			return &ListOfStructs{
-				dt:    dt,
-				arr:   structArr,
-				start: start,
-				end:   end,
-			}, nil
-		default:
-			return nil, fmt.Errorf("field %q is not a list of structs", field)
-		}
-	default:
-		return nil, fmt.Errorf("field %q is not a list", field)
-	}
-}
-
 // TODO remove bis once the other implementation is no longer used
 
 // ListOfStructsFromRecordBis returns the struct type and an array of structs for a given field id.
@@ -337,6 +306,10 @@ func (los *ListOfStructs) Field(name string) (arrow.Array, bool) {
 		return nil, false
 	}
 	return los.arr.Field(id), true
+}
+
+func (los *ListOfStructs) FieldById(id int) arrow.Array {
+	return los.arr.Field(id)
 }
 
 func (los *ListOfStructs) StringFieldById(fieldId int, row int) (string, error) {
@@ -619,37 +592,6 @@ func (los *ListOfStructs) DataType() *arrow.StructType {
 
 func (los *ListOfStructs) Array() *array.Struct {
 	return los.arr
-}
-
-func ListOfStructsFromStruct(fieldType *arrow.StructType, structArr *array.Struct, row int, name string) (*ListOfStructs, error) {
-	fieldId, found := fieldType.FieldIdx(name)
-	if !found {
-		return nil, nil
-	}
-	column := structArr.Field(fieldId)
-	switch listArr := column.(type) {
-	case *array.List:
-		if listArr.IsNull(row) {
-			return nil, nil
-		}
-		switch structArr := listArr.ListValues().(type) {
-		case *array.Struct:
-			dt := structArr.DataType().(*arrow.StructType)
-			start := int(listArr.Offsets()[row])
-			end := int(listArr.Offsets()[row+1])
-
-			return &ListOfStructs{
-				dt:    dt,
-				arr:   structArr,
-				start: start,
-				end:   end,
-			}, nil
-		default:
-			return nil, fmt.Errorf("field %q is not a list of structs", name)
-		}
-	default:
-		return nil, fmt.Errorf("field %q is not a list", name)
-	}
 }
 
 func FieldArrayOfStruct(fieldType *arrow.StructType, arr arrow.Array, column string) (*arrow.Field, arrow.Array, error) {

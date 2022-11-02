@@ -3,7 +3,6 @@ package otlp
 import (
 	"github.com/apache/arrow/go/v10/arrow"
 	"go.opentelemetry.io/collector/pdata/pcommon"
-	"go.opentelemetry.io/collector/pdata/ptrace"
 
 	arrow_utils "github.com/f5/otel-arrow-adapter/pkg/arrow"
 	carrow "github.com/f5/otel-arrow-adapter/pkg/otel/common/arrow"
@@ -48,41 +47,8 @@ func NewScopeIds(resSpansDT *arrow.StructType) (*ScopeIds, error) {
 	}, nil
 }
 
-func NewScopeFromArray(listOfStructs *arrow_utils.ListOfStructs, row int) (pcommon.InstrumentationScope, error) {
-	s := pcommon.NewInstrumentationScope()
-	scopeField, scopeArray, err := listOfStructs.StructArray(constants.SCOPE, row)
-	if err != nil {
-		return s, err
-	}
-	name, err := arrow_utils.OldStringFromStruct(scopeField, scopeArray, row, constants.NAME)
-	if err != nil {
-		return s, err
-	}
-	version, err := arrow_utils.OldStringFromStruct(scopeField, scopeArray, row, constants.VERSION)
-	if err != nil {
-		return s, err
-	}
-	droppedAttributesCount, err := arrow_utils.U32FromStructOld(scopeField, scopeArray, row, constants.DROPPED_ATTRIBUTES_COUNT)
-	if err != nil {
-		return s, err
-	}
-
-	attrs, err := arrow_utils.ListOfStructsFromStruct(scopeField, scopeArray, row, constants.ATTRIBUTES)
-	if err != nil {
-		return s, err
-	}
-	if attrs != nil {
-		err = attrs.CopyAttributesFrom(s.Attributes())
-	}
-	s.SetName(name)
-	s.SetVersion(version)
-	s.SetDroppedAttributesCount(droppedAttributesCount)
-	return s, nil
-}
-
-// AppendScopeInto appends a scope into a given scope spans from an Arrow list of structs.
-func AppendScopeInto(scopeSpans ptrace.ScopeSpans, listOfStructs *arrow_utils.ListOfStructs, row int, ids *ScopeIds) error {
-	s := scopeSpans.Scope()
+// UpdateScopeWith appends a scope into a given scope spans from an Arrow list of structs.
+func UpdateScopeWith(s pcommon.InstrumentationScope, listOfStructs *arrow_utils.ListOfStructs, row int, ids *ScopeIds) error {
 	_, scopeArray, err := listOfStructs.StructById(ids.Id, row)
 	if err != nil {
 		return err

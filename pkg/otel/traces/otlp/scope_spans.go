@@ -56,7 +56,7 @@ func AppendScopeSpansInto(resSpans ptrace.ResourceSpans, arrowResSpans *arrow_ut
 	for scopeSpansIdx := arrowScopeSpans.Start(); scopeSpansIdx < arrowScopeSpans.End(); scopeSpansIdx++ {
 		scopeSpans := scopeSpansSlice.AppendEmpty()
 
-		if err = otlp.AppendScopeInto(scopeSpans, arrowScopeSpans, scopeSpansIdx, ids.ScopeIds); err != nil {
+		if err = otlp.UpdateScopeWith(scopeSpans.Scope(), arrowScopeSpans, scopeSpansIdx, ids.ScopeIds); err != nil {
 			return err
 		}
 

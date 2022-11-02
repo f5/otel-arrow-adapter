@@ -59,7 +59,7 @@ func AppendResourceSpansInto(traces ptrace.Traces, record arrow.Record, traceIds
 		for resSpansIdx := arrowResEnts.Start(); resSpansIdx < arrowResEnts.End(); resSpansIdx++ {
 			resSpans := resSpansSlice.AppendEmpty()
 
-			if err = otlp.AppendResourceInto(resSpans, arrowResEnts, resSpansIdx, traceIds.ResourceSpans.Resource); err != nil {
+			if err = otlp.UpdateResourceWith(resSpans.Resource(), arrowResEnts, resSpansIdx, traceIds.ResourceSpans.Resource); err != nil {
 				return err
 			}
 
