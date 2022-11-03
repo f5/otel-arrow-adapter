@@ -41,7 +41,7 @@ func StatusBuilderFrom(sb *array.StructBuilder) *StatusBuilder {
 }
 
 // Append appends a new span status to the builder.
-func (b *StatusBuilder) Append(status ptrace.SpanStatus) error {
+func (b *StatusBuilder) Append(status ptrace.Status) error {
 	if b.released {
 		return fmt.Errorf("status builder already released")
 	}

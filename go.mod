@@ -13,7 +13,7 @@ require (
 	github.com/pierrec/lz4 v2.0.5+incompatible
 	github.com/stretchr/testify v1.8.1
 	go.opentelemetry.io/collector/pdata v0.63.1
-	golang.org/x/exp v0.0.0-20211216164055-b2b84827b756
+	golang.org/x/exp v0.0.0-20220827204233-334a2380cb91
 	google.golang.org/grpc v1.50.1
 	google.golang.org/protobuf v1.28.1
 )

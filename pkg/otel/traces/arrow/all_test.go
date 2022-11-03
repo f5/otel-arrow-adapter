@@ -223,15 +223,15 @@ func TestTraces(t *testing.T) {
 	require.JSONEq(t, expected, string(json))
 }
 
-func Status1() ptrace.SpanStatus {
-	status := ptrace.NewSpanStatus()
+func Status1() ptrace.Status {
+	status := ptrace.NewStatus()
 	status.SetCode(ptrace.StatusCodeOk)
 	status.SetMessage("message1")
 	return status
 }
 
-func Status2() ptrace.SpanStatus {
-	status := ptrace.NewSpanStatus()
+func Status2() ptrace.Status {
+	status := ptrace.NewStatus()
 	status.SetCode(ptrace.StatusCodeError)
 	status.SetMessage("message2")
 	return status
