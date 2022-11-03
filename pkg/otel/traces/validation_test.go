@@ -38,7 +38,7 @@ func TestConversionFromSyntheticData(t *testing.T) {
 	tracesGen := datagen.NewTracesGenerator(datagen.DefaultResourceAttributes(), datagen.DefaultInstrumentationScopes())
 
 	// Generate a random OTLP traces request.
-	expectedRequest := ptraceotlp.NewRequestFromTraces(tracesGen.Generate(10, 100))
+	expectedRequest := ptraceotlp.NewExportRequestFromTraces(tracesGen.Generate(10, 100))
 
 	// Convert the OTLP traces request to Arrow.
 	pool := memory.NewCheckedAllocator(memory.NewGoAllocator())
@@ -59,7 +59,7 @@ func TestConversionFromSyntheticData(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	assert.Equiv(t, []json.Marshaler{expectedRequest}, []json.Marshaler{ptraceotlp.NewRequestFromTraces(traces)})
+	assert.Equiv(t, []json.Marshaler{expectedRequest}, []json.Marshaler{ptraceotlp.NewExportRequestFromTraces(traces)})
 }
 
 // TestConversionFromRealData tests the conversion of OTLP traces to Arrow and back to OTLP.
@@ -76,14 +76,14 @@ func TestConversionFromRealData(t *testing.T) {
 	batchSizes := []int{1, 10, 100, 1000, 5000, 10000}
 	for _, batchSize := range batchSizes {
 		tracesList := ds.Traces(0, batchSize)
-		expectedRequest := ptraceotlp.NewRequestFromTraces(tracesList[0])
+		expectedRequest := ptraceotlp.NewExportRequestFromTraces(tracesList[0])
 
 		// Convert the OTLP traces request to Arrow.
 		checkTracesConversion(t, expectedRequest)
 	}
 }
 
-func checkTracesConversion(t *testing.T, expectedRequest ptraceotlp.Request) {
+func checkTracesConversion(t *testing.T, expectedRequest ptraceotlp.ExportRequest) {
 	pool := memory.NewCheckedAllocator(memory.NewGoAllocator())
 	defer pool.AssertSize(t, 0)
 	tb := traces_arrow.NewTracesBuilder(pool)
@@ -102,5 +102,5 @@ func checkTracesConversion(t *testing.T, expectedRequest ptraceotlp.Request) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	assert.Equiv(t, []json.Marshaler{expectedRequest}, []json.Marshaler{ptraceotlp.NewRequestFromTraces(traces)})
+	assert.Equiv(t, []json.Marshaler{expectedRequest}, []json.Marshaler{ptraceotlp.NewExportRequestFromTraces(traces)})
 }

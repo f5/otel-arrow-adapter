@@ -37,7 +37,7 @@ func TestConversionFromSyntheticData(t *testing.T) {
 	logsGen := datagen.NewLogsGenerator(datagen.DefaultResourceAttributes(), datagen.DefaultInstrumentationScopes())
 
 	// Generate a random OTLP logs request.
-	expectedRequest := plogotlp.NewRequestFromLogs(logsGen.Generate(10, 100))
+	expectedRequest := plogotlp.NewExportRequestFromLogs(logsGen.Generate(10, 100))
 
 	// Convert the OTLP logs request to Arrow.
 	pool := memory.NewCheckedAllocator(memory.NewGoAllocator())
@@ -58,5 +58,5 @@ func TestConversionFromSyntheticData(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	assert.Equiv(t, []json.Marshaler{expectedRequest}, []json.Marshaler{plogotlp.NewRequestFromLogs(logs)})
+	assert.Equiv(t, []json.Marshaler{expectedRequest}, []json.Marshaler{plogotlp.NewExportRequestFromLogs(logs)})
 }
