@@ -12,16 +12,16 @@ import (
 	"github.com/f5/otel-arrow-adapter/pkg/otel/constants"
 )
 
-// NumberDataPointDT is the Arrow Data Type describing a univariate number data point.
+// UnivariateNumberDataPointDT is the Arrow Data Type describing a univariate number data point.
 var (
-	NumberDataPointDT = arrow.StructOf([]arrow.Field{
-		{Name: constants.ATTRIBUTES, Type: acommon.AttributesDT},
-		{Name: constants.START_TIME_UNIX_NANO, Type: arrow.PrimitiveTypes.Uint64},
-		{Name: constants.TIME_UNIX_NANO, Type: arrow.PrimitiveTypes.Uint64},
-		{Name: constants.METRIC_VALUE, Type: MetricValueDT},
-		{Name: constants.EXEMPLARS, Type: arrow.ListOf(ExemplarDT)},
-		{Name: constants.FLAGS, Type: arrow.PrimitiveTypes.Uint32},
-	}...)
+	UnivariateNumberDataPointDT = arrow.StructOf(
+		arrow.Field{Name: constants.ATTRIBUTES, Type: acommon.AttributesDT},
+		arrow.Field{Name: constants.START_TIME_UNIX_NANO, Type: arrow.PrimitiveTypes.Uint64},
+		arrow.Field{Name: constants.TIME_UNIX_NANO, Type: arrow.PrimitiveTypes.Uint64},
+		arrow.Field{Name: constants.METRIC_VALUE, Type: MetricValueDT},
+		arrow.Field{Name: constants.EXEMPLARS, Type: arrow.ListOf(ExemplarDT)},
+		arrow.Field{Name: constants.FLAGS, Type: arrow.PrimitiveTypes.Uint32},
+	)
 )
 
 // NumberDataPointBuilder is a builder for a data point.
@@ -41,7 +41,7 @@ type NumberDataPointBuilder struct {
 
 // NewNumberDataPointBuilder creates a new NumberDataPointBuilder with a given memory allocator.
 func NewNumberDataPointBuilder(pool memory.Allocator) *NumberDataPointBuilder {
-	return NumberDataPointBuilderFrom(array.NewStructBuilder(pool, NumberDataPointDT))
+	return NumberDataPointBuilderFrom(array.NewStructBuilder(pool, UnivariateNumberDataPointDT))
 }
 
 // NumberDataPointBuilderFrom creates a new NumberDataPointBuilder from an existing StructBuilder.
