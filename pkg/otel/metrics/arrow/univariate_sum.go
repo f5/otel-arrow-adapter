@@ -11,43 +11,49 @@ import (
 	"github.com/f5/otel-arrow-adapter/pkg/otel/constants"
 )
 
-// UnivariateSumDT is the Arrow Data Type describing a univariate gauge.
+// UnivariateSumDT is the Arrow Data Type describing a univariate sum.
 var (
-	UnivariateGaugeDT = arrow.StructOf(
+	UnivariateSumDT = arrow.StructOf(
 		arrow.Field{Name: constants.DATA_POINTS, Type: arrow.ListOf(UnivariateNumberDataPointDT)},
+		arrow.Field{Name: constants.AGGREGATION_TEMPORALITY, Type: arrow.PrimitiveTypes.Int32},
+		arrow.Field{Name: constants.IS_MONOTONIC, Type: arrow.FixedWidthTypes.Boolean},
 	)
 )
 
 // UnivariateSumBuilder is a builder for gauge metrics.
-type UnivariateGaugeBuilder struct {
+type UnivariateSumBuilder struct {
 	released bool
 
 	builder *array.StructBuilder
 
 	dplb *array.ListBuilder      // data_points builder
 	dpb  *NumberDataPointBuilder // number data point builder
+	atb  *array.Int32Builder     // aggregation_temporality builder
+	imb  *array.BooleanBuilder   // is_monotonic builder
 }
 
 // NewUnivariateSumBuilder creates a new UnivariateSumBuilder with a given memory allocator.
-func NewUnivariateGaugeBuilder(pool memory.Allocator) *UnivariateGaugeBuilder {
-	return UnivariateGaugeBuilderFrom(array.NewStructBuilder(pool, UnivariateGaugeDT))
+func NewUnivariateSumBuilder(pool memory.Allocator) *UnivariateSumBuilder {
+	return UnivariateSumBuilderFrom(array.NewStructBuilder(pool, UnivariateSumDT))
 }
 
 // UnivariateSumBuilderFrom creates a new UnivariateSumBuilder from an existing StructBuilder.
-func UnivariateGaugeBuilderFrom(ndpb *array.StructBuilder) *UnivariateGaugeBuilder {
-	return &UnivariateGaugeBuilder{
+func UnivariateSumBuilderFrom(ndpb *array.StructBuilder) *UnivariateSumBuilder {
+	return &UnivariateSumBuilder{
 		released: false,
 		builder:  ndpb,
 
 		dplb: ndpb.FieldBuilder(0).(*array.ListBuilder),
 		dpb:  NumberDataPointBuilderFrom(ndpb.FieldBuilder(0).(*array.ListBuilder).ValueBuilder().(*array.StructBuilder)),
+		atb:  ndpb.FieldBuilder(1).(*array.Int32Builder),
+		imb:  ndpb.FieldBuilder(2).(*array.BooleanBuilder),
 	}
 }
 
 // Build builds the underlying array.
 //
 // Once the array is no longer needed, Release() should be called to free the memory.
-func (b *UnivariateGaugeBuilder) Build() (*array.Struct, error) {
+func (b *UnivariateSumBuilder) Build() (*array.Struct, error) {
 	if b.released {
 		return nil, fmt.Errorf("UnivariateSumBuilder: Build() called after Release()")
 	}
@@ -57,7 +63,7 @@ func (b *UnivariateGaugeBuilder) Build() (*array.Struct, error) {
 }
 
 // Release releases the underlying memory.
-func (b *UnivariateGaugeBuilder) Release() {
+func (b *UnivariateSumBuilder) Release() {
 	if b.released {
 		return
 	}
@@ -67,7 +73,7 @@ func (b *UnivariateGaugeBuilder) Release() {
 }
 
 // Append appends a new univariate gauge to the builder.
-func (b *UnivariateGaugeBuilder) Append(gauge pmetric.Gauge) error {
+func (b *UnivariateSumBuilder) Append(gauge pmetric.Sum) error {
 	if b.released {
 		return fmt.Errorf("UnivariateSumBuilder: Append() called after Release()")
 	}
@@ -86,6 +92,8 @@ func (b *UnivariateGaugeBuilder) Append(gauge pmetric.Gauge) error {
 	} else {
 		b.dplb.Append(false)
 	}
+	b.atb.Append(int32(gauge.AggregationTemporality()))
+	b.imb.Append(gauge.IsMonotonic())
 
 	return nil
 }

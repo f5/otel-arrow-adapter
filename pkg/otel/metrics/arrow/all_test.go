@@ -142,6 +142,37 @@ func TestUnivariateGauge(t *testing.T) {
 	require.JSONEq(t, expected, string(json))
 }
 
+func TestUnivariateSum(t *testing.T) {
+	t.Parallel()
+
+	pool := memory.NewCheckedAllocator(memory.NewGoAllocator())
+	defer pool.AssertSize(t, 0)
+	sb := NewUnivariateSumBuilder(pool)
+
+	if err := sb.Append(Sum1()); err != nil {
+		t.Fatal(err)
+	}
+	if err := sb.Append(Sum2()); err != nil {
+		t.Fatal(err)
+	}
+	arr, err := sb.Build()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer arr.Release()
+
+	json, err := arr.MarshalJSON()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := `[{"aggregation_temporality":1,"data_points":[{"attributes":[{"key":"str","value":[0,"string1"]},{"key":"int","value":[1,1]},{"key":"double","value":[2,1]},{"key":"bool","value":[3,true]},{"key":"bytes","value":[4,"Ynl0ZXMx"]}],"exemplars":[{"attributes":[{"key":"str","value":[0,"string1"]},{"key":"int","value":[1,1]},{"key":"double","value":[2,1]},{"key":"bool","value":[3,true]},{"key":"bytes","value":[4,"Ynl0ZXMx"]}],"span_id":"qgAAAAAAAAA=","time_unix_nano":1,"trace_id":"qgAAAAAAAAAAAAAAAAAAAA==","value":[2,1.5]},{"attributes":[{"key":"str","value":[0,"string2"]},{"key":"int","value":[1,2]},{"key":"double","value":[2,2]},{"key":"bytes","value":[4,"Ynl0ZXMy"]}],"span_id":"qgAAAAAAAAA=","time_unix_nano":2,"trace_id":"qgAAAAAAAAAAAAAAAAAAAA==","value":[1,2]}],"flags":1,"start_time_unix_nano":1,"time_unix_nano":2,"value":[2,1.5]},{"attributes":[{"key":"str","value":[0,"string2"]},{"key":"int","value":[1,2]},{"key":"double","value":[2,2]},{"key":"bytes","value":[4,"Ynl0ZXMy"]}],"exemplars":[{"attributes":[{"key":"str","value":[0,"string2"]},{"key":"int","value":[1,2]},{"key":"double","value":[2,2]},{"key":"bytes","value":[4,"Ynl0ZXMy"]}],"span_id":"qgAAAAAAAAA=","time_unix_nano":2,"trace_id":"qgAAAAAAAAAAAAAAAAAAAA==","value":[1,2]}],"flags":2,"start_time_unix_nano":2,"time_unix_nano":3,"value":[1,2]},{"attributes":[{"key":"str","value":[0,"string3"]},{"key":"double","value":[2,3]},{"key":"bool","value":[3,false]},{"key":"bytes","value":[4,"Ynl0ZXMz"]}],"exemplars":[{"attributes":[{"key":"str","value":[0,"string1"]},{"key":"int","value":[1,1]},{"key":"double","value":[2,1]},{"key":"bool","value":[3,true]},{"key":"bytes","value":[4,"Ynl0ZXMx"]}],"span_id":"qgAAAAAAAAA=","time_unix_nano":1,"trace_id":"qgAAAAAAAAAAAAAAAAAAAA==","value":[2,1.5]}],"flags":3,"start_time_unix_nano":3,"time_unix_nano":4,"value":[1,3]}],"is_monotonic":true}
+,{"aggregation_temporality":2,"data_points":[{"attributes":[{"key":"str","value":[0,"string3"]},{"key":"double","value":[2,3]},{"key":"bool","value":[3,false]},{"key":"bytes","value":[4,"Ynl0ZXMz"]}],"exemplars":[{"attributes":[{"key":"str","value":[0,"string1"]},{"key":"int","value":[1,1]},{"key":"double","value":[2,1]},{"key":"bool","value":[3,true]},{"key":"bytes","value":[4,"Ynl0ZXMx"]}],"span_id":"qgAAAAAAAAA=","time_unix_nano":1,"trace_id":"qgAAAAAAAAAAAAAAAAAAAA==","value":[2,1.5]}],"flags":3,"start_time_unix_nano":3,"time_unix_nano":4,"value":[1,3]}],"is_monotonic":false}
+]`
+
+	require.JSONEq(t, expected, string(json))
+}
+
 // NDP1 returns a pmetric.NumberDataPoint (sample 1).
 func NDP1() pmetric.NumberDataPoint {
 	dp := pmetric.NewNumberDataPoint()
@@ -215,5 +246,23 @@ func Gauge1() pmetric.Gauge {
 func Gauge2() pmetric.Gauge {
 	g := pmetric.NewGauge()
 	NDP3().CopyTo(g.DataPoints().AppendEmpty())
+	return g
+}
+
+func Sum1() pmetric.Sum {
+	g := pmetric.NewSum()
+	NDP1().CopyTo(g.DataPoints().AppendEmpty())
+	NDP2().CopyTo(g.DataPoints().AppendEmpty())
+	NDP3().CopyTo(g.DataPoints().AppendEmpty())
+	g.SetAggregationTemporality(pmetric.AggregationTemporalityDelta)
+	g.SetIsMonotonic(true)
+	return g
+}
+
+func Sum2() pmetric.Sum {
+	g := pmetric.NewSum()
+	NDP3().CopyTo(g.DataPoints().AppendEmpty())
+	g.SetAggregationTemporality(pmetric.AggregationTemporalityCumulative)
+	g.SetIsMonotonic(false)
 	return g
 }
