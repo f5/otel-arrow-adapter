@@ -23,6 +23,7 @@ const METADATA_METRIC_DESCRIPTION = "md"
 
 // All constants used a column names.
 
+const RESOURCE_METRICS = "resource_metrics"
 const RESOURCE_SPANS = "resource_spans"
 const RESOURCE_LOGS = "resource_logs"
 const TIME_UNIX_NANO string = "time_unix_nano"
@@ -52,6 +53,8 @@ const KIND string = "kind"
 const VERSION string = "version"
 const BODY string = "body"
 const STATUS string = "status"
+const DESCRIPTION string = "description"
+const UNIT string = "unit"
 const STATUS_MESSAGE string = "status_message"
 const STATUS_CODE string = "code"
 const GAUGE_METRICS string = "gauge"
