@@ -14,7 +14,7 @@ import (
 // UnivariateSummaryDT is the Arrow Data Type describing a univariate summary.
 var (
 	UnivariateSummaryDT = arrow.StructOf(
-		arrow.Field{Name: constants.DATA_POINTS, Type: arrow.ListOf(QuantileValueDT)},
+		arrow.Field{Name: constants.DATA_POINTS, Type: arrow.ListOf(UnivariateSummaryDataPointDT)},
 	)
 )
 
@@ -24,10 +24,8 @@ type UnivariateSummaryBuilder struct {
 
 	builder *array.StructBuilder
 
-	dplb *array.ListBuilder      // data_points builder
-	dpb  *NumberDataPointBuilder // number data point builder
-	atb  *array.Int32Builder     // aggregation_temporality builder
-	imb  *array.BooleanBuilder   // is_monotonic builder
+	dplb *array.ListBuilder                 // data points builder
+	dpb  *UnivariateSummaryDataPointBuilder // summary data point builder
 }
 
 // NewUnivariateSummaryBuilder creates a new UnivariateSummaryBuilder with a given memory allocator.
@@ -42,9 +40,7 @@ func UnivariateSummaryBuilderFrom(ndpb *array.StructBuilder) *UnivariateSummaryB
 		builder:  ndpb,
 
 		dplb: ndpb.FieldBuilder(0).(*array.ListBuilder),
-		dpb:  NumberDataPointBuilderFrom(ndpb.FieldBuilder(0).(*array.ListBuilder).ValueBuilder().(*array.StructBuilder)),
-		atb:  ndpb.FieldBuilder(1).(*array.Int32Builder),
-		imb:  ndpb.FieldBuilder(2).(*array.BooleanBuilder),
+		dpb:  UnivariateSummaryDataPointBuilderFrom(ndpb.FieldBuilder(0).(*array.ListBuilder).ValueBuilder().(*array.StructBuilder)),
 	}
 }
 
@@ -53,7 +49,7 @@ func UnivariateSummaryBuilderFrom(ndpb *array.StructBuilder) *UnivariateSummaryB
 // Once the array is no longer needed, Release() should be called to free the memory.
 func (b *UnivariateSummaryBuilder) Build() (*array.Struct, error) {
 	if b.released {
-		return nil, fmt.Errorf("UnivariateMetricBuilder: Build() called after Release()")
+		return nil, fmt.Errorf("UnivariateSummaryBuilder: Build() called after Release()")
 	}
 
 	defer b.Release()
@@ -71,12 +67,24 @@ func (b *UnivariateSummaryBuilder) Release() {
 }
 
 // Append appends a new univariate summary to the builder.
-func (b *UnivariateSummaryBuilder) Append(gauge pmetric.Summary) error {
+func (b *UnivariateSummaryBuilder) Append(summary pmetric.Summary) error {
 	if b.released {
-		return fmt.Errorf("UnivariateMetricBuilder: Append() called after Release()")
+		return fmt.Errorf("UnivariateSummaryBuilder: Append() called after Release()")
 	}
 
-	// TODO
+	b.builder.Append(true)
+	dps := summary.DataPoints()
+	dpc := dps.Len()
+	if dpc > 0 {
+		b.dplb.Append(true)
+		for i := 0; i < dpc; i++ {
+			if err := b.dpb.Append(dps.At(i)); err != nil {
+				return err
+			}
+		}
+	} else {
+		b.dplb.Append(false)
+	}
 
 	return nil
 }

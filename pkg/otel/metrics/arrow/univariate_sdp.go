@@ -12,7 +12,7 @@ import (
 	"github.com/f5/otel-arrow-adapter/pkg/otel/constants"
 )
 
-// QuantileValueDT is the Arrow Data Type describing a univariate number data point.
+// UnivariateSummaryDataPointDT is the Arrow Data Type describing a univariate summary data point.
 var (
 	UnivariateSummaryDataPointDT = arrow.StructOf(
 		arrow.Field{Name: constants.ATTRIBUTES, Type: acommon.AttributesDT},
@@ -25,8 +25,8 @@ var (
 	)
 )
 
-// QuantileValueBuilder is a builder for a summary data point.
-type SummaryDataPointBuilder struct {
+// UnivariateSummaryDataPointBuilder is a builder for a summary data point.
+type UnivariateSummaryDataPointBuilder struct {
 	released bool
 
 	builder *array.StructBuilder
@@ -34,39 +34,41 @@ type SummaryDataPointBuilder struct {
 	ab    *acommon.AttributesBuilder // attributes builder
 	stunb *array.Uint64Builder       // start_time_unix_nano builder
 	tunb  *array.Uint64Builder       // time_unix_nano builder
-	mvb   *MetricValueBuilder        // metric_value builder
-	elb   *array.ListBuilder         // exemplars builder
-	eb    *ExemplarBuilder           // exemplar builder
+	scb   *array.Uint64Builder       // count builder
+	ssb   *array.Float64Builder      // sum builder
+	qvlb  *array.ListBuilder         // summary quantile value list builder
+	qvb   *QuantileValueBuilder      // summary quantile value builder
 	fb    *array.Uint32Builder       // flags builder
 }
 
-// NewQuantileValueBuilder creates a new QuantileValueBuilder with a given memory allocator.
-func NewSummaryDataPointBuilder(pool memory.Allocator) *SummaryDataPointBuilder {
-	return SummaryDataPointBuilderFrom(array.NewStructBuilder(pool, UnivariateSummaryDataPointDT))
+// NewUnivariateSummaryDataPointBuilder creates a new UnivariateSummaryDataPointBuilder with a given memory allocator.
+func NewUnivariateSummaryDataPointBuilder(pool memory.Allocator) *UnivariateSummaryDataPointBuilder {
+	return UnivariateSummaryDataPointBuilderFrom(array.NewStructBuilder(pool, UnivariateSummaryDataPointDT))
 }
 
-// QuantileValueBuilderFrom creates a new QuantileValueBuilder from an existing StructBuilder.
-func SummaryDataPointBuilderFrom(ndpb *array.StructBuilder) *SummaryDataPointBuilder {
-	return &SummaryDataPointBuilder{
+// UnivariateSummaryDataPointBuilderFrom creates a new UnivariateSummaryDataPointBuilder from an existing StructBuilder.
+func UnivariateSummaryDataPointBuilderFrom(ndpb *array.StructBuilder) *UnivariateSummaryDataPointBuilder {
+	return &UnivariateSummaryDataPointBuilder{
 		released: false,
 		builder:  ndpb,
 
 		ab:    acommon.AttributesBuilderFrom(ndpb.FieldBuilder(0).(*array.MapBuilder)),
 		stunb: ndpb.FieldBuilder(1).(*array.Uint64Builder),
 		tunb:  ndpb.FieldBuilder(2).(*array.Uint64Builder),
-		mvb:   MetricValueBuilderFrom(ndpb.FieldBuilder(3).(*array.DenseUnionBuilder)),
-		elb:   ndpb.FieldBuilder(4).(*array.ListBuilder),
-		eb:    ExemplarBuilderFrom(ndpb.FieldBuilder(4).(*array.ListBuilder).ValueBuilder().(*array.StructBuilder)),
-		fb:    ndpb.FieldBuilder(5).(*array.Uint32Builder),
+		scb:   ndpb.FieldBuilder(3).(*array.Uint64Builder),
+		ssb:   ndpb.FieldBuilder(4).(*array.Float64Builder),
+		qvlb:  ndpb.FieldBuilder(5).(*array.ListBuilder),
+		qvb:   QuantileValueBuilderFrom(ndpb.FieldBuilder(5).(*array.ListBuilder).ValueBuilder().(*array.StructBuilder)),
+		fb:    ndpb.FieldBuilder(6).(*array.Uint32Builder),
 	}
 }
 
 // Build builds the underlying array.
 //
 // Once the array is no longer needed, Release() should be called to free the memory.
-func (b *SummaryDataPointBuilder) Build() (*array.Struct, error) {
+func (b *UnivariateSummaryDataPointBuilder) Build() (*array.Struct, error) {
 	if b.released {
-		return nil, fmt.Errorf("QuantileValueBuilder: Build() called after Release()")
+		return nil, fmt.Errorf("UnivariateSummaryDataPointBuilder: Build() called after Release()")
 	}
 
 	defer b.Release()
@@ -74,7 +76,7 @@ func (b *SummaryDataPointBuilder) Build() (*array.Struct, error) {
 }
 
 // Release releases the underlying memory.
-func (b *SummaryDataPointBuilder) Release() {
+func (b *UnivariateSummaryDataPointBuilder) Release() {
 	if b.released {
 		return
 	}
@@ -84,9 +86,9 @@ func (b *SummaryDataPointBuilder) Release() {
 }
 
 // Append appends a new summary data point to the builder.
-func (b *SummaryDataPointBuilder) Append(sdp pmetric.SummaryDataPoint) error {
+func (b *UnivariateSummaryDataPointBuilder) Append(sdp pmetric.SummaryDataPoint) error {
 	if b.released {
-		return fmt.Errorf("QuantileValueBuilder: Append() called after Release()")
+		return fmt.Errorf("UnivariateSummaryDataPointBuilder: Append() called after Release()")
 	}
 
 	b.builder.Append(true)
@@ -95,9 +97,21 @@ func (b *SummaryDataPointBuilder) Append(sdp pmetric.SummaryDataPoint) error {
 	}
 	b.stunb.Append(uint64(sdp.StartTimestamp()))
 	b.tunb.Append(uint64(sdp.Timestamp()))
-	//if err := b.mvb.AppendNumberDataPointValue(sdp); err != nil {
-	//	return err
-	//}
+	b.scb.Append(sdp.Count())
+	b.ssb.Append(sdp.Sum())
+	qvs := sdp.QuantileValues()
+	qvc := qvs.Len()
+	if qvc > 0 {
+		b.qvlb.Append(true)
+		b.qvlb.Reserve(qvc)
+		for i := 0; i < qvc; i++ {
+			if err := b.qvb.Append(qvs.At(i)); err != nil {
+				return err
+			}
+		}
+	} else {
+		b.qvlb.Append(false)
+	}
 	b.fb.Append(uint32(sdp.Flags()))
 	return nil
 }
