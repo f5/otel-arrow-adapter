@@ -13,11 +13,12 @@ import (
 )
 
 var (
-	// MetricSetDT is the Arrow Data Type describing a metric set.
-	MetricSetDT = arrow.StructOf([]arrow.Field{
-		{Name: constants.NAME, Type: acommon.DictU16String},
-		{Name: constants.DESCRIPTION, Type: acommon.DictU16String},
-		{Name: constants.UNIT, Type: acommon.DictU16String},
+	// UnivariateMetricSetDT is the Arrow Data Type describing a set of univariate metrics.
+	UnivariateMetricSetDT = arrow.StructOf(
+		arrow.Field{Name: constants.NAME, Type: acommon.DictU16String},
+		arrow.Field{Name: constants.DESCRIPTION, Type: acommon.DictU16String},
+		arrow.Field{Name: constants.UNIT, Type: acommon.DictU16String},
+		// arrow.Field {Name: constants.UNIVARIATE_METRICS, Type: arrow.ListOf()},
 		// Data
 		// - Attributes
 		// - Start Time
@@ -25,9 +26,10 @@ var (
 		// - Value
 		// - Exemplars
 		// - Flags
-	}...)
+	)
 
-	// MultivariateMetricsDT is the Arrow Data Type describing a multivariate metrics.
+	// MultivariateMetricsDT is the Arrow Data Type describing a set of multivariate metrics.
+	// Multivariate metrics are metrics sharing the same attributes, start time, and end time.
 	MultivariateMetricsDT = arrow.StructOf([]arrow.Field{
 		{Name: constants.NAME, Type: acommon.DictU16String},
 		{Name: constants.DESCRIPTION, Type: acommon.DictU16String},
@@ -59,7 +61,7 @@ type MetricSetBuilder struct {
 // Once the builder is no longer needed, Release() must be called to free the
 // memory allocated by the builder.
 func NewMetricSetBuilder(pool memory.Allocator) *MetricSetBuilder {
-	sb := array.NewStructBuilder(pool, MetricSetDT)
+	sb := array.NewStructBuilder(pool, UnivariateMetricSetDT)
 	return MetricSetBuilderFrom(sb)
 }
 

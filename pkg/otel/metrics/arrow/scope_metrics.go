@@ -17,7 +17,7 @@ var (
 	ScopeMetricsDT = arrow.StructOf([]arrow.Field{
 		{Name: constants.SCOPE, Type: acommon.ScopeDT},
 		{Name: constants.SCHEMA_URL, Type: acommon.DictU16String},
-		{Name: constants.METRICS, Type: arrow.ListOf(MetricSetDT)},
+		{Name: constants.METRICS, Type: arrow.ListOf(UnivariateMetricSetDT)},
 	}...)
 )
 
