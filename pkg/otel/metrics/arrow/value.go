@@ -7,6 +7,8 @@ import (
 	"github.com/apache/arrow/go/v10/arrow/array"
 	"github.com/apache/arrow/go/v10/arrow/memory"
 	"go.opentelemetry.io/collector/pdata/pmetric"
+
+	"github.com/f5/otel-arrow-adapter/pkg/otel/constants"
 )
 
 // Constants used to identify the type of value in the union.
@@ -16,17 +18,17 @@ const (
 )
 
 var (
-	// MetricValueDT is an Arrow Data Type representing an OTLP metric value.
+	// ExemplarDT is an Arrow Data Type representing an OTLP metric value.
 	MetricValueDT = arrow.DenseUnionOf([]arrow.Field{
-		{Name: "i64", Type: arrow.PrimitiveTypes.Int64},
-		{Name: "f64", Type: arrow.PrimitiveTypes.Float64},
+		{Name: constants.I64_METRIC_VALUE, Type: arrow.PrimitiveTypes.Int64},
+		{Name: constants.F64_METRIC_VALUE, Type: arrow.PrimitiveTypes.Float64},
 	}, []int8{
 		I64Code,
 		F64Code,
 	})
 )
 
-// MetricValueBuilder is a helper to build an Arrow array containing a collection of OTLP metric value.
+// ExemplarBuilder is a helper to build an Arrow array containing a collection of OTLP metric value.
 type MetricValueBuilder struct {
 	released bool
 
@@ -36,12 +38,12 @@ type MetricValueBuilder struct {
 	f64Builder *array.Float64Builder // float64 builder
 }
 
-// NewMetricValueBuilder creates a new MetricValueBuilder with a given memory allocator.
+// NewExemplarBuilder creates a new ExemplarBuilder with a given memory allocator.
 func NewMetricValueBuilder(pool memory.Allocator) *MetricValueBuilder {
 	return MetricValueBuilderFrom(array.NewDenseUnionBuilder(pool, MetricValueDT))
 }
 
-// MetricValueBuilderFrom creates a new MetricValueBuilder from an existing DenseUnionBuilder.
+// ExemplarBuilderFrom creates a new ExemplarBuilder from an existing DenseUnionBuilder.
 func MetricValueBuilderFrom(mv *array.DenseUnionBuilder) *MetricValueBuilder {
 	return &MetricValueBuilder{
 		released:   false,
@@ -64,8 +66,8 @@ func (b *MetricValueBuilder) Build() (*array.DenseUnion, error) {
 	return b.builder.NewDenseUnionArray(), nil
 }
 
-// Append appends a new metric value to the builder.
-func (b *MetricValueBuilder) Append(mdp pmetric.NumberDataPoint) error {
+// AppendNumberDataPointValue appends a new metric value to the builder.
+func (b *MetricValueBuilder) AppendNumberDataPointValue(mdp pmetric.NumberDataPoint) error {
 	if b.released {
 		return fmt.Errorf("metric value builder already released")
 	}
@@ -76,6 +78,22 @@ func (b *MetricValueBuilder) Append(mdp pmetric.NumberDataPoint) error {
 		err = b.appendF64(mdp.DoubleValue())
 	case pmetric.NumberDataPointValueTypeInt:
 		err = b.appendI64(mdp.IntValue())
+	}
+	return err
+}
+
+// AppendExemplarValue appends a new exemplar value to the builder.
+func (b *MetricValueBuilder) AppendExemplarValue(ex pmetric.Exemplar) error {
+	if b.released {
+		return fmt.Errorf("metric value builder already released")
+	}
+
+	var err error
+	switch ex.ValueType() {
+	case pmetric.ExemplarValueTypeDouble:
+		err = b.appendF64(ex.DoubleValue())
+	case pmetric.ExemplarValueTypeInt:
+		err = b.appendI64(ex.IntValue())
 	}
 	return err
 }

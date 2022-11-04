@@ -76,13 +76,13 @@ func (b *AttributesBuilder) Append(attrs pcommon.Map) error {
 
 	var err error
 	attrs.Range(func(key string, v pcommon.Value) bool {
-		// Append the key
+		// AppendNumberDataPointValue the key
 		err := b.kb.AppendString(key)
 		if err != nil {
 			return false
 		}
 
-		// Append the value
+		// AppendNumberDataPointValue the value
 		err = b.ib.Append(v)
 		if err != nil {
 			return false
