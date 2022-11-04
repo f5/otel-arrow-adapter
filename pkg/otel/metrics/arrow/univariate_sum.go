@@ -20,7 +20,7 @@ var (
 	)
 )
 
-// UnivariateSumBuilder is a builder for gauge metrics.
+// UnivariateSumBuilder is a builder for sum metrics.
 type UnivariateSumBuilder struct {
 	released bool
 
@@ -32,12 +32,12 @@ type UnivariateSumBuilder struct {
 	imb  *array.BooleanBuilder   // is_monotonic builder
 }
 
-// NewUnivariateSumBuilder creates a new UnivariateSumBuilder with a given memory allocator.
+// NewUnivariateSummaryBuilder creates a new UnivariateSumBuilder with a given memory allocator.
 func NewUnivariateSumBuilder(pool memory.Allocator) *UnivariateSumBuilder {
 	return UnivariateSumBuilderFrom(array.NewStructBuilder(pool, UnivariateSumDT))
 }
 
-// UnivariateSumBuilderFrom creates a new UnivariateSumBuilder from an existing StructBuilder.
+// UnivariateSummaryBuilderFrom creates a new UnivariateSumBuilder from an existing StructBuilder.
 func UnivariateSumBuilderFrom(ndpb *array.StructBuilder) *UnivariateSumBuilder {
 	return &UnivariateSumBuilder{
 		released: false,
@@ -55,7 +55,7 @@ func UnivariateSumBuilderFrom(ndpb *array.StructBuilder) *UnivariateSumBuilder {
 // Once the array is no longer needed, Release() should be called to free the memory.
 func (b *UnivariateSumBuilder) Build() (*array.Struct, error) {
 	if b.released {
-		return nil, fmt.Errorf("UnivariateSumBuilder: Build() called after Release()")
+		return nil, fmt.Errorf("UnivariateMetricBuilder: Build() called after Release()")
 	}
 
 	defer b.Release()
@@ -72,14 +72,14 @@ func (b *UnivariateSumBuilder) Release() {
 	b.builder.Release()
 }
 
-// Append appends a new univariate gauge to the builder.
-func (b *UnivariateSumBuilder) Append(gauge pmetric.Sum) error {
+// Append appends a new univariate sum to the builder.
+func (b *UnivariateSumBuilder) Append(sum pmetric.Sum) error {
 	if b.released {
-		return fmt.Errorf("UnivariateSumBuilder: Append() called after Release()")
+		return fmt.Errorf("UnivariateMetricBuilder: Append() called after Release()")
 	}
 
 	b.builder.Append(true)
-	dps := gauge.DataPoints()
+	dps := sum.DataPoints()
 	dpc := dps.Len()
 	if dpc > 0 {
 		b.dplb.Append(true)
@@ -92,8 +92,8 @@ func (b *UnivariateSumBuilder) Append(gauge pmetric.Sum) error {
 	} else {
 		b.dplb.Append(false)
 	}
-	b.atb.Append(int32(gauge.AggregationTemporality()))
-	b.imb.Append(gauge.IsMonotonic())
+	b.atb.Append(int32(sum.AggregationTemporality()))
+	b.imb.Append(sum.IsMonotonic())
 
 	return nil
 }

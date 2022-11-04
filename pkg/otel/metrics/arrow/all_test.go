@@ -173,6 +173,37 @@ func TestUnivariateSum(t *testing.T) {
 	require.JSONEq(t, expected, string(json))
 }
 
+func TestQuantileValue(t *testing.T) {
+	t.Parallel()
+
+	pool := memory.NewCheckedAllocator(memory.NewGoAllocator())
+	defer pool.AssertSize(t, 0)
+	sb := NewQuantileValueBuilder(pool)
+
+	if err := sb.Append(QuantileValue1()); err != nil {
+		t.Fatal(err)
+	}
+	if err := sb.Append(QuantileValue2()); err != nil {
+		t.Fatal(err)
+	}
+	arr, err := sb.Build()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer arr.Release()
+
+	json, err := arr.MarshalJSON()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := `[{"quantile":0.1,"value":1.5}
+,{"quantile":0.2,"value":2.5}
+]`
+
+	require.JSONEq(t, expected, string(json))
+}
+
 // NDP1 returns a pmetric.NumberDataPoint (sample 1).
 func NDP1() pmetric.NumberDataPoint {
 	dp := pmetric.NewNumberDataPoint()
@@ -265,4 +296,18 @@ func Sum2() pmetric.Sum {
 	g.SetAggregationTemporality(pmetric.AggregationTemporalityCumulative)
 	g.SetIsMonotonic(false)
 	return g
+}
+
+func QuantileValue1() pmetric.SummaryDataPointValueAtQuantile {
+	qv := pmetric.NewSummaryDataPointValueAtQuantile()
+	qv.SetQuantile(0.1)
+	qv.SetValue(1.5)
+	return qv
+}
+
+func QuantileValue2() pmetric.SummaryDataPointValueAtQuantile {
+	qv := pmetric.NewSummaryDataPointValueAtQuantile()
+	qv.SetQuantile(0.2)
+	qv.SetValue(2.5)
+	return qv
 }

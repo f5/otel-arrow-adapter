@@ -14,18 +14,19 @@ import (
 
 // QuantileValueDT is the Arrow Data Type describing a univariate number data point.
 var (
-	UnivariateNumberDataPointDT = arrow.StructOf(
+	UnivariateSummaryDataPointDT = arrow.StructOf(
 		arrow.Field{Name: constants.ATTRIBUTES, Type: acommon.AttributesDT},
 		arrow.Field{Name: constants.START_TIME_UNIX_NANO, Type: arrow.PrimitiveTypes.Uint64},
 		arrow.Field{Name: constants.TIME_UNIX_NANO, Type: arrow.PrimitiveTypes.Uint64},
-		arrow.Field{Name: constants.METRIC_VALUE, Type: MetricValueDT},
-		arrow.Field{Name: constants.EXEMPLARS, Type: arrow.ListOf(ExemplarDT)},
+		arrow.Field{Name: constants.SUMMARY_COUNT, Type: arrow.PrimitiveTypes.Uint64},
+		arrow.Field{Name: constants.SUMMARY_SUM, Type: arrow.PrimitiveTypes.Float64},
+		arrow.Field{Name: constants.SUMMARY_QUANTILE_VALUES, Type: arrow.ListOf(QuantileValueDT)},
 		arrow.Field{Name: constants.FLAGS, Type: arrow.PrimitiveTypes.Uint32},
 	)
 )
 
-// QuantileValueBuilder is a builder for a data point.
-type NumberDataPointBuilder struct {
+// QuantileValueBuilder is a builder for a summary data point.
+type SummaryDataPointBuilder struct {
 	released bool
 
 	builder *array.StructBuilder
@@ -40,13 +41,13 @@ type NumberDataPointBuilder struct {
 }
 
 // NewQuantileValueBuilder creates a new QuantileValueBuilder with a given memory allocator.
-func NewNumberDataPointBuilder(pool memory.Allocator) *NumberDataPointBuilder {
-	return NumberDataPointBuilderFrom(array.NewStructBuilder(pool, UnivariateNumberDataPointDT))
+func NewSummaryDataPointBuilder(pool memory.Allocator) *SummaryDataPointBuilder {
+	return SummaryDataPointBuilderFrom(array.NewStructBuilder(pool, UnivariateSummaryDataPointDT))
 }
 
 // QuantileValueBuilderFrom creates a new QuantileValueBuilder from an existing StructBuilder.
-func NumberDataPointBuilderFrom(ndpb *array.StructBuilder) *NumberDataPointBuilder {
-	return &NumberDataPointBuilder{
+func SummaryDataPointBuilderFrom(ndpb *array.StructBuilder) *SummaryDataPointBuilder {
+	return &SummaryDataPointBuilder{
 		released: false,
 		builder:  ndpb,
 
@@ -63,7 +64,7 @@ func NumberDataPointBuilderFrom(ndpb *array.StructBuilder) *NumberDataPointBuild
 // Build builds the underlying array.
 //
 // Once the array is no longer needed, Release() should be called to free the memory.
-func (b *NumberDataPointBuilder) Build() (*array.Struct, error) {
+func (b *SummaryDataPointBuilder) Build() (*array.Struct, error) {
 	if b.released {
 		return nil, fmt.Errorf("QuantileValueBuilder: Build() called after Release()")
 	}
@@ -73,7 +74,7 @@ func (b *NumberDataPointBuilder) Build() (*array.Struct, error) {
 }
 
 // Release releases the underlying memory.
-func (b *NumberDataPointBuilder) Release() {
+func (b *SummaryDataPointBuilder) Release() {
 	if b.released {
 		return
 	}
@@ -82,33 +83,21 @@ func (b *NumberDataPointBuilder) Release() {
 	b.builder.Release()
 }
 
-// Append appends a new data point to the builder.
-func (b *NumberDataPointBuilder) Append(ndp pmetric.NumberDataPoint) error {
+// Append appends a new summary data point to the builder.
+func (b *SummaryDataPointBuilder) Append(sdp pmetric.SummaryDataPoint) error {
 	if b.released {
 		return fmt.Errorf("QuantileValueBuilder: Append() called after Release()")
 	}
 
 	b.builder.Append(true)
-	if err := b.ab.Append(ndp.Attributes()); err != nil {
+	if err := b.ab.Append(sdp.Attributes()); err != nil {
 		return err
 	}
-	b.stunb.Append(uint64(ndp.StartTimestamp()))
-	b.tunb.Append(uint64(ndp.Timestamp()))
-	if err := b.mvb.AppendNumberDataPointValue(ndp); err != nil {
-		return err
-	}
-	exs := ndp.Exemplars()
-	ec := exs.Len()
-	if ec > 0 {
-		b.elb.Append(true)
-		for i := 0; i < ec; i++ {
-			if err := b.eb.Append(exs.At(i)); err != nil {
-				return err
-			}
-		}
-	} else {
-		b.elb.Append(false)
-	}
-	b.fb.Append(uint32(ndp.Flags()))
+	b.stunb.Append(uint64(sdp.StartTimestamp()))
+	b.tunb.Append(uint64(sdp.Timestamp()))
+	//if err := b.mvb.AppendNumberDataPointValue(sdp); err != nil {
+	//	return err
+	//}
+	b.fb.Append(uint32(sdp.Flags()))
 	return nil
 }
