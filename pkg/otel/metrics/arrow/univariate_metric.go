@@ -13,11 +13,11 @@ import (
 
 // Constants used to identify the type of univariate metric in the union.
 const (
-	GaugeCode int8 = 1
-	SumCode   int8 = 2
-	// HistogramCode int8 = 3
-	// ExponentialHistogramCode int8 = 4
-	// SummaryCode   int8 = 5
+	GaugeCode   int8 = 1
+	SumCode     int8 = 2
+	SummaryCode int8 = 3
+	// HistogramCode int8 = 4
+	// ExponentialHistogramCode int8 = 5
 )
 
 // UnivariateMetricDT is the Arrow Data Type describing a univariate metric.
@@ -25,13 +25,14 @@ var (
 	UnivariateMetricDT = arrow.SparseUnionOf([]arrow.Field{
 		{Name: constants.GAUGE_METRICS, Type: UnivariateGaugeDT},
 		{Name: constants.SUM_METRICS, Type: UnivariateSumDT},
+		{Name: constants.SUMMARY_METRICS, Type: UnivariateSummaryDT},
 		// {Name: constants.HISTOGRAM_METRICS, Type: UnivariateHistogramDT},
 		// {Name: constants.EXPONENTIAL_HISTOGRAM_METRICS, Type: UnivariateExponentialHistogramDT},
-		// {Name: constants.SUMMARY_METRICS, Type: UnivariateSummaryDT},
 	},
 		[]arrow.UnionTypeCode{
 			GaugeCode,
 			SumCode,
+			SummaryCode,
 		},
 	)
 )
@@ -42,8 +43,9 @@ type UnivariateMetricBuilder struct {
 
 	builder *array.SparseUnionBuilder
 
-	gb *UnivariateGaugeBuilder // univariate gauge builder
-	sg *UnivariateSumBuilder   // univariate sum builder
+	gb  *UnivariateGaugeBuilder   // univariate gauge builder
+	sb  *UnivariateSumBuilder     // univariate sum builder
+	syb *UnivariateSummaryBuilder // univariate summary builder
 }
 
 // NewUnivariateMetricBuilder creates a new UnivariateMetricBuilder with a given memory allocator.
@@ -57,8 +59,9 @@ func UnivariateMetricBuilderFrom(umb *array.SparseUnionBuilder) *UnivariateMetri
 		released: false,
 		builder:  umb,
 
-		gb: UnivariateGaugeBuilderFrom(umb.Child(0).(*array.StructBuilder)),
-		sg: UnivariateSumBuilderFrom(umb.Child(1).(*array.StructBuilder)),
+		gb:  UnivariateGaugeBuilderFrom(umb.Child(0).(*array.StructBuilder)),
+		sb:  UnivariateSumBuilderFrom(umb.Child(1).(*array.StructBuilder)),
+		syb: UnivariateSummaryBuilderFrom(umb.Child(2).(*array.StructBuilder)),
 	}
 }
 

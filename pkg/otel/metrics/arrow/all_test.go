@@ -204,6 +204,69 @@ func TestQuantileValue(t *testing.T) {
 	require.JSONEq(t, expected, string(json))
 }
 
+func TestUnivariateSummaryDataPoint(t *testing.T) {
+	t.Parallel()
+
+	pool := memory.NewCheckedAllocator(memory.NewGoAllocator())
+	defer pool.AssertSize(t, 0)
+	sb := NewUnivariateSummaryDataPointBuilder(pool)
+
+	if err := sb.Append(SummaryDataPoint1()); err != nil {
+		t.Fatal(err)
+	}
+	if err := sb.Append(SummaryDataPoint2()); err != nil {
+		t.Fatal(err)
+	}
+	arr, err := sb.Build()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer arr.Release()
+
+	json, err := arr.MarshalJSON()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := `[{"attributes":[{"key":"str","value":[0,"string1"]},{"key":"int","value":[1,1]},{"key":"double","value":[2,1]},{"key":"bool","value":[3,true]},{"key":"bytes","value":[4,"Ynl0ZXMx"]}],"count":1,"flags":1,"quantile":[{"quantile":0.1,"value":1.5},{"quantile":0.2,"value":2.5}],"start_time_unix_nano":1,"sum":1.5,"time_unix_nano":2}
+,{"attributes":[{"key":"str","value":[0,"string2"]},{"key":"int","value":[1,2]},{"key":"double","value":[2,2]},{"key":"bytes","value":[4,"Ynl0ZXMy"]}],"count":2,"flags":2,"quantile":[{"quantile":0.2,"value":2.5}],"start_time_unix_nano":3,"sum":2.5,"time_unix_nano":4}
+]`
+
+	require.JSONEq(t, expected, string(json))
+}
+
+func TestUnivariateSummary(t *testing.T) {
+	t.Parallel()
+
+	pool := memory.NewCheckedAllocator(memory.NewGoAllocator())
+	defer pool.AssertSize(t, 0)
+	sb := NewUnivariateSummaryBuilder(pool)
+
+	if err := sb.Append(Summary1()); err != nil {
+		t.Fatal(err)
+	}
+	if err := sb.Append(Summary2()); err != nil {
+		t.Fatal(err)
+	}
+	arr, err := sb.Build()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer arr.Release()
+
+	json, err := arr.MarshalJSON()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	println(string(json))
+	expected := `[{"data_points":[{"attributes":[{"key":"str","value":[0,"string1"]},{"key":"int","value":[1,1]},{"key":"double","value":[2,1]},{"key":"bool","value":[3,true]},{"key":"bytes","value":[4,"Ynl0ZXMx"]}],"count":1,"flags":1,"quantile":[{"quantile":0.1,"value":1.5},{"quantile":0.2,"value":2.5}],"start_time_unix_nano":1,"sum":1.5,"time_unix_nano":2},{"attributes":[{"key":"str","value":[0,"string2"]},{"key":"int","value":[1,2]},{"key":"double","value":[2,2]},{"key":"bytes","value":[4,"Ynl0ZXMy"]}],"count":2,"flags":2,"quantile":[{"quantile":0.2,"value":2.5}],"start_time_unix_nano":3,"sum":2.5,"time_unix_nano":4}]}
+,{"data_points":[{"attributes":[{"key":"str","value":[0,"string2"]},{"key":"int","value":[1,2]},{"key":"double","value":[2,2]},{"key":"bytes","value":[4,"Ynl0ZXMy"]}],"count":2,"flags":2,"quantile":[{"quantile":0.2,"value":2.5}],"start_time_unix_nano":3,"sum":2.5,"time_unix_nano":4}]}
+]`
+
+	require.JSONEq(t, expected, string(json))
+}
+
 // NDP1 returns a pmetric.NumberDataPoint (sample 1).
 func NDP1() pmetric.NumberDataPoint {
 	dp := pmetric.NewNumberDataPoint()
@@ -310,4 +373,46 @@ func QuantileValue2() pmetric.SummaryDataPointValueAtQuantile {
 	qv.SetQuantile(0.2)
 	qv.SetValue(2.5)
 	return qv
+}
+
+func SummaryDataPoint1() pmetric.SummaryDataPoint {
+	dp := pmetric.NewSummaryDataPoint()
+	internal.Attrs1().CopyTo(dp.Attributes())
+	dp.SetStartTimestamp(1)
+	dp.SetTimestamp(2)
+	dp.SetCount(1)
+	dp.SetSum(1.5)
+	qvs := dp.QuantileValues()
+	qvs.EnsureCapacity(2)
+	QuantileValue1().CopyTo(qvs.AppendEmpty())
+	QuantileValue2().CopyTo(qvs.AppendEmpty())
+	dp.SetFlags(1)
+	return dp
+}
+
+func SummaryDataPoint2() pmetric.SummaryDataPoint {
+	dp := pmetric.NewSummaryDataPoint()
+	internal.Attrs2().CopyTo(dp.Attributes())
+	dp.SetStartTimestamp(3)
+	dp.SetTimestamp(4)
+	dp.SetCount(2)
+	dp.SetSum(2.5)
+	qvs := dp.QuantileValues()
+	qvs.EnsureCapacity(1)
+	QuantileValue2().CopyTo(qvs.AppendEmpty())
+	dp.SetFlags(2)
+	return dp
+}
+
+func Summary1() pmetric.Summary {
+	s := pmetric.NewSummary()
+	SummaryDataPoint1().CopyTo(s.DataPoints().AppendEmpty())
+	SummaryDataPoint2().CopyTo(s.DataPoints().AppendEmpty())
+	return s
+}
+
+func Summary2() pmetric.Summary {
+	s := pmetric.NewSummary()
+	SummaryDataPoint2().CopyTo(s.DataPoints().AppendEmpty())
+	return s
 }

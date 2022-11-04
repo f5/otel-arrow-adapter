@@ -101,6 +101,7 @@ func (b *NumberDataPointBuilder) Append(ndp pmetric.NumberDataPoint) error {
 	ec := exs.Len()
 	if ec > 0 {
 		b.elb.Append(true)
+		b.elb.Reserve(ec)
 		for i := 0; i < ec; i++ {
 			if err := b.eb.Append(exs.At(i)); err != nil {
 				return err
