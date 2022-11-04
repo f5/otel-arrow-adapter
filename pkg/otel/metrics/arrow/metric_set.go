@@ -12,13 +12,34 @@ import (
 	"github.com/f5/otel-arrow-adapter/pkg/otel/constants"
 )
 
-// MetricSetDT is the Arrow Data Type describing a metric set.
 var (
+	// MetricSetDT is the Arrow Data Type describing a metric set.
 	MetricSetDT = arrow.StructOf([]arrow.Field{
 		{Name: constants.NAME, Type: acommon.DictU16String},
 		{Name: constants.DESCRIPTION, Type: acommon.DictU16String},
 		{Name: constants.UNIT, Type: acommon.DictU16String},
 		// Data
+		// - Attributes
+		// - Start Time
+		// - End Time
+		// - Value
+		// - Exemplars
+		// - Flags
+	}...)
+
+	// MultivariateMetricsDT is the Arrow Data Type describing a multivariate metrics.
+	MultivariateMetricsDT = arrow.StructOf([]arrow.Field{
+		{Name: constants.NAME, Type: acommon.DictU16String},
+		{Name: constants.DESCRIPTION, Type: acommon.DictU16String},
+		{Name: constants.UNIT, Type: acommon.DictU16String},
+		// attributes
+		// start time
+		// end time
+		// [metrics]
+		// - sub-name
+		// - value
+		// - exemplars
+		// - flags
 	}...)
 )
 
@@ -65,7 +86,7 @@ func (b *MetricSetBuilder) Build() (*array.Struct, error) {
 	return b.builder.NewStructArray(), nil
 }
 
-// Append appends a new span to the builder.
+// Append appends a new metric to the builder.
 func (b *MetricSetBuilder) Append(metric pmetric.Metric) error {
 	if b.released {
 		return fmt.Errorf("metric set builder already released")
@@ -97,6 +118,7 @@ func (b *MetricSetBuilder) Append(metric pmetric.Metric) error {
 			return err
 		}
 	}
+
 	return nil
 }
 

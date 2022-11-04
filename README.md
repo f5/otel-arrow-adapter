@@ -81,6 +81,7 @@ Below some utility functions in package `pkg/otel/traces` than can be used to co
 
 ## Status [WIP]
 
+
 **Arrow Intermediate Representation (framework to convert row-oriented structured data to Arrow columnar data)**
 - [X] Values (supported types: bool, i[8|16|32|64], u[8|16|32|64], f[32|64], string, binary, list, struct)
 - [X] Fields
@@ -126,7 +127,7 @@ This capability will be used to implement an exporter into the existing collecto
   - **General**
     - [X] Complex attributes 
     - [X] Complex body
-    - [ ] Schema URL 
+    - [X] Schema URL 
     - [X] Description
     - [X] Unit
   - **OTLP_ARROW events --> OTLP metrics**
@@ -181,7 +182,7 @@ This capability will be used to implement an exporter into the existing collecto
   - [ ] Check memory leaks (e.g. Arrow related memory leaks)
 
 **CI**
-  - [ ] GitHub Actions to build, test, check at every commit.
+  - [X] GitHub Actions to build, test, check at every commit.
 
 **Integration**
   - [ ] Integration with Open Telemetry Collector.
