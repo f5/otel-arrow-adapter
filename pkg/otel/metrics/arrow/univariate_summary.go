@@ -88,3 +88,11 @@ func (b *UnivariateSummaryBuilder) Append(summary pmetric.Summary) error {
 
 	return nil
 }
+
+func (b *UnivariateSummaryBuilder) AppendNull() {
+	if b.released {
+		return
+	}
+
+	b.builder.Append(false)
+}

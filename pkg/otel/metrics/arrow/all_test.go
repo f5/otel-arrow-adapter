@@ -259,9 +259,43 @@ func TestUnivariateSummary(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	println(string(json))
 	expected := `[{"data_points":[{"attributes":[{"key":"str","value":[0,"string1"]},{"key":"int","value":[1,1]},{"key":"double","value":[2,1]},{"key":"bool","value":[3,true]},{"key":"bytes","value":[4,"Ynl0ZXMx"]}],"count":1,"flags":1,"quantile":[{"quantile":0.1,"value":1.5},{"quantile":0.2,"value":2.5}],"start_time_unix_nano":1,"sum":1.5,"time_unix_nano":2},{"attributes":[{"key":"str","value":[0,"string2"]},{"key":"int","value":[1,2]},{"key":"double","value":[2,2]},{"key":"bytes","value":[4,"Ynl0ZXMy"]}],"count":2,"flags":2,"quantile":[{"quantile":0.2,"value":2.5}],"start_time_unix_nano":3,"sum":2.5,"time_unix_nano":4}]}
 ,{"data_points":[{"attributes":[{"key":"str","value":[0,"string2"]},{"key":"int","value":[1,2]},{"key":"double","value":[2,2]},{"key":"bytes","value":[4,"Ynl0ZXMy"]}],"count":2,"flags":2,"quantile":[{"quantile":0.2,"value":2.5}],"start_time_unix_nano":3,"sum":2.5,"time_unix_nano":4}]}
+]`
+
+	require.JSONEq(t, expected, string(json))
+}
+
+func TestUnivariateMetric(t *testing.T) {
+	t.Parallel()
+
+	pool := memory.NewCheckedAllocator(memory.NewGoAllocator())
+	defer pool.AssertSize(t, 0)
+	sb := NewUnivariateMetricBuilder(pool)
+
+	if err := sb.Append(Metric1()); err != nil {
+		t.Fatal(err)
+	}
+	if err := sb.Append(Metric2()); err != nil {
+		t.Fatal(err)
+	}
+	if err := sb.Append(Metric3()); err != nil {
+		t.Fatal(err)
+	}
+	arr, err := sb.Build()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer arr.Release()
+
+	json, err := arr.MarshalJSON()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := `[[0,{"data_points":[{"attributes":[{"key":"str","value":[0,"string1"]},{"key":"int","value":[1,1]},{"key":"double","value":[2,1]},{"key":"bool","value":[3,true]},{"key":"bytes","value":[4,"Ynl0ZXMx"]}],"exemplars":[{"attributes":[{"key":"str","value":[0,"string1"]},{"key":"int","value":[1,1]},{"key":"double","value":[2,1]},{"key":"bool","value":[3,true]},{"key":"bytes","value":[4,"Ynl0ZXMx"]}],"span_id":"qgAAAAAAAAA=","time_unix_nano":1,"trace_id":"qgAAAAAAAAAAAAAAAAAAAA==","value":[1,1.5]},{"attributes":[{"key":"str","value":[0,"string2"]},{"key":"int","value":[1,2]},{"key":"double","value":[2,2]},{"key":"bytes","value":[4,"Ynl0ZXMy"]}],"span_id":"qgAAAAAAAAA=","time_unix_nano":2,"trace_id":"qgAAAAAAAAAAAAAAAAAAAA==","value":[0,2]}],"flags":1,"start_time_unix_nano":1,"time_unix_nano":2,"value":[1,1.5]},{"attributes":[{"key":"str","value":[0,"string2"]},{"key":"int","value":[1,2]},{"key":"double","value":[2,2]},{"key":"bytes","value":[4,"Ynl0ZXMy"]}],"exemplars":[{"attributes":[{"key":"str","value":[0,"string2"]},{"key":"int","value":[1,2]},{"key":"double","value":[2,2]},{"key":"bytes","value":[4,"Ynl0ZXMy"]}],"span_id":"qgAAAAAAAAA=","time_unix_nano":2,"trace_id":"qgAAAAAAAAAAAAAAAAAAAA==","value":[0,2]}],"flags":2,"start_time_unix_nano":2,"time_unix_nano":3,"value":[0,2]},{"attributes":[{"key":"str","value":[0,"string3"]},{"key":"double","value":[2,3]},{"key":"bool","value":[3,false]},{"key":"bytes","value":[4,"Ynl0ZXMz"]}],"exemplars":[{"attributes":[{"key":"str","value":[0,"string1"]},{"key":"int","value":[1,1]},{"key":"double","value":[2,1]},{"key":"bool","value":[3,true]},{"key":"bytes","value":[4,"Ynl0ZXMx"]}],"span_id":"qgAAAAAAAAA=","time_unix_nano":1,"trace_id":"qgAAAAAAAAAAAAAAAAAAAA==","value":[1,1.5]}],"flags":3,"start_time_unix_nano":3,"time_unix_nano":4,"value":[0,3]}]}]
+,[1,{"aggregation_temporality":1,"data_points":[{"attributes":[{"key":"str","value":[0,"string1"]},{"key":"int","value":[1,1]},{"key":"double","value":[2,1]},{"key":"bool","value":[3,true]},{"key":"bytes","value":[4,"Ynl0ZXMx"]}],"exemplars":[{"attributes":[{"key":"str","value":[0,"string1"]},{"key":"int","value":[1,1]},{"key":"double","value":[2,1]},{"key":"bool","value":[3,true]},{"key":"bytes","value":[4,"Ynl0ZXMx"]}],"span_id":"qgAAAAAAAAA=","time_unix_nano":1,"trace_id":"qgAAAAAAAAAAAAAAAAAAAA==","value":[1,1.5]},{"attributes":[{"key":"str","value":[0,"string2"]},{"key":"int","value":[1,2]},{"key":"double","value":[2,2]},{"key":"bytes","value":[4,"Ynl0ZXMy"]}],"span_id":"qgAAAAAAAAA=","time_unix_nano":2,"trace_id":"qgAAAAAAAAAAAAAAAAAAAA==","value":[0,2]}],"flags":1,"start_time_unix_nano":1,"time_unix_nano":2,"value":[1,1.5]},{"attributes":[{"key":"str","value":[0,"string2"]},{"key":"int","value":[1,2]},{"key":"double","value":[2,2]},{"key":"bytes","value":[4,"Ynl0ZXMy"]}],"exemplars":[{"attributes":[{"key":"str","value":[0,"string2"]},{"key":"int","value":[1,2]},{"key":"double","value":[2,2]},{"key":"bytes","value":[4,"Ynl0ZXMy"]}],"span_id":"qgAAAAAAAAA=","time_unix_nano":2,"trace_id":"qgAAAAAAAAAAAAAAAAAAAA==","value":[0,2]}],"flags":2,"start_time_unix_nano":2,"time_unix_nano":3,"value":[0,2]},{"attributes":[{"key":"str","value":[0,"string3"]},{"key":"double","value":[2,3]},{"key":"bool","value":[3,false]},{"key":"bytes","value":[4,"Ynl0ZXMz"]}],"exemplars":[{"attributes":[{"key":"str","value":[0,"string1"]},{"key":"int","value":[1,1]},{"key":"double","value":[2,1]},{"key":"bool","value":[3,true]},{"key":"bytes","value":[4,"Ynl0ZXMx"]}],"span_id":"qgAAAAAAAAA=","time_unix_nano":1,"trace_id":"qgAAAAAAAAAAAAAAAAAAAA==","value":[1,1.5]}],"flags":3,"start_time_unix_nano":3,"time_unix_nano":4,"value":[0,3]}],"is_monotonic":true}]
+,[2,{"data_points":[{"attributes":[{"key":"str","value":[0,"string1"]},{"key":"int","value":[1,1]},{"key":"double","value":[2,1]},{"key":"bool","value":[3,true]},{"key":"bytes","value":[4,"Ynl0ZXMx"]}],"count":1,"flags":1,"quantile":[{"quantile":0.1,"value":1.5},{"quantile":0.2,"value":2.5}],"start_time_unix_nano":1,"sum":1.5,"time_unix_nano":2},{"attributes":[{"key":"str","value":[0,"string2"]},{"key":"int","value":[1,2]},{"key":"double","value":[2,2]},{"key":"bytes","value":[4,"Ynl0ZXMy"]}],"count":2,"flags":2,"quantile":[{"quantile":0.2,"value":2.5}],"start_time_unix_nano":3,"sum":2.5,"time_unix_nano":4}]}]
 ]`
 
 	require.JSONEq(t, expected, string(json))
@@ -415,4 +449,31 @@ func Summary2() pmetric.Summary {
 	s := pmetric.NewSummary()
 	SummaryDataPoint2().CopyTo(s.DataPoints().AppendEmpty())
 	return s
+}
+
+func Metric1() pmetric.Metric {
+	m := pmetric.NewMetric()
+	m.SetName("gauge-1")
+	m.SetDescription("gauge-1-desc")
+	m.SetUnit("gauge-1-unit")
+	Gauge1().CopyTo(m.SetEmptyGauge())
+	return m
+}
+
+func Metric2() pmetric.Metric {
+	m := pmetric.NewMetric()
+	m.SetName("sum-2")
+	m.SetDescription("sum-2-desc")
+	m.SetUnit("sum-2-unit")
+	Sum1().CopyTo(m.SetEmptySum())
+	return m
+}
+
+func Metric3() pmetric.Metric {
+	m := pmetric.NewMetric()
+	m.SetName("summary-3")
+	m.SetDescription("summary-3-desc")
+	m.SetUnit("summary-3-unit")
+	Summary1().CopyTo(m.SetEmptySummary())
+	return m
 }
