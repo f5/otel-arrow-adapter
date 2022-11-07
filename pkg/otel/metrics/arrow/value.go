@@ -13,8 +13,8 @@ import (
 
 // Constants used to identify the type of value in the union.
 const (
-	I64Code int8 = 1
-	F64Code int8 = 2
+	I64Code int8 = 0
+	F64Code int8 = 1
 )
 
 var (

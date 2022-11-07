@@ -13,11 +13,11 @@ import (
 
 // Constants used to identify the type of univariate metric in the union.
 const (
-	GaugeCode   int8 = 1
-	SumCode     int8 = 2
-	SummaryCode int8 = 3
-	// HistogramCode int8 = 4
-	// ExponentialHistogramCode int8 = 5
+	GaugeCode   int8 = 0
+	SumCode     int8 = 1
+	SummaryCode int8 = 2
+	// HistogramCode int8 = 3
+	// ExponentialHistogramCode int8 = 4
 )
 
 // UnivariateMetricDT is the Arrow Data Type describing a univariate metric.
@@ -50,7 +50,12 @@ type UnivariateMetricBuilder struct {
 
 // NewUnivariateMetricBuilder creates a new UnivariateMetricBuilder with a given memory allocator.
 func NewUnivariateMetricBuilder(pool memory.Allocator) *UnivariateMetricBuilder {
-	return UnivariateMetricBuilderFrom(array.NewSparseUnionBuilder(pool, UnivariateMetricDT))
+	println("Use the default sparse union builder once the bug is fixed")
+	children := make([]array.Builder, len(UnivariateMetricDT.Fields()))
+	for i, f := range UnivariateMetricDT.Fields() {
+		children[i] = array.NewBuilder(pool, f.Type)
+	}
+	return UnivariateMetricBuilderFrom(array.NewSparseUnionBuilderWithBuilders(pool, UnivariateMetricDT, children))
 }
 
 // UnivariateMetricBuilderFrom creates a new UnivariateMetricBuilder from an existing StructBuilder.
@@ -87,13 +92,39 @@ func (b *UnivariateMetricBuilder) Release() {
 	b.builder.Release()
 }
 
-// Append appends a new univariate gauge to the builder.
-func (b *UnivariateMetricBuilder) Append(gauge pmetric.Metric) error {
+// Append appends a new univariate metric to the builder.
+func (b *UnivariateMetricBuilder) Append(metric pmetric.Metric) error {
 	if b.released {
 		return fmt.Errorf("UnivariateMetricBuilder: Append() called after Release()")
 	}
 
-	// TODO
+	switch metric.Type() {
+	case pmetric.MetricTypeGauge:
+		b.builder.Append(GaugeCode)
+		if err := b.gb.Append(metric.Gauge()); err != nil {
+			return err
+		}
+		b.sb.AppendNull()
+		b.syb.AppendNull()
+	case pmetric.MetricTypeSum:
+		b.builder.Append(SumCode)
+		if err := b.sb.Append(metric.Sum()); err != nil {
+			return err
+		}
+		b.gb.AppendNull()
+		b.syb.AppendNull()
+	case pmetric.MetricTypeSummary:
+		b.builder.Append(SummaryCode)
+		if err := b.syb.Append(metric.Summary()); err != nil {
+			return err
+		}
+		b.gb.AppendNull()
+		b.sb.AppendNull()
+		// case pmetric.MetricTypeHistogram:
+		// 	b.builder.Append(HistogramCode)
+		// case pmetric.MetricTypeExponentialHistogram:
+		// 	b.builder.Append(ExponentialHistogramCode)
+	}
 
 	return nil
 }

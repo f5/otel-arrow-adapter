@@ -97,3 +97,11 @@ func (b *UnivariateSumBuilder) Append(sum pmetric.Sum) error {
 
 	return nil
 }
+
+func (b *UnivariateSumBuilder) AppendNull() {
+	if b.released {
+		return
+	}
+
+	b.builder.Append(false)
+}

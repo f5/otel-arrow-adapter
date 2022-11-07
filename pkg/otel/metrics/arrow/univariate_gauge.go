@@ -89,3 +89,11 @@ func (b *UnivariateGaugeBuilder) Append(gauge pmetric.Gauge) error {
 
 	return nil
 }
+
+func (b *UnivariateGaugeBuilder) AppendNull() {
+	if b.released {
+		return
+	}
+
+	b.builder.Append(false)
+}
