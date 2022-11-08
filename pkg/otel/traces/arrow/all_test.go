@@ -212,8 +212,6 @@ func TestTraces(t *testing.T) {
 	}
 	defer record.Release()
 
-	println(record.Schema().String())
-
 	json, err := record.MarshalJSON()
 	if err != nil {
 		t.Fatal(err)
