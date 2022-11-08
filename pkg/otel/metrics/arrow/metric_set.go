@@ -3,9 +3,9 @@ package arrow
 import (
 	"fmt"
 
-	"github.com/apache/arrow/go/v10/arrow"
-	"github.com/apache/arrow/go/v10/arrow/array"
-	"github.com/apache/arrow/go/v10/arrow/memory"
+	"github.com/apache/arrow/go/v11/arrow"
+	"github.com/apache/arrow/go/v11/arrow/array"
+	"github.com/apache/arrow/go/v11/arrow/memory"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 
 	acommon "github.com/f5/otel-arrow-adapter/pkg/otel/common/arrow"
@@ -18,14 +18,7 @@ var (
 		arrow.Field{Name: constants.NAME, Type: acommon.DictU16String},
 		arrow.Field{Name: constants.DESCRIPTION, Type: acommon.DictU16String},
 		arrow.Field{Name: constants.UNIT, Type: acommon.DictU16String},
-		// arrow.Field {Name: constants.UNIVARIATE_METRICS, Type: arrow.ListOf()},
-		// Data
-		// - Attributes
-		// - Start Time
-		// - End Time
-		// - Value
-		// - Exemplars
-		// - Flags
+		arrow.Field{Name: constants.DATA, Type: UnivariateMetricDT},
 	)
 
 	// MultivariateMetricsDT is the Arrow Data Type describing a set of multivariate metrics.
@@ -51,9 +44,10 @@ type MetricSetBuilder struct {
 
 	builder *array.StructBuilder
 
-	nb *array.BinaryDictionaryBuilder // metric name builder
-	db *array.BinaryDictionaryBuilder // metric description builder
-	ub *array.BinaryDictionaryBuilder // metric unit builder
+	nb  *array.BinaryDictionaryBuilder // metric name builder
+	db  *array.BinaryDictionaryBuilder // metric description builder
+	ub  *array.BinaryDictionaryBuilder // metric unit builder
+	dtb *UnivariateMetricBuilder       // univariate metric builder
 }
 
 // NewMetricSetBuilder creates a new SpansBuilder with a given allocator.
@@ -72,6 +66,7 @@ func MetricSetBuilderFrom(sb *array.StructBuilder) *MetricSetBuilder {
 		nb:       sb.FieldBuilder(0).(*array.BinaryDictionaryBuilder),
 		db:       sb.FieldBuilder(1).(*array.BinaryDictionaryBuilder),
 		ub:       sb.FieldBuilder(2).(*array.BinaryDictionaryBuilder),
+		dtb:      UnivariateMetricBuilderFrom(sb.FieldBuilder(3).(*array.SparseUnionBuilder)),
 	}
 }
 
@@ -120,6 +115,9 @@ func (b *MetricSetBuilder) Append(metric pmetric.Metric) error {
 			return err
 		}
 	}
+	if err := b.dtb.Append(metric); err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -128,9 +126,6 @@ func (b *MetricSetBuilder) Append(metric pmetric.Metric) error {
 func (b *MetricSetBuilder) Release() {
 	if !b.released {
 		b.builder.Release()
-		b.nb.Release()
-		b.db.Release()
-		b.ub.Release()
 
 		b.released = true
 	}

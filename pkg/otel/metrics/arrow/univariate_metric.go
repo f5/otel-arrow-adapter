@@ -3,9 +3,9 @@ package arrow
 import (
 	"fmt"
 
-	"github.com/apache/arrow/go/v10/arrow"
-	"github.com/apache/arrow/go/v10/arrow/array"
-	"github.com/apache/arrow/go/v10/arrow/memory"
+	"github.com/apache/arrow/go/v11/arrow"
+	"github.com/apache/arrow/go/v11/arrow/array"
+	"github.com/apache/arrow/go/v11/arrow/memory"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 
 	"github.com/f5/otel-arrow-adapter/pkg/otel/constants"
@@ -50,12 +50,7 @@ type UnivariateMetricBuilder struct {
 
 // NewUnivariateMetricBuilder creates a new UnivariateMetricBuilder with a given memory allocator.
 func NewUnivariateMetricBuilder(pool memory.Allocator) *UnivariateMetricBuilder {
-	println("Use the default sparse union builder once the bug is fixed")
-	children := make([]array.Builder, len(UnivariateMetricDT.Fields()))
-	for i, f := range UnivariateMetricDT.Fields() {
-		children[i] = array.NewBuilder(pool, f.Type)
-	}
-	return UnivariateMetricBuilderFrom(array.NewSparseUnionBuilderWithBuilders(pool, UnivariateMetricDT, children))
+	return UnivariateMetricBuilderFrom(array.NewSparseUnionBuilder(pool, UnivariateMetricDT))
 }
 
 // UnivariateMetricBuilderFrom creates a new UnivariateMetricBuilder from an existing StructBuilder.

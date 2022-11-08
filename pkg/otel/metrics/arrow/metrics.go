@@ -3,9 +3,9 @@ package arrow
 import (
 	"fmt"
 
-	"github.com/apache/arrow/go/v10/arrow"
-	"github.com/apache/arrow/go/v10/arrow/array"
-	"github.com/apache/arrow/go/v10/arrow/memory"
+	"github.com/apache/arrow/go/v11/arrow"
+	"github.com/apache/arrow/go/v11/arrow/array"
+	"github.com/apache/arrow/go/v11/arrow/memory"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 
 	"github.com/f5/otel-arrow-adapter/pkg/otel/constants"
@@ -26,8 +26,8 @@ type MetricsBuilder struct {
 	rmp     *ResourceMetricsBuilder // resource metrics builder
 }
 
-// NewTracesBuilder creates a new MetricsBuilder with a given allocator.
-func NewTracesBuilder(pool memory.Allocator) *MetricsBuilder {
+// NewMetricsBuilder creates a new MetricsBuilder with a given allocator.
+func NewMetricsBuilder(pool memory.Allocator) *MetricsBuilder {
 	rsb := array.NewListBuilder(pool, ResourceMetricsDT)
 	return &MetricsBuilder{
 		released: false,
