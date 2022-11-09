@@ -1,3 +1,0 @@
-# Metrics Arrow Schema
-
-TBD
