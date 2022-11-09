@@ -22,7 +22,7 @@ payload. The sparse union is used to represent the value type.
 attributes: &attributes                                 # arrow type = map
   - key: string | string_dictionary
     value:                                              # arrow type = sparse union
-        str: string | string_dictionary, 
+        str: string | string_dictionary 
         i64: int64
         f64: float64
         bool: bool 
