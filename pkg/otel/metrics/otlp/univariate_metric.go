@@ -56,8 +56,6 @@ func NewUnivariateMetricIds(parentDT *arrow.StructType) (*UnivariateMetricIds, e
 		return nil, err
 	}
 
-	println(sumDT)
-	println(summaryDT)
 	return &UnivariateMetricIds{
 		Id:                   id,
 		UnivariateGaugeIds:   gaugeIds,

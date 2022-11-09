@@ -11,16 +11,17 @@ import (
 )
 
 func UpdateValueFromExemplar(v pmetric.Exemplar, vArr *array.DenseUnion, row int) error {
+	idx := int(vArr.ValueOffset(row))
 	tcode := int8(vArr.ChildID(row))
 	switch tcode {
 	case arrow.I64Code:
-		val, err := arrow_utils.I64FromArray(vArr.Field(int(tcode)), row)
+		val, err := arrow_utils.I64FromArray(vArr.Field(int(tcode)), idx)
 		if err != nil {
 			return err
 		}
 		v.SetIntValue(val)
 	case arrow.F64Code:
-		val, err := arrow_utils.F64FromArray(vArr.Field(int(tcode)), row)
+		val, err := arrow_utils.F64FromArray(vArr.Field(int(tcode)), idx)
 		if err != nil {
 			return err
 		}
@@ -32,16 +33,17 @@ func UpdateValueFromExemplar(v pmetric.Exemplar, vArr *array.DenseUnion, row int
 }
 
 func UpdateValueFromNumberDataPoint(v pmetric.NumberDataPoint, vArr *array.DenseUnion, row int) error {
+	idx := int(vArr.ValueOffset(row))
 	tcode := int8(vArr.ChildID(row))
 	switch tcode {
 	case arrow.I64Code:
-		val, err := arrow_utils.I64FromArray(vArr.Field(int(tcode)), row)
+		val, err := arrow_utils.I64FromArray(vArr.Field(int(tcode)), idx)
 		if err != nil {
 			return err
 		}
 		v.SetIntValue(val)
 	case arrow.F64Code:
-		val, err := arrow_utils.F64FromArray(vArr.Field(int(tcode)), row)
+		val, err := arrow_utils.F64FromArray(vArr.Field(int(tcode)), idx)
 		if err != nil {
 			return err
 		}

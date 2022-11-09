@@ -117,7 +117,7 @@ func AppendUnivariateNdpInto(ndpSlice pmetric.NumberDataPointSlice, ndp *arrow_u
 			if err := AppendExemplarsInto(ndpValue.Exemplars(), exemplars, ndpIdx, ids.Exemplars); err != nil {
 				return err
 			}
-		} else {
+		} else if err != nil {
 			return err
 		}
 	}

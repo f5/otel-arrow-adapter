@@ -23,7 +23,7 @@ func TestConversionFromSyntheticData(t *testing.T) {
 	metricsGen := datagen.NewMetricsGenerator(datagen.DefaultResourceAttributes(), datagen.DefaultInstrumentationScopes())
 
 	// Generate a random OTLP metrics request.
-	expectedRequest := pmetricotlp.NewExportRequestFromMetrics(metricsGen.Generate(1, 100))
+	expectedRequest := pmetricotlp.NewExportRequestFromMetrics(metricsGen.Generate(10, 100))
 
 	// Convert the OTLP metrics request to Arrow.
 	pool := memory.NewCheckedAllocator(memory.NewGoAllocator())
