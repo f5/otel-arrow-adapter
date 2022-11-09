@@ -5,78 +5,80 @@ import (
 	"go.opentelemetry.io/collector/pdata/pmetric"
 
 	arrow_utils "github.com/f5/otel-arrow-adapter/pkg/arrow"
+	"github.com/f5/otel-arrow-adapter/pkg/otel/common/otlp"
+	"github.com/f5/otel-arrow-adapter/pkg/otel/constants"
 )
 
 type ScopeMetricsIds struct {
-	//Id        int
-	//SchemaUrl int
-	//ScopeIds  *otlp.ScopeIds
-	//SpansIds  *SpansIds
+	Id           int
+	SchemaUrl    int
+	ScopeIds     *otlp.ScopeIds
+	MetricSetIds *MetricSetIds
 }
 
 func NewScopeMetricsIds(dt *arrow.StructType) (*ScopeMetricsIds, error) {
-	//id, scopeSpansDT, err := arrow_utils.ListOfStructsFieldIdFromStruct(dt, constants.SCOPE_SPANS)
-	//if err != nil {
-	//	return nil, err
-	//}
-	//
-	//schemaId, _, err := arrow_utils.FieldIdFromStruct(scopeSpansDT, constants.SCHEMA_URL)
-	//if err != nil {
-	//	return nil, err
-	//}
-	//
-	//scopeIds, err := otlp.NewScopeIds(scopeSpansDT)
-	//if err != nil {
-	//	return nil, err
-	//}
-	//
-	//spansIds, err := NewSpansIds(scopeSpansDT)
-	//if err != nil {
-	//	return nil, err
-	//}
+	id, scopeMetricsDT, err := arrow_utils.ListOfStructsFieldIdFromStruct(dt, constants.SCOPE_METRICS)
+	if err != nil {
+		return nil, err
+	}
+
+	schemaId, _, err := arrow_utils.FieldIdFromStruct(scopeMetricsDT, constants.SCHEMA_URL)
+	if err != nil {
+		return nil, err
+	}
+
+	scopeIds, err := otlp.NewScopeIds(scopeMetricsDT)
+	if err != nil {
+		return nil, err
+	}
+
+	metricSetIds, err := NewMetricSetIds(scopeMetricsDT)
+	if err != nil {
+		return nil, err
+	}
 
 	return &ScopeMetricsIds{
-		//Id:        id,
-		//SchemaUrl: schemaId,
-		//ScopeIds:  scopeIds,
-		//SpansIds:  spansIds,
+		Id:           id,
+		SchemaUrl:    schemaId,
+		ScopeIds:     scopeIds,
+		MetricSetIds: metricSetIds,
 	}, nil
 }
 
 func AppendScopeMetricsInto(resMetrics pmetric.ResourceMetrics, arrowResMetrics *arrow_utils.ListOfStructs, resMetricsIdx int, ids *ScopeMetricsIds) error {
-	//arrowScopeSpans, err := arrowResMetrics.ListOfStructsById(resMetricsIdx, ids.Id)
-	//if err != nil {
-	//	return err
-	//}
-	//scopeSpansSlice := resMetrics.ScopeSpans()
-	//scopeSpansSlice.EnsureCapacity(arrowScopeSpans.End() - arrowResMetrics.Start())
-	//
-	//for scopeSpansIdx := arrowScopeSpans.Start(); scopeSpansIdx < arrowScopeSpans.End(); scopeSpansIdx++ {
-	//	scopeSpans := scopeSpansSlice.AppendEmpty()
-	//
-	//	if err = otlp.UpdateScopeWith(scopeSpans.Scope(), arrowScopeSpans, scopeSpansIdx, ids.ScopeIds); err != nil {
-	//		return err
-	//	}
-	//
-	//	schemaUrl, err := arrowScopeSpans.StringFieldById(ids.SchemaUrl, scopeSpansIdx)
-	//	if err != nil {
-	//		return err
-	//	}
-	//	scopeSpans.SetSchemaUrl(schemaUrl)
-	//
-	//	arrowSpans, err := arrowScopeSpans.ListOfStructsById(scopeSpansIdx, ids.SpansIds.Id)
-	//	if err != nil {
-	//		return err
-	//	}
-	//	spansSlice := scopeSpans.Spans()
-	//	spansSlice.EnsureCapacity(arrowSpans.End() - arrowSpans.Start())
-	//	for entityIdx := arrowSpans.Start(); entityIdx < arrowSpans.End(); entityIdx++ {
-	//		err = AppendSpanInto(spansSlice, arrowSpans, entityIdx, ids.SpansIds)
-	//		if err != nil {
-	//			return err
-	//		}
-	//	}
-	//}
+	arrowScopeMetrics, err := arrowResMetrics.ListOfStructsById(resMetricsIdx, ids.Id)
+	if err != nil {
+		return err
+	}
+	scopeMetricsSlice := resMetrics.ScopeMetrics()
+	scopeMetricsSlice.EnsureCapacity(arrowScopeMetrics.End() - arrowResMetrics.Start())
+
+	for scopeMetricsIdx := arrowScopeMetrics.Start(); scopeMetricsIdx < arrowScopeMetrics.End(); scopeMetricsIdx++ {
+		scopeMetrics := scopeMetricsSlice.AppendEmpty()
+
+		if err = otlp.UpdateScopeWith(scopeMetrics.Scope(), arrowScopeMetrics, scopeMetricsIdx, ids.ScopeIds); err != nil {
+			return err
+		}
+
+		schemaUrl, err := arrowScopeMetrics.StringFieldById(ids.SchemaUrl, scopeMetricsIdx)
+		if err != nil {
+			return err
+		}
+		scopeMetrics.SetSchemaUrl(schemaUrl)
+
+		arrowMetrics, err := arrowScopeMetrics.ListOfStructsById(scopeMetricsIdx, ids.MetricSetIds.Id)
+		if err != nil {
+			return err
+		}
+		metricsSlice := scopeMetrics.Metrics()
+		metricsSlice.EnsureCapacity(arrowMetrics.End() - arrowMetrics.Start())
+		for entityIdx := arrowMetrics.Start(); entityIdx < arrowMetrics.End(); entityIdx++ {
+			err = AppendMetricSetInto(metricsSlice, arrowMetrics, entityIdx, ids.MetricSetIds)
+			if err != nil {
+				return err
+			}
+		}
+	}
 
 	return nil
 }
