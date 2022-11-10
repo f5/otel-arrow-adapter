@@ -82,7 +82,7 @@ func (b *AttributesBuilder) Append(attrs pcommon.Map) error {
 			return false
 		}
 
-		// AppendNumberDataPointValue the value
+		// Append the value
 		err = b.ib.Append(v)
 		if err != nil {
 			return false
