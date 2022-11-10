@@ -16,6 +16,14 @@ type ProducerAPI struct {
 	mock.Mock
 }
 
+type ProducerAPI_Expecter struct {
+	mock *mock.Mock
+}
+
+func (_m *ProducerAPI) EXPECT() *ProducerAPI_Expecter {
+	return &ProducerAPI_Expecter{mock: &_m.Mock}
+}
+
 // BatchArrowRecordsFromLogs provides a mock function with given fields: _a0
 func (_m *ProducerAPI) BatchArrowRecordsFromLogs(_a0 plog.Logs) (*v1.BatchArrowRecords, error) {
 	ret := _m.Called(_a0)
@@ -39,6 +47,29 @@ func (_m *ProducerAPI) BatchArrowRecordsFromLogs(_a0 plog.Logs) (*v1.BatchArrowR
 	return r0, r1
 }
 
+// ProducerAPI_BatchArrowRecordsFromLogs_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'BatchArrowRecordsFromLogs'
+type ProducerAPI_BatchArrowRecordsFromLogs_Call struct {
+	*mock.Call
+}
+
+// BatchArrowRecordsFromLogs is a helper method to define mock.On call
+//   - _a0 plog.Logs
+func (_e *ProducerAPI_Expecter) BatchArrowRecordsFromLogs(_a0 interface{}) *ProducerAPI_BatchArrowRecordsFromLogs_Call {
+	return &ProducerAPI_BatchArrowRecordsFromLogs_Call{Call: _e.mock.On("BatchArrowRecordsFromLogs", _a0)}
+}
+
+func (_c *ProducerAPI_BatchArrowRecordsFromLogs_Call) Run(run func(_a0 plog.Logs)) *ProducerAPI_BatchArrowRecordsFromLogs_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(plog.Logs))
+	})
+	return _c
+}
+
+func (_c *ProducerAPI_BatchArrowRecordsFromLogs_Call) Return(_a0 *v1.BatchArrowRecords, _a1 error) *ProducerAPI_BatchArrowRecordsFromLogs_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
 // BatchArrowRecordsFromTraces provides a mock function with given fields: _a0
 func (_m *ProducerAPI) BatchArrowRecordsFromTraces(_a0 ptrace.Traces) (*v1.BatchArrowRecords, error) {
 	ret := _m.Called(_a0)
@@ -60,6 +91,29 @@ func (_m *ProducerAPI) BatchArrowRecordsFromTraces(_a0 ptrace.Traces) (*v1.Batch
 	}
 
 	return r0, r1
+}
+
+// ProducerAPI_BatchArrowRecordsFromTraces_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'BatchArrowRecordsFromTraces'
+type ProducerAPI_BatchArrowRecordsFromTraces_Call struct {
+	*mock.Call
+}
+
+// BatchArrowRecordsFromTraces is a helper method to define mock.On call
+//   - _a0 ptrace.Traces
+func (_e *ProducerAPI_Expecter) BatchArrowRecordsFromTraces(_a0 interface{}) *ProducerAPI_BatchArrowRecordsFromTraces_Call {
+	return &ProducerAPI_BatchArrowRecordsFromTraces_Call{Call: _e.mock.On("BatchArrowRecordsFromTraces", _a0)}
+}
+
+func (_c *ProducerAPI_BatchArrowRecordsFromTraces_Call) Run(run func(_a0 ptrace.Traces)) *ProducerAPI_BatchArrowRecordsFromTraces_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(ptrace.Traces))
+	})
+	return _c
+}
+
+func (_c *ProducerAPI_BatchArrowRecordsFromTraces_Call) Return(_a0 *v1.BatchArrowRecords, _a1 error) *ProducerAPI_BatchArrowRecordsFromTraces_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
 }
 
 type mockConstructorTestingTNewProducerAPI interface {

@@ -24,18 +24,20 @@ go install github.com/vektra/mockery/v2@latest
 mkdir -p api/collector/arrow/v1/mock
 mkdir -p pkg/otel/arrow_record/mock
 
+MOCKERY_OPTS="--with-expecter"
+
 # mocks in pkg/otel/arrow_record
 ARROW_RECORD_MOCKS="ProducerAPI ConsumerAPI"
 
 for name in ${ARROW_RECORD_MOCKS}; do
-    mockery --dir ./pkg/otel/arrow_record --output ./pkg/otel/arrow_record/mocks --name ${name}
+    mockery ${MOCKERY_OPTS} --dir ./pkg/otel/arrow_record --output ./pkg/otel/arrow_record/mocks --name ${name}
 done
 
 # mocks in api/collector/arrow/v1
 ARROW_COLLECTOR_API_MOCKS="ArrowStreamServiceClient ArrowStreamService_ArrowStreamClient ArrowStreamServiceServer ArrowStreamService_ArrowStreamServer"
 
 for name in ${ARROW_COLLECTOR_API_MOCKS}; do
-    mockery --dir ./api/collector/arrow/v1 --output ./api/collector/arrow/v1/mocks --name ${name}
+    mockery ${MOCKERY_OPTS} --dir ./api/collector/arrow/v1 --output ./api/collector/arrow/v1/mocks --name ${name}
 done
 
 go mod tidy

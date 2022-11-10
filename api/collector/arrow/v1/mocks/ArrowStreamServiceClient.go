@@ -17,6 +17,14 @@ type ArrowStreamServiceClient struct {
 	mock.Mock
 }
 
+type ArrowStreamServiceClient_Expecter struct {
+	mock *mock.Mock
+}
+
+func (_m *ArrowStreamServiceClient) EXPECT() *ArrowStreamServiceClient_Expecter {
+	return &ArrowStreamServiceClient_Expecter{mock: &_m.Mock}
+}
+
 // ArrowStream provides a mock function with given fields: ctx, opts
 func (_m *ArrowStreamServiceClient) ArrowStream(ctx context.Context, opts ...grpc.CallOption) (v1.ArrowStreamService_ArrowStreamClient, error) {
 	_va := make([]interface{}, len(opts))
@@ -45,6 +53,37 @@ func (_m *ArrowStreamServiceClient) ArrowStream(ctx context.Context, opts ...grp
 	}
 
 	return r0, r1
+}
+
+// ArrowStreamServiceClient_ArrowStream_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ArrowStream'
+type ArrowStreamServiceClient_ArrowStream_Call struct {
+	*mock.Call
+}
+
+// ArrowStream is a helper method to define mock.On call
+//   - ctx context.Context
+//   - opts ...grpc.CallOption
+func (_e *ArrowStreamServiceClient_Expecter) ArrowStream(ctx interface{}, opts ...interface{}) *ArrowStreamServiceClient_ArrowStream_Call {
+	return &ArrowStreamServiceClient_ArrowStream_Call{Call: _e.mock.On("ArrowStream",
+		append([]interface{}{ctx}, opts...)...)}
+}
+
+func (_c *ArrowStreamServiceClient_ArrowStream_Call) Run(run func(ctx context.Context, opts ...grpc.CallOption)) *ArrowStreamServiceClient_ArrowStream_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		variadicArgs := make([]grpc.CallOption, len(args)-1)
+		for i, a := range args[1:] {
+			if a != nil {
+				variadicArgs[i] = a.(grpc.CallOption)
+			}
+		}
+		run(args[0].(context.Context), variadicArgs...)
+	})
+	return _c
+}
+
+func (_c *ArrowStreamServiceClient_ArrowStream_Call) Return(_a0 v1.ArrowStreamService_ArrowStreamClient, _a1 error) *ArrowStreamServiceClient_ArrowStream_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
 }
 
 type mockConstructorTestingTNewArrowStreamServiceClient interface {

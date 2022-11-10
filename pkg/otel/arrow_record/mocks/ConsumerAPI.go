@@ -16,6 +16,14 @@ type ConsumerAPI struct {
 	mock.Mock
 }
 
+type ConsumerAPI_Expecter struct {
+	mock *mock.Mock
+}
+
+func (_m *ConsumerAPI) EXPECT() *ConsumerAPI_Expecter {
+	return &ConsumerAPI_Expecter{mock: &_m.Mock}
+}
+
 // LogsFrom provides a mock function with given fields: _a0
 func (_m *ConsumerAPI) LogsFrom(_a0 *v1.BatchArrowRecords) ([]plog.Logs, error) {
 	ret := _m.Called(_a0)
@@ -39,6 +47,29 @@ func (_m *ConsumerAPI) LogsFrom(_a0 *v1.BatchArrowRecords) ([]plog.Logs, error) 
 	return r0, r1
 }
 
+// ConsumerAPI_LogsFrom_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'LogsFrom'
+type ConsumerAPI_LogsFrom_Call struct {
+	*mock.Call
+}
+
+// LogsFrom is a helper method to define mock.On call
+//   - _a0 *v1.BatchArrowRecords
+func (_e *ConsumerAPI_Expecter) LogsFrom(_a0 interface{}) *ConsumerAPI_LogsFrom_Call {
+	return &ConsumerAPI_LogsFrom_Call{Call: _e.mock.On("LogsFrom", _a0)}
+}
+
+func (_c *ConsumerAPI_LogsFrom_Call) Run(run func(_a0 *v1.BatchArrowRecords)) *ConsumerAPI_LogsFrom_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(*v1.BatchArrowRecords))
+	})
+	return _c
+}
+
+func (_c *ConsumerAPI_LogsFrom_Call) Return(_a0 []plog.Logs, _a1 error) *ConsumerAPI_LogsFrom_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
 // TracesFrom provides a mock function with given fields: _a0
 func (_m *ConsumerAPI) TracesFrom(_a0 *v1.BatchArrowRecords) ([]ptrace.Traces, error) {
 	ret := _m.Called(_a0)
@@ -60,6 +91,29 @@ func (_m *ConsumerAPI) TracesFrom(_a0 *v1.BatchArrowRecords) ([]ptrace.Traces, e
 	}
 
 	return r0, r1
+}
+
+// ConsumerAPI_TracesFrom_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'TracesFrom'
+type ConsumerAPI_TracesFrom_Call struct {
+	*mock.Call
+}
+
+// TracesFrom is a helper method to define mock.On call
+//   - _a0 *v1.BatchArrowRecords
+func (_e *ConsumerAPI_Expecter) TracesFrom(_a0 interface{}) *ConsumerAPI_TracesFrom_Call {
+	return &ConsumerAPI_TracesFrom_Call{Call: _e.mock.On("TracesFrom", _a0)}
+}
+
+func (_c *ConsumerAPI_TracesFrom_Call) Run(run func(_a0 *v1.BatchArrowRecords)) *ConsumerAPI_TracesFrom_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(*v1.BatchArrowRecords))
+	})
+	return _c
+}
+
+func (_c *ConsumerAPI_TracesFrom_Call) Return(_a0 []ptrace.Traces, _a1 error) *ConsumerAPI_TracesFrom_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
 }
 
 type mockConstructorTestingTNewConsumerAPI interface {

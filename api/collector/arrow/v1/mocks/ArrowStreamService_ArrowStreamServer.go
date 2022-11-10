@@ -16,6 +16,14 @@ type ArrowStreamService_ArrowStreamServer struct {
 	mock.Mock
 }
 
+type ArrowStreamService_ArrowStreamServer_Expecter struct {
+	mock *mock.Mock
+}
+
+func (_m *ArrowStreamService_ArrowStreamServer) EXPECT() *ArrowStreamService_ArrowStreamServer_Expecter {
+	return &ArrowStreamService_ArrowStreamServer_Expecter{mock: &_m.Mock}
+}
+
 // Context provides a mock function with given fields:
 func (_m *ArrowStreamService_ArrowStreamServer) Context() context.Context {
 	ret := _m.Called()
@@ -30,6 +38,28 @@ func (_m *ArrowStreamService_ArrowStreamServer) Context() context.Context {
 	}
 
 	return r0
+}
+
+// ArrowStreamService_ArrowStreamServer_Context_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Context'
+type ArrowStreamService_ArrowStreamServer_Context_Call struct {
+	*mock.Call
+}
+
+// Context is a helper method to define mock.On call
+func (_e *ArrowStreamService_ArrowStreamServer_Expecter) Context() *ArrowStreamService_ArrowStreamServer_Context_Call {
+	return &ArrowStreamService_ArrowStreamServer_Context_Call{Call: _e.mock.On("Context")}
+}
+
+func (_c *ArrowStreamService_ArrowStreamServer_Context_Call) Run(run func()) *ArrowStreamService_ArrowStreamServer_Context_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *ArrowStreamService_ArrowStreamServer_Context_Call) Return(_a0 context.Context) *ArrowStreamService_ArrowStreamServer_Context_Call {
+	_c.Call.Return(_a0)
+	return _c
 }
 
 // Recv provides a mock function with given fields:
@@ -55,6 +85,28 @@ func (_m *ArrowStreamService_ArrowStreamServer) Recv() (*v1.BatchArrowRecords, e
 	return r0, r1
 }
 
+// ArrowStreamService_ArrowStreamServer_Recv_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Recv'
+type ArrowStreamService_ArrowStreamServer_Recv_Call struct {
+	*mock.Call
+}
+
+// Recv is a helper method to define mock.On call
+func (_e *ArrowStreamService_ArrowStreamServer_Expecter) Recv() *ArrowStreamService_ArrowStreamServer_Recv_Call {
+	return &ArrowStreamService_ArrowStreamServer_Recv_Call{Call: _e.mock.On("Recv")}
+}
+
+func (_c *ArrowStreamService_ArrowStreamServer_Recv_Call) Run(run func()) *ArrowStreamService_ArrowStreamServer_Recv_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *ArrowStreamService_ArrowStreamServer_Recv_Call) Return(_a0 *v1.BatchArrowRecords, _a1 error) *ArrowStreamService_ArrowStreamServer_Recv_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
 // RecvMsg provides a mock function with given fields: m
 func (_m *ArrowStreamService_ArrowStreamServer) RecvMsg(m interface{}) error {
 	ret := _m.Called(m)
@@ -67,6 +119,29 @@ func (_m *ArrowStreamService_ArrowStreamServer) RecvMsg(m interface{}) error {
 	}
 
 	return r0
+}
+
+// ArrowStreamService_ArrowStreamServer_RecvMsg_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RecvMsg'
+type ArrowStreamService_ArrowStreamServer_RecvMsg_Call struct {
+	*mock.Call
+}
+
+// RecvMsg is a helper method to define mock.On call
+//   - m interface{}
+func (_e *ArrowStreamService_ArrowStreamServer_Expecter) RecvMsg(m interface{}) *ArrowStreamService_ArrowStreamServer_RecvMsg_Call {
+	return &ArrowStreamService_ArrowStreamServer_RecvMsg_Call{Call: _e.mock.On("RecvMsg", m)}
+}
+
+func (_c *ArrowStreamService_ArrowStreamServer_RecvMsg_Call) Run(run func(m interface{})) *ArrowStreamService_ArrowStreamServer_RecvMsg_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(interface{}))
+	})
+	return _c
+}
+
+func (_c *ArrowStreamService_ArrowStreamServer_RecvMsg_Call) Return(_a0 error) *ArrowStreamService_ArrowStreamServer_RecvMsg_Call {
+	_c.Call.Return(_a0)
+	return _c
 }
 
 // Send provides a mock function with given fields: _a0
@@ -83,6 +158,29 @@ func (_m *ArrowStreamService_ArrowStreamServer) Send(_a0 *v1.BatchStatus) error 
 	return r0
 }
 
+// ArrowStreamService_ArrowStreamServer_Send_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Send'
+type ArrowStreamService_ArrowStreamServer_Send_Call struct {
+	*mock.Call
+}
+
+// Send is a helper method to define mock.On call
+//   - _a0 *v1.BatchStatus
+func (_e *ArrowStreamService_ArrowStreamServer_Expecter) Send(_a0 interface{}) *ArrowStreamService_ArrowStreamServer_Send_Call {
+	return &ArrowStreamService_ArrowStreamServer_Send_Call{Call: _e.mock.On("Send", _a0)}
+}
+
+func (_c *ArrowStreamService_ArrowStreamServer_Send_Call) Run(run func(_a0 *v1.BatchStatus)) *ArrowStreamService_ArrowStreamServer_Send_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(*v1.BatchStatus))
+	})
+	return _c
+}
+
+func (_c *ArrowStreamService_ArrowStreamServer_Send_Call) Return(_a0 error) *ArrowStreamService_ArrowStreamServer_Send_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
 // SendHeader provides a mock function with given fields: _a0
 func (_m *ArrowStreamService_ArrowStreamServer) SendHeader(_a0 metadata.MD) error {
 	ret := _m.Called(_a0)
@@ -95,6 +193,29 @@ func (_m *ArrowStreamService_ArrowStreamServer) SendHeader(_a0 metadata.MD) erro
 	}
 
 	return r0
+}
+
+// ArrowStreamService_ArrowStreamServer_SendHeader_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SendHeader'
+type ArrowStreamService_ArrowStreamServer_SendHeader_Call struct {
+	*mock.Call
+}
+
+// SendHeader is a helper method to define mock.On call
+//   - _a0 metadata.MD
+func (_e *ArrowStreamService_ArrowStreamServer_Expecter) SendHeader(_a0 interface{}) *ArrowStreamService_ArrowStreamServer_SendHeader_Call {
+	return &ArrowStreamService_ArrowStreamServer_SendHeader_Call{Call: _e.mock.On("SendHeader", _a0)}
+}
+
+func (_c *ArrowStreamService_ArrowStreamServer_SendHeader_Call) Run(run func(_a0 metadata.MD)) *ArrowStreamService_ArrowStreamServer_SendHeader_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(metadata.MD))
+	})
+	return _c
+}
+
+func (_c *ArrowStreamService_ArrowStreamServer_SendHeader_Call) Return(_a0 error) *ArrowStreamService_ArrowStreamServer_SendHeader_Call {
+	_c.Call.Return(_a0)
+	return _c
 }
 
 // SendMsg provides a mock function with given fields: m
@@ -111,6 +232,29 @@ func (_m *ArrowStreamService_ArrowStreamServer) SendMsg(m interface{}) error {
 	return r0
 }
 
+// ArrowStreamService_ArrowStreamServer_SendMsg_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SendMsg'
+type ArrowStreamService_ArrowStreamServer_SendMsg_Call struct {
+	*mock.Call
+}
+
+// SendMsg is a helper method to define mock.On call
+//   - m interface{}
+func (_e *ArrowStreamService_ArrowStreamServer_Expecter) SendMsg(m interface{}) *ArrowStreamService_ArrowStreamServer_SendMsg_Call {
+	return &ArrowStreamService_ArrowStreamServer_SendMsg_Call{Call: _e.mock.On("SendMsg", m)}
+}
+
+func (_c *ArrowStreamService_ArrowStreamServer_SendMsg_Call) Run(run func(m interface{})) *ArrowStreamService_ArrowStreamServer_SendMsg_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(interface{}))
+	})
+	return _c
+}
+
+func (_c *ArrowStreamService_ArrowStreamServer_SendMsg_Call) Return(_a0 error) *ArrowStreamService_ArrowStreamServer_SendMsg_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
 // SetHeader provides a mock function with given fields: _a0
 func (_m *ArrowStreamService_ArrowStreamServer) SetHeader(_a0 metadata.MD) error {
 	ret := _m.Called(_a0)
@@ -125,9 +269,55 @@ func (_m *ArrowStreamService_ArrowStreamServer) SetHeader(_a0 metadata.MD) error
 	return r0
 }
 
+// ArrowStreamService_ArrowStreamServer_SetHeader_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetHeader'
+type ArrowStreamService_ArrowStreamServer_SetHeader_Call struct {
+	*mock.Call
+}
+
+// SetHeader is a helper method to define mock.On call
+//   - _a0 metadata.MD
+func (_e *ArrowStreamService_ArrowStreamServer_Expecter) SetHeader(_a0 interface{}) *ArrowStreamService_ArrowStreamServer_SetHeader_Call {
+	return &ArrowStreamService_ArrowStreamServer_SetHeader_Call{Call: _e.mock.On("SetHeader", _a0)}
+}
+
+func (_c *ArrowStreamService_ArrowStreamServer_SetHeader_Call) Run(run func(_a0 metadata.MD)) *ArrowStreamService_ArrowStreamServer_SetHeader_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(metadata.MD))
+	})
+	return _c
+}
+
+func (_c *ArrowStreamService_ArrowStreamServer_SetHeader_Call) Return(_a0 error) *ArrowStreamService_ArrowStreamServer_SetHeader_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
 // SetTrailer provides a mock function with given fields: _a0
 func (_m *ArrowStreamService_ArrowStreamServer) SetTrailer(_a0 metadata.MD) {
 	_m.Called(_a0)
+}
+
+// ArrowStreamService_ArrowStreamServer_SetTrailer_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetTrailer'
+type ArrowStreamService_ArrowStreamServer_SetTrailer_Call struct {
+	*mock.Call
+}
+
+// SetTrailer is a helper method to define mock.On call
+//   - _a0 metadata.MD
+func (_e *ArrowStreamService_ArrowStreamServer_Expecter) SetTrailer(_a0 interface{}) *ArrowStreamService_ArrowStreamServer_SetTrailer_Call {
+	return &ArrowStreamService_ArrowStreamServer_SetTrailer_Call{Call: _e.mock.On("SetTrailer", _a0)}
+}
+
+func (_c *ArrowStreamService_ArrowStreamServer_SetTrailer_Call) Run(run func(_a0 metadata.MD)) *ArrowStreamService_ArrowStreamServer_SetTrailer_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(metadata.MD))
+	})
+	return _c
+}
+
+func (_c *ArrowStreamService_ArrowStreamServer_SetTrailer_Call) Return() *ArrowStreamService_ArrowStreamServer_SetTrailer_Call {
+	_c.Call.Return()
+	return _c
 }
 
 type mockConstructorTestingTNewArrowStreamService_ArrowStreamServer interface {

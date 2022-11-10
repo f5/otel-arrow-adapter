@@ -12,6 +12,14 @@ type ArrowStreamServiceServer struct {
 	mock.Mock
 }
 
+type ArrowStreamServiceServer_Expecter struct {
+	mock *mock.Mock
+}
+
+func (_m *ArrowStreamServiceServer) EXPECT() *ArrowStreamServiceServer_Expecter {
+	return &ArrowStreamServiceServer_Expecter{mock: &_m.Mock}
+}
+
 // ArrowStream provides a mock function with given fields: _a0
 func (_m *ArrowStreamServiceServer) ArrowStream(_a0 v1.ArrowStreamService_ArrowStreamServer) error {
 	ret := _m.Called(_a0)
@@ -26,9 +34,54 @@ func (_m *ArrowStreamServiceServer) ArrowStream(_a0 v1.ArrowStreamService_ArrowS
 	return r0
 }
 
+// ArrowStreamServiceServer_ArrowStream_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ArrowStream'
+type ArrowStreamServiceServer_ArrowStream_Call struct {
+	*mock.Call
+}
+
+// ArrowStream is a helper method to define mock.On call
+//   - _a0 v1.ArrowStreamService_ArrowStreamServer
+func (_e *ArrowStreamServiceServer_Expecter) ArrowStream(_a0 interface{}) *ArrowStreamServiceServer_ArrowStream_Call {
+	return &ArrowStreamServiceServer_ArrowStream_Call{Call: _e.mock.On("ArrowStream", _a0)}
+}
+
+func (_c *ArrowStreamServiceServer_ArrowStream_Call) Run(run func(_a0 v1.ArrowStreamService_ArrowStreamServer)) *ArrowStreamServiceServer_ArrowStream_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(v1.ArrowStreamService_ArrowStreamServer))
+	})
+	return _c
+}
+
+func (_c *ArrowStreamServiceServer_ArrowStream_Call) Return(_a0 error) *ArrowStreamServiceServer_ArrowStream_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
 // mustEmbedUnimplementedArrowStreamServiceServer provides a mock function with given fields:
 func (_m *ArrowStreamServiceServer) mustEmbedUnimplementedArrowStreamServiceServer() {
 	_m.Called()
+}
+
+// ArrowStreamServiceServer_mustEmbedUnimplementedArrowStreamServiceServer_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'mustEmbedUnimplementedArrowStreamServiceServer'
+type ArrowStreamServiceServer_mustEmbedUnimplementedArrowStreamServiceServer_Call struct {
+	*mock.Call
+}
+
+// mustEmbedUnimplementedArrowStreamServiceServer is a helper method to define mock.On call
+func (_e *ArrowStreamServiceServer_Expecter) mustEmbedUnimplementedArrowStreamServiceServer() *ArrowStreamServiceServer_mustEmbedUnimplementedArrowStreamServiceServer_Call {
+	return &ArrowStreamServiceServer_mustEmbedUnimplementedArrowStreamServiceServer_Call{Call: _e.mock.On("mustEmbedUnimplementedArrowStreamServiceServer")}
+}
+
+func (_c *ArrowStreamServiceServer_mustEmbedUnimplementedArrowStreamServiceServer_Call) Run(run func()) *ArrowStreamServiceServer_mustEmbedUnimplementedArrowStreamServiceServer_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *ArrowStreamServiceServer_mustEmbedUnimplementedArrowStreamServiceServer_Call) Return() *ArrowStreamServiceServer_mustEmbedUnimplementedArrowStreamServiceServer_Call {
+	_c.Call.Return()
+	return _c
 }
 
 type mockConstructorTestingTNewArrowStreamServiceServer interface {
