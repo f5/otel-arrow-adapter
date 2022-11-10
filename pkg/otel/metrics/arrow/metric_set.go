@@ -27,6 +27,7 @@ var (
 		{Name: constants.NAME, Type: acommon.DictU16String},
 		{Name: constants.DESCRIPTION, Type: acommon.DictU16String},
 		{Name: constants.UNIT, Type: acommon.DictU16String},
+		// TODO
 		// attributes
 		// start time
 		// end time
