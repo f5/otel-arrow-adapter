@@ -19,8 +19,23 @@ mv api/github.com/f5/otel-arrow-adapter/api/collector api
 rm -rf api/github.com
 
 # Generate the mock files
-go get github.com/golang/mock
-go install github.com/golang/mock
+go install github.com/vektra/mockery/v2@latest
+
 mkdir -p api/collector/arrow/v1/mock
-mockgen -package mock github.com/f5/otel-arrow-adapter/api/collector/arrow/v1 ArrowStreamServiceClient,ArrowStreamService_ArrowStreamClient,ArrowStreamServiceServer,ArrowStreamService_ArrowStreamServer > api/collector/arrow/v1/mock/arrow_service_mock.go
+mkdir -p pkg/otel/arrow_record/mock
+
+# mocks in pkg/otel/arrow_record
+ARROW_RECORD_MOCKS="ProducerAPI ConsumerAPI"
+
+for name in ${ARROW_RECORD_MOCKS}; do
+    mockery --dir ./pkg/otel/arrow_record --output ./pkg/otel/arrow_record/mocks --name ${name}
+done
+
+# mocks in api/collector/arrow/v1
+ARROW_COLLECTOR_API_MOCKS="ArrowStreamServiceClient ArrowStreamService_ArrowStreamClient ArrowStreamServiceServer ArrowStreamService_ArrowStreamServer"
+
+for name in ${ARROW_COLLECTOR_API_MOCKS}; do
+    mockery --dir ./api/collector/arrow/v1 --output ./api/collector/arrow/v1/mocks --name ${name}
+done
+
 go mod tidy
