@@ -72,10 +72,10 @@ func HistogramDataPointBuilderFrom(b *array.StructBuilder) *HistogramDataPointBu
 		heblb: b.FieldBuilder(6).(*array.ListBuilder),
 		hebb:  b.FieldBuilder(6).(*array.ListBuilder).ValueBuilder().(*array.Float64Builder),
 		elb:   b.FieldBuilder(7).(*array.ListBuilder),
-		eb:    ExemplarBuilderFrom(b.FieldBuilder(8).(*array.ListBuilder).ValueBuilder().(*array.StructBuilder)),
-		fb:    b.FieldBuilder(9).(*array.Uint32Builder),
-		hmib:  b.FieldBuilder(10).(*array.Float64Builder),
-		hmab:  b.FieldBuilder(11).(*array.Float64Builder),
+		eb:    ExemplarBuilderFrom(b.FieldBuilder(7).(*array.ListBuilder).ValueBuilder().(*array.StructBuilder)),
+		fb:    b.FieldBuilder(8).(*array.Uint32Builder),
+		hmib:  b.FieldBuilder(9).(*array.Float64Builder),
+		hmab:  b.FieldBuilder(10).(*array.Float64Builder),
 	}
 }
 
