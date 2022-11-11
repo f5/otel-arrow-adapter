@@ -32,7 +32,7 @@ type EHistogramDataPointBucketsBuilder struct {
 
 // NewEHistogramDataPointBucketsBuilder creates a new EHistogramDataPointBucketsBuilderFrom with a given memory allocator.
 func NewEHistogramDataPointBucketsBuilder(pool memory.Allocator) *EHistogramDataPointBucketsBuilder {
-	return EHistogramDataPointBucketsBuilderFrom(array.NewStructBuilder(pool, UnivariateHistogramDataPointDT))
+	return EHistogramDataPointBucketsBuilderFrom(array.NewStructBuilder(pool, EHistogramDataPointBucketsDT))
 }
 
 // EHistogramDataPointBucketsBuilderFrom creates a new EHistogramDataPointBucketsBuilder from an existing StructBuilder.

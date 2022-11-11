@@ -89,6 +89,15 @@ func (b *UnivariateEHistogramBuilder) Append(eh pmetric.ExponentialHistogram) er
 	} else {
 		b.hdplb.Append(false)
 	}
+	b.atb.Append(int32(eh.AggregationTemporality()))
 
 	return nil
+}
+
+func (b *UnivariateEHistogramBuilder) AppendNull() {
+	if b.released {
+		return
+	}
+
+	b.builder.Append(false)
 }

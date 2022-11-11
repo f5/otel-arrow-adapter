@@ -89,6 +89,15 @@ func (b *UnivariateHistogramBuilder) Append(histogram pmetric.Histogram) error {
 	} else {
 		b.hdplb.Append(false)
 	}
+	b.atb.Append(int32(histogram.AggregationTemporality()))
 
 	return nil
+}
+
+func (b *UnivariateHistogramBuilder) AppendNull() {
+	if b.released {
+		return
+	}
+
+	b.builder.Append(false)
 }

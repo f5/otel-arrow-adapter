@@ -120,7 +120,7 @@ func (b *HistogramDataPointBuilder) Append(hdp pmetric.HistogramDataPoint) error
 	hbcc := hbc.Len()
 	if hbcc > 0 {
 		b.hbclb.Append(true)
-		b.hbcb.Reserve(hbcc)
+		b.hbclb.Reserve(hbcc)
 		for i := 0; i < hbcc; i++ {
 			b.hbcb.Append(hbc.At(i))
 		}
@@ -132,7 +132,7 @@ func (b *HistogramDataPointBuilder) Append(hdp pmetric.HistogramDataPoint) error
 	hebc := heb.Len()
 	if hebc > 0 {
 		b.heblb.Append(true)
-		b.hebb.Reserve(hebc)
+		b.heblb.Reserve(hebc)
 		for i := 0; i < hebc; i++ {
 			b.hebb.Append(heb.At(i))
 		}
