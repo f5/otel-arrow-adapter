@@ -59,8 +59,8 @@ func (mg *MetricsGenerator) Generate(batchSize int, collectInterval time.Duratio
 		mg.SystemCpuTime(metrics.AppendEmpty(), 1)
 		mg.SystemMemoryUsage(metrics.AppendEmpty())
 		mg.SystemCpuLoadAverage1m(metrics.AppendEmpty())
-		mg.HypotheticalHistogram(metrics.AppendEmpty())
-		mg.HypotheticalExpHistogram(metrics.AppendEmpty())
+		mg.FakeHistogram(metrics.AppendEmpty())
+		mg.FakeExpHistogram(metrics.AppendEmpty())
 	}
 
 	mg.generation++
@@ -170,8 +170,10 @@ func (dg *DataGenerator) SystemCpuLoadAverage1m(metric pmetric.Metric) {
 	point.SetDoubleValue(dg.GenF64Range(1.0, 100.0))
 }
 
-func (dg *DataGenerator) HypotheticalHistogram(metric pmetric.Metric) {
-	metric.SetName("hypothetical.histogram")
+// FakeHistogram generates a fake histogram metric.
+// All field are purposely filled with random values.
+func (dg *DataGenerator) FakeHistogram(metric pmetric.Metric) {
+	metric.SetName("fake.histogram")
 	metric.SetDescription("A histogram with a few buckets.")
 	metric.SetUnit("1")
 
@@ -205,8 +207,10 @@ func (dg *DataGenerator) HypotheticalHistogram(metric pmetric.Metric) {
 	}
 }
 
-func (dg *DataGenerator) HypotheticalExpHistogram(metric pmetric.Metric) {
-	metric.SetName("hypothetical.exp_histogram")
+// FakeExpHistogram generates a fake exponential histogram metric.
+// All field are purposely filled with random values.
+func (dg *DataGenerator) FakeExpHistogram(metric pmetric.Metric) {
+	metric.SetName("fake.exp_histogram")
 	metric.SetDescription("An exponential histogram with a few buckets.")
 	metric.SetUnit("1")
 

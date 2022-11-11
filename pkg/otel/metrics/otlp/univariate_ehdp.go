@@ -12,6 +12,8 @@ import (
 	"github.com/f5/otel-arrow-adapter/pkg/otel/constants"
 )
 
+// UnivariateEHistogramDataPointIds is a struct containing the field ids for the
+// fields of ExponentialHistogramDataPoint.
 type UnivariateEHistogramDataPointIds struct {
 	Id                int
 	Attributes        *otlp.AttributeIds
@@ -29,6 +31,7 @@ type UnivariateEHistogramDataPointIds struct {
 	Max               int
 }
 
+// NewUnivariateEHistogramDataPointIds returns a new UnivariateEHistogramDataPointIds struct.
 func NewUnivariateEHistogramDataPointIds(parentDT *arrow.StructType) (*UnivariateEHistogramDataPointIds, error) {
 	id, ehdpDT, err := arrow_utils.ListOfStructsFieldIdFromStruct(parentDT, constants.DATA_POINTS)
 	if err != nil {
@@ -126,6 +129,8 @@ func NewUnivariateEHistogramDataPointIds(parentDT *arrow.StructType) (*Univariat
 	}, nil
 }
 
+// AppendUnivariateEHistogramDataPointInto appends exponential histogram data points into the
+// given slice of ExponentialHistogramDataPoint decoded from the ehdp array.
 func AppendUnivariateEHistogramDataPointInto(ehdpSlice pmetric.ExponentialHistogramDataPointSlice, ehdp *arrow_utils.ListOfStructs, ids *UnivariateEHistogramDataPointIds) error {
 	if ehdp == nil {
 		return nil
