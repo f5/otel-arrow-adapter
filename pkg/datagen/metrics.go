@@ -60,6 +60,7 @@ func (mg *MetricsGenerator) Generate(batchSize int, collectInterval time.Duratio
 		mg.SystemMemoryUsage(metrics.AppendEmpty())
 		mg.SystemCpuLoadAverage1m(metrics.AppendEmpty())
 		mg.HypotheticalHistogram(metrics.AppendEmpty())
+		mg.HypotheticalExpHistogram(metrics.AppendEmpty())
 	}
 
 	mg.generation++
@@ -198,6 +199,48 @@ func (dg *DataGenerator) HypotheticalHistogram(metric pmetric.Metric) {
 		for j := 0; j < 10; j++ {
 			ebs.Append(dg.GenF64Range(0, 100))
 		}
+		dp.SetFlags(pmetric.DataPointFlags(dg.GenI64Range(1, 50)))
+		dp.SetMin(dg.GenF64Range(0, 100))
+		dp.SetMax(dg.GenF64Range(0, 100))
+	}
+}
+
+func (dg *DataGenerator) HypotheticalExpHistogram(metric pmetric.Metric) {
+	metric.SetName("hypothetical.exp_histogram")
+	metric.SetDescription("An exponential histogram with a few buckets.")
+	metric.SetUnit("1")
+
+	histogram := metric.SetEmptyExponentialHistogram()
+	histogram.SetAggregationTemporality(pmetric.AggregationTemporalityCumulative)
+
+	dps := histogram.DataPoints()
+	dps.EnsureCapacity(10)
+
+	for i := 0; i < 10; i++ {
+		dp := dps.AppendEmpty()
+		dp.SetStartTimestamp(dg.PrevTime())
+		dp.SetTimestamp(dg.CurrentTime())
+		dp.SetCount(uint64(dg.GenI64Range(0, 100)))
+		dp.SetSum(dg.GenF64Range(0, 100))
+		dp.SetScale(int32(dg.GenI64Range(0, 100)))
+		dp.SetZeroCount(uint64(dg.GenI64Range(0, 100)))
+
+		positive := dp.Positive()
+		positive.SetOffset(int32(dg.GenI64Range(0, 100)))
+		buckets := positive.BucketCounts()
+		buckets.EnsureCapacity(10)
+		for j := 0; j < 10; j++ {
+			buckets.Append(uint64(dg.GenI64Range(0, 100)))
+		}
+
+		negative := dp.Negative()
+		negative.SetOffset(int32(dg.GenI64Range(0, 100)))
+		buckets = negative.BucketCounts()
+		buckets.EnsureCapacity(10)
+		for j := 0; j < 10; j++ {
+			buckets.Append(uint64(dg.GenI64Range(0, 100)))
+		}
+
 		dp.SetFlags(pmetric.DataPointFlags(dg.GenI64Range(1, 50)))
 		dp.SetMin(dg.GenF64Range(0, 100))
 		dp.SetMax(dg.GenF64Range(0, 100))

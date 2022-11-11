@@ -13,11 +13,12 @@ import (
 )
 
 type UnivariateMetricIds struct {
-	Id                     int
-	UnivariateGaugeIds     *UnivariateGaugeIds
-	UnivariateSumIds       *UnivariateSumIds
-	UnivariateSummaryIds   *UnivariateSummaryIds
-	UnivariateHistogramIds *UnivariateHistogramIds
+	Id                      int
+	UnivariateGaugeIds      *UnivariateGaugeIds
+	UnivariateSumIds        *UnivariateSumIds
+	UnivariateSummaryIds    *UnivariateSummaryIds
+	UnivariateHistogramIds  *UnivariateHistogramIds
+	UnivariateEHistogramIds *UnivariateEHistogramIds
 }
 
 func NewUnivariateMetricIds(parentDT *arrow.StructType) (*UnivariateMetricIds, error) {
@@ -66,12 +67,22 @@ func NewUnivariateMetricIds(parentDT *arrow.StructType) (*UnivariateMetricIds, e
 		return nil, err
 	}
 
+	ehistogramDT, ok := dataDT.Fields()[ametric.ExpHistogramCode].Type.(*arrow.StructType)
+	if !ok {
+		return nil, fmt.Errorf("ehistogram field is not a struct")
+	}
+	ehistogramIds, err := NewUnivariateEHistogramIds(ehistogramDT)
+	if err != nil {
+		return nil, err
+	}
+
 	return &UnivariateMetricIds{
-		Id:                     id,
-		UnivariateGaugeIds:     gaugeIds,
-		UnivariateSumIds:       sumIds,
-		UnivariateSummaryIds:   summaryIds,
-		UnivariateHistogramIds: histogramIds,
+		Id:                      id,
+		UnivariateGaugeIds:      gaugeIds,
+		UnivariateSumIds:        sumIds,
+		UnivariateSummaryIds:    summaryIds,
+		UnivariateHistogramIds:  histogramIds,
+		UnivariateEHistogramIds: ehistogramIds,
 	}, nil
 }
 
@@ -90,6 +101,8 @@ func UpdateUnivariateMetricFrom(metric pmetric.Metric, los *arrow_utils.ListOfSt
 		return UpdateUnivariateSummaryFrom(metric.SetEmptySummary(), arr.Field(int(tcode)).(*array.Struct), row, ids.UnivariateSummaryIds)
 	case ametric.HistogramCode:
 		return UpdateUnivariateHistogramFrom(metric.SetEmptyHistogram(), arr.Field(int(tcode)).(*array.Struct), row, ids.UnivariateHistogramIds)
+	case ametric.ExpHistogramCode:
+		return UpdateUnivariateEHistogramFrom(metric.SetEmptyExponentialHistogram(), arr.Field(int(tcode)).(*array.Struct), row, ids.UnivariateEHistogramIds)
 	default:
 		return fmt.Errorf("UpdateUnivariateMetricFrom: unknown type code %d", tcode)
 	}
