@@ -42,8 +42,8 @@ func TestOtlpMetricsToArrowRecords(t *testing.T) {
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}
-	if len(multiSchemaRecords) != 3 {
-		t.Errorf("Expected 3 record, got %d", len(multiSchemaRecords))
+	if len(multiSchemaRecords) != 4 {
+		t.Errorf("Expected 4 record, got %d", len(multiSchemaRecords))
 	}
 	for _, record := range multiSchemaRecords {
 		schemaId := arrow.SchemaToId(record.Schema())
@@ -67,6 +67,13 @@ func TestOtlpMetricsToArrowRecords(t *testing.T) {
 				t.Errorf("Expected 5 fields, got %d", record.NumCols())
 			}
 			if record.NumRows() != 10 {
+				t.Errorf("Expected 10 rows, got %d", record.NumRows())
+			}
+		case "flags:U32,histogram_hypothetical.histogram:{bucket_counts:[U64],count:U64,explicit_bounds:[F64],max:F64,min:F64,sum:F64},resource:{attributes:{hostname:Dic<U8,Str>,ip:Dic<U8,Str>,status:I64,up:Bol,version:F64}},scope_metrics:{name:Dic<U8,Str>,version:Dic<U8,Str>},start_time_unix_nano:U64,time_unix_nano:U64":
+			if record.NumCols() != 6 {
+				t.Errorf("Expected 7 fields, got %d", record.NumCols())
+			}
+			if record.NumRows() != 100 {
 				t.Errorf("Expected 10 rows, got %d", record.NumRows())
 			}
 		default:
