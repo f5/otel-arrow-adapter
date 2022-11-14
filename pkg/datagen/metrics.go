@@ -238,7 +238,7 @@ func (dg *DataGenerator) FakeExpHistogram(metric pmetric.Metric) {
 		}
 
 		negative := dp.Negative()
-		negative.SetOffset(int32(dg.GenI64Range(0, 100)))
+		negative.SetOffset(int32(dg.GenI64Range(-100, 100)))
 		buckets = negative.BucketCounts()
 		buckets.EnsureCapacity(10)
 		for j := 0; j < 10; j++ {
