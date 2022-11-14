@@ -226,7 +226,7 @@ func (dg *DataGenerator) FakeExpHistogram(metric pmetric.Metric) {
 		dp.SetTimestamp(dg.CurrentTime())
 		dp.SetCount(uint64(dg.GenI64Range(0, 100)))
 		dp.SetSum(dg.GenF64Range(0, 100))
-		dp.SetScale(int32(dg.GenI64Range(0, 100)))
+		dp.SetScale(int32(dg.GenI64Range(-10, 10)))
 		dp.SetZeroCount(uint64(dg.GenI64Range(0, 100)))
 
 		positive := dp.Positive()
