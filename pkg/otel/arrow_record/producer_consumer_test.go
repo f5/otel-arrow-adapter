@@ -2,6 +2,7 @@ package arrow_record
 
 import (
 	"encoding/json"
+	"math/rand"
 	"testing"
 	"time"
 
@@ -17,10 +18,13 @@ import (
 func FuzzProducerConsumerTraces(f *testing.F) {
 	const numSeeds = 5
 
+	ent := datagen.NewTestEntropy(12345)
+
 	for i := 0; i < numSeeds; i++ {
 		dg := datagen.NewTracesGenerator(
-			datagen.DefaultResourceAttributes(),
-			datagen.DefaultInstrumentationScopes(),
+			ent,
+			ent.NewStandardResourceAttributes(),
+			ent.NewStandardInstrumentationScopes(),
 		)
 		traces1 := dg.Generate(i+1, time.Minute)
 		traces2 := dg.Generate(i+1, time.Minute)
@@ -61,9 +65,12 @@ func FuzzProducerConsumerTraces(f *testing.F) {
 }
 
 func TestProducerConsumerTraces(t *testing.T) {
+	ent := datagen.NewTestEntropy(int64(rand.Uint64()))
+
 	dg := datagen.NewTracesGenerator(
-		datagen.DefaultResourceAttributes(),
-		datagen.DefaultInstrumentationScopes(),
+		ent,
+		ent.NewStandardResourceAttributes(),
+		ent.NewStandardInstrumentationScopes(),
 	)
 	traces := dg.Generate(10, time.Minute)
 
@@ -85,9 +92,12 @@ func TestProducerConsumerTraces(t *testing.T) {
 }
 
 func TestProducerConsumerLogs(t *testing.T) {
+	ent := datagen.NewTestEntropy(int64(rand.Uint64()))
+
 	dg := datagen.NewLogsGenerator(
-		datagen.DefaultResourceAttributes(),
-		datagen.DefaultInstrumentationScopes(),
+		ent,
+		ent.NewStandardResourceAttributes(),
+		ent.NewStandardInstrumentationScopes(),
 	)
 	logs := dg.Generate(10, time.Minute)
 
