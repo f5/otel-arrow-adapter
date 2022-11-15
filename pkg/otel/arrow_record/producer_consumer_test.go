@@ -11,7 +11,54 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/pdata/plog/plogotlp"
 	"go.opentelemetry.io/collector/pdata/ptrace/ptraceotlp"
+	"google.golang.org/protobuf/proto"
 )
+
+func FuzzProducerConsumerTraces(f *testing.F) {
+	const numSeeds = 5
+
+	for i := 0; i < numSeeds; i++ {
+		dg := datagen.NewTracesGenerator(
+			datagen.DefaultResourceAttributes(),
+			datagen.DefaultInstrumentationScopes(),
+		)
+		traces1 := dg.Generate(i+1, time.Minute)
+		traces2 := dg.Generate(i+1, time.Minute)
+
+		producer := NewProducer()
+
+		batch1, err1 := producer.BatchArrowRecordsFromTraces(traces1)
+		require.NoError(f, err1)
+		batch2, err2 := producer.BatchArrowRecordsFromTraces(traces2)
+		require.NoError(f, err2)
+
+		b1b, err1 := proto.Marshal(batch1)
+		b2b, err2 := proto.Marshal(batch2)
+
+		f.Add(b1b, b2b)
+	}
+
+	f.Fuzz(func(t *testing.T, b1, b2 []byte) {
+		var b1b arrowpb.BatchArrowRecords
+		var b2b arrowpb.BatchArrowRecords
+
+		if err := proto.Unmarshal(b1, &b1b); err != nil {
+			return
+		}
+		if err := proto.Unmarshal(b2, &b1b); err != nil {
+			return
+		}
+
+		consumer := NewConsumer()
+
+		if _, err := consumer.TracesFrom(&b1b); err != nil {
+			return
+		}
+		if _, err := consumer.TracesFrom(&b2b); err != nil {
+			return
+		}
+	})
+}
 
 func TestProducerConsumerTraces(t *testing.T) {
 	dg := datagen.NewTracesGenerator(
