@@ -15,6 +15,10 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
+// Fuzz-tests the consumer on a sequence of two OTLP protobuf inputs.
+// Note: This is basically a fuzz-tester of the Arrow IPC library.
+// TODO: Note we can add a memory allocator to limit some of the memory
+// allocated by Arrow, but not all of it.
 func FuzzConsumerTraces(f *testing.F) {
 	const numSeeds = 5
 
@@ -64,6 +68,7 @@ func FuzzConsumerTraces(f *testing.F) {
 	})
 }
 
+// Fuzz-tests the producer on a sequence of two OTLP protobuf inputs.
 func FuzzProducerTraces2(f *testing.F) {
 	const numSeeds = 5
 
@@ -112,6 +117,7 @@ func FuzzProducerTraces2(f *testing.F) {
 	})
 }
 
+// Fuzz-tests the producer on the second in sequence of two OTLP protobuf inputs.
 func FuzzProducerTraces1(f *testing.F) {
 	const numSeeds = 5
 

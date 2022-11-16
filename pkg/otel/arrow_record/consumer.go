@@ -21,6 +21,7 @@ import (
 	"bytes"
 
 	"github.com/apache/arrow/go/v11/arrow/ipc"
+	"github.com/apache/arrow/go/v11/arrow/memory"
 	"go.opentelemetry.io/collector/pdata/plog"
 	"go.opentelemetry.io/collector/pdata/ptrace"
 
@@ -41,6 +42,33 @@ var _ ConsumerAPI = &Consumer{}
 // Consumer is a BatchArrowRecords consumer.
 type Consumer struct {
 	streamConsumers map[string]*streamConsumer
+	inuse           uint64
+	limit           uint64
+}
+
+func (c *Consumer) Allocate(size int) []byte {
+	change := uint64(size)
+	if c.inuse+change > c.limit {
+		panic("out of memory")
+	}
+
+	c.inuse += change
+	return memory.DefaultAllocator.Allocate(size)
+}
+
+func (c *Consumer) Reallocate(size int, b []byte) []byte {
+	change := uint64(size - len(b))
+	if c.inuse+change > c.limit {
+		panic("out of memory")
+	}
+
+	c.inuse += change
+	return memory.DefaultAllocator.Reallocate(size, b)
+}
+
+func (c *Consumer) Free(b []byte) {
+	c.inuse -= uint64(len(b))
+	memory.DefaultAllocator.Free(b)
 }
 
 type streamConsumer struct {
@@ -52,6 +80,7 @@ type streamConsumer struct {
 func NewConsumer() *Consumer {
 	return &Consumer{
 		streamConsumers: make(map[string]*streamConsumer),
+		limit:           200 << 20,
 	}
 }
 
@@ -120,7 +149,7 @@ func (c *Consumer) Consume(bar *colarspb.BatchArrowRecords) ([]*RecordMessage, e
 
 		sc.bufReader.Reset(payload.Record)
 		if sc.ipcReader == nil {
-			ipcReader, err := ipc.NewReader(sc.bufReader)
+			ipcReader, err := ipc.NewReader(sc.bufReader, ipc.WithAllocator(c))
 			if err != nil {
 				return nil, err
 			}
