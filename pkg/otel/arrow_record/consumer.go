@@ -26,6 +26,7 @@ import (
 	"go.opentelemetry.io/collector/pdata/ptrace"
 
 	colarspb "github.com/f5/otel-arrow-adapter/api/collector/arrow/v1"
+	common "github.com/f5/otel-arrow-adapter/pkg/otel/common/arrow"
 	logs_otlp "github.com/f5/otel-arrow-adapter/pkg/otel/logs/otlp"
 	traces_otlp "github.com/f5/otel-arrow-adapter/pkg/otel/traces/otlp"
 )
@@ -42,33 +43,8 @@ var _ ConsumerAPI = &Consumer{}
 // Consumer is a BatchArrowRecords consumer.
 type Consumer struct {
 	streamConsumers map[string]*streamConsumer
-	inuse           uint64
-	limit           uint64
-}
 
-func (c *Consumer) Allocate(size int) []byte {
-	change := uint64(size)
-	if c.inuse+change > c.limit {
-		panic("out of memory")
-	}
-
-	c.inuse += change
-	return memory.DefaultAllocator.Allocate(size)
-}
-
-func (c *Consumer) Reallocate(size int, b []byte) []byte {
-	change := uint64(size - len(b))
-	if c.inuse+change > c.limit {
-		panic("out of memory")
-	}
-
-	c.inuse += change
-	return memory.DefaultAllocator.Reallocate(size, b)
-}
-
-func (c *Consumer) Free(b []byte) {
-	c.inuse -= uint64(len(b))
-	memory.DefaultAllocator.Free(b)
+	memLimit uint64
 }
 
 type streamConsumer struct {
@@ -80,7 +56,9 @@ type streamConsumer struct {
 func NewConsumer() *Consumer {
 	return &Consumer{
 		streamConsumers: make(map[string]*streamConsumer),
-		limit:           200 << 20,
+
+		// TODO: configure this limit with a functional option
+		memLimit: 20 << 20,
 	}
 }
 
@@ -149,7 +127,7 @@ func (c *Consumer) Consume(bar *colarspb.BatchArrowRecords) ([]*RecordMessage, e
 
 		sc.bufReader.Reset(payload.Record)
 		if sc.ipcReader == nil {
-			ipcReader, err := ipc.NewReader(sc.bufReader, ipc.WithAllocator(c))
+			ipcReader, err := ipc.NewReader(sc.bufReader, ipc.WithAllocator(common.NewLimitedAllocator(memory.NewGoAllocator(), c.memLimit)))
 			if err != nil {
 				return nil, err
 			}
