@@ -15,7 +15,7 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-func FuzzProducerConsumerTraces(f *testing.F) {
+func FuzzConsumerTraces(f *testing.F) {
 	const numSeeds = 5
 
 	ent := datagen.NewTestEntropy(12345)
@@ -59,6 +59,95 @@ func FuzzProducerConsumerTraces(f *testing.F) {
 			return
 		}
 		if _, err := consumer.TracesFrom(&b2b); err != nil {
+			return
+		}
+	})
+}
+
+func FuzzProducerTraces2(f *testing.F) {
+	const numSeeds = 5
+
+	ent := datagen.NewTestEntropy(12345)
+
+	for i := 0; i < numSeeds; i++ {
+		dg := datagen.NewTracesGenerator(
+			ent,
+			ent.NewStandardResourceAttributes(),
+			ent.NewStandardInstrumentationScopes(),
+		)
+		traces1 := dg.Generate(i+1, time.Minute)
+		traces2 := dg.Generate(i+1, time.Minute)
+
+		b1b, err1 := ptraceotlp.NewExportRequestFromTraces(traces1).MarshalProto()
+		if err1 != nil {
+			panic(err1)
+		}
+		b2b, err2 := ptraceotlp.NewExportRequestFromTraces(traces2).MarshalProto()
+		if err2 != nil {
+			panic(err2)
+		}
+
+		f.Add(b1b, b2b)
+	}
+
+	f.Fuzz(func(t *testing.T, b1, b2 []byte) {
+		e1 := ptraceotlp.NewExportRequest()
+		e2 := ptraceotlp.NewExportRequest()
+
+		if err := e1.UnmarshalProto(b1); err != nil {
+			return
+		}
+		if err := e2.UnmarshalProto(b2); err != nil {
+			return
+		}
+
+		producer := NewProducer()
+
+		if _, err := producer.BatchArrowRecordsFromTraces(e1.Traces()); err != nil {
+			return
+		}
+		if _, err := producer.BatchArrowRecordsFromTraces(e2.Traces()); err != nil {
+			return
+		}
+	})
+}
+
+func FuzzProducerTraces1(f *testing.F) {
+	const numSeeds = 5
+
+	ent := datagen.NewTestEntropy(12345)
+
+	dg := datagen.NewTracesGenerator(
+		ent,
+		ent.NewStandardResourceAttributes(),
+		ent.NewStandardInstrumentationScopes(),
+	)
+	traces1 := dg.Generate(1, time.Minute)
+
+	for i := 0; i < numSeeds; i++ {
+		traces2 := dg.Generate(11, time.Minute)
+
+		b2b, err2 := ptraceotlp.NewExportRequestFromTraces(traces2).MarshalProto()
+		if err2 != nil {
+			panic(err2)
+		}
+
+		f.Add(b2b)
+	}
+
+	f.Fuzz(func(t *testing.T, b2 []byte) {
+		e2 := ptraceotlp.NewExportRequest()
+
+		if err := e2.UnmarshalProto(b2); err != nil {
+			return
+		}
+
+		producer := NewProducer()
+
+		if _, err := producer.BatchArrowRecordsFromTraces(traces1); err != nil {
+			t.Error("unexpected fail", err)
+		}
+		if _, err := producer.BatchArrowRecordsFromTraces(e2.Traces()); err != nil {
 			return
 		}
 	})
