@@ -14,6 +14,8 @@ github.com/apache/arrow/go/arrow v0.0.0-20211112161151-bc219186db40 h1:q4dksr6IC
 github.com/apache/arrow/go/arrow v0.0.0-20211112161151-bc219186db40/go.mod h1:Q7yQnSMnLvcXlZ8RV+jwz/6y1rQTqbX6C82SndT52Zs=
 github.com/apache/arrow/go/v11 v11.0.0-20221108144011-89a65b06a199 h1:bqrZRAGaf5gEai8himdntwKW+J5PPts7dZvfAu0kN9U=
 github.com/apache/arrow/go/v11 v11.0.0-20221108144011-89a65b06a199/go.mod h1:Q32o+NHZTzx1r3xbYklfUu7RxiRlN78ZCqMFrspF7To=
+github.com/apache/arrow/go/v11 v11.0.0-20221116153901-e38141421d43 h1:d4KPcJL5+oVJMjFAMeInEd+jX36npptNQyWQmkoEobA=
+github.com/apache/arrow/go/v11 v11.0.0-20221116153901-e38141421d43/go.mod h1:Q32o+NHZTzx1r3xbYklfUu7RxiRlN78ZCqMFrspF7To=
 github.com/apache/thrift v0.16.0 h1:qEy6UW60iVOlUy+b9ZR0d5WzUWYGOo4HfopoyBaNmoY=
 github.com/apache/thrift v0.16.0/go.mod h1:PHK3hniurgQaNMZYaCLEqXKsYK8upmhPbmdP2FXSqgU=
 github.com/boombuler/barcode v1.0.0/go.mod h1:paBWMcWSl3LHKBqUq+rly7CNSldXjb2rDl3JlRe0mD8=
