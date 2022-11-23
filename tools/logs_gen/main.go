@@ -50,7 +50,7 @@ func main() {
 	// Generate the dataset.
 	entropy := datagen.NewTestEntropy(int64(rand.Uint64()))
 	generator := datagen.NewLogsGenerator(entropy, entropy.NewStandardResourceAttributes(), entropy.NewStandardInstrumentationScopes())
-	request := plogotlp.NewRequestFromLogs(generator.Generate(batchSize, 100))
+	request := plogotlp.NewExportRequestFromLogs(generator.Generate(batchSize, 100))
 
 	// Marshal the request to bytes.
 	msg, err := request.MarshalProto()

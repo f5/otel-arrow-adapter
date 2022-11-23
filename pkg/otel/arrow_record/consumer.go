@@ -19,6 +19,7 @@ package arrow_record
 
 import (
 	"bytes"
+	"fmt"
 
 	"github.com/apache/arrow/go/v11/arrow/ipc"
 	"github.com/apache/arrow/go/v11/arrow/memory"
@@ -125,8 +126,10 @@ func (c *Consumer) TracesFrom(bar *colarspb.BatchArrowRecords) ([]ptrace.Traces,
 	}
 
 	var result []ptrace.Traces
+	fmt.Println("RECRRRS:(", len(records))
 	for _, record := range records {
 		traces, err := record2Traces(record)
+		fmt.Println("HEYY:(", traces)
 		if err != nil {
 			return nil, err
 		}
