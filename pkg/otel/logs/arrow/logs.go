@@ -8,6 +8,7 @@ import (
 	"github.com/apache/arrow/go/v11/arrow/memory"
 	"go.opentelemetry.io/collector/pdata/plog"
 
+	"github.com/f5/otel-arrow-adapter/pkg/otel/common"
 	acommon "github.com/f5/otel-arrow-adapter/pkg/otel/common/arrow"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/constants"
 )
@@ -27,10 +28,12 @@ type LogsBuilder struct {
 	builder *array.RecordBuilder    // Record builder
 	rlb     *array.ListBuilder      // ResourceLogs list builder
 	rlp     *ResourceLogsBuilder    // resource logs builder
+
+	config *common.LogConfig
 }
 
 // NewLogsBuilder creates a new LogsBuilder with a given allocator.
-func NewLogsBuilder(pool memory.Allocator, schema *acommon.AdaptiveSchema) (*LogsBuilder, error) {
+func NewLogsBuilder(pool memory.Allocator, schema *acommon.AdaptiveSchema, logConfig *common.LogConfig) (*LogsBuilder, error) {
 	builder := array.NewRecordBuilder(pool, schema.Schema())
 	err := schema.InitDictionaryBuilders(builder)
 	if err != nil {
@@ -46,6 +49,7 @@ func NewLogsBuilder(pool memory.Allocator, schema *acommon.AdaptiveSchema) (*Log
 		builder:  builder,
 		rlb:      rlb,
 		rlp:      ResourceLogsBuilderFrom(rlb.ValueBuilder().(*array.StructBuilder)),
+		config:   logConfig,
 	}, nil
 }
 

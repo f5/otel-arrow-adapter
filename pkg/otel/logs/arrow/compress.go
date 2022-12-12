@@ -19,34 +19,29 @@ package arrow
 
 import (
 	"fmt"
-	"github.com/f5/otel-arrow-adapter/pkg/otel/common"
 	"regexp"
 	"strings"
+
+	"github.com/f5/otel-arrow-adapter/pkg/otel/common"
 )
 
-type Config struct {
-	delimiter   string
-	dictVars    []string
-	nonDictVars []string
-}
-
 type LogCompressor struct {
-	config      Config
+	config      common.LogConfig
 	delimiter   *regexp.Regexp
 	dictVars    []*regexp.Regexp
 	nonDictVars []*regexp.Regexp
 }
 
-func NewLogCompressor(config Config) *LogCompressor {
-	delimiter := regexp.MustCompile(fmt.Sprintf("[%s]", config.delimiter))
+func NewLogCompressor(config common.LogConfig) *LogCompressor {
+	delimiter := regexp.MustCompile(fmt.Sprintf("[%s]", config.Delimiter))
 
-	dictVars := make([]*regexp.Regexp, len(config.dictVars))
-	for i, pattern := range config.dictVars {
+	dictVars := make([]*regexp.Regexp, len(config.DictVars))
+	for i, pattern := range config.DictVars {
 		dictVars[i] = regexp.MustCompile(fmt.Sprintf("^%s$", pattern))
 	}
 
-	nonDictVars := make([]*regexp.Regexp, len(config.nonDictVars))
-	for i, pattern := range config.nonDictVars {
+	nonDictVars := make([]*regexp.Regexp, len(config.NonDictVars))
+	for i, pattern := range config.NonDictVars {
 		nonDictVars[i] = regexp.MustCompile(fmt.Sprintf("^%s$", pattern))
 	}
 
@@ -58,7 +53,7 @@ func NewLogCompressor(config Config) *LogCompressor {
 	}
 }
 
-func (lc *LogCompressor) Compress(log string) *common.Segment {
+func (lc *LogCompressor) Compress(log string) *common.EncodedLog {
 	// TODO combine patterns into one regexp
 
 	var (
@@ -72,7 +67,7 @@ func (lc *LogCompressor) Compress(log string) *common.Segment {
 
 	if len(delimiterIndices) == 0 {
 		// No delimiters found, return the whole log as a log type
-		return &common.Segment{
+		return &common.EncodedLog{
 			LogType: log,
 		}
 	}
@@ -122,7 +117,7 @@ func (lc *LogCompressor) Compress(log string) *common.Segment {
 		}
 	}
 
-	return &common.Segment{
+	return &common.EncodedLog{
 		LogType:     logTypeBuf.String(),
 		DictVars:    dictVars,
 		NonDictVars: nonDictVars,

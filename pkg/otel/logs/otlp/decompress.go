@@ -23,7 +23,7 @@ import (
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common"
 )
 
-func Decompress(seg *common.Segment) string {
+func Decompress(seg *common.EncodedLog) string {
 	var log strings.Builder
 	x11 := false
 	x12 := false

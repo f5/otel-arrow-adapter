@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/pdata/plog"
 
+	"github.com/f5/otel-arrow-adapter/pkg/otel/common"
 	acommon "github.com/f5/otel-arrow-adapter/pkg/otel/common/arrow"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/internal"
 )
@@ -111,7 +112,7 @@ func TestLogs(t *testing.T) {
 	defer pool.AssertSize(t, 0)
 	logsSchema := acommon.NewAdaptiveSchema(Schema)
 	defer logsSchema.Release()
-	tb, err := NewLogsBuilder(pool, logsSchema)
+	tb, err := NewLogsBuilder(pool, logsSchema, common.DefaultLogConfig())
 	require.NoError(t, err)
 
 	err = tb.Append(Logs())
