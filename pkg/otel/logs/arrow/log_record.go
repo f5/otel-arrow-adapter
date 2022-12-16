@@ -26,6 +26,7 @@ var (
 		{Name: constants.ATTRIBUTES, Type: acommon.AttributesDT},
 		{Name: constants.DROPPED_ATTRIBUTES_COUNT, Type: arrow.PrimitiveTypes.Uint32},
 		{Name: constants.FLAGS, Type: arrow.PrimitiveTypes.Uint32},
+		{Name: constants.ENCODED_STR_BODY, Type: EncodedLogDT},
 	}...)
 )
 
@@ -45,6 +46,7 @@ type LogRecordBuilder struct {
 	ab    *acommon.AttributesBuilder         // attributes builder
 	dacb  *array.Uint32Builder               // dropped attributes count builder
 	fb    *array.Uint32Builder               // flags builder
+	elb   *EncodedLogBuilder                 // encoded log body builder
 }
 
 // NewLogRecordBuilder creates a new LogRecordBuilder with a given allocator.
@@ -70,6 +72,7 @@ func LogRecordBuilderFrom(sb *array.StructBuilder) *LogRecordBuilder {
 		ab:       acommon.AttributesBuilderFrom(sb.FieldBuilder(7).(*array.MapBuilder)),
 		dacb:     sb.FieldBuilder(8).(*array.Uint32Builder),
 		fb:       sb.FieldBuilder(9).(*array.Uint32Builder),
+		elb:      EncodedLogBuilderFrom(sb.FieldBuilder(10).(*array.StructBuilder) /* todo */, nil),
 	}
 }
 
@@ -120,6 +123,11 @@ func (b *LogRecordBuilder) Append(log plog.LogRecord) error {
 	}
 	b.dacb.Append(log.DroppedAttributesCount())
 	b.fb.Append(uint32(log.Flags()))
+
+	// ToDO continue
+	if err := b.elb.AppendNull(); err != nil {
+		return err
+	}
 
 	return nil
 }

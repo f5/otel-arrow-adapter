@@ -26,23 +26,31 @@ import (
 )
 
 type LogCompressor struct {
-	config      common.LogConfig
+	config      *common.LogConfig
 	delimiter   *regexp.Regexp
 	dictVars    []*regexp.Regexp
 	nonDictVars []*regexp.Regexp
 }
 
-func NewLogCompressor(config common.LogConfig) *LogCompressor {
-	delimiter := regexp.MustCompile(fmt.Sprintf("[%s]", config.Delimiter))
+func NewLogCompressor(config *common.LogConfig) *LogCompressor {
+	var (
+		delimiter   *regexp.Regexp
+		dictVars    []*regexp.Regexp
+		nonDictVars []*regexp.Regexp
+	)
 
-	dictVars := make([]*regexp.Regexp, len(config.DictVars))
-	for i, pattern := range config.DictVars {
-		dictVars[i] = regexp.MustCompile(fmt.Sprintf("^%s$", pattern))
-	}
+	if config != nil {
+		delimiter = regexp.MustCompile(fmt.Sprintf("[%s]", config.Delimiter))
 
-	nonDictVars := make([]*regexp.Regexp, len(config.NonDictVars))
-	for i, pattern := range config.NonDictVars {
-		nonDictVars[i] = regexp.MustCompile(fmt.Sprintf("^%s$", pattern))
+		dictVars = make([]*regexp.Regexp, len(config.DictVars))
+		for i, pattern := range config.DictVars {
+			dictVars[i] = regexp.MustCompile(fmt.Sprintf("^%s$", pattern))
+		}
+
+		nonDictVars = make([]*regexp.Regexp, len(config.NonDictVars))
+		for i, pattern := range config.NonDictVars {
+			nonDictVars[i] = regexp.MustCompile(fmt.Sprintf("^%s$", pattern))
+		}
 	}
 
 	return &LogCompressor{
@@ -55,6 +63,13 @@ func NewLogCompressor(config common.LogConfig) *LogCompressor {
 
 func (lc *LogCompressor) Compress(log string) *common.EncodedLog {
 	// TODO combine patterns into one regexp
+
+	// TODO avoid this allocation
+	if lc.config == nil {
+		return &common.EncodedLog{
+			LogType: log,
+		}
+	}
 
 	var (
 		logTypeBuf  strings.Builder
