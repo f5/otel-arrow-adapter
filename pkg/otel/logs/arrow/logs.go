@@ -48,7 +48,7 @@ func NewLogsBuilder(pool memory.Allocator, schema *acommon.AdaptiveSchema, logCo
 		schema:   schema,
 		builder:  builder,
 		rlb:      rlb,
-		rlp:      ResourceLogsBuilderFrom(rlb.ValueBuilder().(*array.StructBuilder)),
+		rlp:      ResourceLogsBuilderFrom(rlb.ValueBuilder().(*array.StructBuilder), logConfig),
 		config:   logConfig,
 	}, nil
 }

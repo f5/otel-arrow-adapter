@@ -110,6 +110,10 @@ func (b *AnyValueBuilder) Append(av pcommon.Value) error {
 	return err
 }
 
+func (b *AnyValueBuilder) AppendNull() {
+	b.builder.AppendNull()
+}
+
 // Release releases the memory allocated by the builder.
 func (b *AnyValueBuilder) Release() {
 	if !b.released {

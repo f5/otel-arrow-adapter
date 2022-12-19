@@ -20,6 +20,7 @@ package arrow
 import (
 	"fmt"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common"
@@ -34,37 +35,31 @@ type LogCompressor struct {
 
 func NewLogCompressor(config *common.LogConfig) *LogCompressor {
 	var (
-		delimiter   *regexp.Regexp
-		dictVars    []*regexp.Regexp
-		nonDictVars []*regexp.Regexp
+		delimiter *regexp.Regexp
+		dictVars  []*regexp.Regexp
 	)
 
 	if config != nil {
-		delimiter = regexp.MustCompile(fmt.Sprintf("[%s]", config.Delimiter))
+		delimiter = regexp.MustCompile(fmt.Sprintf("[%s]+", config.Delimiter))
 
 		dictVars = make([]*regexp.Regexp, len(config.DictVars))
 		for i, pattern := range config.DictVars {
 			dictVars[i] = regexp.MustCompile(fmt.Sprintf("^%s$", pattern))
 		}
-
-		nonDictVars = make([]*regexp.Regexp, len(config.NonDictVars))
-		for i, pattern := range config.NonDictVars {
-			nonDictVars[i] = regexp.MustCompile(fmt.Sprintf("^%s$", pattern))
-		}
 	}
 
 	return &LogCompressor{
-		config:      config,
-		delimiter:   delimiter,
-		dictVars:    dictVars,
-		nonDictVars: nonDictVars,
+		config:    config,
+		delimiter: delimiter,
+		dictVars:  dictVars,
 	}
 }
 
-func (lc *LogCompressor) Compress(log string) *common.EncodedLog {
-	// TODO combine patterns into one regexp
+func (lc *LogCompressor) Config() *common.LogConfig {
+	return lc.config
+}
 
-	// TODO avoid this allocation
+func (lc *LogCompressor) Compress(log string) *common.EncodedLog {
 	if lc.config == nil {
 		return &common.EncodedLog{
 			LogType: log,
@@ -72,10 +67,11 @@ func (lc *LogCompressor) Compress(log string) *common.EncodedLog {
 	}
 
 	var (
-		logTypeBuf  strings.Builder
-		tokenBuf    strings.Builder
-		dictVars    []string
-		nonDictVars []string
+		logTypeBuf strings.Builder
+		tokenBuf   strings.Builder
+		dictVars   []string
+		intVars    []int64
+		floatVars  []float64
 	)
 
 	delimiterIndices := lc.delimiter.FindAllStringIndex(log, -1)
@@ -89,7 +85,7 @@ func (lc *LogCompressor) Compress(log string) *common.EncodedLog {
 
 	// Add an artificial delimiter at the end of the log to simplify
 	// the logic of the main loop.
-	delimiterIndices = append(delimiterIndices, []int{len(log) - 1, len(log) - 1})
+	delimiterIndices = append(delimiterIndices, []int{len(log), len(log)})
 
 	curDelimiter := 0
 	inToken := true
@@ -107,7 +103,7 @@ func (lc *LogCompressor) Compress(log string) *common.EncodedLog {
 		if pos == delimiterIndices[curDelimiter][0] { // left delimiter
 			token := tokenBuf.String()
 			tokenBuf.Reset()
-			if varFound := lc.extractVariable(&token, &logTypeBuf, &nonDictVars, &dictVars); !varFound {
+			if varFound := lc.extractVariable(&token, &logTypeBuf, &intVars, &floatVars, &dictVars); !varFound {
 				logTypeBuf.WriteString(token)
 			}
 			inToken = false
@@ -127,40 +123,42 @@ func (lc *LogCompressor) Compress(log string) *common.EncodedLog {
 	// In case of a trailing token
 	if tokenBuf.Len() > 0 {
 		token := tokenBuf.String()
-		if varFound := lc.extractVariable(&token, &logTypeBuf, &nonDictVars, &dictVars); !varFound {
+		if varFound := lc.extractVariable(&token, &logTypeBuf, &intVars, &floatVars, &dictVars); !varFound {
 			logTypeBuf.WriteString(token)
 		}
 	}
 
 	return &common.EncodedLog{
-		LogType:     logTypeBuf.String(),
-		DictVars:    dictVars,
-		NonDictVars: nonDictVars,
+		LogType:   logTypeBuf.String(),
+		DictVars:  dictVars,
+		IntVars:   intVars,
+		FloatVars: floatVars,
 	}
 }
 
-func (lc *LogCompressor) extractVariable(text *string, logType *strings.Builder, nonDictVars *[]string, dictVars *[]string) bool {
-	varFound := false
-	for _, regex := range lc.nonDictVars {
+func (lc *LogCompressor) extractVariable(text *string, logType *strings.Builder, intVars *[]int64, floatVars *[]float64, dictVars *[]string) bool {
+	if i64V, err := strconv.ParseInt(*text, 10, 64); err == nil {
+		logType.WriteRune('\x12')
+		logType.WriteRune(rune(len(*intVars)))
+		*intVars = append(*intVars, i64V)
+		return true
+	}
+
+	if f64V, err := strconv.ParseFloat(*text, 64); err == nil {
+		logType.WriteRune('\x13')
+		logType.WriteRune(rune(len(*floatVars)))
+		*floatVars = append(*floatVars, f64V)
+		return true
+	}
+
+	for _, regex := range lc.dictVars {
 		if regex.Match([]byte(*text)) {
-			varFound = true
-			logType.WriteRune('\x12')
-			logType.WriteRune(rune(len(*nonDictVars)))
-			*nonDictVars = append(*nonDictVars, *text)
-			break
+			logType.WriteRune('\x11')
+			logType.WriteRune(rune(len(*dictVars)))
+			*dictVars = append(*dictVars, *text)
+			return true
 		}
 	}
 
-	if !varFound {
-		for _, regex := range lc.dictVars {
-			if regex.Match([]byte(*text)) {
-				varFound = true
-				logType.WriteRune('\x11')
-				logType.WriteRune(rune(len(*dictVars)))
-				*dictVars = append(*dictVars, *text)
-				break
-			}
-		}
-	}
-	return varFound
+	return false
 }

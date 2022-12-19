@@ -17,7 +17,7 @@ func TestLogRecord(t *testing.T) {
 
 	pool := memory.NewCheckedAllocator(memory.NewGoAllocator())
 	defer pool.AssertSize(t, 0)
-	sb := NewLogRecordBuilder(pool)
+	sb := NewLogRecordBuilder(pool, nil)
 
 	if err := sb.Append(LogRecord1()); err != nil {
 		t.Fatal(err)
@@ -48,7 +48,7 @@ func TestScopeLogs(t *testing.T) {
 
 	pool := memory.NewCheckedAllocator(memory.NewGoAllocator())
 	defer pool.AssertSize(t, 0)
-	ssb := NewScopeLogsBuilder(pool)
+	ssb := NewScopeLogsBuilder(pool, nil)
 
 	if err := ssb.Append(ScopeLogs1()); err != nil {
 		t.Fatal(err)
@@ -79,7 +79,7 @@ func TestResourceLogs(t *testing.T) {
 
 	pool := memory.NewCheckedAllocator(memory.NewGoAllocator())
 	defer pool.AssertSize(t, 0)
-	rsb := NewResourceLogsBuilder(pool)
+	rsb := NewResourceLogsBuilder(pool, nil)
 
 	if err := rsb.Append(ResourceLogs1()); err != nil {
 		t.Fatal(err)

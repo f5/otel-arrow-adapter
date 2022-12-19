@@ -8,6 +8,7 @@ import (
 	"github.com/apache/arrow/go/v11/arrow/memory"
 	"go.opentelemetry.io/collector/pdata/plog"
 
+	"github.com/f5/otel-arrow-adapter/pkg/otel/common"
 	acommon "github.com/f5/otel-arrow-adapter/pkg/otel/common/arrow"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/constants"
 )
@@ -36,20 +37,20 @@ type ResourceLogsBuilder struct {
 //
 // Once the builder is no longer needed, Build() or Release() must be called to free the
 // memory allocated by the builder.
-func NewResourceLogsBuilder(pool memory.Allocator) *ResourceLogsBuilder {
+func NewResourceLogsBuilder(pool memory.Allocator, logConfig *common.LogConfig) *ResourceLogsBuilder {
 	builder := array.NewStructBuilder(pool, ResourceLogsDT)
-	return ResourceLogsBuilderFrom(builder)
+	return ResourceLogsBuilderFrom(builder, logConfig)
 }
 
 // ResourceLogsBuilderFrom creates a new ResourceLogsBuilder from an existing builder.
-func ResourceLogsBuilderFrom(builder *array.StructBuilder) *ResourceLogsBuilder {
+func ResourceLogsBuilderFrom(builder *array.StructBuilder, logConfig *common.LogConfig) *ResourceLogsBuilder {
 	return &ResourceLogsBuilder{
 		released: false,
 		builder:  builder,
 		rb:       acommon.ResourceBuilderFrom(builder.FieldBuilder(0).(*array.StructBuilder)),
 		schb:     acommon.AdaptiveDictionaryBuilderFrom(builder.FieldBuilder(1)),
 		slsb:     builder.FieldBuilder(2).(*array.ListBuilder),
-		slb:      ScopeLogsBuilderFrom(builder.FieldBuilder(2).(*array.ListBuilder).ValueBuilder().(*array.StructBuilder)),
+		slb:      ScopeLogsBuilderFrom(builder.FieldBuilder(2).(*array.ListBuilder).ValueBuilder().(*array.StructBuilder), logConfig),
 	}
 }
 

@@ -20,18 +20,13 @@ package common
 // LogConfig is a configuration for the log compressor (CLP inspired log optimization).
 // See [CLP: Efficient and Scalable Search on Compressed Text Logs](https://www.usenix.org/system/files/osdi21-rodrigues.pdf)
 type LogConfig struct {
-	Delimiter   string
-	DictVars    []string
-	NonDictVars []string
+	Delimiter string
+	DictVars  []string
 }
 
 func DefaultLogConfig() *LogConfig {
 	return &LogConfig{
 		Delimiter: " \\t\\r\\n!\"#$%&'\\(\\)\\*,:;<>?@\\[\\]\\^_`\\{\\|\\}~",
-		NonDictVars: []string{
-			"\\-{0,1}[0-9]+",          // signed integer
-			"\\-{0,1}[0-9]+\\.[0-9]+", // float
-		},
 		DictVars: []string{
 			"0x[0-9a-fA-F]+", // Hexadecimal identifier
 			"\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}",      // ip v4 address
@@ -45,9 +40,11 @@ func DefaultLogConfig() *LogConfig {
 // EncodedLog represents a log record into 3 parts:
 // - LogType: the log type, which is the static pattern detected by the compressor (highly repetitive).
 // - DictVars: the dictionary variables, which are the variables that are repeated in the log.
-// - NonDictVars: the non-dictionary variables, which are numbers or high cardinality values.
+// - IntVars: non-dictionary variables which are int 64 numbers (potentially high cardinality values).
+// - FloatVars: non-dictionary variables which are float 64 numbers (potentially high cardinality values).
 type EncodedLog struct {
-	LogType     string
-	DictVars    []string
-	NonDictVars []string
+	LogType   string
+	DictVars  []string
+	IntVars   []int64
+	FloatVars []float64
 }

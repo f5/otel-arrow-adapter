@@ -18,6 +18,8 @@
 package otlp
 
 import (
+	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common"
@@ -27,6 +29,7 @@ func Decompress(seg *common.EncodedLog) string {
 	var log strings.Builder
 	x11 := false
 	x12 := false
+	x13 := false
 
 	for _, c := range seg.LogType {
 		if !x11 && !x12 && c == '\x11' {
@@ -35,13 +38,19 @@ func Decompress(seg *common.EncodedLog) string {
 		} else if !x11 && !x12 && c == '\x12' {
 			x12 = true
 			continue
+		} else if !x11 && !x12 && c == '\x13' {
+			x13 = true
+			continue
 		} else {
 			if x11 {
 				log.WriteString(seg.DictVars[int(c)])
 				x11 = false
 			} else if x12 {
-				log.WriteString(seg.NonDictVars[int(c)])
+				log.WriteString(strconv.FormatInt(seg.IntVars[int(c)], 10))
 				x12 = false
+			} else if x13 {
+				log.WriteString(fmt.Sprintf("%f", seg.FloatVars[int(c)]))
+				x13 = false
 			} else {
 				log.WriteRune(c)
 			}

@@ -99,6 +99,8 @@ func (b *EncodedLogBuilder) Append(log string) (err error) {
 		return fmt.Errorf("encoded log builder already released")
 	}
 
+	b.builder.Append(true)
+
 	encodedLog := b.logCompressor.Compress(log)
 	if len(encodedLog.LogType) == 0 {
 		b.logTypeBuilder.AppendNull()
@@ -136,4 +138,8 @@ func (b *EncodedLogBuilder) Release() {
 
 		b.released = true
 	}
+}
+
+func (b *EncodedLogBuilder) LogConfig() *common.LogConfig {
+	return b.logCompressor.Config()
 }
