@@ -25,6 +25,7 @@ import (
 
 	"github.com/f5/otel-arrow-adapter/pkg/datagen"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/assert"
+	"github.com/f5/otel-arrow-adapter/pkg/otel/common"
 	acommon "github.com/f5/otel-arrow-adapter/pkg/otel/common/arrow"
 	logsarrow "github.com/f5/otel-arrow-adapter/pkg/otel/logs/arrow"
 	logsotlp "github.com/f5/otel-arrow-adapter/pkg/otel/logs/otlp"
@@ -48,7 +49,7 @@ func TestConversionFromSyntheticData(t *testing.T) {
 	defer pool.AssertSize(t, 0)
 	logsSchema := acommon.NewAdaptiveSchema(logsarrow.Schema)
 	defer logsSchema.Release()
-	lb, err := logsarrow.NewLogsBuilder(pool, logsSchema)
+	lb, err := logsarrow.NewLogsBuilder(pool, logsSchema, common.DefaultLogConfig())
 	require.NoError(t, err)
 	err = lb.Append(expectedRequest.Logs())
 	require.NoError(t, err)

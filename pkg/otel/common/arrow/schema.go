@@ -381,7 +381,14 @@ func updateField(f *arrow.Field, dictMap map[*arrow.DictionaryType]*arrow.Dictio
 
 func getDictionaryArray(arr arrow.Array, ids []int) *array.Dictionary {
 	if len(ids) == 0 {
-		return arr.(*array.Dictionary)
+		switch b := arr.(type) {
+		case *array.Dictionary:
+			return b
+		case *array.List:
+			return getDictionaryArray(b.ListValues(), ids)
+		default:
+			panic("getDictionaryArray: unsupported array type `" + arr.DataType().Name() + "`")
+		}
 	}
 
 	switch arr := arr.(type) {
@@ -409,6 +416,14 @@ func getDictionaryArray(arr arrow.Array, ids []int) *array.Dictionary {
 
 func getDictionaryBuilder(builder array.Builder, ids []int) array.DictionaryBuilder {
 	if len(ids) == 0 {
+		switch b := builder.(type) {
+		case array.DictionaryBuilder:
+			return b
+		case *array.ListBuilder:
+			return getDictionaryBuilder(b.ValueBuilder(), ids)
+		default:
+			panic("getDictionaryBuilder: unsupported builder type `" + b.Type().Name() + "`")
+		}
 		return builder.(array.DictionaryBuilder)
 	}
 

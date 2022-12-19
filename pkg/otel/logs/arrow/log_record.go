@@ -6,8 +6,10 @@ import (
 	"github.com/apache/arrow/go/v11/arrow"
 	"github.com/apache/arrow/go/v11/arrow/array"
 	"github.com/apache/arrow/go/v11/arrow/memory"
+	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/plog"
 
+	"github.com/f5/otel-arrow-adapter/pkg/otel/common"
 	acommon "github.com/f5/otel-arrow-adapter/pkg/otel/common/arrow"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/constants"
 )
@@ -26,6 +28,7 @@ var (
 		{Name: constants.ATTRIBUTES, Type: acommon.AttributesDT},
 		{Name: constants.DROPPED_ATTRIBUTES_COUNT, Type: arrow.PrimitiveTypes.Uint32},
 		{Name: constants.FLAGS, Type: arrow.PrimitiveTypes.Uint32},
+		{Name: constants.ENCODED_STR_BODY, Type: EncodedLogDT},
 	}...)
 )
 
@@ -45,18 +48,19 @@ type LogRecordBuilder struct {
 	ab    *acommon.AttributesBuilder         // attributes builder
 	dacb  *array.Uint32Builder               // dropped attributes count builder
 	fb    *array.Uint32Builder               // flags builder
+	elb   *EncodedLogBuilder                 // encoded log body builder
 }
 
 // NewLogRecordBuilder creates a new LogRecordBuilder with a given allocator.
 //
 // Once the builder is no longer needed, Release() must be called to free the
 // memory allocated by the builder.
-func NewLogRecordBuilder(pool memory.Allocator) *LogRecordBuilder {
+func NewLogRecordBuilder(pool memory.Allocator, logConfig *common.LogConfig) *LogRecordBuilder {
 	sb := array.NewStructBuilder(pool, LogRecordDT)
-	return LogRecordBuilderFrom(sb)
+	return LogRecordBuilderFrom(sb, logConfig)
 }
 
-func LogRecordBuilderFrom(sb *array.StructBuilder) *LogRecordBuilder {
+func LogRecordBuilderFrom(sb *array.StructBuilder, logConfig *common.LogConfig) *LogRecordBuilder {
 	return &LogRecordBuilder{
 		released: false,
 		builder:  sb,
@@ -70,6 +74,7 @@ func LogRecordBuilderFrom(sb *array.StructBuilder) *LogRecordBuilder {
 		ab:       acommon.AttributesBuilderFrom(sb.FieldBuilder(7).(*array.MapBuilder)),
 		dacb:     sb.FieldBuilder(8).(*array.Uint32Builder),
 		fb:       sb.FieldBuilder(9).(*array.Uint32Builder),
+		elb:      EncodedLogBuilderFrom(sb.FieldBuilder(10).(*array.StructBuilder), logConfig),
 	}
 }
 
@@ -112,9 +117,25 @@ func (b *LogRecordBuilder) Append(log plog.LogRecord) error {
 			return err
 		}
 	}
-	if err := b.bb.Append(log.Body()); err != nil {
-		return err
+
+	// If the log body is a string and log compressor is enabled, we encode the
+	// log body and store it in the encoded log body field otherwise we store
+	// the log body in the body field.
+	body := log.Body()
+	if body.Type() == pcommon.ValueTypeStr && b.elb.LogConfig() != nil {
+		b.bb.AppendNull()
+		if err := b.elb.Append(body.AsString()); err != nil {
+			return err
+		}
+	} else {
+		if err := b.bb.Append(body); err != nil {
+			return err
+		}
+		if err := b.elb.AppendNull(); err != nil {
+			return err
+		}
 	}
+
 	if err := b.ab.Append(log.Attributes()); err != nil {
 		return err
 	}

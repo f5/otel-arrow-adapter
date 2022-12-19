@@ -28,6 +28,7 @@ import (
 	"go.opentelemetry.io/collector/pdata/ptrace"
 
 	colarspb "github.com/f5/otel-arrow-adapter/api/collector/arrow/v1"
+	"github.com/f5/otel-arrow-adapter/pkg/otel/common"
 	acommon "github.com/f5/otel-arrow-adapter/pkg/otel/common/arrow"
 	logsarrow "github.com/f5/otel-arrow-adapter/pkg/otel/logs/arrow"
 	metricsarrow "github.com/f5/otel-arrow-adapter/pkg/otel/metrics/arrow"
@@ -53,6 +54,9 @@ type Producer struct {
 	metricsSchema   *acommon.AdaptiveSchema
 	logsSchema      *acommon.AdaptiveSchema
 	tracesSchema    *acommon.AdaptiveSchema
+	// CLP like log optimization
+	// see [CLP: Efficient and Scalable Search on Compressed Text Logs](https://www.usenix.org/system/files/osdi21-rodrigues.pdf)
+	logOptimization *common.LogConfig
 }
 
 type streamProducer struct {
@@ -65,6 +69,7 @@ type Config struct {
 	pool           memory.Allocator
 	initIndexSize  uint64
 	limitIndexSize uint64
+	logConfig      *common.LogConfig
 }
 
 type Option func(*Config)
@@ -84,6 +89,7 @@ func NewProducerWithOptions(options ...Option) *Producer {
 		pool:           memory.NewGoAllocator(),
 		initIndexSize:  math.MaxUint16,
 		limitIndexSize: math.MaxUint16,
+		logConfig:      common.DefaultLogConfig(),
 	}
 	for _, opt := range options {
 		opt(cfg)
@@ -104,6 +110,7 @@ func NewProducerWithOptions(options ...Option) *Producer {
 			tracesarrow.Schema,
 			acommon.WithDictInitIndexSize(cfg.initIndexSize),
 			acommon.WithDictLimitIndexSize(cfg.limitIndexSize)),
+		logOptimization: cfg.logConfig,
 	}
 }
 
@@ -134,7 +141,7 @@ func (p *Producer) BatchArrowRecordsFromLogs(ls plog.Logs) (*colarspb.BatchArrow
 	// Note: The record returned is wrapped into a RecordMessage and will
 	// be released by the Producer.Produce method.
 	record, err := RecordBuilder[plog.Logs](func() (acommon.EntityBuilder[plog.Logs], error) {
-		return logsarrow.NewLogsBuilder(p.pool, p.logsSchema)
+		return logsarrow.NewLogsBuilder(p.pool, p.logsSchema, p.logOptimization)
 	}, ls)
 	if err != nil {
 		return nil, err
@@ -359,5 +366,17 @@ func WithUint32LimitDictIndex() Option {
 func WithUint64LimitDictIndex() Option {
 	return func(cfg *Config) {
 		cfg.limitIndexSize = math.MaxUint64
+	}
+}
+
+func WithLogOptimization(logConfig *common.LogConfig) Option {
+	return func(cfg *Config) {
+		cfg.logConfig = logConfig
+	}
+}
+
+func WithNoLogOptimization() Option {
+	return func(cfg *Config) {
+		cfg.logConfig = nil
 	}
 }

@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/pdata/plog"
 
+	"github.com/f5/otel-arrow-adapter/pkg/otel/common"
 	acommon "github.com/f5/otel-arrow-adapter/pkg/otel/common/arrow"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/internal"
 )
@@ -16,7 +17,7 @@ func TestLogRecord(t *testing.T) {
 
 	pool := memory.NewCheckedAllocator(memory.NewGoAllocator())
 	defer pool.AssertSize(t, 0)
-	sb := NewLogRecordBuilder(pool)
+	sb := NewLogRecordBuilder(pool, nil)
 
 	if err := sb.Append(LogRecord1()); err != nil {
 		t.Fatal(err)
@@ -47,7 +48,7 @@ func TestScopeLogs(t *testing.T) {
 
 	pool := memory.NewCheckedAllocator(memory.NewGoAllocator())
 	defer pool.AssertSize(t, 0)
-	ssb := NewScopeLogsBuilder(pool)
+	ssb := NewScopeLogsBuilder(pool, nil)
 
 	if err := ssb.Append(ScopeLogs1()); err != nil {
 		t.Fatal(err)
@@ -78,7 +79,7 @@ func TestResourceLogs(t *testing.T) {
 
 	pool := memory.NewCheckedAllocator(memory.NewGoAllocator())
 	defer pool.AssertSize(t, 0)
-	rsb := NewResourceLogsBuilder(pool)
+	rsb := NewResourceLogsBuilder(pool, nil)
 
 	if err := rsb.Append(ResourceLogs1()); err != nil {
 		t.Fatal(err)
@@ -111,7 +112,7 @@ func TestLogs(t *testing.T) {
 	defer pool.AssertSize(t, 0)
 	logsSchema := acommon.NewAdaptiveSchema(Schema)
 	defer logsSchema.Release()
-	tb, err := NewLogsBuilder(pool, logsSchema)
+	tb, err := NewLogsBuilder(pool, logsSchema, common.DefaultLogConfig())
 	require.NoError(t, err)
 
 	err = tb.Append(Logs())
