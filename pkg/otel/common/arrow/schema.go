@@ -22,6 +22,16 @@ type AdaptiveSchema struct {
 	// map of dictionary fields that have overflowed (used for test purpose)
 	// map = path -> dictionary index type
 	dictionariesWithOverflow map[string]string
+
+	fieldCapacities map[string]*BuilderCapacityWindow
+}
+
+// BuilderCapacityWindow is a moving window on builder length observations collected
+// after each batch (window size=len(values)). These n last observations are used
+// to compute the maximum capacity of the corresponding builder for the new batch.
+type BuilderCapacityWindow struct {
+	index  int
+	values []int
 }
 
 type dictionaryField struct {
@@ -75,7 +85,13 @@ func NewAdaptiveSchema(schema *arrow.Schema, options ...Option) *AdaptiveSchema 
 		ids := []int{i}
 		collectDictionaries(fields[i].Name, ids, &fields[i], &dictionaries)
 	}
-	return &AdaptiveSchema{cfg: cfg, schema: schema, dictionaries: dictionaries, dictionariesWithOverflow: make(map[string]string)}
+	return &AdaptiveSchema{
+		cfg:                      cfg,
+		schema:                   schema,
+		dictionaries:             dictionaries,
+		dictionariesWithOverflow: make(map[string]string),
+		fieldCapacities:          make(map[string]*BuilderCapacityWindow),
+	}
 }
 
 // Schema returns the current schema.
@@ -119,6 +135,9 @@ func (m *AdaptiveSchema) Analyze(record arrow.Record) (overflowDetected bool, up
 			}
 		}
 	}
+
+	m.collectSizeBuildersFromRecord(record)
+
 	return
 }
 
@@ -169,6 +188,9 @@ func (m *AdaptiveSchema) InitDictionaryBuilders(builder *array.RecordBuilder) (e
 			}
 		}
 	}
+
+	m.initSizeBuildersFromRecordBuilder(builder)
+
 	return
 }
 
@@ -280,6 +302,94 @@ func (m *AdaptiveSchema) rebuildSchema(updates []SchemaUpdate) {
 
 	metadata := m.schema.Metadata()
 	m.schema = arrow.NewSchema(newFields, &metadata)
+}
+
+// collectSizeBuildersFromRecord collects the size of each internal array present in the record
+// passed in parameter. These values will be used to initialize the size builders in the next
+// batch.
+func (m *AdaptiveSchema) collectSizeBuildersFromRecord(record arrow.Record) {
+	arrays := record.Columns()
+	schema := record.Schema()
+	for i, arr := range arrays {
+		field := schema.Field(i)
+		m.collectSizeBuildersFromArray(field.Name, &field, arr)
+	}
+}
+
+func (m *AdaptiveSchema) collectSizeBuildersFromArray(path string, field *arrow.Field, arr arrow.Array) {
+	window, found := m.fieldCapacities[path]
+	if !found {
+		window = NewBuilderCapacityWindow(10)
+		m.fieldCapacities[path] = window
+	}
+	window.Record(arr.Len())
+
+	switch arr := arr.(type) {
+	case *array.Struct:
+		structField := field.Type.(*arrow.StructType)
+		for i := 0; i < arr.NumField(); i++ {
+			subField := structField.Field(i)
+			m.collectSizeBuildersFromArray(path+"."+subField.Name, &subField, arr.Field(i))
+		}
+	case *array.List:
+		elemField := field.Type.(*arrow.ListType).ElemField()
+		m.collectSizeBuildersFromArray(path+"[]", &elemField, arr.ListValues())
+	case array.Union:
+		variantFields := field.Type.(arrow.UnionType).Fields()
+		for i := 0; i < arr.NumFields(); i++ {
+			m.collectSizeBuildersFromArray(path+"."+variantFields[i].Name, &variantFields[i], arr.Field(i))
+		}
+	case *array.Map:
+		keyField := field.Type.(*arrow.MapType).KeyField()
+		valueField := field.Type.(*arrow.MapType).ItemField()
+		m.collectSizeBuildersFromArray(path+".key", &keyField, arr.Keys())
+		m.collectSizeBuildersFromArray(path+".value", &valueField, arr.Items())
+	}
+}
+
+// initSizeBuildersFromRecordBuilder initializes the size of each internal builder in rhe record builder
+// passed in parameter. The previous size of the builders are used to determine the initial sizes.
+// The goal is to avoid resizing the builders too often (the default size being 32).
+func (m *AdaptiveSchema) initSizeBuildersFromRecordBuilder(recordBuilder *array.RecordBuilder) {
+	builders := recordBuilder.Fields()
+	schema := recordBuilder.Schema()
+
+	for i, builder := range builders {
+		field := schema.Field(i)
+		m.initSizeBuildersFromBuilder(field.Name, &field, builder)
+	}
+}
+
+func (m *AdaptiveSchema) initSizeBuildersFromBuilder(path string, field *arrow.Field, builder array.Builder) {
+	window, found := m.fieldCapacities[path]
+	cap := 0
+	if found {
+		cap = window.Max()
+	}
+
+	builder.Reserve(cap)
+
+	switch b := builder.(type) {
+	case *array.StructBuilder:
+		structField := field.Type.(*arrow.StructType)
+		for i := 0; i < b.NumField(); i++ {
+			subField := structField.Field(i)
+			m.initSizeBuildersFromBuilder(path+"."+subField.Name, &subField, b.FieldBuilder(i))
+		}
+	case *array.ListBuilder:
+		elemField := field.Type.(*arrow.ListType).ElemField()
+		m.initSizeBuildersFromBuilder(path+"[]", &elemField, b.ValueBuilder())
+	case array.UnionBuilder:
+		variantFields := field.Type.(arrow.UnionType).Fields()
+		for i := 0; i < len(variantFields); i++ {
+			m.initSizeBuildersFromBuilder(path+"."+variantFields[i].Name, &variantFields[i], b.Child(i))
+		}
+	case *array.MapBuilder:
+		keyField := field.Type.(*arrow.MapType).KeyField()
+		valueField := field.Type.(*arrow.MapType).ItemField()
+		m.initSizeBuildersFromBuilder(path+".key", &keyField, b.KeyBuilder())
+		m.initSizeBuildersFromBuilder(path+".value", &valueField, b.ItemBuilder())
+	}
 }
 
 func initField(f *arrow.Field, indexType arrow.DataType) arrow.Field {
@@ -515,4 +625,26 @@ type DictionaryOverflowError struct {
 
 func (e *DictionaryOverflowError) Error() string {
 	return fmt.Sprintf("dictionary overflow for fields: %v", e.FieldNames)
+}
+
+func NewBuilderCapacityWindow(maxNumValues int) *BuilderCapacityWindow {
+	return &BuilderCapacityWindow{
+		index:  0,
+		values: make([]int, maxNumValues),
+	}
+}
+
+func (w *BuilderCapacityWindow) Record(value int) {
+	w.values[w.index] = value
+	w.index = (w.index + 1) % cap(w.values)
+}
+
+func (w *BuilderCapacityWindow) Max() int {
+	max := w.values[0]
+	for i := 1; i < len(w.values); i++ {
+		if w.values[i] > max {
+			max = w.values[i]
+		}
+	}
+	return max
 }
