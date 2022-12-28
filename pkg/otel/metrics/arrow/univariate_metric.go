@@ -159,6 +159,8 @@ func (b *UnivariateMetricBuilder) Append(metric pmetric.Metric, smdata *ScopeMet
 		b.sb.AppendNull()
 		b.syb.AppendNull()
 		b.hb.AppendNull()
+	case pmetric.MetricTypeEmpty:
+		// ignore empty metric
 	}
 
 	return nil

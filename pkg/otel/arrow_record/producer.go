@@ -298,7 +298,7 @@ func RecordBuilder[T pmetric.Metrics | plog.Logs | ptrace.Traces](builder func()
 			break
 		}
 	}
-	return
+	return record, err
 }
 
 func WithAllocator(allocator memory.Allocator) Option {

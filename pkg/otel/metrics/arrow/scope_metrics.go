@@ -230,7 +230,7 @@ func NewMetricsSharedData(metrics pmetric.MetricSlice) (sharedData *ScopeMetrics
 			sharedData.Attributes = nil
 		}
 	}
-	return
+	return sharedData, err
 }
 
 func NewMetricSharedData(metric pmetric.Metric) (sharedData *MetricSharedData, err error) {
@@ -259,9 +259,11 @@ func NewMetricSharedData(metric pmetric.Metric) (sharedData *MetricSharedData, e
 		dps := metric.ExponentialHistogram().DataPoints()
 		dpLen = func() int { return dps.Len() }
 		dpAt = func(i int) DataPoint { return dps.At(i) }
+	case pmetric.MetricTypeEmpty:
+		// ignore empty metric.
 	default:
 		err = fmt.Errorf("unknown metric type: %v", metric.Type())
-		return
+		return sharedData, err
 	}
 
 	sharedData.NumDP = dpLen()
@@ -272,7 +274,7 @@ func NewMetricSharedData(metric pmetric.Metric) (sharedData *MetricSharedData, e
 		}
 	}
 
-	return
+	return sharedData, err
 }
 
 func initSharedDataFrom(sharedData *MetricSharedData, initDataPoint DataPoint) {

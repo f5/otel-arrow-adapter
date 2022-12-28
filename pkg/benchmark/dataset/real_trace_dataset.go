@@ -66,9 +66,7 @@ func NewRealTraceDataset(path string, sortOrder []string) *RealTraceDataset {
 
 	for i := 0; i < traces.ResourceSpans().Len(); i++ {
 		rs := traces.ResourceSpans().At(i)
-
 		for j := 0; j < rs.ScopeSpans().Len(); j++ {
-
 			ss := rs.ScopeSpans().At(j)
 
 			for k := 0; k < ss.Spans().Len(); k++ {
@@ -145,6 +143,8 @@ func v2s(v pcommon.Value) string {
 		return fmt.Sprint(v.Int())
 	case pcommon.ValueTypeDouble:
 		return fmt.Sprint(v.Double())
+	case pcommon.ValueTypeBytes, pcommon.ValueTypeEmpty, pcommon.ValueTypeMap, pcommon.ValueTypeSlice:
+		panic(fmt.Sprint("unsupported sorting value:", v.Type()))
 	default:
 		panic(fmt.Sprint("unsupported sorting value:", v.Type()))
 	}

@@ -24,10 +24,12 @@ type SharedAttributes struct {
 // NewSharedAttributesFrom creates a new SharedAttributes from a [pcommon.Map] of attributes.
 func NewSharedAttributesFrom(attrs pcommon.Map) *SharedAttributes {
 	attributes := make(map[string]pcommon.Value)
+
 	attrs.Range(func(k string, v pcommon.Value) bool {
 		attributes[k] = v
 		return true
 	})
+
 	return &SharedAttributes{
 		Attributes: attributes,
 	}
@@ -44,6 +46,7 @@ func (sa *SharedAttributes) Clone() *SharedAttributes {
 	for k, v := range sa.Attributes {
 		attributes[k] = v
 	}
+
 	return &SharedAttributes{
 		Attributes: attributes,
 	}
@@ -61,6 +64,7 @@ func (sa *SharedAttributes) IntersectWithMap(attrs pcommon.Map) int {
 			delete(sa.Attributes, k)
 		}
 	}
+
 	return len(sa.Attributes)
 }
 

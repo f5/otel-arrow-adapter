@@ -68,6 +68,7 @@ func (b *EventBuilder) Append(event ptrace.SpanEvent) error {
 
 	b.builder.Append(true)
 	b.tunb.Append(uint64(event.Timestamp()))
+
 	name := event.Name()
 	if name == "" {
 		b.nb.AppendNull()
@@ -76,10 +77,12 @@ func (b *EventBuilder) Append(event ptrace.SpanEvent) error {
 			return err
 		}
 	}
+
 	if err := b.ab.Append(event.Attributes()); err != nil {
 		return err
 	}
 	b.dacb.Append(event.DroppedAttributesCount())
+
 	return nil
 }
 
@@ -93,6 +96,7 @@ func (b *EventBuilder) Build() (*array.Struct, error) {
 	}
 
 	defer b.Release()
+
 	return b.builder.NewStructArray(), nil
 }
 

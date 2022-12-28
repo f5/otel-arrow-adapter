@@ -24,6 +24,8 @@ import (
 	"go.opentelemetry.io/collector/pdata/plog/plogotlp"
 )
 
+const Otlp = "OTLP"
+
 type LogsProfileable struct {
 	compression benchmark.CompressionAlgorithm
 	dataset     dataset.LogsDataset
@@ -35,7 +37,7 @@ func NewLogsProfileable(dataset dataset.LogsDataset, compression benchmark.Compr
 }
 
 func (s *LogsProfileable) Name() string {
-	return "OTLP"
+	return Otlp
 }
 
 func (s *LogsProfileable) Tags() []string {

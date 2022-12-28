@@ -54,6 +54,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to generate random number - %v", err)
 	}
+
 	entropy := datagen.NewTestEntropy(v.Int64())
 	generator := datagen.NewLogsGenerator(entropy, entropy.NewStandardResourceAttributes(), entropy.NewStandardInstrumentationScopes())
 	request := plogotlp.NewExportRequestFromLogs(generator.Generate(batchSize, 100))
@@ -71,6 +72,7 @@ func main() {
 			log.Fatal("error creating directory: ", err)
 		}
 	}
+
 	err = os.WriteFile(outputFile, msg, 0600)
 	if err != nil {
 		log.Fatal("write error: ", err)

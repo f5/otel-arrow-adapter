@@ -71,6 +71,8 @@ func ValueID(v pcommon.Value) string {
 		}
 		valueID += "]"
 		return valueID
+	case pcommon.ValueTypeEmpty:
+		return ""
 	default:
 		// includes pcommon.ValueTypeEmpty
 		panic("unsupported value type")

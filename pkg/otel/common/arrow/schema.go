@@ -152,7 +152,7 @@ func (m *AdaptiveSchema) Analyze(record arrow.Record) (overflowDetected bool, up
 
 	m.collectSizeBuildersFromRecord(record)
 
-	return
+	return overflowDetected, updates
 }
 
 // UpdateSchema updates the schema with the provided updates.
@@ -270,7 +270,7 @@ func (m *AdaptiveSchema) promoteDictionaryType(observedSize uint64, existingDT *
 	if upperLimit > m.cfg.limitIndexSize {
 		dictType = nil
 	}
-	return
+	return dictType, upperLimit
 }
 
 func initSchema(schema *arrow.Schema, cfg *config) *arrow.Schema {
@@ -340,7 +340,10 @@ func (m *AdaptiveSchema) collectSizeBuildersFromArray(path string, field *arrow.
 
 	switch arr := arr.(type) {
 	case *array.Struct:
-		structField := field.Type.(*arrow.StructType)
+		structField, ok := field.Type.(*arrow.StructType)
+		if !ok {
+			panic("collectSizeBuildersFromArray: expected struct field")
+		}
 		for i := 0; i < arr.NumField(); i++ {
 			subField := structField.Field(i)
 			m.collectSizeBuildersFromArray(path+"."+subField.Name, &subField, arr.Field(i))
@@ -385,7 +388,10 @@ func (m *AdaptiveSchema) initSizeBuildersFromBuilder(path string, field *arrow.F
 
 	switch b := builder.(type) {
 	case *array.StructBuilder:
-		structField := field.Type.(*arrow.StructType)
+		structField, ok := field.Type.(*arrow.StructType)
+		if !ok {
+			panic("initSizeBuildersFromBuilder: expected struct field")
+		}
 		for i := 0; i < b.NumField(); i++ {
 			subField := structField.Field(i)
 			m.initSizeBuildersFromBuilder(path+"."+subField.Name, &subField, b.FieldBuilder(i))

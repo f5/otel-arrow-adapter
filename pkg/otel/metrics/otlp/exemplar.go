@@ -82,6 +82,7 @@ func AppendExemplarsInto(exemplarSlice pmetric.ExemplarSlice, ndp *arrowutils.Li
 	if err != nil {
 		return err
 	}
+
 	if exemplars == nil {
 		return nil
 	}
@@ -96,6 +97,7 @@ func AppendExemplarsInto(exemplarSlice pmetric.ExemplarSlice, ndp *arrowutils.Li
 		if err := otlp.AppendAttributesInto(exemplar.FilteredAttributes(), exemplars.Array(), exemplarIdx, ids.Attributes); err != nil {
 			return err
 		}
+
 		timeUnixNano, err := exemplars.U64FieldByID(ids.TimeUnixNano, exemplarIdx)
 		if err != nil {
 			return err
@@ -106,8 +108,10 @@ func AppendExemplarsInto(exemplarSlice pmetric.ExemplarSlice, ndp *arrowutils.Li
 		if err != nil {
 			return err
 		}
+
 		if len(spanId) == 8 {
 			var sid pcommon.SpanID
+
 			copy(sid[:], spanId)
 			exemplar.SetSpanID(sid)
 		} else {
@@ -118,8 +122,10 @@ func AppendExemplarsInto(exemplarSlice pmetric.ExemplarSlice, ndp *arrowutils.Li
 		if err != nil {
 			return err
 		}
+
 		if len(traceId) == 16 {
 			var tid pcommon.TraceID
+
 			copy(tid[:], traceId)
 			exemplar.SetTraceID(tid)
 		} else {
@@ -135,5 +141,6 @@ func AppendExemplarsInto(exemplarSlice pmetric.ExemplarSlice, ndp *arrowutils.Li
 			return fmt.Errorf("value field shound be a DenseUnion")
 		}
 	}
+
 	return nil
 }

@@ -106,11 +106,11 @@ func (b *AnyValueBuilder) Append(av pcommon.Value) error {
 	case pcommon.ValueTypeStr:
 		err = b.appendStr(av.Str())
 	case pcommon.ValueTypeInt:
-		err = b.appendI64(av.Int())
+		b.appendI64(av.Int())
 	case pcommon.ValueTypeDouble:
-		err = b.appendF64(av.Double())
+		b.appendF64(av.Double())
 	case pcommon.ValueTypeBool:
-		err = b.appendBool(av.Bool())
+		b.appendBool(av.Bool())
 	case pcommon.ValueTypeBytes:
 		err = b.appendBinary(av.Bytes().AsRaw())
 	case pcommon.ValueTypeSlice:
@@ -152,7 +152,7 @@ func (b *AnyValueBuilder) appendStr(v string) error {
 }
 
 // appendI64 appends a new int64 value to the builder.
-func (b *AnyValueBuilder) appendI64(v int64) error {
+func (b *AnyValueBuilder) appendI64(v int64) {
 	b.builder.Append(I64Code)
 	b.i64Builder.Append(v)
 
@@ -160,12 +160,10 @@ func (b *AnyValueBuilder) appendI64(v int64) error {
 	b.f64Builder.AppendNull()
 	b.boolBuilder.AppendNull()
 	b.binaryBuilder.AppendNull()
-
-	return nil
 }
 
 // appendF64 appends a new double value to the builder.
-func (b *AnyValueBuilder) appendF64(v float64) error {
+func (b *AnyValueBuilder) appendF64(v float64) {
 	b.builder.Append(F64Code)
 	b.f64Builder.Append(v)
 
@@ -173,12 +171,10 @@ func (b *AnyValueBuilder) appendF64(v float64) error {
 	b.i64Builder.AppendNull()
 	b.boolBuilder.AppendNull()
 	b.binaryBuilder.AppendNull()
-
-	return nil
 }
 
 // appendBool appends a new bool value to the builder.
-func (b *AnyValueBuilder) appendBool(v bool) error {
+func (b *AnyValueBuilder) appendBool(v bool) {
 	b.builder.Append(BoolCode)
 	b.boolBuilder.Append(v)
 
@@ -186,8 +182,6 @@ func (b *AnyValueBuilder) appendBool(v bool) error {
 	b.i64Builder.AppendNull()
 	b.f64Builder.AppendNull()
 	b.binaryBuilder.AppendNull()
-
-	return nil
 }
 
 // appendBinary appends a new binary value to the builder.

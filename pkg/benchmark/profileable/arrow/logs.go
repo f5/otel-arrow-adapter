@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package otlp_arrow
+package arrow
 
 import (
 	"io"
@@ -20,30 +20,29 @@ import (
 	"github.com/apache/arrow/go/v11/arrow/memory"
 	"google.golang.org/protobuf/proto"
 
-	"go.opentelemetry.io/collector/pdata/ptrace"
+	"go.opentelemetry.io/collector/pdata/plog"
 
 	v1 "github.com/f5/otel-arrow-adapter/api/collector/arrow/v1"
 	"github.com/f5/otel-arrow-adapter/pkg/benchmark"
 	"github.com/f5/otel-arrow-adapter/pkg/benchmark/dataset"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/arrow_record"
-	acommon "github.com/f5/otel-arrow-adapter/pkg/otel/common/arrow"
-	tracesarrow "github.com/f5/otel-arrow-adapter/pkg/otel/traces/arrow"
 )
 
-type TraceProfileable struct {
+const OtlpArrow = "OTLP_ARROW"
+
+type LogsProfileable struct {
 	tags              []string
 	compression       benchmark.CompressionAlgorithm
-	dataset           dataset.TraceDataset
-	traces            []ptrace.Traces
+	dataset           dataset.LogsDataset
+	logs              []plog.Logs
 	producer          *arrow_record.Producer
 	batchArrowRecords []*v1.BatchArrowRecords
 	config            *benchmark.Config
 	pool              *memory.GoAllocator
-	schema            *acommon.AdaptiveSchema
 }
 
-func NewTraceProfileable(tags []string, dataset dataset.TraceDataset, config *benchmark.Config) *TraceProfileable {
-	return &TraceProfileable{
+func NewLogsProfileable(tags []string, dataset dataset.LogsDataset, config *benchmark.Config) *LogsProfileable {
+	return &LogsProfileable{
 		tags:              tags,
 		dataset:           dataset,
 		compression:       benchmark.NoCompression(),
@@ -51,15 +50,14 @@ func NewTraceProfileable(tags []string, dataset dataset.TraceDataset, config *be
 		batchArrowRecords: make([]*v1.BatchArrowRecords, 0, 10),
 		config:            config,
 		pool:              memory.NewGoAllocator(),
-		schema:            acommon.NewAdaptiveSchema(tracesarrow.Schema),
 	}
 }
 
-func (s *TraceProfileable) Name() string {
-	return "OTLP_ARROW"
+func (s *LogsProfileable) Name() string {
+	return OtlpArrow
 }
 
-func (s *TraceProfileable) Tags() []string {
+func (s *LogsProfileable) Tags() []string {
 	var tags []string
 	compression := s.compression.String()
 	if compression != "" {
@@ -68,32 +66,32 @@ func (s *TraceProfileable) Tags() []string {
 	tags = append(tags, s.tags...)
 	return tags
 }
-func (s *TraceProfileable) DatasetSize() int { return s.dataset.Len() }
-func (s *TraceProfileable) CompressionAlgorithm() benchmark.CompressionAlgorithm {
+func (s *LogsProfileable) DatasetSize() int { return s.dataset.Len() }
+func (s *LogsProfileable) CompressionAlgorithm() benchmark.CompressionAlgorithm {
 	return s.compression
 }
-func (s *TraceProfileable) StartProfiling(_ io.Writer)       {}
-func (s *TraceProfileable) EndProfiling(_ io.Writer)         {}
-func (s *TraceProfileable) InitBatchSize(_ io.Writer, _ int) {}
-func (s *TraceProfileable) PrepareBatch(_ io.Writer, startAt, size int) {
-	s.traces = s.dataset.Traces(startAt, size)
+func (s *LogsProfileable) StartProfiling(_ io.Writer)       {}
+func (s *LogsProfileable) EndProfiling(_ io.Writer)         {}
+func (s *LogsProfileable) InitBatchSize(_ io.Writer, _ int) {}
+func (s *LogsProfileable) PrepareBatch(_ io.Writer, startAt, size int) {
+	s.logs = s.dataset.Logs(startAt, size)
 }
-func (s *TraceProfileable) CreateBatch(_ io.Writer, _, _ int) {
+func (s *LogsProfileable) CreateBatch(_ io.Writer, _, _ int) {
 	// Conversion of OTLP metrics to OTLP Arrow Records
-	s.batchArrowRecords = make([]*v1.BatchArrowRecords, 0, len(s.traces))
-	for _, traceReq := range s.traces {
-		bar, err := s.producer.BatchArrowRecordsFromTraces(traceReq)
+	s.batchArrowRecords = make([]*v1.BatchArrowRecords, 0, len(s.logs))
+	for _, log := range s.logs {
+		bar, err := s.producer.BatchArrowRecordsFromLogs(log)
 		if err != nil {
 			panic(err)
 		}
 		s.batchArrowRecords = append(s.batchArrowRecords, bar)
 	}
 }
-func (s *TraceProfileable) Process(io.Writer) string {
+func (s *LogsProfileable) Process(io.Writer) string {
 	// Not used in this benchmark
 	return ""
 }
-func (s *TraceProfileable) Serialize(io.Writer) ([][]byte, error) {
+func (s *LogsProfileable) Serialize(io.Writer) ([][]byte, error) {
 	buffers := make([][]byte, len(s.batchArrowRecords))
 	for i, be := range s.batchArrowRecords {
 		bytes, err := proto.Marshal(be)
@@ -104,34 +102,18 @@ func (s *TraceProfileable) Serialize(io.Writer) ([][]byte, error) {
 	}
 	return buffers, nil
 }
-
-func (s *TraceProfileable) Deserialize(_ io.Writer, buffers [][]byte) {
+func (s *LogsProfileable) Deserialize(_ io.Writer, buffers [][]byte) {
 	s.batchArrowRecords = make([]*v1.BatchArrowRecords, len(buffers))
 	for i, b := range buffers {
-		be := &v1.BatchArrowRecords{}
-		if err := proto.Unmarshal(b, be); err != nil {
+		bar := &v1.BatchArrowRecords{}
+		if err := proto.Unmarshal(b, bar); err != nil {
 			panic(err)
 		}
-		s.batchArrowRecords[i] = be
-
-		// ToDo TMP
-		//ibes, err := s.consumer.Consume(be)
-		//if err != nil {
-		//	panic(err)
-		//}
-		//for _, ibe := range ibes {
-		//	request, err := trace2.ArrowRecordToOtlpTraces(ibe.Record())
-		//	if err != nil {
-		//		panic(err)
-		//	}
-		//	if len(request.ResourceLogs) == 0 {
-		//		panic("no resource spans")
-		//	}
-		//}
+		s.batchArrowRecords[i] = bar
 	}
 }
-func (s *TraceProfileable) Clear() {
-	s.traces = nil
+func (s *LogsProfileable) Clear() {
+	s.logs = nil
 	s.batchArrowRecords = s.batchArrowRecords[:0]
 }
-func (s *TraceProfileable) ShowStats() {}
+func (s *LogsProfileable) ShowStats() {}

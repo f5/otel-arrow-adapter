@@ -53,6 +53,7 @@ func (d Fields) Swap(i, j int) { d[i], d[j] = d[j], d[i] }
 func SchemaToID(schema *arrow.Schema) string {
 	schemaID := ""
 	fields := sortedFields(schema.Fields())
+
 	for i := range fields {
 		field := &fields[i]
 		if i != 0 {
@@ -60,6 +61,7 @@ func SchemaToID(schema *arrow.Schema) string {
 		}
 		schemaID += FieldToID(field.field)
 	}
+
 	return schemaID
 }
 
@@ -72,6 +74,7 @@ func sortedFields(fields []arrow.Field) []SortableField {
 		}
 	}
 	sort.Sort(Fields(sortedField))
+
 	return sortedField
 }
 
@@ -111,6 +114,7 @@ func DataTypeToID(dt arrow.DataType) string {
 	case *arrow.StructType:
 		id += "{"
 		fields := sortedFields(t.Fields())
+
 		for i := range fields {
 			if i > 0 {
 				id += ","
@@ -120,7 +124,9 @@ func DataTypeToID(dt arrow.DataType) string {
 		id += "}"
 	case *arrow.ListType:
 		id += "["
+
 		elemField := t.ElemField()
+
 		id += DataTypeToID(elemField.Type)
 		id += "]"
 	case *arrow.DictionaryType:
@@ -156,6 +162,7 @@ func ListOfStructsFieldIDFromSchema(schema *arrow.Schema, fieldName string) (int
 	if len(ids) > 1 {
 		return 0, nil, fmt.Errorf("more than one field %q in schema", fieldName)
 	}
+
 	if lt, ok := schema.Field(ids[0]).Type.(*arrow.ListType); ok {
 		st, ok := lt.ElemField().Type.(*arrow.StructType)
 		if !ok {
@@ -172,6 +179,7 @@ func ListOfStructsFieldIDFromStruct(dt *arrow.StructType, fieldName string) (int
 	if !ok {
 		return 0, nil, fmt.Errorf("field %q not found", fieldName)
 	}
+
 	if lt, ok := dt.Field(id).Type.(*arrow.ListType); ok {
 		st, ok := lt.ElemField().Type.(*arrow.StructType)
 		if !ok {
@@ -227,6 +235,7 @@ func ListOfStructsFromRecord(record arrow.Record, fieldID int, row int) (*ListOf
 		if listArr.IsNull(row) {
 			return nil, nil
 		}
+
 		switch structArr := listArr.ListValues().(type) {
 		case *array.Struct:
 			dt, ok := structArr.DataType().(*arrow.StructType)
@@ -256,6 +265,7 @@ func ListOfStructsFromStruct(parent *array.Struct, fieldID int, row int) (*ListO
 		if listArr.IsNull(row) {
 			return nil, nil
 		}
+
 		switch structArr := listArr.ListValues().(type) {
 		case *array.Struct:
 			dt, ok := structArr.DataType().(*arrow.StructType)
@@ -327,6 +337,7 @@ func (los *ListOfStructs) OptionalTimestampFieldByID(fieldID int, row int) *pcom
 	if err != nil {
 		return nil
 	}
+
 	timestamp := pcommon.Timestamp(ts)
 	return &timestamp
 }
@@ -453,6 +464,7 @@ func (los *ListOfStructs) StructArray(name string, row int) (*arrow.StructType, 
 		return nil, nil, nil
 	}
 	column := los.arr.Field(fieldID)
+
 	switch structArr := column.(type) {
 	case *array.Struct:
 		if structArr.IsNull(row) {
@@ -504,6 +516,7 @@ func (los *ListOfStructs) ListOfStructsById(row int, fieldID int) (*ListOfStruct
 		if listArr.IsNull(row) {
 			return nil, nil
 		}
+
 		switch structArr := listArr.ListValues().(type) {
 		case *array.Struct:
 			dt, ok := structArr.DataType().(*arrow.StructType)
@@ -738,86 +751,4 @@ func FixedSizeBinaryFromArray(arr arrow.Array, row int) ([]byte, error) {
 			return nil, fmt.Errorf("column is not of type binary")
 		}
 	}
-}
-
-// DumpRecordInfo is a utility function to display the structure and few other attributes of an
-// Apache Record.
-// This function is test/debug purpose only.
-func DumpRecordInfo(record arrow.Record) {
-	schema := record.Schema()
-	columnCount := 0
-	emptyColumnCount := 0
-	for i := 0; i < int(record.NumCols()); i++ {
-		field := schema.Field(i)
-		arr := record.Column(i)
-		fmt.Printf("Field %q type: %q, null-count: %d, length: %d\n", field.Name, field.Type.Name(), arr.NullN(), arr.Len())
-		columnCount++
-		if arr.Len() == arr.NullN() {
-			emptyColumnCount++
-		}
-		cc, scc := DumArrayInfo("\t", &field, arr)
-		columnCount += cc
-		emptyColumnCount += scc
-	}
-	fmt.Printf("#columns: %d\n", columnCount)
-	fmt.Printf("# empty columns: %d\n", emptyColumnCount)
-}
-
-// DumArrayInfo is a utility function to display the structure and few other attributes of an
-// // Apache Array.
-// // This function is test/debug purpose only.
-func DumArrayInfo(indent string, field *arrow.Field, arr arrow.Array) (int, int) {
-	columnCount := 1
-	emptyColumnCount := 0
-	if arr.Len() == arr.NullN() {
-		emptyColumnCount++
-	}
-	switch f := field.Type.(type) {
-	case *arrow.StructType:
-		arr := arr.(*array.Struct)
-		fmt.Printf("%sField %q type: %q, null-count: %d, length: %d\n", indent, field.Name, field.Type.Name(), arr.NullN(), arr.Len())
-		for i := 0; i < arr.NumField(); i++ {
-			subField := f.Field(i)
-			cc, ecc := DumArrayInfo(indent+"\t", &subField, arr.Field(i))
-			columnCount += cc
-			emptyColumnCount += ecc
-		}
-	case *arrow.ListType:
-		arr := arr.(*array.List)
-		fmt.Printf("%sField %q type: %q, null-count: %d, length: %d\n", indent, field.Name, field.Type.Name(), arr.NullN(), arr.Len())
-		subField := f.ElemField()
-		cc, ecc := DumArrayInfo(indent+"\t", &subField, arr.ListValues())
-		columnCount += cc
-		emptyColumnCount += ecc
-	case *arrow.MapType:
-		arr := arr.(*array.Map)
-		fmt.Printf("%sField %q type: %q, null-count: %d, length: %d\n", indent, field.Name, field.Type.Name(), arr.NullN(), arr.Len())
-		subField := f.KeyField()
-		cc, ecc := DumArrayInfo(indent+"\t", &subField, arr.Keys())
-		columnCount += cc
-		emptyColumnCount += ecc
-		subField = f.ValueField()
-		cc, ecc = DumArrayInfo(indent+"\t", &subField, arr.ListValues())
-		columnCount += cc
-		emptyColumnCount += ecc
-	case *arrow.SparseUnionType:
-		arr := arr.(*array.SparseUnion)
-		fmt.Printf("%sField %q type: %q, null-count: %d, length: %d\n", indent, field.Name, field.Type.Name(), arr.NullN(), arr.Len())
-		for i, variant := range f.Fields() {
-			cc, ecc := DumArrayInfo(indent+"\t", &variant, arr.Field(i))
-			columnCount += cc
-			emptyColumnCount += ecc
-		}
-	case *arrow.DenseUnionType:
-		arr := arr.(*array.DenseUnion)
-		fmt.Printf("%sField %q type: %q, null-count: %d, length: %d\n", indent, field.Name, field.Type.Name(), arr.NullN(), arr.Len())
-		for i, variant := range f.Fields() {
-			cc, ecc := DumArrayInfo(indent+"\t", &variant, arr.Field(i))
-			columnCount += cc
-			emptyColumnCount += ecc
-		}
-	default:
-		fmt.Printf("%sField %q type: %q, null-count: %d, length: %d\n", indent, field.Name, field.Type.Name(), arr.NullN(), arr.Len())
-	}
-	return columnCount, emptyColumnCount
 }

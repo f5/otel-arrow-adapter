@@ -89,9 +89,11 @@ func (b *MetricValueBuilder) AppendNumberDataPointValue(mdp pmetric.NumberDataPo
 	var err error
 	switch mdp.ValueType() {
 	case pmetric.NumberDataPointValueTypeDouble:
-		err = b.appendF64(mdp.DoubleValue())
+		b.appendF64(mdp.DoubleValue())
 	case pmetric.NumberDataPointValueTypeInt:
-		err = b.appendI64(mdp.IntValue())
+		b.appendI64(mdp.IntValue())
+	case pmetric.NumberDataPointValueTypeEmpty:
+		// ignore empty data point.
 	}
 	return err
 }
@@ -105,9 +107,11 @@ func (b *MetricValueBuilder) AppendExemplarValue(ex pmetric.Exemplar) error {
 	var err error
 	switch ex.ValueType() {
 	case pmetric.ExemplarValueTypeDouble:
-		err = b.appendF64(ex.DoubleValue())
+		b.appendF64(ex.DoubleValue())
 	case pmetric.ExemplarValueTypeInt:
-		err = b.appendI64(ex.IntValue())
+		b.appendI64(ex.IntValue())
+	case pmetric.ExemplarValueTypeEmpty:
+		// ignore empty exemplar.
 	}
 	return err
 }
@@ -122,17 +126,13 @@ func (b *MetricValueBuilder) Release() {
 }
 
 // appendI64 appends a new int64 value to the builder.
-func (b *MetricValueBuilder) appendI64(v int64) error {
+func (b *MetricValueBuilder) appendI64(v int64) {
 	b.builder.Append(I64Code)
 	b.i64Builder.Append(v)
-
-	return nil
 }
 
 // appendF64 appends a new double value to the builder.
-func (b *MetricValueBuilder) appendF64(v float64) error {
+func (b *MetricValueBuilder) appendF64(v float64) {
 	b.builder.Append(F64Code)
 	b.f64Builder.Append(v)
-
-	return nil
 }

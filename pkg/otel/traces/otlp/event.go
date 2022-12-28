@@ -88,20 +88,27 @@ func AppendEventsInto(spans ptrace.SpanEventSlice, arrowSpans *arrowutils.ListOf
 		if err != nil {
 			return err
 		}
+
 		event.SetTimestamp(pcommon.Timestamp(timeUnixNano))
+
 		name, err := events.StringFieldByID(ids.Name, eventIdx)
 		if err != nil {
 			return err
 		}
+
 		event.SetName(name)
+
 		if err = otlp.AppendAttributesInto(event.Attributes(), events.Array(), eventIdx, ids.Attributes); err != nil {
 			return err
 		}
+
 		dac, err := events.U32FieldByID(ids.DroppedAttributesCount, eventIdx)
 		if err != nil {
 			return err
 		}
+
 		event.SetDroppedAttributesCount(dac)
 	}
+
 	return nil
 }
