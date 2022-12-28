@@ -36,9 +36,9 @@ func NewUnivariateEHistogramIds(parentDT *arrow.StructType) (*UnivariateEHistogr
 		return nil, err
 	}
 
-	aggrTempId, found := parentDT.FieldIdx(constants.AGGREGATION_TEMPORALITY)
+	aggrTempId, found := parentDT.FieldIdx(constants.AggregationTemporality)
 	if !found {
-		return nil, fmt.Errorf("missing field %q", constants.AGGREGATION_TEMPORALITY)
+		return nil, fmt.Errorf("missing field %q", constants.AggregationTemporality)
 	}
 
 	return &UnivariateEHistogramIds{
@@ -50,7 +50,7 @@ func NewUnivariateEHistogramIds(parentDT *arrow.StructType) (*UnivariateEHistogr
 func UpdateUnivariateEHistogramFrom(ehistogram pmetric.ExponentialHistogram, arr *array.Struct, row int, ids *UnivariateEHistogramIds, smdata *SharedData, mdata *SharedData) error {
 	atArr, ok := arr.Field(ids.AggregationTemporality).(*array.Int32)
 	if !ok {
-		return fmt.Errorf("field %q is not an int64", constants.AGGREGATION_TEMPORALITY)
+		return fmt.Errorf("field %q is not an int64", constants.AggregationTemporality)
 	}
 	ehistogram.SetAggregationTemporality(pmetric.AggregationTemporality(atArr.Value(row)))
 

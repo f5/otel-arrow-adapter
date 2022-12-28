@@ -35,12 +35,12 @@ type ScopeMetricsIds struct {
 }
 
 func NewScopeMetricsIds(dt *arrow.StructType) (*ScopeMetricsIds, error) {
-	id, scopeMetricsDT, err := arrowutils.ListOfStructsFieldIDFromStruct(dt, constants.SCOPE_METRICS)
+	id, scopeMetricsDT, err := arrowutils.ListOfStructsFieldIDFromStruct(dt, constants.ScopeMetrics)
 	if err != nil {
 		return nil, err
 	}
 
-	schemaId, _, err := arrowutils.FieldIDFromStruct(scopeMetricsDT, constants.SCHEMA_URL)
+	schemaId, _, err := arrowutils.FieldIDFromStruct(scopeMetricsDT, constants.SchemaUrl)
 	if err != nil {
 		return nil, err
 	}
@@ -56,8 +56,8 @@ func NewScopeMetricsIds(dt *arrow.StructType) (*ScopeMetricsIds, error) {
 	}
 
 	sharedAttrIds := otlp.NewSharedAttributeIds(scopeMetricsDT)
-	startTimeID := arrowutils.OptionalFieldIDFromStruct(scopeMetricsDT, constants.SHARED_START_TIME_UNIX_NANO)
-	timeID := arrowutils.OptionalFieldIDFromStruct(scopeMetricsDT, constants.SHARED_TIME_UNIX_NANO)
+	startTimeID := arrowutils.OptionalFieldIDFromStruct(scopeMetricsDT, constants.SharedStartTimeUnixNano)
+	timeID := arrowutils.OptionalFieldIDFromStruct(scopeMetricsDT, constants.SharedTimeUnixNano)
 
 	return &ScopeMetricsIds{
 		Id:                 id,

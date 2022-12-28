@@ -28,7 +28,7 @@ import (
 // UnivariateSummaryDT is the Arrow Data Type describing a univariate summary.
 var (
 	UnivariateSummaryDT = arrow.StructOf(
-		arrow.Field{Name: constants.DATA_POINTS, Type: arrow.ListOf(UnivariateSummaryDataPointDT)},
+		arrow.Field{Name: constants.DataPoints, Type: arrow.ListOf(UnivariateSummaryDataPointDT)},
 	)
 )
 

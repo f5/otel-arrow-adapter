@@ -29,7 +29,7 @@ type ResourceIds struct {
 }
 
 func NewResourceIds(resSpansDT *arrow.StructType) (*ResourceIds, error) {
-	resId, resDT, err := arrowutils.StructFieldIDFromStruct(resSpansDT, constants.RESOURCE)
+	resId, resDT, err := arrowutils.StructFieldIDFromStruct(resSpansDT, constants.Resource)
 	if err != nil {
 		return nil, err
 	}
@@ -39,7 +39,7 @@ func NewResourceIds(resSpansDT *arrow.StructType) (*ResourceIds, error) {
 		return nil, err
 	}
 
-	droppedAttributesCount, _, err := arrowutils.FieldIDFromStruct(resDT, constants.DROPPED_ATTRIBUTES_COUNT)
+	droppedAttributesCount, _, err := arrowutils.FieldIDFromStruct(resDT, constants.DroppedAttributesCount)
 	if err != nil {
 		return nil, err
 	}

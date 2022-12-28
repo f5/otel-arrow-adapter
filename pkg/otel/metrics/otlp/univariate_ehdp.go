@@ -47,7 +47,7 @@ type UnivariateEHistogramDataPointIds struct {
 
 // NewUnivariateEHistogramDataPointIds returns a new UnivariateEHistogramDataPointIds struct.
 func NewUnivariateEHistogramDataPointIds(parentDT *arrow.StructType) (*UnivariateEHistogramDataPointIds, error) {
-	id, ehdpDT, err := arrowutils.ListOfStructsFieldIDFromStruct(parentDT, constants.DATA_POINTS)
+	id, ehdpDT, err := arrowutils.ListOfStructsFieldIDFromStruct(parentDT, constants.DataPoints)
 	if err != nil {
 		return nil, err
 	}
@@ -57,37 +57,37 @@ func NewUnivariateEHistogramDataPointIds(parentDT *arrow.StructType) (*Univariat
 		return nil, err
 	}
 
-	startTimeUnixNanoID, found := ehdpDT.FieldIdx(constants.START_TIME_UNIX_NANO)
+	startTimeUnixNanoID, found := ehdpDT.FieldIdx(constants.StartTimeUnixNano)
 	if !found {
-		return nil, fmt.Errorf("field %q not found", constants.START_TIME_UNIX_NANO)
+		return nil, fmt.Errorf("field %q not found", constants.StartTimeUnixNano)
 	}
 
-	timeUnixNanoID, found := ehdpDT.FieldIdx(constants.TIME_UNIX_NANO)
+	timeUnixNanoID, found := ehdpDT.FieldIdx(constants.TimeUnixNano)
 	if !found {
-		return nil, fmt.Errorf("field %q not found", constants.TIME_UNIX_NANO)
+		return nil, fmt.Errorf("field %q not found", constants.TimeUnixNano)
 	}
 
-	countID, found := ehdpDT.FieldIdx(constants.HISTOGRAM_COUNT)
+	countID, found := ehdpDT.FieldIdx(constants.HistogramCount)
 	if !found {
-		return nil, fmt.Errorf("field %q not found", constants.HISTOGRAM_COUNT)
+		return nil, fmt.Errorf("field %q not found", constants.HistogramCount)
 	}
 
-	sumID, found := ehdpDT.FieldIdx(constants.HISTOGRAM_SUM)
+	sumID, found := ehdpDT.FieldIdx(constants.HistogramSum)
 	if !found {
-		return nil, fmt.Errorf("field %q not found", constants.HISTOGRAM_SUM)
+		return nil, fmt.Errorf("field %q not found", constants.HistogramSum)
 	}
 
-	scaleID, found := ehdpDT.FieldIdx(constants.EXP_HISTOGRAM_SCALE)
+	scaleID, found := ehdpDT.FieldIdx(constants.ExpHistogramScale)
 	if !found {
-		return nil, fmt.Errorf("field %q not found", constants.EXP_HISTOGRAM_SCALE)
+		return nil, fmt.Errorf("field %q not found", constants.ExpHistogramScale)
 	}
 
-	zeroCountID, found := ehdpDT.FieldIdx(constants.EXP_HISTOGRAM_ZERO_COUNT)
+	zeroCountID, found := ehdpDT.FieldIdx(constants.ExpHistogramZeroCount)
 	if !found {
-		return nil, fmt.Errorf("field %q not found", constants.EXP_HISTOGRAM_ZERO_COUNT)
+		return nil, fmt.Errorf("field %q not found", constants.ExpHistogramZeroCount)
 	}
 
-	positiveID, positiveDT, err := arrowutils.StructFieldIDFromStruct(ehdpDT, constants.EXP_HISTOGRAM_POSITIVE)
+	positiveID, positiveDT, err := arrowutils.StructFieldIDFromStruct(ehdpDT, constants.ExpHistogramPositive)
 	if err != nil {
 		return nil, err
 	}
@@ -96,7 +96,7 @@ func NewUnivariateEHistogramDataPointIds(parentDT *arrow.StructType) (*Univariat
 		return nil, err
 	}
 
-	negativeID, negativeDT, err := arrowutils.StructFieldIDFromStruct(ehdpDT, constants.EXP_HISTOGRAM_NEGATIVE)
+	negativeID, negativeDT, err := arrowutils.StructFieldIDFromStruct(ehdpDT, constants.ExpHistogramNegative)
 	if err != nil {
 		return nil, err
 	}
@@ -110,19 +110,19 @@ func NewUnivariateEHistogramDataPointIds(parentDT *arrow.StructType) (*Univariat
 		return nil, err
 	}
 
-	flagsID, found := ehdpDT.FieldIdx(constants.FLAGS)
+	flagsID, found := ehdpDT.FieldIdx(constants.Flags)
 	if !found {
-		return nil, fmt.Errorf("field %q not found", constants.FLAGS)
+		return nil, fmt.Errorf("field %q not found", constants.Flags)
 	}
 
-	minID, found := ehdpDT.FieldIdx(constants.HISTOGRAM_MIN)
+	minID, found := ehdpDT.FieldIdx(constants.HistogramMin)
 	if !found {
-		return nil, fmt.Errorf("field %q not found", constants.HISTOGRAM_MIN)
+		return nil, fmt.Errorf("field %q not found", constants.HistogramMin)
 	}
 
-	maxID, found := ehdpDT.FieldIdx(constants.HISTOGRAM_MAX)
+	maxID, found := ehdpDT.FieldIdx(constants.HistogramMax)
 	if !found {
-		return nil, fmt.Errorf("field %q not found", constants.HISTOGRAM_MAX)
+		return nil, fmt.Errorf("field %q not found", constants.HistogramMax)
 	}
 
 	return &UnivariateEHistogramDataPointIds{

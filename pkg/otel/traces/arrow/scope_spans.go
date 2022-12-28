@@ -29,9 +29,9 @@ import (
 // ScopeSpansDT is the Arrow Data Type describing a scope span.
 var (
 	ScopeSpansDT = arrow.StructOf([]arrow.Field{
-		{Name: constants.SCOPE, Type: acommon.ScopeDT},
-		{Name: constants.SCHEMA_URL, Type: acommon.DefaultDictString},
-		{Name: constants.SPANS, Type: arrow.ListOf(SpanDT)},
+		{Name: constants.Scope, Type: acommon.ScopeDT},
+		{Name: constants.SchemaUrl, Type: acommon.DefaultDictString},
+		{Name: constants.Spans, Type: arrow.ListOf(SpanDT)},
 	}...)
 )
 

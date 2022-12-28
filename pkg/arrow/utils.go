@@ -17,26 +17,25 @@ package arrow
 import (
 	"fmt"
 	"sort"
-	"strings"
 
 	"github.com/apache/arrow/go/v11/arrow"
 	"github.com/apache/arrow/go/v11/arrow/array"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 )
 
-const BOOL_SIG = "Bol"
-const U8_SIG = "U8"
-const U16_SIG = "U16"
-const U32_SIG = "U32"
-const U64_SIG = "U64"
-const I8_SIG = "I8"
-const I16_SIG = "I16"
-const I32_SIG = "I32"
-const I64_SIG = "I64"
-const F32_SIG = "F32"
-const F64_SIG = "F64"
-const BINARY_SIG = "Bin"
-const STRING_SIG = "Str"
+const BoolSig = "Bol"
+const U8Sig = "U8"
+const U16Sig = "U16"
+const U32Sig = "U32"
+const U64Sig = "U64"
+const I8Sig = "I8"
+const I16Sig = "I16"
+const I32Sig = "I32"
+const I64Sig = "I64"
+const F32Sig = "F32"
+const F64Sig = "F64"
+const BinarySig = "Bin"
+const StringSig = "Str"
 
 type SortableField struct {
 	name  *string
@@ -84,31 +83,31 @@ func DataTypeToID(dt arrow.DataType) string {
 	id := ""
 	switch t := dt.(type) {
 	case *arrow.BooleanType:
-		id += BOOL_SIG
+		id += BoolSig
 	case *arrow.Int8Type:
-		id += I8_SIG
+		id += I8Sig
 	case *arrow.Int16Type:
-		id += I16_SIG
+		id += I16Sig
 	case *arrow.Int32Type:
-		id += I32_SIG
+		id += I32Sig
 	case *arrow.Int64Type:
-		id += I64_SIG
+		id += I64Sig
 	case *arrow.Uint8Type:
-		id += U8_SIG
+		id += U8Sig
 	case *arrow.Uint16Type:
-		id += U16_SIG
+		id += U16Sig
 	case *arrow.Uint32Type:
-		id += U32_SIG
+		id += U32Sig
 	case *arrow.Uint64Type:
-		id += U64_SIG
+		id += U64Sig
 	case *arrow.Float32Type:
-		id += F32_SIG
+		id += F32Sig
 	case *arrow.Float64Type:
-		id += F64_SIG
+		id += F64Sig
 	case *arrow.StringType:
-		id += STRING_SIG
+		id += StringSig
 	case *arrow.BinaryType:
-		id += BINARY_SIG
+		id += BinarySig
 	case *arrow.StructType:
 		id += "{"
 		fields := sortedFields(t.Fields())
@@ -220,10 +219,8 @@ type ListOfStructs struct {
 	end   int
 }
 
-// TODO remove bis once the other implementation is no longer used
-
-// ListOfStructsFromRecordBis returns the struct type and an array of structs for a given field id.
-func ListOfStructsFromRecordBis(record arrow.Record, fieldID int, row int) (*ListOfStructs, error) {
+// ListOfStructsFromRecord returns the struct type and an array of structs for a given field id.
+func ListOfStructsFromRecord(record arrow.Record, fieldID int, row int) (*ListOfStructs, error) {
 	arr := record.Column(fieldID)
 	switch listArr := arr.(type) {
 	case *array.List:
@@ -484,89 +481,6 @@ func (los *ListOfStructs) IsNull(row int) bool {
 	return los.arr.IsNull(row)
 }
 
-func (los *ListOfStructs) CopyAttributesFrom(attr pcommon.Map) error {
-	attr.EnsureCapacity(los.end - los.start)
-	for i := los.start; i < los.end; i++ {
-		key, err := los.StringFieldByName("key", i)
-		if err != nil {
-			return err
-		}
-		// TODO replace this separator with a constant
-		idx := strings.Index(key, "|")
-		if idx == -1 {
-			return fmt.Errorf("invalid key %q, the signature prefix is missing", key)
-		}
-		sig := key[:idx]
-		key = key[idx+1:]
-		// TODO replace field name strings with constants
-		switch sig {
-		case STRING_SIG:
-			value, err := los.StringFieldByName("string", i)
-			if err != nil {
-				return err
-			}
-			attr.PutStr(key, value)
-		case BINARY_SIG:
-			value, err := los.BinaryFieldByName("binary", i)
-			if err != nil {
-				return err
-			}
-			attr.PutEmptyBytes(key).FromRaw(value)
-		case I64_SIG:
-			value, err := los.I64FieldByName("i64", i)
-			if err != nil {
-				return err
-			}
-			attr.PutInt(key, value)
-		case F64_SIG:
-			value, err := los.F64FieldByName("f64", i)
-			if err != nil {
-				return err
-			}
-			attr.PutDouble(key, value)
-		case BOOL_SIG:
-			value, err := los.BoolFieldByName("bool", i)
-			if err != nil {
-				return err
-			}
-			attr.PutBool(key, value)
-		}
-	}
-	return nil
-}
-
-// OldListOfStructsById
-// TODO remove this function
-func (los *ListOfStructs) OldListOfStructsById(row int, fieldID int, fieldName string) (*ListOfStructs, error) {
-	column := los.arr.Field(fieldID)
-	switch listArr := column.(type) {
-	case *array.List:
-		if listArr.IsNull(row) {
-			return nil, nil
-		}
-		switch structArr := listArr.ListValues().(type) {
-		case *array.Struct:
-			dt, ok := structArr.DataType().(*arrow.StructType)
-			if !ok {
-				return nil, fmt.Errorf("field %q is not a list of struct", fieldName)
-			}
-			start := int(listArr.Offsets()[row])
-			end := int(listArr.Offsets()[row+1])
-
-			return &ListOfStructs{
-				dt:    dt,
-				arr:   structArr,
-				start: start,
-				end:   end,
-			}, nil
-		default:
-			return nil, fmt.Errorf("field %q is not a list of structs", fieldName)
-		}
-	default:
-		return nil, fmt.Errorf("field %q is not a list", fieldName)
-	}
-}
-
 func (los *ListOfStructs) ListValuesById(row int, fieldID int) (arr arrow.Array, start int, end int, err error) {
 	column := los.arr.Field(fieldID)
 	switch listArr := column.(type) {
@@ -613,31 +527,12 @@ func (los *ListOfStructs) ListOfStructsById(row int, fieldID int) (*ListOfStruct
 	}
 }
 
-func (los *ListOfStructs) ListOfStructsByName(name string, row int) (*ListOfStructs, error) {
-	fieldID, found := los.dt.FieldIdx(name)
-	if !found {
-		return nil, nil
-	}
-	return los.OldListOfStructsById(row, fieldID, name)
-}
-
 func (los *ListOfStructs) DataType() *arrow.StructType {
 	return los.dt
 }
 
 func (los *ListOfStructs) Array() *array.Struct {
 	return los.arr
-}
-
-func Array(record arrow.Record, column string) (arrow.Array, error) {
-	fieldIdsWithSameName := record.Schema().FieldIndices(column)
-	if fieldIdsWithSameName == nil {
-		return nil, fmt.Errorf("column %q not found", column)
-	}
-	if len(fieldIdsWithSameName) != 1 {
-		return nil, fmt.Errorf("column %q is ambiguous (multiple columns with the same name)", column)
-	}
-	return record.Column(fieldIdsWithSameName[0]), nil
 }
 
 func BoolFromArray(arr arrow.Array, row int) (bool, error) {

@@ -37,14 +37,14 @@ func NewUnivariateSumIds(parentDT *arrow.StructType) (*UnivariateSumIds, error) 
 		return nil, err
 	}
 
-	aggrTempId, found := parentDT.FieldIdx(constants.AGGREGATION_TEMPORALITY)
+	aggrTempId, found := parentDT.FieldIdx(constants.AggregationTemporality)
 	if !found {
-		return nil, fmt.Errorf("missing field %q", constants.AGGREGATION_TEMPORALITY)
+		return nil, fmt.Errorf("missing field %q", constants.AggregationTemporality)
 	}
 
-	isMonotonicId, found := parentDT.FieldIdx(constants.IS_MONOTONIC)
+	isMonotonicId, found := parentDT.FieldIdx(constants.IsMonotonic)
 	if !found {
-		return nil, fmt.Errorf("missing field %q", constants.IS_MONOTONIC)
+		return nil, fmt.Errorf("missing field %q", constants.IsMonotonic)
 	}
 
 	return &UnivariateSumIds{
@@ -57,13 +57,13 @@ func NewUnivariateSumIds(parentDT *arrow.StructType) (*UnivariateSumIds, error) 
 func UpdateUnivariateSumFrom(sum pmetric.Sum, arr *array.Struct, row int, ids *UnivariateSumIds, smdata *SharedData, mdata *SharedData) error {
 	atArr, ok := arr.Field(ids.AggregationTemporality).(*array.Int32)
 	if !ok {
-		return fmt.Errorf("field %q is not an int64", constants.AGGREGATION_TEMPORALITY)
+		return fmt.Errorf("field %q is not an int64", constants.AggregationTemporality)
 	}
 	sum.SetAggregationTemporality(pmetric.AggregationTemporality(atArr.Value(row)))
 
 	imArr, ok := arr.Field(ids.IsMonotonic).(*array.Boolean)
 	if !ok {
-		return fmt.Errorf("field %q is not a boolean", constants.IS_MONOTONIC)
+		return fmt.Errorf("field %q is not a boolean", constants.IsMonotonic)
 	}
 	sum.SetIsMonotonic(imArr.Value(row))
 

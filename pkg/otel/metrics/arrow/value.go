@@ -34,8 +34,8 @@ const (
 var (
 	// MetricValueDT is an Arrow Data Type representing an OTLP metric value.
 	MetricValueDT = arrow.DenseUnionOf([]arrow.Field{
-		{Name: constants.I64_METRIC_VALUE, Type: arrow.PrimitiveTypes.Int64},
-		{Name: constants.F64_METRIC_VALUE, Type: arrow.PrimitiveTypes.Float64},
+		{Name: constants.I64MetricValue, Type: arrow.PrimitiveTypes.Int64},
+		{Name: constants.F64MetricValue, Type: arrow.PrimitiveTypes.Float64},
 	}, []int8{
 		I64Code,
 		F64Code,

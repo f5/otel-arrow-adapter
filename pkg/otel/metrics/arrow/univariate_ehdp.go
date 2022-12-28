@@ -29,19 +29,19 @@ import (
 // UnivariateEHistogramDataPointDT is the Arrow Data Type describing a univariate exponential histogram number data point.
 var (
 	UnivariateEHistogramDataPointDT = arrow.StructOf(
-		arrow.Field{Name: constants.ATTRIBUTES, Type: acommon.AttributesDT},
-		arrow.Field{Name: constants.START_TIME_UNIX_NANO, Type: arrow.PrimitiveTypes.Uint64},
-		arrow.Field{Name: constants.TIME_UNIX_NANO, Type: arrow.PrimitiveTypes.Uint64},
-		arrow.Field{Name: constants.HISTOGRAM_COUNT, Type: arrow.PrimitiveTypes.Uint64},
-		arrow.Field{Name: constants.HISTOGRAM_SUM, Type: arrow.PrimitiveTypes.Float64},
-		arrow.Field{Name: constants.EXP_HISTOGRAM_SCALE, Type: arrow.PrimitiveTypes.Int32},
-		arrow.Field{Name: constants.EXP_HISTOGRAM_ZERO_COUNT, Type: arrow.PrimitiveTypes.Uint64},
-		arrow.Field{Name: constants.EXP_HISTOGRAM_POSITIVE, Type: EHistogramDataPointBucketsDT},
-		arrow.Field{Name: constants.EXP_HISTOGRAM_NEGATIVE, Type: EHistogramDataPointBucketsDT},
-		arrow.Field{Name: constants.EXEMPLARS, Type: arrow.ListOf(ExemplarDT)},
-		arrow.Field{Name: constants.FLAGS, Type: arrow.PrimitiveTypes.Uint32},
-		arrow.Field{Name: constants.HISTOGRAM_MIN, Type: arrow.PrimitiveTypes.Float64},
-		arrow.Field{Name: constants.HISTOGRAM_MAX, Type: arrow.PrimitiveTypes.Float64},
+		arrow.Field{Name: constants.Attributes, Type: acommon.AttributesDT},
+		arrow.Field{Name: constants.StartTimeUnixNano, Type: arrow.PrimitiveTypes.Uint64},
+		arrow.Field{Name: constants.TimeUnixNano, Type: arrow.PrimitiveTypes.Uint64},
+		arrow.Field{Name: constants.HistogramCount, Type: arrow.PrimitiveTypes.Uint64},
+		arrow.Field{Name: constants.HistogramSum, Type: arrow.PrimitiveTypes.Float64},
+		arrow.Field{Name: constants.ExpHistogramScale, Type: arrow.PrimitiveTypes.Int32},
+		arrow.Field{Name: constants.ExpHistogramZeroCount, Type: arrow.PrimitiveTypes.Uint64},
+		arrow.Field{Name: constants.ExpHistogramPositive, Type: EHistogramDataPointBucketsDT},
+		arrow.Field{Name: constants.ExpHistogramNegative, Type: EHistogramDataPointBucketsDT},
+		arrow.Field{Name: constants.Exemplars, Type: arrow.ListOf(ExemplarDT)},
+		arrow.Field{Name: constants.Flags, Type: arrow.PrimitiveTypes.Uint32},
+		arrow.Field{Name: constants.HistogramMin, Type: arrow.PrimitiveTypes.Float64},
+		arrow.Field{Name: constants.HistogramMax, Type: arrow.PrimitiveTypes.Float64},
 	)
 )
 

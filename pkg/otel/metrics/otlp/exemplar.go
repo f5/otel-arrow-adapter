@@ -37,7 +37,7 @@ type ExemplarIds struct {
 }
 
 func NewExemplarIds(ndp *arrow.StructType) (*ExemplarIds, error) {
-	id, exemplarDT, err := arrowutils.ListOfStructsFieldIDFromStruct(ndp, constants.EXEMPLARS)
+	id, exemplarDT, err := arrowutils.ListOfStructsFieldIDFromStruct(ndp, constants.Exemplars)
 	if err != nil {
 		return nil, err
 	}
@@ -47,24 +47,24 @@ func NewExemplarIds(ndp *arrow.StructType) (*ExemplarIds, error) {
 		return nil, err
 	}
 
-	timeUnixNanoId, timeUnixNanoFound := exemplarDT.FieldIdx(constants.TIME_UNIX_NANO)
+	timeUnixNanoId, timeUnixNanoFound := exemplarDT.FieldIdx(constants.TimeUnixNano)
 	if !timeUnixNanoFound {
-		return nil, fmt.Errorf("field %s not found", constants.TIME_UNIX_NANO)
+		return nil, fmt.Errorf("field %s not found", constants.TimeUnixNano)
 	}
 
-	spanIdId, spanIdFound := exemplarDT.FieldIdx(constants.SPAN_ID)
+	spanIdId, spanIdFound := exemplarDT.FieldIdx(constants.SpanId)
 	if !spanIdFound {
-		return nil, fmt.Errorf("field %s not found", constants.SPAN_ID)
+		return nil, fmt.Errorf("field %s not found", constants.SpanId)
 	}
 
-	traceIdId, traceIdFound := exemplarDT.FieldIdx(constants.TRACE_ID)
+	traceIdId, traceIdFound := exemplarDT.FieldIdx(constants.TraceId)
 	if !traceIdFound {
-		return nil, fmt.Errorf("field %s not found", constants.TRACE_ID)
+		return nil, fmt.Errorf("field %s not found", constants.TraceId)
 	}
 
-	valueId, valueFound := exemplarDT.FieldIdx(constants.METRIC_VALUE)
+	valueId, valueFound := exemplarDT.FieldIdx(constants.MetricValue)
 	if !valueFound {
-		return nil, fmt.Errorf("field %s not found", constants.METRIC_VALUE)
+		return nil, fmt.Errorf("field %s not found", constants.MetricValue)
 	}
 
 	return &ExemplarIds{

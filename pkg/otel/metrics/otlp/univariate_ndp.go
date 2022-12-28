@@ -38,7 +38,7 @@ type UnivariateNdpIds struct {
 }
 
 func NewUnivariateNdpIds(parentDT *arrow.StructType) (*UnivariateNdpIds, error) {
-	id, univariateNdpDT, err := arrowutils.ListOfStructsFieldIDFromStruct(parentDT, constants.DATA_POINTS)
+	id, univariateNdpDT, err := arrowutils.ListOfStructsFieldIDFromStruct(parentDT, constants.DataPoints)
 	if err != nil {
 		return nil, err
 	}
@@ -48,19 +48,19 @@ func NewUnivariateNdpIds(parentDT *arrow.StructType) (*UnivariateNdpIds, error) 
 		return nil, err
 	}
 
-	startTimeUnixNanoId, found := univariateNdpDT.FieldIdx(constants.START_TIME_UNIX_NANO)
+	startTimeUnixNanoId, found := univariateNdpDT.FieldIdx(constants.StartTimeUnixNano)
 	if !found {
-		return nil, fmt.Errorf("field %q not found", constants.START_TIME_UNIX_NANO)
+		return nil, fmt.Errorf("field %q not found", constants.StartTimeUnixNano)
 	}
 
-	timeUnixNanoId, found := univariateNdpDT.FieldIdx(constants.TIME_UNIX_NANO)
+	timeUnixNanoId, found := univariateNdpDT.FieldIdx(constants.TimeUnixNano)
 	if !found {
-		return nil, fmt.Errorf("field %q not found", constants.TIME_UNIX_NANO)
+		return nil, fmt.Errorf("field %q not found", constants.TimeUnixNano)
 	}
 
-	metricValueId, found := univariateNdpDT.FieldIdx(constants.METRIC_VALUE)
+	metricValueId, found := univariateNdpDT.FieldIdx(constants.MetricValue)
 	if !found {
-		return nil, fmt.Errorf("field %q not found", constants.METRIC_VALUE)
+		return nil, fmt.Errorf("field %q not found", constants.MetricValue)
 	}
 
 	exemplars, err := NewExemplarIds(univariateNdpDT)
@@ -68,9 +68,9 @@ func NewUnivariateNdpIds(parentDT *arrow.StructType) (*UnivariateNdpIds, error) 
 		return nil, err
 	}
 
-	flagsId, found := univariateNdpDT.FieldIdx(constants.FLAGS)
+	flagsId, found := univariateNdpDT.FieldIdx(constants.Flags)
 	if !found {
-		return nil, fmt.Errorf("field %q not found", constants.FLAGS)
+		return nil, fmt.Errorf("field %q not found", constants.Flags)
 	}
 
 	return &UnivariateNdpIds{

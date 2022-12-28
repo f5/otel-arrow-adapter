@@ -29,7 +29,7 @@ import (
 // Schema is the Arrow schema for the OTLP Arrow Logs record.
 var (
 	Schema = arrow.NewSchema([]arrow.Field{
-		{Name: constants.RESOURCE_LOGS, Type: arrow.ListOf(ResourceLogsDT)},
+		{Name: constants.ResourceLogs, Type: arrow.ListOf(ResourceLogsDT)},
 	}, nil)
 )
 

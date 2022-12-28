@@ -36,13 +36,13 @@ type UnivariateMetricIds struct {
 }
 
 func NewUnivariateMetricIds(parentDT *arrow.StructType) (*UnivariateMetricIds, error) {
-	id, found := parentDT.FieldIdx(constants.DATA)
+	id, found := parentDT.FieldIdx(constants.Data)
 	if !found {
-		return nil, fmt.Errorf("field %q not found in struct", constants.DATA)
+		return nil, fmt.Errorf("field %q not found in struct", constants.Data)
 	}
 	dataDT, ok := parentDT.Field(id).Type.(*arrow.SparseUnionType)
 	if !ok {
-		return nil, fmt.Errorf("field %q is not a sparse union", constants.DATA)
+		return nil, fmt.Errorf("field %q is not a sparse union", constants.Data)
 	}
 
 	gaugeDT, ok := dataDT.Fields()[ametric.GaugeCode].Type.(*arrow.StructType)
@@ -103,7 +103,7 @@ func NewUnivariateMetricIds(parentDT *arrow.StructType) (*UnivariateMetricIds, e
 func UpdateUnivariateMetricFrom(metric pmetric.Metric, los *arrowutils.ListOfStructs, row int, ids *UnivariateMetricIds, smdata *SharedData, mdata *SharedData) error {
 	arr, ok := los.FieldByID(ids.Id).(*array.SparseUnion)
 	if !ok {
-		return fmt.Errorf("field %q is not a sparse union", constants.DATA)
+		return fmt.Errorf("field %q is not a sparse union", constants.Data)
 	}
 	tcode := int8(arr.ChildID(row))
 	switch tcode {

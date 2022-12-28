@@ -28,8 +28,8 @@ import (
 // ResourceDT is the Arrow Data Type describing a resource.
 var (
 	ResourceDT = arrow.StructOf([]arrow.Field{
-		{Name: constants.ATTRIBUTES, Type: AttributesDT},
-		{Name: constants.DROPPED_ATTRIBUTES_COUNT, Type: arrow.PrimitiveTypes.Uint32},
+		{Name: constants.Attributes, Type: AttributesDT},
+		{Name: constants.DroppedAttributesCount, Type: arrow.PrimitiveTypes.Uint32},
 	}...)
 )
 

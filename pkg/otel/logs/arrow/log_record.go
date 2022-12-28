@@ -30,16 +30,16 @@ import (
 var (
 	// LogRecordDT is the Arrow Data Type describing a log record.
 	LogRecordDT = arrow.StructOf([]arrow.Field{
-		{Name: constants.TIME_UNIX_NANO, Type: arrow.PrimitiveTypes.Uint64},
-		{Name: constants.OBSERVED_TIME_UNIX_NANO, Type: arrow.PrimitiveTypes.Uint64},
-		{Name: constants.TRACE_ID, Type: acommon.DefaultDictFixed16Binary},
-		{Name: constants.SPAN_ID, Type: acommon.DefaultDictFixed8Binary},
-		{Name: constants.SEVERITY_NUMBER, Type: arrow.PrimitiveTypes.Int32},
-		{Name: constants.SEVERITY_TEXT, Type: acommon.DefaultDictString},
-		{Name: constants.BODY, Type: acommon.AnyValueDT},
-		{Name: constants.ATTRIBUTES, Type: acommon.AttributesDT},
-		{Name: constants.DROPPED_ATTRIBUTES_COUNT, Type: arrow.PrimitiveTypes.Uint32},
-		{Name: constants.FLAGS, Type: arrow.PrimitiveTypes.Uint32},
+		{Name: constants.TimeUnixNano, Type: arrow.PrimitiveTypes.Uint64},
+		{Name: constants.ObservedTimeUnixNano, Type: arrow.PrimitiveTypes.Uint64},
+		{Name: constants.TraceId, Type: acommon.DefaultDictFixed16Binary},
+		{Name: constants.SpanId, Type: acommon.DefaultDictFixed8Binary},
+		{Name: constants.SeverityNumber, Type: arrow.PrimitiveTypes.Int32},
+		{Name: constants.SeverityText, Type: acommon.DefaultDictString},
+		{Name: constants.Body, Type: acommon.AnyValueDT},
+		{Name: constants.Attributes, Type: acommon.AttributesDT},
+		{Name: constants.DroppedAttributesCount, Type: arrow.PrimitiveTypes.Uint32},
+		{Name: constants.Flags, Type: arrow.PrimitiveTypes.Uint32},
 	}...)
 )
 

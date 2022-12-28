@@ -29,12 +29,12 @@ import (
 var (
 	// ExemplarDT is an Arrow Data Type representing an OTLP metric exemplar.
 	ExemplarDT = arrow.StructOf(
-		arrow.Field{Name: constants.ATTRIBUTES, Type: acommon.AttributesDT},
-		arrow.Field{Name: constants.TIME_UNIX_NANO, Type: arrow.PrimitiveTypes.Uint64},
-		arrow.Field{Name: constants.METRIC_VALUE, Type: MetricValueDT},
+		arrow.Field{Name: constants.Attributes, Type: acommon.AttributesDT},
+		arrow.Field{Name: constants.TimeUnixNano, Type: arrow.PrimitiveTypes.Uint64},
+		arrow.Field{Name: constants.MetricValue, Type: MetricValueDT},
 		// TODO: Not sure a dictionary if needed here
-		arrow.Field{Name: constants.SPAN_ID, Type: acommon.DefaultDictFixed8Binary},
-		arrow.Field{Name: constants.TRACE_ID, Type: acommon.DefaultDictFixed16Binary},
+		arrow.Field{Name: constants.SpanId, Type: acommon.DefaultDictFixed8Binary},
+		arrow.Field{Name: constants.TraceId, Type: acommon.DefaultDictFixed16Binary},
 	)
 )
 

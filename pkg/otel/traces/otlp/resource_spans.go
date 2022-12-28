@@ -31,12 +31,12 @@ type ResourceSpansIds struct {
 }
 
 func NewResourceSpansIds(schema *arrow.Schema) (*ResourceSpansIds, error) {
-	id, rsDT, err := arrowutils.ListOfStructsFieldIDFromSchema(schema, constants.RESOURCE_SPANS)
+	id, rsDT, err := arrowutils.ListOfStructsFieldIDFromSchema(schema, constants.ResourceSpans)
 	if err != nil {
 		return nil, err
 	}
 
-	schemaId, _, err := arrowutils.FieldIDFromStruct(rsDT, constants.SCHEMA_URL)
+	schemaId, _, err := arrowutils.FieldIDFromStruct(rsDT, constants.SchemaUrl)
 	if err != nil {
 		return nil, err
 	}
@@ -64,7 +64,7 @@ func AppendResourceSpansInto(traces ptrace.Traces, record arrow.Record, traceIds
 	resSpansCount := int(record.NumRows())
 
 	for traceIdx := 0; traceIdx < resSpansCount; traceIdx++ {
-		arrowResEnts, err := arrowutils.ListOfStructsFromRecordBis(record, traceIds.ResourceSpans.Id, traceIdx)
+		arrowResEnts, err := arrowutils.ListOfStructsFromRecord(record, traceIds.ResourceSpans.Id, traceIdx)
 		if err != nil {
 			return err
 		}

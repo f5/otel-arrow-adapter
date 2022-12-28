@@ -28,7 +28,7 @@ import (
 var (
 	// UnivariateGaugeDT is the Arrow Data Type describing a univariate gauge.
 	UnivariateGaugeDT = arrow.StructOf(
-		arrow.Field{Name: constants.DATA_POINTS, Type: arrow.ListOf(UnivariateNumberDataPointDT)},
+		arrow.Field{Name: constants.DataPoints, Type: arrow.ListOf(UnivariateNumberDataPointDT)},
 	)
 )
 

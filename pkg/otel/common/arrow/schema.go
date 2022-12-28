@@ -376,12 +376,12 @@ func (m *AdaptiveSchema) initSizeBuildersFromRecordBuilder(recordBuilder *array.
 
 func (m *AdaptiveSchema) initSizeBuildersFromBuilder(path string, field *arrow.Field, builder array.Builder) {
 	window, found := m.fieldCapacities[path]
-	cap := 0
+	capacity := 0
 	if found {
-		cap = window.Max()
+		capacity = window.Max()
 	}
 
-	builder.Reserve(cap)
+	builder.Reserve(capacity)
 
 	switch b := builder.(type) {
 	case *array.StructBuilder:

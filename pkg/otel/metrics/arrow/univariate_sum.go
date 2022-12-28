@@ -28,9 +28,9 @@ import (
 // UnivariateSumDT is the Arrow Data Type describing a univariate sum.
 var (
 	UnivariateSumDT = arrow.StructOf(
-		arrow.Field{Name: constants.DATA_POINTS, Type: arrow.ListOf(UnivariateNumberDataPointDT)},
-		arrow.Field{Name: constants.AGGREGATION_TEMPORALITY, Type: arrow.PrimitiveTypes.Int32},
-		arrow.Field{Name: constants.IS_MONOTONIC, Type: arrow.FixedWidthTypes.Boolean},
+		arrow.Field{Name: constants.DataPoints, Type: arrow.ListOf(UnivariateNumberDataPointDT)},
+		arrow.Field{Name: constants.AggregationTemporality, Type: arrow.PrimitiveTypes.Int32},
+		arrow.Field{Name: constants.IsMonotonic, Type: arrow.FixedWidthTypes.Boolean},
 	)
 )
 

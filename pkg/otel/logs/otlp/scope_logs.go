@@ -31,12 +31,12 @@ type ScopeLogsIds struct {
 }
 
 func NewScopeLogsIds(dt *arrow.StructType) (*ScopeLogsIds, error) {
-	id, scopeSpansDT, err := arrowutils.ListOfStructsFieldIDFromStruct(dt, constants.SCOPE_LOGS)
+	id, scopeSpansDT, err := arrowutils.ListOfStructsFieldIDFromStruct(dt, constants.ScopeLogs)
 	if err != nil {
 		return nil, err
 	}
 
-	schemaId, _, err := arrowutils.FieldIDFromStruct(scopeSpansDT, constants.SCHEMA_URL)
+	schemaId, _, err := arrowutils.FieldIDFromStruct(scopeSpansDT, constants.SchemaUrl)
 	if err != nil {
 		return nil, err
 	}

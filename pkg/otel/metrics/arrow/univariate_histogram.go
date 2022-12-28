@@ -28,8 +28,8 @@ import (
 var (
 	// UnivariateHistogramDT is the Arrow Data Type describing a univariate histogram.
 	UnivariateHistogramDT = arrow.StructOf(
-		arrow.Field{Name: constants.DATA_POINTS, Type: arrow.ListOf(UnivariateHistogramDataPointDT)},
-		arrow.Field{Name: constants.AGGREGATION_TEMPORALITY, Type: arrow.PrimitiveTypes.Int32},
+		arrow.Field{Name: constants.DataPoints, Type: arrow.ListOf(UnivariateHistogramDataPointDT)},
+		arrow.Field{Name: constants.AggregationTemporality, Type: arrow.PrimitiveTypes.Int32},
 	)
 )
 

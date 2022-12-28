@@ -35,22 +35,22 @@ type EventIds struct {
 }
 
 func NewEventIds(spansDT *arrow.StructType) (*EventIds, error) {
-	id, eventDT, err := arrowutils.ListOfStructsFieldIDFromStruct(spansDT, constants.SPAN_EVENTS)
+	id, eventDT, err := arrowutils.ListOfStructsFieldIDFromStruct(spansDT, constants.SpanEvents)
 	if err != nil {
 		return nil, err
 	}
 
-	timeUnixNanoID, timeUnixNanoFound := eventDT.FieldIdx(constants.TIME_UNIX_NANO)
+	timeUnixNanoID, timeUnixNanoFound := eventDT.FieldIdx(constants.TimeUnixNano)
 	if !timeUnixNanoFound {
-		return nil, fmt.Errorf("field %s not found", constants.TIME_UNIX_NANO)
+		return nil, fmt.Errorf("field %s not found", constants.TimeUnixNano)
 	}
-	nameID, nameFound := eventDT.FieldIdx(constants.NAME)
+	nameID, nameFound := eventDT.FieldIdx(constants.Name)
 	if !nameFound {
-		return nil, fmt.Errorf("field %s not found", constants.NAME)
+		return nil, fmt.Errorf("field %s not found", constants.Name)
 	}
-	droppedAttributesCountId, droppedAttributesCountFound := eventDT.FieldIdx(constants.DROPPED_ATTRIBUTES_COUNT)
+	droppedAttributesCountId, droppedAttributesCountFound := eventDT.FieldIdx(constants.DroppedAttributesCount)
 	if !droppedAttributesCountFound {
-		return nil, fmt.Errorf("field %s not found", constants.DROPPED_ATTRIBUTES_COUNT)
+		return nil, fmt.Errorf("field %s not found", constants.DroppedAttributesCount)
 	}
 	attributesID, err := otlp.NewAttributeIds(eventDT)
 	if err != nil {

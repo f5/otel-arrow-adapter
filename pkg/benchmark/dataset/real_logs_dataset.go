@@ -23,7 +23,7 @@ import (
 	"go.opentelemetry.io/collector/pdata/plog/plogotlp"
 )
 
-// RealLogsDataset represents a dataset of real logs read from an Logs serialized to a binary file.
+// RealLogsDataset represents a dataset of real logs read from a Logs serialized to a binary file.
 type RealLogsDataset struct {
 	logs []logUnit
 }

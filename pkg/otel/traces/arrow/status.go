@@ -29,8 +29,8 @@ import (
 // StatusDT is the Arrow Data Type describing a span status.
 var (
 	StatusDT = arrow.StructOf([]arrow.Field{
-		{Name: constants.STATUS_CODE, Type: arrow.PrimitiveTypes.Int32},
-		{Name: constants.STATUS_MESSAGE, Type: acommon.DefaultDictString},
+		{Name: constants.StatusCode, Type: arrow.PrimitiveTypes.Int32},
+		{Name: constants.StatusMessage, Type: acommon.DefaultDictString},
 	}...)
 )
 

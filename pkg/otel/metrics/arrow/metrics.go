@@ -29,7 +29,7 @@ import (
 // Schema is the Arrow schema for the OTLP Arrow Metrics record.
 var (
 	Schema = arrow.NewSchema([]arrow.Field{
-		{Name: constants.RESOURCE_METRICS, Type: arrow.ListOf(ResourceMetricsDT)},
+		{Name: constants.ResourceMetrics, Type: arrow.ListOf(ResourceMetricsDT)},
 	}, nil)
 )
 

@@ -30,7 +30,7 @@ type AttributeIds struct {
 }
 
 func NewAttributeIds(structDT *arrow.StructType) (*AttributeIds, error) {
-	id, found := structDT.FieldIdx(constants.ATTRIBUTES)
+	id, found := structDT.FieldIdx(constants.Attributes)
 	if !found {
 		return nil, fmt.Errorf("`attributes` field not found in Arrow struct")
 	}
@@ -38,7 +38,7 @@ func NewAttributeIds(structDT *arrow.StructType) (*AttributeIds, error) {
 }
 
 func NewSharedAttributeIds(structDT *arrow.StructType) *AttributeIds {
-	id, found := structDT.FieldIdx(constants.SHARED_ATTRIBUTES)
+	id, found := structDT.FieldIdx(constants.SharedAttributes)
 	if !found {
 		return nil
 	}

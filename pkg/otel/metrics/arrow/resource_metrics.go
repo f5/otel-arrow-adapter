@@ -28,9 +28,9 @@ import (
 
 var (
 	ResourceMetricsDT = arrow.StructOf([]arrow.Field{
-		{Name: constants.RESOURCE, Type: acommon.ResourceDT},
-		{Name: constants.SCHEMA_URL, Type: acommon.DefaultDictString},
-		{Name: constants.SCOPE_METRICS, Type: arrow.ListOf(ScopeMetricsDT)},
+		{Name: constants.Resource, Type: acommon.ResourceDT},
+		{Name: constants.SchemaUrl, Type: acommon.DefaultDictString},
+		{Name: constants.ScopeMetrics, Type: arrow.ListOf(ScopeMetricsDT)},
 	}...)
 )
 

@@ -23,7 +23,7 @@ import (
 	"go.opentelemetry.io/collector/pdata/pmetric/pmetricotlp"
 )
 
-// RealMetricsDataset represents a dataset of real metrics read from an Metrics serialized to a binary file.
+// RealMetricsDataset represents a dataset of real metrics read from a Metrics serialized to a binary file.
 type RealMetricsDataset struct {
 	metrics []metrics
 }

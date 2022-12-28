@@ -31,19 +31,19 @@ type QuantileValueIds struct {
 }
 
 func NewQuantileValueIds(parentDT *arrow.StructType) (*QuantileValueIds, error) {
-	id, quantileValueDT, err := arrowutils.ListOfStructsFieldIDFromStruct(parentDT, constants.SUMMARY_QUANTILE_VALUES)
+	id, quantileValueDT, err := arrowutils.ListOfStructsFieldIDFromStruct(parentDT, constants.SummaryQuantileValues)
 	if err != nil {
 		return nil, err
 	}
 
-	quantile, quantileFound := quantileValueDT.FieldIdx(constants.SUMMARY_QUANTILE)
+	quantile, quantileFound := quantileValueDT.FieldIdx(constants.SummaryQuantile)
 	if !quantileFound {
-		return nil, fmt.Errorf("field %q not found", constants.SUMMARY_QUANTILE)
+		return nil, fmt.Errorf("field %q not found", constants.SummaryQuantile)
 	}
 
-	value, valueFound := quantileValueDT.FieldIdx(constants.SUMMARY_VALUE)
+	value, valueFound := quantileValueDT.FieldIdx(constants.SummaryValue)
 	if !valueFound {
-		return nil, fmt.Errorf("field %q not found", constants.SUMMARY_VALUE)
+		return nil, fmt.Errorf("field %q not found", constants.SummaryValue)
 	}
 
 	return &QuantileValueIds{

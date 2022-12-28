@@ -31,12 +31,12 @@ import (
 // ScopeMetricsDT is the Arrow Data Type describing a scope span.
 var (
 	ScopeMetricsDT = arrow.StructOf([]arrow.Field{
-		{Name: constants.SCOPE, Type: acommon.ScopeDT},
-		{Name: constants.SCHEMA_URL, Type: acommon.DefaultDictString},
-		{Name: constants.UNIVARIATE_METRICS, Type: arrow.ListOf(UnivariateMetricSetDT)},
-		{Name: constants.SHARED_ATTRIBUTES, Type: acommon.AttributesDT},
-		{Name: constants.SHARED_START_TIME_UNIX_NANO, Type: arrow.PrimitiveTypes.Uint64},
-		{Name: constants.SHARED_TIME_UNIX_NANO, Type: arrow.PrimitiveTypes.Uint64},
+		{Name: constants.Scope, Type: acommon.ScopeDT},
+		{Name: constants.SchemaUrl, Type: acommon.DefaultDictString},
+		{Name: constants.UnivariateMetrics, Type: arrow.ListOf(UnivariateMetricSetDT)},
+		{Name: constants.SharedAttributes, Type: acommon.AttributesDT},
+		{Name: constants.SharedStartTimeUnixNano, Type: arrow.PrimitiveTypes.Uint64},
+		{Name: constants.SharedTimeUnixNano, Type: arrow.PrimitiveTypes.Uint64},
 	}...)
 )
 

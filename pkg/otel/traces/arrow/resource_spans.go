@@ -28,9 +28,9 @@ import (
 
 var (
 	ResourceSpansDT = arrow.StructOf([]arrow.Field{
-		{Name: constants.RESOURCE, Type: acommon.ResourceDT},
-		{Name: constants.SCHEMA_URL, Type: acommon.DefaultDictString},
-		{Name: constants.SCOPE_SPANS, Type: arrow.ListOf(ScopeSpansDT)},
+		{Name: constants.Resource, Type: acommon.ResourceDT},
+		{Name: constants.SchemaUrl, Type: acommon.DefaultDictString},
+		{Name: constants.ScopeSpans, Type: arrow.ListOf(ScopeSpansDT)},
 	}...)
 )
 

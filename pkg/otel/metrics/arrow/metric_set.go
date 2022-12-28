@@ -30,23 +30,14 @@ import (
 var (
 	// UnivariateMetricSetDT is the Arrow Data Type describing a set of univariate metrics.
 	UnivariateMetricSetDT = arrow.StructOf(
-		arrow.Field{Name: constants.NAME, Type: acommon.DefaultDictString},
-		arrow.Field{Name: constants.DESCRIPTION, Type: acommon.DefaultDictString},
-		arrow.Field{Name: constants.UNIT, Type: acommon.DefaultDictString},
-		arrow.Field{Name: constants.DATA, Type: UnivariateMetricDT},
-		arrow.Field{Name: constants.SHARED_ATTRIBUTES, Type: acommon.AttributesDT},
-		arrow.Field{Name: constants.SHARED_START_TIME_UNIX_NANO, Type: arrow.PrimitiveTypes.Uint64},
-		arrow.Field{Name: constants.SHARED_TIME_UNIX_NANO, Type: arrow.PrimitiveTypes.Uint64},
+		arrow.Field{Name: constants.Name, Type: acommon.DefaultDictString},
+		arrow.Field{Name: constants.Description, Type: acommon.DefaultDictString},
+		arrow.Field{Name: constants.Unit, Type: acommon.DefaultDictString},
+		arrow.Field{Name: constants.Data, Type: UnivariateMetricDT},
+		arrow.Field{Name: constants.SharedAttributes, Type: acommon.AttributesDT},
+		arrow.Field{Name: constants.SharedStartTimeUnixNano, Type: arrow.PrimitiveTypes.Uint64},
+		arrow.Field{Name: constants.SharedTimeUnixNano, Type: arrow.PrimitiveTypes.Uint64},
 	)
-
-	// MultivariateMetricsDT is the Arrow Data Type describing a set of multivariate metrics.
-	// Multivariate metrics are metrics sharing the same attributes, start time, and end time.
-	MultivariateMetricsDT = arrow.StructOf([]arrow.Field{
-		{Name: constants.NAME, Type: acommon.DefaultDictString},
-		{Name: constants.DESCRIPTION, Type: acommon.DefaultDictString},
-		{Name: constants.UNIT, Type: acommon.DefaultDictString},
-		// TODO
-	}...)
 )
 
 // MetricSetBuilder is a helper to build a metric set.

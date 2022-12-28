@@ -37,11 +37,11 @@ const (
 // UnivariateMetricDT is the Arrow Data Type describing a univariate metric.
 var (
 	UnivariateMetricDT = arrow.SparseUnionOf([]arrow.Field{
-		{Name: constants.GAUGE_METRICS, Type: UnivariateGaugeDT},
-		{Name: constants.SUM_METRICS, Type: UnivariateSumDT},
-		{Name: constants.SUMMARY_METRICS, Type: UnivariateSummaryDT},
-		{Name: constants.HISTOGRAM_METRICS, Type: UnivariateHistogramDT},
-		{Name: constants.EXP_HISTOGRAM_METRICS, Type: UnivariateEHistogramDT},
+		{Name: constants.GaugeMetrics, Type: UnivariateGaugeDT},
+		{Name: constants.SumMetrics, Type: UnivariateSumDT},
+		{Name: constants.SummaryMetrics, Type: UnivariateSummaryDT},
+		{Name: constants.HistogramMetrics, Type: UnivariateHistogramDT},
+		{Name: constants.ExpHistogramMetrics, Type: UnivariateEHistogramDT},
 	},
 		[]arrow.UnionTypeCode{
 			GaugeCode,

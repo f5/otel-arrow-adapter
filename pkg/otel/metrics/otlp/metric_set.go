@@ -36,22 +36,22 @@ type MetricSetIds struct {
 }
 
 func NewMetricSetIds(parentDT *arrow.StructType) (*MetricSetIds, error) {
-	id, metricSetDT, err := arrowutils.ListOfStructsFieldIDFromStruct(parentDT, constants.UNIVARIATE_METRICS)
+	id, metricSetDT, err := arrowutils.ListOfStructsFieldIDFromStruct(parentDT, constants.UnivariateMetrics)
 	if err != nil {
 		return nil, err
 	}
 
-	name, _, err := arrowutils.FieldIDFromStruct(metricSetDT, constants.NAME)
+	name, _, err := arrowutils.FieldIDFromStruct(metricSetDT, constants.Name)
 	if err != nil {
 		return nil, err
 	}
 
-	description, _, err := arrowutils.FieldIDFromStruct(metricSetDT, constants.DESCRIPTION)
+	description, _, err := arrowutils.FieldIDFromStruct(metricSetDT, constants.Description)
 	if err != nil {
 		return nil, err
 	}
 
-	unit, _, err := arrowutils.FieldIDFromStruct(metricSetDT, constants.UNIT)
+	unit, _, err := arrowutils.FieldIDFromStruct(metricSetDT, constants.Unit)
 	if err != nil {
 		return nil, err
 	}
@@ -62,8 +62,8 @@ func NewMetricSetIds(parentDT *arrow.StructType) (*MetricSetIds, error) {
 	}
 
 	sharedAttrIds := otlp.NewSharedAttributeIds(metricSetDT)
-	startTimeID := arrowutils.OptionalFieldIDFromStruct(metricSetDT, constants.SHARED_START_TIME_UNIX_NANO)
-	timeID := arrowutils.OptionalFieldIDFromStruct(metricSetDT, constants.SHARED_TIME_UNIX_NANO)
+	startTimeID := arrowutils.OptionalFieldIDFromStruct(metricSetDT, constants.SharedStartTimeUnixNano)
+	timeID := arrowutils.OptionalFieldIDFromStruct(metricSetDT, constants.SharedTimeUnixNano)
 
 	return &MetricSetIds{
 		Id:                 id,

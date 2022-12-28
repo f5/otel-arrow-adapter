@@ -31,19 +31,19 @@ type ScopeIds struct {
 }
 
 func NewScopeIds(resSpansDT *arrow.StructType) (*ScopeIds, error) {
-	scopeID, scopeDT, err := arrowutils.StructFieldIDFromStruct(resSpansDT, constants.SCOPE)
+	scopeID, scopeDT, err := arrowutils.StructFieldIDFromStruct(resSpansDT, constants.Scope)
 	if err != nil {
 		return nil, err
 	}
-	nameID, _, err := arrowutils.FieldIDFromStruct(scopeDT, constants.NAME)
+	nameID, _, err := arrowutils.FieldIDFromStruct(scopeDT, constants.Name)
 	if err != nil {
 		return nil, err
 	}
-	versionID, _, err := arrowutils.FieldIDFromStruct(scopeDT, constants.VERSION)
+	versionID, _, err := arrowutils.FieldIDFromStruct(scopeDT, constants.Version)
 	if err != nil {
 		return nil, err
 	}
-	droppedAttributesCountID, _, err := arrowutils.FieldIDFromStruct(scopeDT, constants.DROPPED_ATTRIBUTES_COUNT)
+	droppedAttributesCountID, _, err := arrowutils.FieldIDFromStruct(scopeDT, constants.DroppedAttributesCount)
 	if err != nil {
 		return nil, err
 	}
