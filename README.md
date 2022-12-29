@@ -15,6 +15,22 @@ Other important links:
 - The underlying [OTEP](https://github.com/lquerel/oteps/blob/main/text/0156-columnar-encoding.md) describing the 
 rationale, specifications and different phases of this project.
 
+## Benchmark results
+
+### Metrics
+
+TBD 
+
+### Logs
+
+TBD
+
+### Traces
+
+Results comparing the OTLP and OTLP Arrow encoders/decoders for traces. The traces dataset used for this benchmark comes
+from a production environment and contains 416995 spans.
+
+![img](docs/img/benchmark_traces.png)
 
 ## Testing and validation
 
