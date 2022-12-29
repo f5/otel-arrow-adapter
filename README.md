@@ -19,11 +19,11 @@ rationale, specifications and different phases of this project.
 
 ### Metrics
 
-TBD 
+![img](docs/img/benchmark_metrics.png)
 
 ### Logs
 
-TBD
+![img](docs/img/benchmark_logs.png)
 
 ### Traces
 

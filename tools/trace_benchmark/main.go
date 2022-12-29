@@ -24,6 +24,7 @@ import (
 	"github.com/f5/otel-arrow-adapter/pkg/benchmark"
 	"github.com/f5/otel-arrow-adapter/pkg/benchmark/dataset"
 	"github.com/f5/otel-arrow-adapter/pkg/benchmark/profileable/arrow"
+	"github.com/f5/otel-arrow-adapter/pkg/benchmark/profileable/otlp"
 )
 
 var help = flag.Bool("help", false, "Show help")
@@ -49,18 +50,18 @@ func main() {
 		// Compare the performance between the standard OTLP representation and the OTLP Arrow representation.
 		//profiler := benchmark.NewProfiler([]int{1000, 5000, 10000, 25000})
 		profiler := benchmark.NewProfiler([]int{1000, 2000}, "output/trace_benchmark.log", 2)
-		//compressionAlgo := benchmark.Zstd()
+		compressionAlgo := benchmark.Zstd()
 		maxIter := uint64(1)
 		ds := dataset.NewRealTraceDataset(inputFiles[i], []string{"trace_id"})
 		profiler.Printf("Dataset '%s' (%s) loaded\n", inputFiles[i], humanize.Bytes(uint64(ds.SizeInBytes())))
-		//otlpTraces := otlp.NewTraceProfileable(ds, compressionAlgo)
+		otlpTraces := otlp.NewTraceProfileable(ds, compressionAlgo)
 
 		conf := &benchmark.Config{}
 		otlpArrowTraces := arrow.NewTraceProfileable([]string{"uint16 dict"}, ds, conf)
 
-		//if err := profiler.Profile(otlpTraces, maxIter); err != nil {
-		//	panic(fmt.Errorf("expected no error, got %v", err))
-		//}
+		if err := profiler.Profile(otlpTraces, maxIter); err != nil {
+			panic(fmt.Errorf("expected no error, got %v", err))
+		}
 
 		if err := profiler.Profile(otlpArrowTraces, maxIter); err != nil {
 			panic(fmt.Errorf("expected no error, got %v", err))
