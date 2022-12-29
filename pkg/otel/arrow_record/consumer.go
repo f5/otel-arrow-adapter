@@ -30,7 +30,11 @@ import (
 	tracesotlp "github.com/f5/otel-arrow-adapter/pkg/otel/traces/otlp"
 )
 
-// ConsumerAPI is the interface of a Consumer consdiering all signals.
+// This file implements a generic consumer API used to decode BatchArrowRecords messages into
+// their corresponding OTLP representations (i.e. pmetric.Metrics, plog.Logs, ptrace.Traces).
+// The consumer API is used by the OTLP Arrow receiver.
+
+// ConsumerAPI is the interface of a Consumer considering all signals.
 // This is useful for mock testing.
 type ConsumerAPI interface {
 	LogsFrom(*colarspb.BatchArrowRecords) ([]plog.Logs, error)
@@ -53,7 +57,8 @@ type streamConsumer struct {
 	ipcReader *ipc.Reader
 }
 
-// NewConsumer creates a new BatchArrowRecords consumer.
+// NewConsumer creates a new BatchArrowRecords consumer, i.e. a decoder consuming BatchArrowRecords and returning
+// the corresponding OTLP representation (pmetric,Metrics, plog.Logs, ptrace.Traces).
 func NewConsumer() *Consumer {
 	return &Consumer{
 		streamConsumers: make(map[string]*streamConsumer),
