@@ -125,6 +125,10 @@ The integration of this package with the OpenTelemetry Collector is done in the 
   - [Beta 2](https://github.com/f5/otel-arrow-adapter/milestone/2)
   - [Beta 3](https://github.com/f5/otel-arrow-adapter/milestone/3)
   - [Beta 4](https://github.com/f5/otel-arrow-adapter/milestone/4)
+- Not yet implemented
+  - Multivariate metrics encoder/decoder
+  - Complex attributes (list, map)
+  - Some mitigations mentioned in the [thread model assessment](docs/thread_model_assessment.md)
 
 ## License
 
