@@ -1,6 +1,6 @@
 # OTLP Arrow Encoder/Decoder package
 
-This package is a reference implementation of the OTLP Arrow Encoder/Decoder specified in this [OTEP](https://github.com/lquerel/oteps/blob/main/text/0156-columnar-encoding.md.
+This package is a reference implementation of the OTLP Arrow protocol specified in this [OTEP](https://github.com/lquerel/oteps/blob/main/text/0156-columnar-encoding.md).
 All OTLP entities are covered (metrics, logs, and traces) as well as all sub-elements such as events, links, gauge, sum, 
 summary, histograms, ... The overall goal is to optimize the compression ratio for telemetry data transmission as well 
 as the end-to-end performance between telemetry data producers and receivers.
@@ -17,18 +17,29 @@ rationale, specifications and different phases of this project.
 
 ## Benchmark results
 
-### Metrics
+A comparison of the performance and compression rates between the standard OTLP protocol and the OTLP Arrow protocol is
+given below. Except for the traces, the telemetry data used for these benchmarks are from a synthetic data generator.
+A larger campaign of tests and benchmarks on real production data will be conducted with the help of the community
+(see the [Help us](#tests-and-benchmarks-on-real-production-data) section).
+
+**Current results show an improvement of the compression ratio from 200% to 400%.**
+
+### Metrics benchmarks
+
+The following results demonstrate an improvement of the compression rate from 200% to 223% for univariate metrics. 
 
 ![img](docs/img/benchmark_metrics.png)
 
-### Logs
+### Logs benchmarks
+
+The following results demonstrate an improvement of the compression rate of 266% for logs.
 
 ![img](docs/img/benchmark_logs.png)
 
-### Traces
+### Traces benchmarks
 
-Results comparing the OTLP and OTLP Arrow encoders/decoders for traces. The traces dataset used for this benchmark comes
-from a production environment and contains 416995 spans.
+The following results demonstrate an improvement of the compression rate from 362% to 395%. The traces dataset used for
+this benchmark comes from a production environment and contains 416995 spans.
 
 ![img](docs/img/benchmark_traces.png)
 
@@ -37,17 +48,18 @@ from a production environment and contains 416995 spans.
 The testing of this package and the validation of the OTLP Arrow encoding/decoding are the object of particular 
 attention because of the central position of this package in the future OTEL collector.
 
-Concerning the test, the plan is to:
-- reach at least 80% of the tested code (probably more),
-- implement fuzz tests on the encoding and decoding of OTLP Arrow messages,
-- implement integration tests with the experimental collector.
+Concerning the tests, the plan is to:
+- reach a test coverage close to 80% (currently ~62%).
+- add more fuzz tests on the encoding and decoding of OTLP Arrow messages,
+- implement integration tests with the experimental collector (testbed implemented in the experimental collector).
 
 Concerning the encoding/decoding validation, the plan is to:
-- compare the OTLP entities before and after their conversion to OTLP Arrow entities.
+- compare the OTLP entities before and after their conversion to OTLP Arrow entities (done).
 - test the conversion procedure of the production data via a CLI tool or directly via the integration in the 
-experimental collector.
+experimental collector (wip).
 
-A validation of the compression ratio stability is also part of the objectives. This validation will be performed on production data.
+A validation of the compression ratio stability is also part of the objectives. This validation will be performed on
+production data (see [Help us](#tests-and-benchmarks-on-real-production-data) section).
 
 ## Security
 
@@ -60,9 +72,23 @@ encoding or decoding phases, ...). Below the main risks identified so far:
 
 Check this issue for complementary information: https://github.com/open-telemetry/opentelemetry-specification/issues/1891 
 
-## Developers
+## Help us!
 
-### How to change the protobuf specification
+### Tests and benchmarks on real production data
+
+We strongly encourage community members to test this protocol extension on production data and report their results and
+potential problems.
+
+A beta version of this experimental collector will soon be available for this purpose. The testing procedure is described below:
+- ToDo
+
+### Developers
+
+Pull requests are welcome. For major changes, please open an issue
+first to discuss what you would like to change. For more information, please
+read [CONTRIBUTING](CONTRIBUTING.md).
+
+#### How to change the protobuf specification
 
 To (re)generate the ArrowStreamService gRPC service, you need to install the `protoc` compiler and the `protoc-gen-grpc` plugin.
 ```shell
@@ -75,12 +101,10 @@ cd ./proto
 Once the `*.pb.go` files are generated, you need to replace the content of the `api/collector/arrow/v1` directory by the
 generated files present in the `./proto/api/collector/arrow/v1` directory.
 
-
 ## Integration with the OpenTelemetry Collector
 
 The integration of this package with the OpenTelemetry Collector is done in the following experimental repository:
 * [experimental-arrow-collector](https://github.com/open-telemetry/experimental-arrow-collector)
-
 
 ## Project management and status
 
@@ -90,12 +114,6 @@ The integration of this package with the OpenTelemetry Collector is done in the 
   - [Beta 2](https://github.com/f5/otel-arrow-adapter/milestone/2)
   - [Beta 3](https://github.com/f5/otel-arrow-adapter/milestone/3)
   - [Beta 4](https://github.com/f5/otel-arrow-adapter/milestone/4)
-
-## Contributing
-
-Pull requests are welcome. For major changes, please open an issue
-first to discuss what you would like to change. For more information, please
-read [CONTRIBUTING](CONTRIBUTING.md).
 
 ## License
 
