@@ -15,6 +15,27 @@ Other important links:
 - The underlying [OTEP](https://github.com/lquerel/oteps/blob/main/text/0156-columnar-encoding.md) describing the 
 rationale, specifications and different phases of this project.
 
+## Phase 1 (current implementation)
+
+This first step is intended to address the specific use cases of traffic reduction. Based on community feedback, many
+companies want to reduce the cost of transferring telemetry data over the Internet. By adding a collector that acts as
+a point of integration and traffic conversion at the edge of a client environment, we can take advantage of the columnar
+format to eliminate redundant data and optimize the compression rate. This is illustrated in the following diagram.
+
+![Traffic reduction use case](docs/img/traffic_reduction_use_case.png)
+
+> Note 1: A fallback mechanism can be used to handle the case where the new protocol is not supported by the target. 
+> More on this mechanism in this [section](https://github.com/lquerel/oteps/blob/main/text/0156-columnar-encoding.md#protocol-extension-and-fallback-mechanism) of the OTEP. 
+
+The experimental collector implements on top of this library a new OTLP Arrow Receiver and Exporter able to fallback on
+standard OTLP when needed. The following diagram is an overview of this integration. The internal representation of the
+data has not been updated and this collector is still fundamentally row-oriented internally.
+
+![collector internal overview](docs/img/collector_internal_overview.png)
+
+> Note 2: A future phase 2 of this project will focus on implementing end-to-end OTLP arrow to improve the overall
+> performance.
+
 ## Benchmark results
 
 A comparison of the performance and compression rates between the standard OTLP protocol and the OTLP Arrow protocol is
