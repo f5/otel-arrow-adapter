@@ -14,6 +14,7 @@ Other important links:
 - [Arrow schemas](docs/arrow_schema.md) used by this package.
 - The underlying [OTEP](https://github.com/lquerel/oteps/blob/main/text/0156-columnar-encoding.md) describing the 
 rationale, specifications and different phases of this project.
+- [Thread model](docs/thread_model_assessment.md).
 
 ## Phase 1 (current implementation)
 
@@ -81,17 +82,6 @@ experimental collector (wip).
 
 A validation of the compression ratio stability is also part of the objectives. This validation will be performed on
 production data (see [Help us](#tests-and-benchmarks-on-real-production-data) section).
-
-## Security
-
-A thread model is being defined [WIP] (untrusted input data, what can go wrong at the protocol level, during the 
-encoding or decoding phases, ...). Below the main risks identified so far:
-- invalid, or compromised inputs causing security or reliability issues.
-- very large input data causing denial of service.
-- high cardinality data causing dictionary overflow (over multiple messages).
-- ... TBD 
-
-Check this issue for complementary information: https://github.com/open-telemetry/opentelemetry-specification/issues/1891 
 
 ## Help us!
 
