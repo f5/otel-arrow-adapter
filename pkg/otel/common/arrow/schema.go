@@ -22,6 +22,12 @@ import (
 	"github.com/apache/arrow/go/v11/arrow/array"
 )
 
+// A window on the last n capacities of each Arrow builder (present in a RecordBuilder) is maintained. The optimal
+// capacity of each Arrow builder in a RecordBuilder is determined from the previous observations. The size of this
+// window therefore represents the depth of the history used to optimize the construction of the RecordBuilder.
+// In the current implementation is based on the max value of the last n observations (i.e. max(nth capacities)).
+const builderCapacityWindowSize = 10
+
 // AdaptiveSchema is a wrapper around [arrow.Schema] that can be used to detect
 // dictionary overflow and update the schema accordingly. It also maintains the
 // dictionary values for each dictionary field so that the dictionary builders
@@ -333,7 +339,7 @@ func (m *AdaptiveSchema) collectSizeBuildersFromRecord(record arrow.Record) {
 func (m *AdaptiveSchema) collectSizeBuildersFromArray(path string, field *arrow.Field, arr arrow.Array) {
 	window, found := m.fieldCapacities[path]
 	if !found {
-		window = NewBuilderCapacityWindow(10)
+		window = NewBuilderCapacityWindow(builderCapacityWindowSize)
 		m.fieldCapacities[path] = window
 	}
 	window.Record(arr.Len())
