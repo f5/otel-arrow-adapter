@@ -364,7 +364,7 @@ func (m *AdaptiveSchema) collectSizeBuildersFromArray(path string, field *arrow.
 	}
 }
 
-// initSizeBuildersFromRecordBuilder initializes the size of each internal builder in rhe record builder
+// initSizeBuildersFromRecordBuilder initializes the size of each internal builder in the record builder
 // passed in parameter. The previous size of the builders are used to determine the initial sizes.
 // The goal is to avoid resizing the builders too often (the default size being 32).
 func (m *AdaptiveSchema) initSizeBuildersFromRecordBuilder(recordBuilder *array.RecordBuilder) {
