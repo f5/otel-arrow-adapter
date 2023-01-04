@@ -17,4 +17,4 @@ For more information visit
 
 ## Threat Model
 
-See the following [threat model assessment](docs/thread_model_assessment.md) for more details.
+See the following [threat model assessment](docs/threat_model_assessment.md) for more details.

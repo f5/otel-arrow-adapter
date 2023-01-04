@@ -14,7 +14,7 @@ Other important links:
 - [Arrow schemas](docs/arrow_schema.md) used by this package.
 - The underlying [OTEP](https://github.com/lquerel/oteps/blob/main/text/0156-columnar-encoding.md) describing the 
 rationale, specifications and different phases of this project.
-- [Thread model](docs/thread_model_assessment.md).
+- [Thread model](docs/threat_model_assessment.md).
 
 ## Phase 1 (current implementation)
 
@@ -128,7 +128,7 @@ The integration of this package with the OpenTelemetry Collector is done in the 
 - Not yet implemented
   - Multivariate metrics encoder/decoder
   - Complex attributes (list, map)
-  - Some mitigations mentioned in the [thread model assessment](docs/thread_model_assessment.md)
+  - Some mitigations mentioned in the [thread model assessment](docs/threat_model_assessment.md)
 
 ## License
 
