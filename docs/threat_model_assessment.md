@@ -10,6 +10,8 @@ threat model. The existing OTEL guidance is recommended to mitigate threats in t
 * Transport Layer Security: [setting up certificates](https://opentelemetry.io/docs/collector/configuration/#setting-up-certificates)
 * Authentication: [custom auth](https://opentelemetry.io/docs/collector/custom-auth/)
 
+![diagram flow and scope](img/OTEL%20-%20TMA%20scope.png)
+
 ## Security Testing
 For this project we intend to run fuzz tests and various other security scans on each commit.
 
