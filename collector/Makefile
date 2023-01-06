@@ -11,7 +11,7 @@ endef
 all:
 	echo "Run 'make gen'"
 
-DIR_NAMES := internal exporter receiver
+DIR_NAMES := internal exporter receiver cmd
 SOURCE_DIR := ../../arrow-collector
 
 gen:
@@ -24,6 +24,10 @@ gen:
 	cp -r ${SOURCE_DIR}/internal/testutil internal
 	cp -r ${SOURCE_DIR}/internal/testdata internal
 	cp -r ${SOURCE_DIR}/internal/sharedcomponent internal
+	cp -r ${SOURCE_DIR}/cmd/otelcorecol cmd/otelarrowcol
+	rm cmd/otelarrowcol/go.{sum,mod}
+	rm cmd/otelarrowcol/Makefile
+	rm cmd/otelarrowcol/builder-config.yaml
 	$(MAKE) subgen
 
 subgen:
