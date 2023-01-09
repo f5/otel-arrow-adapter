@@ -67,7 +67,7 @@ func NumberDataPointBuilderFrom(ndpb *array.StructBuilder) *NumberDataPointBuild
 		ab:    acommon.AttributesBuilderFrom(ndpb.FieldBuilder(0).(*array.MapBuilder)),
 		stunb: ndpb.FieldBuilder(1).(*array.TimestampBuilder),
 		tunb:  ndpb.FieldBuilder(2).(*array.TimestampBuilder),
-		mvb:   MetricValueBuilderFrom(ndpb.FieldBuilder(3).(*array.DenseUnionBuilder)),
+		mvb:   MetricValueBuilderFrom(ndpb.FieldBuilder(3).(*array.SparseUnionBuilder)),
 		elb:   ndpb.FieldBuilder(4).(*array.ListBuilder),
 		eb:    ExemplarBuilderFrom(ndpb.FieldBuilder(4).(*array.ListBuilder).ValueBuilder().(*array.StructBuilder)),
 		fb:    ndpb.FieldBuilder(5).(*array.Uint32Builder),

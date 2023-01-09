@@ -137,12 +137,12 @@ func AppendUnivariateNdpInto(ndpSlice pmetric.NumberDataPointSlice, ndp *arrowut
 		}
 
 		value := ndp.FieldByID(ids.MetricValue)
-		if valueArr, ok := value.(*array.DenseUnion); ok {
+		if valueArr, ok := value.(*array.SparseUnion); ok {
 			if err := UpdateValueFromNumberDataPoint(ndpValue, valueArr, ndpIdx); err != nil {
 				return err
 			}
 		} else {
-			return fmt.Errorf("value field shound be a DenseUnion")
+			return fmt.Errorf("value field shound be a SparseUnion")
 		}
 
 		flags, err := ndp.U32FieldByID(ids.Flags, ndpIdx)

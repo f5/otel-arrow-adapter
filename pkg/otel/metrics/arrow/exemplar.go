@@ -32,7 +32,7 @@ var (
 		arrow.Field{Name: constants.Attributes, Type: acommon.AttributesDT},
 		arrow.Field{Name: constants.TimeUnixNano, Type: arrow.FixedWidthTypes.Timestamp_ns},
 		arrow.Field{Name: constants.MetricValue, Type: MetricValueDT},
-		// TODO: Not sure a dictionary if needed here
+		// TODO Not sure a dictionary if needed here
 		arrow.Field{Name: constants.SpanId, Type: acommon.DefaultDictFixed8Binary},
 		arrow.Field{Name: constants.TraceId, Type: acommon.DefaultDictFixed16Binary},
 	)
@@ -64,7 +64,7 @@ func ExemplarBuilderFrom(ex *array.StructBuilder) *ExemplarBuilder {
 
 		ab:   acommon.AttributesBuilderFrom(ex.FieldBuilder(0).(*array.MapBuilder)),
 		tunb: ex.FieldBuilder(1).(*array.TimestampBuilder),
-		mvb:  MetricValueBuilderFrom(ex.FieldBuilder(2).(*array.DenseUnionBuilder)),
+		mvb:  MetricValueBuilderFrom(ex.FieldBuilder(2).(*array.SparseUnionBuilder)),
 		sib:  acommon.AdaptiveDictionaryBuilderFrom(ex.FieldBuilder(3)),
 		tib:  acommon.AdaptiveDictionaryBuilderFrom(ex.FieldBuilder(4)),
 	}
