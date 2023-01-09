@@ -29,8 +29,8 @@ import (
 // SpanDT is the Arrow Data Type describing a span.
 var (
 	SpanDT = arrow.StructOf([]arrow.Field{
-		{Name: constants.StartTimeUnixNano, Type: arrow.PrimitiveTypes.Uint64},
-		{Name: constants.EndTimeUnixNano, Type: arrow.PrimitiveTypes.Uint64},
+		{Name: constants.StartTimeUnixNano, Type: arrow.FixedWidthTypes.Timestamp_ns},
+		{Name: constants.EndTimeUnixNano, Type: arrow.FixedWidthTypes.Timestamp_ns},
 		{Name: constants.TraceId, Type: acommon.DefaultDictFixed16Binary},
 		{Name: constants.SpanId, Type: acommon.DefaultDictFixed8Binary},
 		{Name: constants.TraceState, Type: acommon.DefaultDictString},
@@ -53,8 +53,8 @@ type SpanBuilder struct {
 
 	builder *array.StructBuilder
 
-	stunb *array.Uint64Builder               // start time unix nano builder
-	etunb *array.Uint64Builder               // end time unix nano builder
+	stunb *array.TimestampBuilder            // start time unix nano builder
+	etunb *array.TimestampBuilder            // end time unix nano builder
 	tib   *acommon.AdaptiveDictionaryBuilder // trace id builder
 	sib   *acommon.AdaptiveDictionaryBuilder // span id builder
 	tsb   *acommon.AdaptiveDictionaryBuilder // trace state builder
@@ -85,8 +85,8 @@ func SpanBuilderFrom(sb *array.StructBuilder) *SpanBuilder {
 	return &SpanBuilder{
 		released: false,
 		builder:  sb,
-		stunb:    sb.FieldBuilder(0).(*array.Uint64Builder),
-		etunb:    sb.FieldBuilder(1).(*array.Uint64Builder),
+		stunb:    sb.FieldBuilder(0).(*array.TimestampBuilder),
+		etunb:    sb.FieldBuilder(1).(*array.TimestampBuilder),
 		tib:      acommon.AdaptiveDictionaryBuilderFrom(sb.FieldBuilder(2)),
 		sib:      acommon.AdaptiveDictionaryBuilderFrom(sb.FieldBuilder(3)),
 		tsb:      acommon.AdaptiveDictionaryBuilderFrom(sb.FieldBuilder(4)),
@@ -125,8 +125,8 @@ func (b *SpanBuilder) Append(span ptrace.Span) error {
 	}
 
 	b.builder.Append(true)
-	b.stunb.Append(uint64(span.StartTimestamp()))
-	b.etunb.Append(uint64(span.EndTimestamp()))
+	b.stunb.Append(arrow.Timestamp(span.StartTimestamp()))
+	b.etunb.Append(arrow.Timestamp(span.EndTimestamp()))
 	tib := span.TraceID()
 	if err := b.tib.AppendBinary(tib[:]); err != nil {
 		return err
