@@ -733,6 +733,13 @@ func I32FromArray(arr arrow.Array, row int) (int32, error) {
 			} else {
 				return arr.Value(row), nil
 			}
+		case *array.Dictionary:
+			i32Arr := arr.Dictionary().(*array.Int32)
+			if arr.IsNull(row) {
+				return 0, nil
+			} else {
+				return i32Arr.Value(arr.GetValueIndex(row)), nil
+			}
 		default:
 			return 0, fmt.Errorf("column is not of type int32")
 		}

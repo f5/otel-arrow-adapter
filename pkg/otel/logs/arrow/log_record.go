@@ -34,7 +34,7 @@ var (
 		{Name: constants.ObservedTimeUnixNano, Type: arrow.FixedWidthTypes.Timestamp_ns},
 		{Name: constants.TraceId, Type: acommon.DefaultDictFixed16Binary},
 		{Name: constants.SpanId, Type: acommon.DefaultDictFixed8Binary},
-		{Name: constants.SeverityNumber, Type: arrow.PrimitiveTypes.Int32},
+		{Name: constants.SeverityNumber, Type: acommon.DefaultDictInt32},
 		{Name: constants.SeverityText, Type: acommon.DefaultDictString},
 		{Name: constants.Body, Type: acommon.AnyValueDT},
 		{Name: constants.Attributes, Type: acommon.AttributesDT},
@@ -53,7 +53,7 @@ type LogRecordBuilder struct {
 	otunb *array.TimestampBuilder            // observed time unix nano builder
 	tib   *acommon.AdaptiveDictionaryBuilder // trace id builder
 	sib   *acommon.AdaptiveDictionaryBuilder // span id builder
-	snb   *array.Int32Builder                // severity number builder
+	snb   *acommon.AdaptiveDictionaryBuilder // severity number builder
 	stb   *acommon.AdaptiveDictionaryBuilder // severity text builder
 	bb    *acommon.AnyValueBuilder           // body builder (LOL)
 	ab    *acommon.AttributesBuilder         // attributes builder
@@ -78,7 +78,7 @@ func LogRecordBuilderFrom(sb *array.StructBuilder) *LogRecordBuilder {
 		otunb:    sb.FieldBuilder(1).(*array.TimestampBuilder),
 		tib:      acommon.AdaptiveDictionaryBuilderFrom(sb.FieldBuilder(2)),
 		sib:      acommon.AdaptiveDictionaryBuilderFrom(sb.FieldBuilder(3)),
-		snb:      sb.FieldBuilder(4).(*array.Int32Builder),
+		snb:      acommon.AdaptiveDictionaryBuilderFrom(sb.FieldBuilder(4)),
 		stb:      acommon.AdaptiveDictionaryBuilderFrom(sb.FieldBuilder(5)),
 		bb:       acommon.AnyValueBuilderFrom(sb.FieldBuilder(6).(*array.SparseUnionBuilder)),
 		ab:       acommon.AttributesBuilderFrom(sb.FieldBuilder(7).(*array.MapBuilder)),
@@ -117,7 +117,9 @@ func (b *LogRecordBuilder) Append(log plog.LogRecord) error {
 	if err := b.sib.AppendBinary(sib[:]); err != nil {
 		return err
 	}
-	b.snb.Append(int32(log.SeverityNumber()))
+	if err := b.snb.AppendI32(int32(log.SeverityNumber())); err != nil {
+		return err
+	}
 	severityText := log.SeverityText()
 	if severityText == "" {
 		b.stb.AppendNull()
