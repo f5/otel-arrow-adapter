@@ -260,7 +260,7 @@ func (sdg *SchemaDocGenerator) arrowTypeToYamlType(dt arrow.DataType) (string, s
 	case *arrow.FixedSizeBinaryType:
 		return fmt.Sprintf("%d_bytes_binary", t.ByteWidth), "arrow fixed size binary array"
 	case *arrow.StructType:
-		return "struct", ""
+		return "", "struct"
 	}
 	return "", ""
 }
