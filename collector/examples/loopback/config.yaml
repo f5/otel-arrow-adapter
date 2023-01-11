@@ -1,0 +1,56 @@
+receivers:
+  otlp/stdin:
+    protocols:
+      grpc:
+        endpoint: 127.0.0.1:4318
+  otlp/arrowin:
+    protocols:
+      grpc:
+        endpoint: 127.0.0.1:4000
+      arrow:
+        enabled: true
+
+processors:
+  batch:
+  experiment:
+    table:
+    - weight: 1
+      exporters: [otlp/arrowout, logging/debug]
+    - weight: 2
+      exporters: [otlp/stdout, logging/info]
+
+exporters:
+  otlp/stdout:
+    endpoint: ingest.lightstep.com:443
+    headers:
+      lightstep-access-token: "${LIGHTSTEP_ACCESS_TOKEN}"
+
+  otlp/arrowout:
+    endpoint: 127.0.0.1:4000
+    wait_for_ready: true
+    tls:
+      insecure: true
+    arrow:
+      enabled: true
+      num_streams: 1
+
+  logging/info:      
+    loglevel: info
+  logging/debug:      
+    loglevel: debug
+
+service:
+  pipelines:
+    traces/normal:
+      receivers: [otlp/stdin]
+      processors: [batch, experiment]
+      exporters: [logging/info, otlp/stdout, otlp/arrowout]
+
+    traces/experiment:
+      receivers: [otlp/arrowin]
+      processors: [batch]
+      exporters: [logging/debug, otlp/stdout]
+
+  telemetry:
+    metrics:
+      address: localhost:8888
