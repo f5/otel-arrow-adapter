@@ -1,4 +1,5 @@
 receivers:
+  # otlp/in configures an arrow receiver
   otlp/in:
     protocols:
       grpc:

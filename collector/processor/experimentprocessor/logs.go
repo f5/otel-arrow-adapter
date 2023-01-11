@@ -52,10 +52,6 @@ func (p *logProcessor) Start(_ context.Context, host component.Host) error {
 }
 
 func (p *logProcessor) ConsumeLogs(ctx context.Context, l plog.Logs) error {
-	return p.routeForContext(ctx, l)
-}
-
-func (p *logProcessor) routeForContext(ctx context.Context, l plog.Logs) error {
 	exporters := p.router.getExporters()
 
 	var errs error

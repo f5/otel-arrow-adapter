@@ -22,17 +22,20 @@ import (
 )
 
 var (
-	errNoExporters   = errors.New("no exporters defined for the route")
-	errNoTableItems  = errors.New("the routing table is empty")
-	errInvalidWeight = errors.New("negative weight is invalid")
+	errNoExporters     = errors.New("no exporters defined for the route")
+	errNoTableItems    = errors.New("the routing table is empty")
+	errZeroTableWeight = errors.New("zero weight table")
+	errInvalidWeight   = errors.New("negative weight is invalid")
 )
 
 // Config defines configuration for the Routing processor.
 type Config struct {
-	config.ProcessorSettings `mapstructure:",squash"` // squash ensures fields are correctly decoded in embedded struct
+	// ProcessorSettings are the standard collector settings for processors.
+	// ",squash" ensures fields are correctly decoded in an embedded struct.
+	config.ProcessorSettings `mapstructure:",squash"`
 
 	// Table contains the routing table for this processor.
-	// Required.
+	// Required, must be non-empty.
 	Table []RoutingTableItem `mapstructure:"table"`
 }
 
@@ -40,19 +43,23 @@ type Config struct {
 func (c *Config) Validate() error {
 	// validate that there's at least one item in the table
 	if len(c.Table) == 0 {
-		return fmt.Errorf("invalid routing table: %w", errNoTableItems)
+		return fmt.Errorf("invalid route table: %w", errNoTableItems)
 	}
 
-	// validate that every route has a value for the routing attribute and has
-	// at least one exporter
+	// validate each route table item
+	total := 0
 	for _, item := range c.Table {
 		if item.Weight < 0 {
 			return fmt.Errorf("invalid route weight: %d: %w", item.Weight, errInvalidWeight)
 		}
 
 		if len(item.Exporters) == 0 {
-			return fmt.Errorf("invalid route with weight %d: %w", item.Weight, errNoExporters)
+			return fmt.Errorf("invalid route entry: %w", errNoExporters)
 		}
+		total += item.Weight
+	}
+	if total == 0 {
+		return fmt.Errorf("invalid route table: %w", errZeroTableWeight)
 	}
 
 	return nil
@@ -63,9 +70,7 @@ type RoutingTableItem struct {
 	// Weight is relative weight within the table.
 	Weight int `mapstructure:"weight"`
 
-	// Exporters contains the list of exporters to use when the value from the FromAttribute field matches this table item.
-	// When no exporters are specified, the ones specified under DefaultExporters are used, if any.
-	// The routing processor will fail upon the first failure from these exporters.
-	// Optional.
+	// Exporters contains the list of exporters to use when this
+	// table item is selected.  Must be non-empty.
 	Exporters []string `mapstructure:"exporters"`
 }

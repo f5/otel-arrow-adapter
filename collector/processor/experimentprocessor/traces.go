@@ -52,10 +52,6 @@ func (p *tracesProcessor) Start(_ context.Context, host component.Host) error {
 }
 
 func (p *tracesProcessor) ConsumeTraces(ctx context.Context, t ptrace.Traces) error {
-	return p.routeForContext(ctx, t)
-}
-
-func (p *tracesProcessor) routeForContext(ctx context.Context, t ptrace.Traces) error {
 	exporters := p.router.getExporters()
 
 	var errs error

@@ -52,15 +52,6 @@ func (p *metricsProcessor) Start(_ context.Context, host component.Host) error {
 }
 
 func (p *metricsProcessor) ConsumeMetrics(ctx context.Context, m pmetric.Metrics) error {
-	return p.routeForContext(ctx, m)
-}
-
-type metricsGroup struct {
-	exporters []exporter.Metrics
-	metrics   pmetric.Metrics
-}
-
-func (p *metricsProcessor) routeForContext(ctx context.Context, m pmetric.Metrics) error {
 	exporters := p.router.getExporters()
 
 	var errs error

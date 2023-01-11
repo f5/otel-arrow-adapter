@@ -23,6 +23,10 @@ import (
 	"go.uber.org/zap"
 )
 
+// This code is derived from collector-contrib/processor/routingprocessor.
+// It is substantially simpler because it routes whole data items, not individual
+// points, therefore there is no regrouping step.
+
 var errExporterNotFound = errors.New("exporter not found")
 
 // router registers exporters and default exporters for an exporter. router can
@@ -110,14 +114,17 @@ func (r *router[E]) extractExporter(name string, available map[component.ID]comp
 
 func (r *router[E]) getExporters() []E {
 	n := len(r.routes)
+
+	// Generate a random number in the range [0, totalWeight)
+	// using the last item's cumulative weight.
 	x := r.randIntn(r.routes[n-1].cumWeight)
 
-	for X, route := range r.routes[:n-1] {
-		if route.cumWeight >= x {
-			fmt.Println("CHOICE IS", X)
+	// Note: linear search. We could use sort.Search() but with a
+	// small routing table this is likely faster.
+	for _, route := range r.routes[:n-1] {
+		if route.cumWeight > x {
 			return route.exporters
 		}
 	}
-	fmt.Println("CHOICE IS DEFAULT")
 	return r.routes[n-1].exporters
 }
