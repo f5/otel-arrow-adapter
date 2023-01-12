@@ -15,7 +15,7 @@
  *
  */
 
-package arrow
+package common
 
 import (
 	"math"
@@ -34,7 +34,8 @@ func TestIntValues(t *testing.T) {
 	cborData, err := Serialize(expectedValue)
 	assert.NoError(t, err)
 
-	value, err := Deserialize(cborData)
+	value := pcommon.NewValueEmpty()
+	err = Deserialize(cborData, value)
 	assert.NoError(t, err)
 
 	assert.Equal(t, expectedValue, value)
@@ -45,7 +46,8 @@ func TestIntValues(t *testing.T) {
 	cborData, err = Serialize(expectedValue)
 	assert.NoError(t, err)
 
-	value, err = Deserialize(cborData)
+	value = pcommon.NewValueEmpty()
+	err = Deserialize(cborData, value)
 	assert.NoError(t, err)
 
 	assert.Equal(t, expectedValue, value)
@@ -56,7 +58,8 @@ func TestIntValues(t *testing.T) {
 	cborData, err = Serialize(expectedValue)
 	assert.NoError(t, err)
 
-	value, err = Deserialize(cborData)
+	value = pcommon.NewValueEmpty()
+	err = Deserialize(cborData, value)
 	assert.NoError(t, err)
 
 	assert.Equal(t, expectedValue, value)
@@ -67,7 +70,8 @@ func TestIntValues(t *testing.T) {
 	cborData, err = Serialize(expectedValue)
 	assert.NoError(t, err)
 
-	value, err = Deserialize(cborData)
+	value = pcommon.NewValueEmpty()
+	err = Deserialize(cborData, value)
 	assert.NoError(t, err)
 
 	assert.Equal(t, expectedValue, value)
@@ -82,7 +86,8 @@ func TestDoubleValues(t *testing.T) {
 	cborData, err := Serialize(expectedValue)
 	assert.NoError(t, err)
 
-	value, err := Deserialize(cborData)
+	value := pcommon.NewValueEmpty()
+	err = Deserialize(cborData, value)
 	assert.NoError(t, err)
 
 	assert.Equal(t, expectedValue, value)
@@ -93,7 +98,8 @@ func TestDoubleValues(t *testing.T) {
 	cborData, err = Serialize(expectedValue)
 	assert.NoError(t, err)
 
-	value, err = Deserialize(cborData)
+	value = pcommon.NewValueEmpty()
+	err = Deserialize(cborData, value)
 	assert.NoError(t, err)
 
 	assert.Equal(t, expectedValue, value)
@@ -104,7 +110,8 @@ func TestDoubleValues(t *testing.T) {
 	cborData, err = Serialize(expectedValue)
 	assert.NoError(t, err)
 
-	value, err = Deserialize(cborData)
+	value = pcommon.NewValueEmpty()
+	err = Deserialize(cborData, value)
 	assert.NoError(t, err)
 
 	assert.Equal(t, expectedValue, value)
@@ -115,7 +122,8 @@ func TestDoubleValues(t *testing.T) {
 	cborData, err = Serialize(expectedValue)
 	assert.NoError(t, err)
 
-	value, err = Deserialize(cborData)
+	value = pcommon.NewValueEmpty()
+	err = Deserialize(cborData, value)
 	assert.NoError(t, err)
 
 	assert.Equal(t, expectedValue, value)
@@ -129,7 +137,8 @@ func TestBoolValues(t *testing.T) {
 	cborData, err := Serialize(expectedValue)
 	assert.NoError(t, err)
 
-	value, err := Deserialize(cborData)
+	value := pcommon.NewValueEmpty()
+	err = Deserialize(cborData, value)
 	assert.NoError(t, err)
 
 	assert.Equal(t, expectedValue, value)
@@ -139,7 +148,8 @@ func TestBoolValues(t *testing.T) {
 	cborData, err = Serialize(expectedValue)
 	assert.NoError(t, err)
 
-	value, err = Deserialize(cborData)
+	value = pcommon.NewValueEmpty()
+	err = Deserialize(cborData, value)
 	assert.NoError(t, err)
 
 	assert.Equal(t, expectedValue, value)
@@ -153,7 +163,8 @@ func TestStringValues(t *testing.T) {
 	cborData, err := Serialize(expectedValue)
 	assert.NoError(t, err)
 
-	value, err := Deserialize(cborData)
+	value := pcommon.NewValueEmpty()
+	err = Deserialize(cborData, value)
 	assert.NoError(t, err)
 
 	assert.Equal(t, expectedValue, value)
@@ -163,7 +174,8 @@ func TestStringValues(t *testing.T) {
 	cborData, err = Serialize(expectedValue)
 	assert.NoError(t, err)
 
-	value, err = Deserialize(cborData)
+	value = pcommon.NewValueEmpty()
+	err = Deserialize(cborData, value)
 	assert.NoError(t, err)
 
 	assert.Equal(t, expectedValue, value)
@@ -178,7 +190,8 @@ func TestBinaryValue(t *testing.T) {
 	cborData, err := Serialize(expectedValue)
 	assert.NoError(t, err)
 
-	value, err := Deserialize(cborData)
+	value := pcommon.NewValueEmpty()
+	err = Deserialize(cborData, value)
 	assert.NoError(t, err)
 
 	assert.Equal(t, expectedValue, value)
@@ -216,7 +229,8 @@ func TestCbor(t *testing.T) {
 	cborData, err := Serialize(expectedValue)
 	assert.NoError(t, err)
 
-	value, err := Deserialize(cborData)
+	value := pcommon.NewValueEmpty()
+	err = Deserialize(cborData, value)
 	assert.NoError(t, err)
 
 	assert.Equal(t, expectedValue.AsRaw(), value.AsRaw())

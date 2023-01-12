@@ -33,14 +33,14 @@ import (
 
 	otelAssert "github.com/f5/otel-arrow-adapter/pkg/otel/assert"
 
+	"github.com/f5/otel-arrow-adapter/collector/internal/testdata"
+	"github.com/f5/otel-arrow-adapter/collector/receiver/otlpreceiver/internal/arrow/mock"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/component/componenttest"
 	"go.opentelemetry.io/collector/consumer"
-	"github.com/f5/otel-arrow-adapter/collector/internal/testdata"
 	"go.opentelemetry.io/collector/pdata/plog"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 	"go.opentelemetry.io/collector/pdata/ptrace"
-	"github.com/f5/otel-arrow-adapter/collector/receiver/otlpreceiver/internal/arrow/mock"
 )
 
 type compareJSONTraces struct{ ptrace.Traces }

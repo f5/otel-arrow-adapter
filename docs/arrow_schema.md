@@ -26,6 +26,7 @@ attributes: &attributes                 # arrow map
     f64: float64
     bool: bool
     binary: binary_dictionary | binary  # binary_dictionary by default, fallback to binary when cardinality too high
+    cbor: binary_dictionary | binary    # binary_dictionary by default, fallback to binary when cardinality too high
 ---
 
 exemplars: &exemplars                                       # arrow list of 
@@ -155,6 +156,7 @@ resource_logs:                                                          # arrow 
               f64: float64
               bool: bool
               binary: binary_dictionary | binary                        # binary_dictionary by default, fallback to binary when cardinality too high
+              cbor: binary_dictionary | binary                          # binary_dictionary by default, fallback to binary when cardinality too high
             attributes: *attributes                                     # arrow map
             dropped_attributes_count: uint32
             flags: uint32                                               # used as a bit mask

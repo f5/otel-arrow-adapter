@@ -3,10 +3,11 @@
 package main
 
 import (
+	otlpexporter "github.com/f5/otel-arrow-adapter/collector/exporter/otlpexporter"
+	otlpreceiver "github.com/f5/otel-arrow-adapter/collector/receiver/otlpreceiver"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/exporter"
 	loggingexporter "go.opentelemetry.io/collector/exporter/loggingexporter"
-	otlpexporter "github.com/f5/otel-arrow-adapter/collector/exporter/otlpexporter"
 	otlphttpexporter "go.opentelemetry.io/collector/exporter/otlphttpexporter"
 	"go.opentelemetry.io/collector/extension"
 	ballastextension "go.opentelemetry.io/collector/extension/ballastextension"
@@ -15,7 +16,6 @@ import (
 	batchprocessor "go.opentelemetry.io/collector/processor/batchprocessor"
 	memorylimiterprocessor "go.opentelemetry.io/collector/processor/memorylimiterprocessor"
 	"go.opentelemetry.io/collector/receiver"
-	otlpreceiver "github.com/f5/otel-arrow-adapter/collector/receiver/otlpreceiver"
 )
 
 func components() (component.Factories, error) {

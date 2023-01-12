@@ -31,9 +31,9 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
+	"github.com/f5/otel-arrow-adapter/collector/internal/testdata"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/component/componenttest"
-	"github.com/f5/otel-arrow-adapter/collector/internal/testdata"
 )
 
 var (

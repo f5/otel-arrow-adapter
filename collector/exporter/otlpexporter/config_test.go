@@ -22,6 +22,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/f5/otel-arrow-adapter/collector/exporter/otlpexporter/internal/arrow"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/config/configauth"
 	"go.opentelemetry.io/collector/config/configgrpc"
@@ -29,7 +30,6 @@ import (
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/confmap/confmaptest"
 	"go.opentelemetry.io/collector/exporter/exporterhelper"
-	"github.com/f5/otel-arrow-adapter/collector/exporter/otlpexporter/internal/arrow"
 )
 
 func TestUnmarshalDefaultConfig(t *testing.T) {

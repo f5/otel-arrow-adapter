@@ -15,7 +15,7 @@
  *
  */
 
-package arrow
+package common
 
 import (
 	"bytes"
@@ -50,19 +50,18 @@ func Serialize(v pcommon.Value) ([]byte, error) {
 }
 
 // Deserialize deserializes the given CBOR byte array into a pcommon.value.
-func Deserialize(cborData []byte) (pcommon.Value, error) {
+func Deserialize(cborData []byte, target pcommon.Value) error {
 	dec := cbor.NewDecoder(bytes.NewReader(cborData))
 
 	var v interface{}
 	if err := dec.Decode(&v); err != nil {
-		return pcommon.NewValueEmpty(), err
+		return err
 	}
 
-	pv := pcommon.NewValueEmpty()
-	if err := decode(v, &pv); err != nil {
-		return pcommon.NewValueEmpty(), err
+	if err := decode(v, target); err != nil {
+		return err
 	}
-	return pv, nil
+	return nil
 }
 
 func encode(enc *cbor.Encoder, v pcommon.Value) (err error) {
@@ -111,6 +110,8 @@ func encode(enc *cbor.Encoder, v pcommon.Value) (err error) {
 			return
 		}
 	case pcommon.ValueTypeBytes:
+		// Note: Unfortunately, an empty byte array is encoded as a nil value by pcommon.Value. So the conversion
+		// from pcommon.Value to CBOR is not reversible.
 		err = enc.Encode(v.Bytes().AsRaw())
 	case pcommon.ValueTypeEmpty:
 		err = enc.Encode(nil)
@@ -118,7 +119,7 @@ func encode(enc *cbor.Encoder, v pcommon.Value) (err error) {
 	return
 }
 
-func decode(inVal interface{}, outVal *pcommon.Value) error {
+func decode(inVal interface{}, outVal pcommon.Value) error {
 	switch typedV := inVal.(type) {
 	case string:
 		outVal.SetStr(typedV)
@@ -140,9 +141,7 @@ func decode(inVal interface{}, outVal *pcommon.Value) error {
 
 		for k, v := range typedV {
 			if kStr, ok := k.(string); ok {
-				emptyValue := mapV.PutEmpty(kStr)
-
-				if err := decode(v, &emptyValue); err != nil {
+				if err := decode(v, mapV.PutEmpty(kStr)); err != nil {
 					return err
 				}
 			} else {
@@ -153,8 +152,7 @@ func decode(inVal interface{}, outVal *pcommon.Value) error {
 		slice := outVal.SetEmptySlice()
 		slice.EnsureCapacity(len(typedV))
 		for _, v := range typedV {
-			elemV := slice.AppendEmpty()
-			if err := decode(v, &elemV); err != nil {
+			if err := decode(v, slice.AppendEmpty()); err != nil {
 				return err
 			}
 		}

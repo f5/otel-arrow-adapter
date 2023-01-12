@@ -21,6 +21,7 @@ import (
 	"go.opentelemetry.io/collector/config"
 	"go.opentelemetry.io/collector/config/configgrpc"
 	"go.opentelemetry.io/collector/exporter/exporterhelper"
+
 	"github.com/f5/otel-arrow-adapter/collector/exporter/otlpexporter/internal/arrow"
 )
 
