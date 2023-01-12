@@ -27,6 +27,17 @@ import (
 	"go.opentelemetry.io/collector/pdata/pcommon"
 )
 
+// The CBOR representation is used to serialize complex pcommon.Value types (e.g. maps and slices) in the attributes
+// and body fields of OTEL entities (i.e. metrics, logs, and traces). The goal is to minimize the complexity of the
+// Arrow Schema by defining a limited number of variants in the sparse union used to represent the attributes and body
+// fields. This design decision is also motivated by the fact that the memory footprint of sparse unions is directly
+// proportional to the number of variants in the union. The CBOR serialization for complex values limits the number of
+// variants in the sparse union to a fixed number of variant types independently of the complexity of the value.
+//
+// CBOR (Concise Binary Object Representation) is a data format whose design goals include the possibility of extremely
+// small code size, fairly small message size, and extensibility without the need for version negotiation. CBOR is
+// defined in RFC 8949.
+
 var (
 	errInvalidKeyMap         = errors.New("invalid key map")
 	errUnsupportedCborType   = errors.New("unsupported cbor type")
