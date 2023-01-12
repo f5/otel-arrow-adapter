@@ -203,3 +203,9 @@ resource_spans:                                                         # arrow 
               status_message: string_dictionary | string                # string_dictionary by default, fallback to string when cardinality too high
 ---
 ```
+
+This schema has been generated directly from the source code. To regenerate this schema, run the following command:
+
+```bash
+go run tools/doc_schema_gen/main.go
+``` 
