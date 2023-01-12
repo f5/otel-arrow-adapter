@@ -15,7 +15,9 @@ exporters:
       insecure: true
     arrow:
       enabled: true
-      num_streams: 1
+      # num_streams can be set to the the number of available CPUs
+      # to maximize throughput.
+      num_streams: 4
 
   logging:      
     loglevel: info
