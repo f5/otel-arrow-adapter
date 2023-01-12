@@ -21,15 +21,15 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/f5/otel-arrow-adapter/collector/internal/testutil"
 	"go.opentelemetry.io/collector/component/componenttest"
 	"go.opentelemetry.io/collector/config/configgrpc"
 	"go.opentelemetry.io/collector/config/confighttp"
 	"go.opentelemetry.io/collector/config/confignet"
 	"go.opentelemetry.io/collector/consumer"
 	"go.opentelemetry.io/collector/consumer/consumertest"
-	"github.com/f5/otel-arrow-adapter/collector/gen/internal/testutil"
 	"go.opentelemetry.io/collector/receiver/receivertest"
+
+	"github.com/f5/otel-arrow-adapter/collector/gen/internal/testutil"
 )
 
 func TestCreateDefaultConfig(t *testing.T) {

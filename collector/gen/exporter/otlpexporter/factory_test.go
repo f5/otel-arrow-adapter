@@ -23,14 +23,13 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/f5/otel-arrow-adapter/collector/exporter/otlpexporter/internal/arrow"
-	"github.com/f5/otel-arrow-adapter/collector/internal/testutil"
 	"go.opentelemetry.io/collector/component/componenttest"
 	"go.opentelemetry.io/collector/config/configcompression"
 	"go.opentelemetry.io/collector/config/configgrpc"
 	"go.opentelemetry.io/collector/config/configtls"
 	"go.opentelemetry.io/collector/exporter/exporterhelper"
 	"go.opentelemetry.io/collector/exporter/exportertest"
+
 	"github.com/f5/otel-arrow-adapter/collector/gen/exporter/otlpexporter/internal/arrow"
 	"github.com/f5/otel-arrow-adapter/collector/gen/internal/testutil"
 )

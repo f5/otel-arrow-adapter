@@ -17,13 +17,13 @@ package otlpexporter // import "github.com/f5/otel-arrow-adapter/collector/gen/e
 import (
 	"context"
 
-	"github.com/f5/otel-arrow-adapter/collector/exporter/otlpexporter/internal/arrow"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/config/configcompression"
 	"go.opentelemetry.io/collector/config/configgrpc"
 	"go.opentelemetry.io/collector/consumer"
 	"go.opentelemetry.io/collector/exporter"
 	"go.opentelemetry.io/collector/exporter/exporterhelper"
+
 	"github.com/f5/otel-arrow-adapter/collector/gen/exporter/otlpexporter/internal/arrow"
 )
 
