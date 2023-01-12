@@ -50,7 +50,7 @@ func (c *Config) Validate() error {
 	total := 0
 	for _, item := range c.Table {
 		if item.Weight < 0 {
-			return fmt.Errorf("invalid route weight: %d: %w", item.Weight, errInvalidWeight)
+			return fmt.Errorf("invalid route weight %d: %w", item.Weight, errInvalidWeight)
 		}
 
 		if len(item.Exporters) == 0 {
