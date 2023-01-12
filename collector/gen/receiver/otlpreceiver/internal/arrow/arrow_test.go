@@ -22,27 +22,25 @@ import (
 	"io"
 	"testing"
 
-	arrowpb "github.com/f5/otel-arrow-adapter/api/collector/arrow/v1"
-	arrowCollectorMock "github.com/f5/otel-arrow-adapter/api/collector/arrow/v1/mock"
-	arrowRecord "github.com/f5/otel-arrow-adapter/pkg/otel/arrow_record"
-	arrowRecordMock "github.com/f5/otel-arrow-adapter/pkg/otel/arrow_record/mock"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
 
+	arrowpb "github.com/f5/otel-arrow-adapter/api/collector/arrow/v1"
+	arrowCollectorMock "github.com/f5/otel-arrow-adapter/api/collector/arrow/v1/mock"
+	"github.com/f5/otel-arrow-adapter/collector/gen/internal/testdata"
+	"github.com/f5/otel-arrow-adapter/collector/gen/receiver/otlpreceiver/internal/arrow/mock"
+	arrowRecord "github.com/f5/otel-arrow-adapter/pkg/otel/arrow_record"
+	arrowRecordMock "github.com/f5/otel-arrow-adapter/pkg/otel/arrow_record/mock"
 	otelAssert "github.com/f5/otel-arrow-adapter/pkg/otel/assert"
 
-	"github.com/f5/otel-arrow-adapter/collector/internal/testdata"
-	"github.com/f5/otel-arrow-adapter/collector/receiver/otlpreceiver/internal/arrow/mock"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/component/componenttest"
 	"go.opentelemetry.io/collector/consumer"
-	"github.com/f5/otel-arrow-adapter/collector/gen/internal/testdata"
 	"go.opentelemetry.io/collector/pdata/plog"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 	"go.opentelemetry.io/collector/pdata/ptrace"
-	"github.com/f5/otel-arrow-adapter/collector/gen/receiver/otlpreceiver/internal/arrow/mock"
 )
 
 type compareJSONTraces struct{ ptrace.Traces }
@@ -222,7 +220,7 @@ func newCommonTestCase(t *testing.T, tc testChannel) *commonTestCase {
 		stream:       stream,
 		receive:      make(chan recvResult),
 		consume:      make(chan interface{}),
-		streamErr:    make(chan error),
+		streamErr:    make(chan error, 1),
 		testProducer: arrowRecord.NewProducer(),
 		ctxCall:      stream.EXPECT().Context().Times(0),
 		recvCall:     stream.EXPECT().Recv().Times(0),
