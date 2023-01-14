@@ -48,9 +48,6 @@ message OtlpArrowPayload {
   // [mandatory] Type of the OTLP Arrow payload.
   OtlpArrowPayloadType type = 2;
 
-  // [optional] Serialized Arrow dictionaries
-  repeated EncodedData dictionaries = 3;
-
   // [mandatory] Serialized Arrow Record Batch
   // For a description of the Arrow IPC format see: https://arrow.apache.org/docs/format/Columnar.html#serialization-and-interprocess-communication-ipc
   bytes record = 4;
