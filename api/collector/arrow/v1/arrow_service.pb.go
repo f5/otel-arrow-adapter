@@ -222,7 +222,8 @@ type BatchArrowRecords struct {
 	BatchId string `protobuf:"bytes,1,opt,name=batch_id,json=batchId,proto3" json:"batch_id,omitempty"`
 	// [mandatory] A collection of payloads containing the data of the batch.
 	OtlpArrowPayloads []*OtlpArrowPayload `protobuf:"bytes,2,rep,name=otlp_arrow_payloads,json=otlpArrowPayloads,proto3" json:"otlp_arrow_payloads,omitempty"`
-	// [optional] Headers associated with this batch, encoded using hpack.
+
+  // [optional] Headers associated with this batch, encoded using hpack.
 	Headers []byte `protobuf:"bytes,3,opt,name=headers,proto3" json:"headers,omitempty"`
 }
 
