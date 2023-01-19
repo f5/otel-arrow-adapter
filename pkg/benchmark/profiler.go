@@ -34,15 +34,17 @@ import (
 
 // Section identifiers used in the benchmark output.
 var (
-	BatchCreationSection    = NewSectionConfig("batch_creation_sec", "Proto msg creation (ms)")
-	SerializationSection    = NewSectionConfig("serialization_sec", "Serialization (ms)")
-	CompressionSection      = NewSectionConfig("compression_sec", "Compression (ms)")
-	DecompressionSection    = NewSectionConfig("decompression_sec", "Decompression (ms)")
-	DeserializationSection  = NewSectionConfig("deserialization_sec", "Deserialisation (ms)")
-	TotalTimeSection        = NewSectionConfig("total_time_sec", "Total time (ms)")
-	ProcessingSection       = NewSectionConfig("processing_sec", "Batch processing (ms)")
-	UncompressedSizeSection = NewSectionConfig("uncompressed_size", "Uncompressed size (bytes)")
-	CompressedSizeSection   = NewSectionConfig("compressed_size", "Compressed size (bytes)")
+	BatchCreationSection     = NewSectionConfig("batch_creation_sec", "Creation (ms)")
+	SerializationSection     = NewSectionConfig("serialization_sec", "Serialization (ms)")
+	CompressionSection       = NewSectionConfig("compression_sec", "Compression (ms)")
+	DecompressionSection     = NewSectionConfig("decompression_sec", "Decompression (ms)")
+	DeserializationSection   = NewSectionConfig("deserialization_sec", "Deserialization (ms)")
+	TotalEncodingTimeSection = NewSectionConfig("total_encoding_time_sec", "Total encoding time (ms)")
+	TotalDecodingTimeSection = NewSectionConfig("total_decoding_time_sec", "Total decoding time (ms)")
+	TotalTimeSection         = NewSectionConfig("total_time_sec", "Total time (ms)")
+	ProcessingSection        = NewSectionConfig("processing_sec", "Batch processing (ms)")
+	UncompressedSizeSection  = NewSectionConfig("uncompressed_size", "Uncompressed size (bytes)")
+	CompressedSizeSection    = NewSectionConfig("compressed_size", "Compressed size (bytes)")
 )
 
 // Profiler is the main profiler object used to implement benchmarks.
@@ -277,6 +279,9 @@ func (p *Profiler) PrintResults(maxIter uint64) {
 	println(colorCyan)
 	println("======= Measurement of the time spent on the different steps for each protocol configuration ========", colorReset)
 	p.PrintStepsTiming(maxIter)
+	println()
+	println("Total encoding time (i.e. approx. exporter time) = `creation` + `Serialization` + `Compression`")
+	println("Total decoding time (i.e. approx. receiver time) = `Decompression` + `Deserialization`")
 
 	// Message size and compression ratio
 	println()
@@ -287,10 +292,10 @@ func (p *Profiler) PrintResults(maxIter uint64) {
 	// Notes on OTLP Arrow column
 	println()
 	println(colorYellow, "Notes for the OTLP Arrow column", colorReset)
-	println("  - The `Proto msg creation` step represents the creation of the entire BatchArrowRecords, including:")
-	println("    creating the Arrow Record, encoding it, compressing it, and embedding it in the BatchArrowRecords")
-	println("    protobuf message. The compression is performed internally by the Arrow lib during the encoding of")
-	println("    the message and therefore cannot be measured separately.")
+	println("  - The `Creation` step represents the creation of the entire BatchArrowRecords, including creating")
+	println("    the Arrow Record, encoding it, compressing it, and embedding it in the BatchArrowRecords protobuf")
+	println("    message. The compression is performed internally by the Arrow lib during the encoding of the msg")
+	println("    and therefore cannot be measured separately.")
 	println("  - The `Serialization`/`Deserialization` steps are applied to the BatchArrowRecords protobuf message")
 	println("    which is composed of a very small number of fields explaining the huge speed difference with  the")
 	println("    equivalent OTLP steps. Due to the zero-copy nature of Arrow, the deserialization of Arrow Records")
@@ -303,7 +308,7 @@ func (p *Profiler) PrintResults(maxIter uint64) {
 
 func (p *Profiler) PrintStepsTiming(_ uint64) {
 	_, _ = fmt.Fprintf(p.writer, "\n")
-	headers := []string{"Main steps"}
+	headers := []string{"Protobuf msg steps (ms)"}
 
 	for _, benchmark := range p.benchmarks {
 		headers = append(headers, fmt.Sprintf("%s %s - p99", benchmark.benchName, benchmark.tags))
@@ -336,6 +341,10 @@ func (p *Profiler) PrintStepsTiming(_ uint64) {
 			values[key] = summary.decompressionSec
 			key = fmt.Sprintf("%s:%s:%d:%s", result.benchName, result.tags, summary.batchSize, DeserializationSection.ID)
 			values[key] = summary.deserializationSec
+			key = fmt.Sprintf("%s:%s:%d:%s", result.benchName, result.tags, summary.batchSize, TotalEncodingTimeSection.ID)
+			values[key] = AddSummaries(summary.batchCreationSec, summary.serializationSec, summary.compressionSec)
+			key = fmt.Sprintf("%s:%s:%d:%s", result.benchName, result.tags, summary.batchSize, TotalDecodingTimeSection.ID)
+			values[key] = AddSummaries(summary.deserializationSec, summary.decompressionSec)
 			key = fmt.Sprintf("%s:%s:%d:%s", result.benchName, result.tags, summary.batchSize, TotalTimeSection.ID)
 			values[key] = summary.totalTimeSec
 		}
@@ -348,6 +357,9 @@ func (p *Profiler) PrintStepsTiming(_ uint64) {
 	p.AddSection(CompressionSection, table, values, transform)
 	p.AddSection(DecompressionSection, table, values, transform)
 	p.AddSection(DeserializationSection, table, values, transform)
+	p.AddSeparator(table)
+	p.AddSection(TotalEncodingTimeSection, table, values, transform)
+	p.AddSection(TotalDecodingTimeSection, table, values, transform)
 	p.AddSection(TotalTimeSection, table, values, transform)
 
 	table.Render()
@@ -355,7 +367,7 @@ func (p *Profiler) PrintStepsTiming(_ uint64) {
 
 func (p *Profiler) PrintCompressionRatio(maxIter uint64) {
 	_, _ = fmt.Fprintf(p.writer, "\n")
-	headers := []string{"Batch message (avg sz)"}
+	headers := []string{"Protobuf msg (avg size)"}
 	for _, benchmark := range p.benchmarks {
 		headers = append(headers, fmt.Sprintf("%s %s - p99", benchmark.benchName, benchmark.tags))
 	}
@@ -393,6 +405,14 @@ func (p *Profiler) PrintCompressionRatio(maxIter uint64) {
 	p.AddSectionWithTotal(CompressedSizeSection, table, values, transform, maxIter)
 
 	table.Render()
+}
+
+func (p *Profiler) AddSeparator(table *tablewriter.Table) {
+	row := []string{"------------------------"}
+	for i := 0; i < len(p.benchmarks); i++ {
+		row = append(row, "")
+	}
+	table.Append(row)
 }
 
 func (p *Profiler) AddSection(section *SectionConfig, table *tablewriter.Table, values map[string]*Summary, transform func(float64) float64) {

@@ -147,3 +147,28 @@ func (s *Summary) Total(maxIter uint64) float64 {
 	}
 	return sum / float64(maxIter)
 }
+
+// AddSummaries combines multiple summaries by adding their metric values together.
+// This method panics if the summaries have different number of values.
+func AddSummaries(summaries ...*Summary) *Summary {
+	if len(summaries) == 0 {
+		return nil
+	}
+
+	valueCount := len(summaries[0].Values)
+	values := make([]float64, valueCount, valueCount)
+	for _, summary := range summaries {
+		if valueCount != len(summary.Values) {
+			panic("summaries have different number of values")
+		}
+		for j, value := range summary.Values {
+			values[j] += value
+		}
+	}
+
+	metric := &Metric{
+		values: values,
+	}
+
+	return metric.ComputeSummary()
+}

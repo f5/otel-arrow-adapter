@@ -70,7 +70,7 @@ func main() {
 
 		// Compare the performance between the standard OTLP representation and the OTLP Arrow representation.
 		//profiler := benchmark.NewProfiler([]int{1000, 5000, 10000, 25000})
-		profiler := benchmark.NewProfiler([]int{10000}, "output/logs_benchmark.log", 2)
+		profiler := benchmark.NewProfiler([]int{10, 100, 1000, 2000, 5000, 10000}, "output/logs_benchmark.log", 2)
 		profiler.Printf("Dataset '%s'\n", inputFiles[i])
 
 		// Build dataset from CSV file or from OTLP protobuf file
