@@ -277,23 +277,27 @@ func (p *Profiler) PrintResults(maxIter uint64) {
 	println(colorCyan)
 	println("======= Measurement of the time spent on the different steps for each protocol configuration ========", colorReset)
 	p.PrintStepsTiming(maxIter)
-	println()
-	println(colorYellow, "Notes for the OTLP Arrow column", colorReset)
-	println("  - The `Proto msg creation` step represents the creation of the entire BatchArrowRecords, including")
-	println("    creating the Arrow Record, encoding it, compressing it, and embedding it in the BatchArrowRecords")
-	println("    protobuf message. The compression is performed internally by the Arrow library during the")
-	println("    encoding of the message and therefore cannot be measured separately.")
-	println("  - The Serialization/Deserialization steps are applied to the BatchArrowRecords protobuf message")
-	println("    which is composed of a very small number of fields explaining the huge speed difference with the")
-	println("    equivalent OTLP steps. Due to the zero-copy nature of Arrow, the deserialization of Arrow Records")
-	println("    does not exist. The decompression of the Arrow Record is included in the deserialization phase")
-	println("    for the reasons mentioned in the previous point.")
 
 	// Message size and compression ratio
 	println()
 	println(colorCyan)
 	println("======== Measurement of message size and compression ratio for each protocol configuration ==========", colorReset)
 	p.PrintCompressionRatio(maxIter)
+
+	// Notes on OTLP Arrow column
+	println()
+	println(colorYellow, "Notes for the OTLP Arrow column", colorReset)
+	println("  - The `Proto msg creation` step represents the creation of the entire BatchArrowRecords, including:")
+	println("    creating the Arrow Record, encoding it, compressing it, and embedding it in the BatchArrowRecords")
+	println("    protobuf message. The compression is performed internally by the Arrow lib during the encoding of")
+	println("    the message and therefore cannot be measured separately.")
+	println("  - The `Serialization`/`Deserialization` steps are applied to the BatchArrowRecords protobuf message")
+	println("    which is composed of a very small number of fields explaining the huge speed difference with  the")
+	println("    equivalent OTLP steps. Due to the zero-copy nature of Arrow, the deserialization of Arrow Records")
+	println("    does not exist. The decompression of the Arrow Record is included in the deserialization step for")
+	println("    the reasons mentioned in the previous point.")
+	println("  - The `Uncompressed size (bytes)` step is not available for Arrow OTLP for the reasons mentioned in")
+	println("    the first point.")
 	println()
 }
 
@@ -351,7 +355,7 @@ func (p *Profiler) PrintStepsTiming(_ uint64) {
 
 func (p *Profiler) PrintCompressionRatio(maxIter uint64) {
 	_, _ = fmt.Fprintf(p.writer, "\n")
-	headers := []string{"Message"}
+	headers := []string{"Batch message (avg sz)"}
 	for _, benchmark := range p.benchmarks {
 		headers = append(headers, fmt.Sprintf("%s %s - p99", benchmark.benchName, benchmark.tags))
 	}

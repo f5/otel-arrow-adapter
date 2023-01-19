@@ -102,7 +102,7 @@ func main() {
 		benchmark.UncompressedSizeSection.CustomColumnFor(otlpArrowLogs).
 			MetricNotApplicable()
 
-		profiler.Printf("\nDataset summary:\n")
+		profiler.Printf("\nLogs dataset summary:\n")
 		profiler.Printf("- #logs: %d\n", ds.Len())
 
 		profiler.PrintResults(maxIter)

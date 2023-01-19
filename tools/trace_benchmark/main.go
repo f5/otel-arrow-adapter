@@ -77,7 +77,7 @@ func main() {
 		benchmark.UncompressedSizeSection.CustomColumnFor(otlpArrowTraces).
 			MetricNotApplicable()
 
-		profiler.Printf("\nDataset summary:\n")
+		profiler.Printf("\nTraces dataset summary:\n")
 		profiler.Printf("- #traces: %d\n", ds.Len())
 		profiler.Printf("- size: %s\n", humanize.Bytes(uint64(ds.SizeInBytes())))
 
