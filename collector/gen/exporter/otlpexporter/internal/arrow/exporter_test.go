@@ -18,6 +18,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"sync"
 	"testing"
 	"time"
@@ -30,6 +31,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/atomic"
+	"golang.org/x/net/http2/hpack"
+	"google.golang.org/grpc/metadata"
 
 	"github.com/f5/otel-arrow-adapter/collector/gen/internal/testdata"
 	"go.opentelemetry.io/collector/pdata/plog"
@@ -61,9 +64,40 @@ type exporterTestCase struct {
 	exporter *Exporter
 }
 
-func newExporterTestCase(t *testing.T, noisy noisyTest, arrowset Settings) *exporterTestCase {
+func newSingleStreamTestCase(t *testing.T) *exporterTestCase {
+	return newExporterTestCaseCommon(t, NotNoisy, 1, nil)
+}
+
+func newSingleStreamMetadataTestCase(t *testing.T) *exporterTestCase {
+	var count int
+	return newExporterTestCaseCommon(t, NotNoisy, 1, func(ctx context.Context) (map[string]string, error) {
+		defer func() { count++ }()
+		if count%2 == 0 {
+			return nil, nil
+		}
+		return map[string]string{
+			"expected1": "metadata1",
+			"expected2": fmt.Sprint(count),
+		}, nil
+	})
+}
+
+func newExporterNoisyTestCase(t *testing.T, numStreams int) *exporterTestCase {
+	return newExporterTestCaseCommon(t, Noisy, numStreams, nil)
+}
+
+func newExporterTestCaseCommon(t *testing.T, noisy noisyTest, numStreams int, metadataFunc func(ctx context.Context) (map[string]string, error)) *exporterTestCase {
 	ctc := newCommonTestCase(t, noisy)
-	exp := NewExporter(arrowset, func() arrowRecord.ProducerAPI {
+
+	if metadataFunc == nil {
+		ctc.requestMetadataCall.AnyTimes().Return(nil, nil)
+	} else {
+		ctc.requestMetadataCall.AnyTimes().DoAndReturn(func(ctx context.Context, _ ...string) (map[string]string, error) {
+			return metadataFunc(ctx)
+		})
+	}
+
+	exp := NewExporter(numStreams, ctc.telset, nil, func() arrowRecord.ProducerAPI {
 		// Mock the close function, use a real producer for testing dataflow.
 		prod := arrowRecordMock.NewMockProducerAPI(ctc.ctrl)
 		real := arrowRecord.NewProducer()
@@ -76,7 +110,7 @@ func newExporterTestCase(t *testing.T, noisy noisyTest, arrowset Settings) *expo
 			real.BatchArrowRecordsFromMetrics)
 		prod.EXPECT().Close().Times(1).Return(nil)
 		return prod
-	}, ctc.telset, ctc.serviceClient, nil)
+	}, ctc.serviceClient, ctc.perRPCCredentials)
 
 	return &exporterTestCase{
 		commonTestCase: ctc,
@@ -137,7 +171,7 @@ func statusUnrecognizedFor(id string) *arrowpb.BatchStatus {
 // TestArrowExporterSuccess tests a single Send through a healthy channel.
 func TestArrowExporterSuccess(t *testing.T) {
 	for _, inputData := range []interface{}{twoTraces, twoMetrics, twoLogs} {
-		tc := newExporterTestCase(t, NotNoisy, singleStreamSettings)
+		tc := newSingleStreamTestCase(t)
 		channel := newHealthyTestChannel()
 
 		tc.streamCall.Times(1).DoAndReturn(tc.returnNewStream(channel))
@@ -197,7 +231,7 @@ func TestArrowExporterSuccess(t *testing.T) {
 
 // TestArrowExporterTimeout tests that single slow Send leads to context canceled.
 func TestArrowExporterTimeout(t *testing.T) {
-	tc := newExporterTestCase(t, NotNoisy, singleStreamSettings)
+	tc := newSingleStreamTestCase(t)
 	channel := newUnresponsiveTestChannel()
 
 	tc.streamCall.Times(1).DoAndReturn(tc.returnNewStream(channel))
@@ -219,7 +253,7 @@ func TestArrowExporterTimeout(t *testing.T) {
 // TestConnectError tests that if the connetions fail fast the
 // stream object for some reason is nil.  This causes downgrade.
 func TestArrowExporterStreamConnectError(t *testing.T) {
-	tc := newExporterTestCase(t, NotNoisy, singleStreamSettings)
+	tc := newSingleStreamTestCase(t)
 	channel := newConnectErrorTestChannel()
 
 	tc.streamCall.AnyTimes().DoAndReturn(tc.returnNewStream(channel))
@@ -241,7 +275,7 @@ func TestArrowExporterStreamConnectError(t *testing.T) {
 // Unimplemented code (as gRPC does) that the connection is downgraded
 // without error.
 func TestArrowExporterDowngrade(t *testing.T) {
-	tc := newExporterTestCase(t, NotNoisy, singleStreamSettings)
+	tc := newSingleStreamTestCase(t)
 	channel := newArrowUnsupportedTestChannel()
 
 	tc.streamCall.AnyTimes().DoAndReturn(tc.returnNewStream(channel))
@@ -263,7 +297,7 @@ func TestArrowExporterDowngrade(t *testing.T) {
 // TestArrowExporterConnectTimeout tests that an error is returned to
 // the caller if the response does not arrive in time.
 func TestArrowExporterConnectTimeout(t *testing.T) {
-	tc := newExporterTestCase(t, NotNoisy, singleStreamSettings)
+	tc := newSingleStreamTestCase(t)
 	channel := newDisconnectedTestChannel()
 
 	tc.streamCall.AnyTimes().DoAndReturn(tc.returnNewStream(channel))
@@ -286,7 +320,7 @@ func TestArrowExporterConnectTimeout(t *testing.T) {
 // TestArrowExporterStreamFailure tests that a single stream failure
 // followed by a healthy stream.
 func TestArrowExporterStreamFailure(t *testing.T) {
-	tc := newExporterTestCase(t, NotNoisy, singleStreamSettings)
+	tc := newSingleStreamTestCase(t)
 	channel0 := newUnresponsiveTestChannel()
 	channel1 := newHealthyTestChannel()
 
@@ -322,14 +356,9 @@ func TestArrowExporterStreamFailure(t *testing.T) {
 // race between stream send and stream cancel, causing it to fully
 // exercise the removeReady() code path.
 func TestArrowExporterStreamRace(t *testing.T) {
-	// Two streams ensures every possibility.
-	tc := newExporterTestCase(t, Noisy, Settings{
-		Enabled: true,
-
-		// This creates the conditions likely to produce a
-		// stream race in prioritizer.go.
-		NumStreams: 20,
-	})
+	// This creates the conditions likely to produce a
+	// stream race in prioritizer.go.
+	tc := newExporterNoisyTestCase(t, 20)
 
 	var tries atomic.Int32
 
@@ -376,7 +405,7 @@ func TestArrowExporterStreamRace(t *testing.T) {
 
 // TestArrowExporterStreaming tests 10 sends in a row.
 func TestArrowExporterStreaming(t *testing.T) {
-	tc := newExporterTestCase(t, NotNoisy, singleStreamSettings)
+	tc := newSingleStreamTestCase(t)
 	channel := newHealthyTestChannel()
 
 	tc.streamCall.AnyTimes().DoAndReturn(tc.returnNewStream(channel))
@@ -410,6 +439,67 @@ func TestArrowExporterStreaming(t *testing.T) {
 		require.True(t, sent)
 
 		expectOutput = append(expectOutput, input)
+	}
+	// Stop the test conduit started above.  If the sender were
+	// still sending, it would panic on a closed channel.
+	close(channel.sent)
+	wg.Wait()
+
+	require.Equal(t, expectOutput, actualOutput)
+	require.NoError(t, tc.exporter.Shutdown(bg))
+}
+
+// TestArrowExporterHeaders tests a mix of outgoing context headers.
+func TestArrowExporterHeaders(t *testing.T) {
+	tc := newSingleStreamMetadataTestCase(t)
+	channel := newHealthyTestChannel()
+
+	tc.streamCall.AnyTimes().DoAndReturn(tc.returnNewStream(channel))
+
+	bg := context.Background()
+	require.NoError(t, tc.exporter.Start(bg))
+
+	var expectOutput []metadata.MD
+	var actualOutput []metadata.MD
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		md := metadata.MD{}
+		hpd := hpack.NewDecoder(4096, func(f hpack.HeaderField) {
+			md[f.Name] = append(md[f.Name], f.Value)
+		})
+		for data := range channel.sent {
+			if len(data.Headers) == 0 {
+				actualOutput = append(actualOutput, nil)
+			} else {
+				_, err := hpd.Write(data.Headers)
+				require.NoError(t, err)
+				actualOutput = append(actualOutput, md)
+				md = metadata.MD{}
+			}
+			channel.recv <- statusOKFor(data.BatchId)
+		}
+	}()
+
+	for times := 0; times < 10; times++ {
+		input := testdata.GenerateTraces(2)
+		ctx := context.Background()
+
+		if times%2 == 1 {
+			md := metadata.MD{
+				"expected1": []string{"metadata1"},
+				"expected2": []string{fmt.Sprint(times)},
+			}
+			expectOutput = append(expectOutput, md)
+		} else {
+			expectOutput = append(expectOutput, nil)
+		}
+
+		sent, err := tc.exporter.SendAndWait(ctx, input)
+		require.NoError(t, err)
+		require.True(t, sent)
 	}
 	// Stop the test conduit started above.  If the sender were
 	// still sending, it would panic on a closed channel.
