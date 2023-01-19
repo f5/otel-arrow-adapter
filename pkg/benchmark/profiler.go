@@ -32,12 +32,45 @@ import (
 	"github.com/olekukonko/tablewriter"
 )
 
+// Section identifiers used in the benchmark output.
+var (
+	BatchCreationSection    = NewSectionConfig("batch_creation_sec", "Proto msg creation (ms)")
+	SerializationSection    = NewSectionConfig("serialization_sec", "Serialization (ms)")
+	CompressionSection      = NewSectionConfig("compression_sec", "Compression (ms)")
+	DecompressionSection    = NewSectionConfig("decompression_sec", "Decompression (ms)")
+	DeserializationSection  = NewSectionConfig("deserialization_sec", "Deserialisation (ms)")
+	TotalTimeSection        = NewSectionConfig("total_time_sec", "Total time (ms)")
+	ProcessingSection       = NewSectionConfig("processing_sec", "Batch processing (ms)")
+	UncompressedSizeSection = NewSectionConfig("uncompressed_size", "Uncompressed size (bytes)")
+	CompressedSizeSection   = NewSectionConfig("compressed_size", "Compressed size (bytes)")
+)
+
+// Profiler is the main profiler object used to implement benchmarks.
 type Profiler struct {
 	batchSizes []int
 	benchmarks []*ProfilerResult
 	writer     io.Writer
 	outputDir  string
 	warmUpIter uint64
+}
+
+// SectionConfig is the configuration for a section of the benchmark table output.
+type SectionConfig struct {
+	ID string
+
+	Title string
+
+	// Default column configuration (if not overridden by a custom column config).
+	defaultColumnConfig *ColumnConfig
+
+	// Custom column configuration per column identifier.
+	columns map[string]*ColumnConfig
+}
+
+// ColumnConfig is the configuration for a column of the benchmark table output.
+type ColumnConfig struct {
+	subTitle         string
+	metricApplicable bool
 }
 
 func NewProfiler(batchSizes []int, logfile string, warmUpIter uint64) *Profiler {
@@ -235,13 +268,38 @@ func (p *Profiler) CheckProcessingResults() {
 }
 
 func (p *Profiler) PrintResults(maxIter uint64) {
+	colorReset := "\033[0m"
+	colorCyan := "\033[36m"
+	colorYellow := "\033[33m"
+
+	// Time spent in each step + notes
+	println()
+	println(colorCyan)
+	println("======= Measurement of the time spent on the different steps for each protocol configuration ========", colorReset)
 	p.PrintStepsTiming(maxIter)
+	println()
+	println(colorYellow, "Notes for the OTLP Arrow column", colorReset)
+	println("  - The `Proto msg creation` step represents the creation of the entire BatchArrowRecords, including")
+	println("    creating the Arrow Record, encoding it, compressing it, and embedding it in the BatchArrowRecords")
+	println("    protobuf message. The compression is performed internally by the Arrow library during the")
+	println("    encoding of the message and therefore cannot be measured separately.")
+	println("  - The Serialization/Deserialization steps are applied to the BatchArrowRecords protobuf message")
+	println("    which is composed of a very small number of fields explaining the huge speed difference with the")
+	println("    equivalent OTLP steps. Due to the zero-copy nature of Arrow, the deserialization of Arrow Records")
+	println("    does not exist. The decompression of the Arrow Record is included in the deserialization phase")
+	println("    for the reasons mentioned in the previous point.")
+
+	// Message size and compression ratio
+	println()
+	println(colorCyan)
+	println("======== Measurement of message size and compression ratio for each protocol configuration ==========", colorReset)
 	p.PrintCompressionRatio(maxIter)
+	println()
 }
 
 func (p *Profiler) PrintStepsTiming(_ uint64) {
 	_, _ = fmt.Fprintf(p.writer, "\n")
-	headers := []string{"Steps"}
+	headers := []string{"Main steps"}
 
 	for _, benchmark := range p.benchmarks {
 		headers = append(headers, fmt.Sprintf("%s %s - p99", benchmark.benchName, benchmark.tags))
@@ -262,38 +320,38 @@ func (p *Profiler) PrintStepsTiming(_ uint64) {
 
 	for _, result := range p.benchmarks {
 		for _, summary := range result.summaries {
-			key := fmt.Sprintf("%s:%s:%d:%s", result.benchName, result.tags, summary.batchSize, "batch_creation_sec")
+			key := fmt.Sprintf("%s:%s:%d:%s", result.benchName, result.tags, summary.batchSize, BatchCreationSection.ID)
 			values[key] = summary.batchCreationSec
-			key = fmt.Sprintf("%s:%s:%d:%s", result.benchName, result.tags, summary.batchSize, "processing_sec")
+			key = fmt.Sprintf("%s:%s:%d:%s", result.benchName, result.tags, summary.batchSize, ProcessingSection.ID)
 			values[key] = summary.processingSec
-			key = fmt.Sprintf("%s:%s:%d:%s", result.benchName, result.tags, summary.batchSize, "serialization_sec")
+			key = fmt.Sprintf("%s:%s:%d:%s", result.benchName, result.tags, summary.batchSize, SerializationSection.ID)
 			values[key] = summary.serializationSec
-			key = fmt.Sprintf("%s:%s:%d:%s", result.benchName, result.tags, summary.batchSize, "compression_sec")
+			key = fmt.Sprintf("%s:%s:%d:%s", result.benchName, result.tags, summary.batchSize, CompressionSection.ID)
 			values[key] = summary.compressionSec
-			key = fmt.Sprintf("%s:%s:%d:%s", result.benchName, result.tags, summary.batchSize, "decompression_sec")
+			key = fmt.Sprintf("%s:%s:%d:%s", result.benchName, result.tags, summary.batchSize, DecompressionSection.ID)
 			values[key] = summary.decompressionSec
-			key = fmt.Sprintf("%s:%s:%d:%s", result.benchName, result.tags, summary.batchSize, "deserialization_sec")
+			key = fmt.Sprintf("%s:%s:%d:%s", result.benchName, result.tags, summary.batchSize, DeserializationSection.ID)
 			values[key] = summary.deserializationSec
-			key = fmt.Sprintf("%s:%s:%d:%s", result.benchName, result.tags, summary.batchSize, "total_time_sec")
+			key = fmt.Sprintf("%s:%s:%d:%s", result.benchName, result.tags, summary.batchSize, TotalTimeSection.ID)
 			values[key] = summary.totalTimeSec
 		}
 	}
 
 	transform := func(value float64) float64 { return value * 1000.0 }
-	p.AddSection("Batch creation (ms)", "batch_creation_sec", table, values, transform)
-	// p.AddSection("Batch processing (ms)", "processing_sec", table, values, transform)
-	p.AddSection("Serialization (ms)", "serialization_sec", table, values, transform)
-	p.AddSection("Compression (ms)", "compression_sec", table, values, transform)
-	p.AddSection("Decompression (ms)", "decompression_sec", table, values, transform)
-	p.AddSection("Deserialisation (ms)", "deserialization_sec", table, values, transform)
-	p.AddSection("Total time (ms)", "total_time_sec", table, values, transform)
+	p.AddSection(BatchCreationSection, table, values, transform)
+	// p.AddSection(ProcessingSection, table, values, transform)
+	p.AddSection(SerializationSection, table, values, transform)
+	p.AddSection(CompressionSection, table, values, transform)
+	p.AddSection(DecompressionSection, table, values, transform)
+	p.AddSection(DeserializationSection, table, values, transform)
+	p.AddSection(TotalTimeSection, table, values, transform)
 
 	table.Render()
 }
 
 func (p *Profiler) PrintCompressionRatio(maxIter uint64) {
 	_, _ = fmt.Fprintf(p.writer, "\n")
-	headers := []string{"Steps"}
+	headers := []string{"Message"}
 	for _, benchmark := range p.benchmarks {
 		headers = append(headers, fmt.Sprintf("%s %s - p99", benchmark.benchName, benchmark.tags))
 	}
@@ -316,54 +374,66 @@ func (p *Profiler) PrintCompressionRatio(maxIter uint64) {
 
 	for _, result := range p.benchmarks {
 		for _, summary := range result.summaries {
-			key := fmt.Sprintf("%s:%s:%d:%s", result.benchName, result.tags, summary.batchSize, "compressed_size_byte")
+			key := fmt.Sprintf("%s:%s:%d:%s", result.benchName, result.tags, summary.batchSize, CompressedSizeSection.ID)
 			values[key] = summary.compressedSizeByte
 			key = fmt.Sprintf("%s:%s:%d:%s", result.benchName, result.tags, summary.batchSize, "total_compressed_size_byte")
 			compressedTotal[key] = int64(summary.compressedSizeByte.Total(maxIter))
-			key = fmt.Sprintf("%s:%s:%d:%s", result.benchName, result.tags, summary.batchSize, "uncompressed_size_byte")
+			key = fmt.Sprintf("%s:%s:%d:%s", result.benchName, result.tags, summary.batchSize, UncompressedSizeSection.ID)
 			values[key] = summary.uncompressedSizeByte
 			uncompressedTotal[key] = int64(summary.uncompressedSizeByte.Total(maxIter))
 		}
 	}
 
 	transform := func(value float64) float64 { return math.Trunc(value) }
-	p.AddSectionWithTotal("Uncompressed size (bytes)", "uncompressed_size_byte", table, values, transform, maxIter)
-	p.AddSectionWithTotal("Compressed size (bytes)", "compressed_size_byte", table, values, transform, maxIter)
+	p.AddSectionWithTotal(UncompressedSizeSection, table, values, transform, maxIter)
+	p.AddSectionWithTotal(CompressedSizeSection, table, values, transform, maxIter)
 
 	table.Render()
 }
 
-func (p *Profiler) AddSection(label string, step string, table *tablewriter.Table, values map[string]*Summary, transform func(float64) float64) {
-	labels := []string{label}
+func (p *Profiler) AddSection(section *SectionConfig, table *tablewriter.Table, values map[string]*Summary, transform func(float64) float64) {
+	titles := []string{section.Title}
 	colors := []tablewriter.Colors{tablewriter.Color(tablewriter.Normal, tablewriter.FgGreenColor)}
 	for i := 0; i < len(p.benchmarks); i++ {
-		labels = append(labels, "")
+		result := p.benchmarks[i]
+		titles = append(titles, section.SubTitle(fmt.Sprintf("%s:%s", result.benchName, result.tags)))
 		colors = append(colors, tablewriter.Color())
 	}
-	table.Rich(labels, colors)
+	table.Rich(titles, colors)
 
 	for _, batchSize := range p.batchSizes {
 		row := []string{fmt.Sprintf("batch_size: %d", batchSize)}
 		refImplName := ""
 		for _, result := range p.benchmarks {
-			key := fmt.Sprintf("%s:%s:%d:%s", result.benchName, result.tags, batchSize, step)
+			metricNotApplicable := section.MetricNotApplicable(fmt.Sprintf("%s:%s", result.benchName, result.tags))
+			key := fmt.Sprintf("%s:%s:%d:%s", result.benchName, result.tags, batchSize, section.ID)
 			improvement := ""
 
 			if refImplName == "" {
 				refImplName = fmt.Sprintf("%s:%s", result.benchName, result.tags)
 			} else {
-				refKey := fmt.Sprintf("%s:%d:%s", refImplName, batchSize, step)
+				refKey := fmt.Sprintf("%s:%d:%s", refImplName, batchSize, section.ID)
 				improvement = fmt.Sprintf("(x%.2f)", values[refKey].P99/values[key].P99)
 			}
 
 			value := transform(values[key].P99)
+			decoratedValue := "Not Applicable"
 			if value == math.Trunc(value) {
-				row = append(row, fmt.Sprintf("%d %s", int64(value), improvement))
+				if metricNotApplicable {
+					decoratedValue = fmt.Sprintf("%d %s", int64(value), improvement)
+				}
+				row = append(row, decoratedValue)
 			} else {
 				if value >= 1.0 {
-					row = append(row, fmt.Sprintf("%.3f %s", value, improvement))
+					if metricNotApplicable {
+						decoratedValue = fmt.Sprintf("%.3f %s", value, improvement)
+					}
+					row = append(row, decoratedValue)
 				} else {
-					row = append(row, fmt.Sprintf("%.5f %s", value, improvement))
+					if metricNotApplicable {
+						decoratedValue = fmt.Sprintf("%.5f %s", value, improvement)
+					}
+					row = append(row, decoratedValue)
 				}
 			}
 		}
@@ -372,8 +442,8 @@ func (p *Profiler) AddSection(label string, step string, table *tablewriter.Tabl
 	}
 }
 
-func (p *Profiler) AddSectionWithTotal(label string, step string, table *tablewriter.Table, values map[string]*Summary, transform func(float64) float64, maxIter uint64) {
-	labels := []string{label}
+func (p *Profiler) AddSectionWithTotal(section *SectionConfig, table *tablewriter.Table, values map[string]*Summary, transform func(float64) float64, maxIter uint64) {
+	labels := []string{section.Title}
 	colors := []tablewriter.Colors{tablewriter.Color(tablewriter.Normal, tablewriter.FgGreenColor)}
 	for i := 0; i < len(p.benchmarks); i++ {
 		labels = append(labels, "")
@@ -385,25 +455,36 @@ func (p *Profiler) AddSectionWithTotal(label string, step string, table *tablewr
 		row := []string{fmt.Sprintf("batch_size: %d", batchSize)}
 		refImplName := ""
 		for _, result := range p.benchmarks {
-			key := fmt.Sprintf("%s:%s:%d:%s", result.benchName, result.tags, batchSize, step)
+			key := fmt.Sprintf("%s:%s:%d:%s", result.benchName, result.tags, batchSize, section.ID)
+			metricNotApplicable := section.MetricNotApplicable(fmt.Sprintf("%s:%s", result.benchName, result.tags))
 			improvement := ""
 
 			if refImplName == "" {
 				refImplName = fmt.Sprintf("%s:%s", result.benchName, result.tags)
 			} else {
-				refKey := fmt.Sprintf("%s:%d:%s", refImplName, batchSize, step)
+				refKey := fmt.Sprintf("%s:%d:%s", refImplName, batchSize, section.ID)
 				improvement = fmt.Sprintf("(x%.2f)", values[refKey].P99/values[key].P99)
 			}
 
 			value := transform(values[key].P99)
+			decoratedValue := "Not Applicable"
 			if value == math.Trunc(value) {
 				accumulatedSize := uint64(values[key].Total(maxIter))
-				row = append(row, fmt.Sprintf("%d %s (total: %s)", int64(value), improvement, humanize.Bytes(accumulatedSize)))
+				if metricNotApplicable {
+					decoratedValue = fmt.Sprintf("%d %s (total: %s)", int64(value), improvement, humanize.Bytes(accumulatedSize))
+				}
+				row = append(row, decoratedValue)
 			} else {
 				if value >= 1.0 {
-					row = append(row, fmt.Sprintf("%.3f %s (total: %s)", value, improvement, humanize.Bytes(uint64(values[key].Total(maxIter)))))
+					if metricNotApplicable {
+						decoratedValue = fmt.Sprintf("%.3f %s (total: %s)", value, improvement, humanize.Bytes(uint64(values[key].Total(maxIter))))
+					}
+					row = append(row, decoratedValue)
 				} else {
-					row = append(row, fmt.Sprintf("%.5f %s (total: %s)", value, improvement, humanize.Bytes(uint64(values[key].Total(maxIter)))))
+					if metricNotApplicable {
+						decoratedValue = fmt.Sprintf("%.5f %s (total: %s)", value, improvement, humanize.Bytes(uint64(values[key].Total(maxIter))))
+					}
+					row = append(row, decoratedValue)
 				}
 			}
 		}
@@ -560,4 +641,60 @@ func stringsEqual(buffers1, buffers2 []string) bool {
 		}
 	}
 	return true
+}
+
+// DefaultColumnConfig creates a default column config.
+func DefaultColumnConfig() *ColumnConfig {
+	return &ColumnConfig{
+		subTitle:         "",
+		metricApplicable: true,
+	}
+}
+
+// NewSectionConfig creates a new SectionConfig with default values.
+func NewSectionConfig(sectionID string, title string) *SectionConfig {
+	return &SectionConfig{
+		ID:                  sectionID,
+		Title:               title,
+		defaultColumnConfig: DefaultColumnConfig(),
+		columns:             make(map[string]*ColumnConfig),
+	}
+}
+
+func (sc *SectionConfig) CustomColumnFor(ps ProfileableSystem) *ColumnConfig {
+	columnID := ProfileableSystemID(ps)
+	column, ok := sc.columns[columnID]
+
+	if !ok {
+		column = DefaultColumnConfig()
+		sc.columns[columnID] = column
+	}
+
+	return column
+}
+
+func (sc *SectionConfig) SubTitle(columnID string) string {
+	column, ok := sc.columns[columnID]
+	if !ok {
+		return sc.defaultColumnConfig.subTitle
+	}
+	return column.subTitle
+}
+
+func (sc *SectionConfig) MetricNotApplicable(columnID string) bool {
+	column, ok := sc.columns[columnID]
+	if !ok {
+		return sc.defaultColumnConfig.metricApplicable
+	}
+	return column.metricApplicable
+}
+
+func (c *ColumnConfig) SubTitle(subTitle string) *ColumnConfig {
+	c.subTitle = subTitle
+	return c
+}
+
+func (c *ColumnConfig) MetricNotApplicable() *ColumnConfig {
+	c.metricApplicable = false
+	return c
 }
