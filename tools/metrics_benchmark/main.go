@@ -54,16 +54,28 @@ func main() {
 		profiler.Printf("Dataset '%s'\n", inputFiles[i])
 		ds := dataset.NewRealMetricsDataset(inputFiles[i])
 		otlpMetrics := otlp.NewMetricsProfileable(ds, compressionAlgo)
-		otlpArrowMetricsWithDictionary := arrow.NewMetricsProfileable([]string{"With dict"}, ds, &benchmark.Config{})
+		otlpArrowMetrics := arrow.NewMetricsProfileable([]string{"With dict"}, ds, &benchmark.Config{})
 
 		if err := profiler.Profile(otlpMetrics, maxIter); err != nil {
 			panic(fmt.Errorf("expected no error, got %v", err))
 		}
-		if err := profiler.Profile(otlpArrowMetricsWithDictionary, maxIter); err != nil {
+		if err := profiler.Profile(otlpArrowMetrics, maxIter); err != nil {
 			panic(fmt.Errorf("expected no error, got %v", err))
 		}
 
 		profiler.CheckProcessingResults()
+
+		// Configure the profile output
+		benchmark.CompressionSection.CustomColumnFor(otlpArrowMetrics).
+			MetricNotApplicable()
+		benchmark.DecompressionSection.CustomColumnFor(otlpArrowMetrics).
+			MetricNotApplicable()
+		benchmark.UncompressedSizeSection.CustomColumnFor(otlpArrowMetrics).
+			MetricNotApplicable()
+
+		profiler.Printf("\nDataset summary:\n")
+		profiler.Printf("- #metrics: %d\n", ds.Len())
+
 		profiler.PrintResults(maxIter)
 
 		profiler.ExportMetricsTimesCSV(fmt.Sprintf("%d_metrics_benchmark_results", i))

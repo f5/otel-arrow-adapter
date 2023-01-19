@@ -83,16 +83,28 @@ func main() {
 		}
 
 		otlpLogs := otlp.NewLogsProfileable(ds, compressionAlgo)
-		otlpArrowLogsWithDictionary := arrow.NewLogsProfileable([]string{"With dict"}, ds, &benchmark.Config{})
+		otlpArrowLogs := arrow.NewLogsProfileable([]string{"With dict"}, ds, &benchmark.Config{})
 
 		if err := profiler.Profile(otlpLogs, maxIter); err != nil {
 			panic(fmt.Errorf("expected no error, got %v", err))
 		}
-		if err := profiler.Profile(otlpArrowLogsWithDictionary, maxIter); err != nil {
+		if err := profiler.Profile(otlpArrowLogs, maxIter); err != nil {
 			panic(fmt.Errorf("expected no error, got %v", err))
 		}
 
 		profiler.CheckProcessingResults()
+
+		// Configure the profile output
+		benchmark.CompressionSection.CustomColumnFor(otlpArrowLogs).
+			MetricNotApplicable()
+		benchmark.DecompressionSection.CustomColumnFor(otlpArrowLogs).
+			MetricNotApplicable()
+		benchmark.UncompressedSizeSection.CustomColumnFor(otlpArrowLogs).
+			MetricNotApplicable()
+
+		profiler.Printf("\nDataset summary:\n")
+		profiler.Printf("- #logs: %d\n", ds.Len())
+
 		profiler.PrintResults(maxIter)
 
 		profiler.ExportMetricsTimesCSV(fmt.Sprintf("%d_logs_benchmark_results", i))
