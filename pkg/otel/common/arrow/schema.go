@@ -351,9 +351,10 @@ func (m *AdaptiveSchema) rebuildSchema(updates []SchemaUpdate) {
 func (m *AdaptiveSchema) collectSizeBuildersFromRecord(record arrow.Record) {
 	arrays := record.Columns()
 	schema := record.Schema()
+	fields := schema.Fields()
 	for i, arr := range arrays {
-		field := schema.Field(i)
-		m.collectSizeBuildersFromArray(field.Name, &field, arr)
+		field := &fields[i]
+		m.collectSizeBuildersFromArray(field.Name, field, arr)
 	}
 }
 
