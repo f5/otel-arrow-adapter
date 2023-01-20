@@ -1,34 +1,63 @@
 receivers:
-  otlp/in:
+  otlp/standard:
     protocols:
       grpc:
-        endpoint: 0.0.0.0:4999
+        endpoint: 127.0.0.1:4318
 
-processors:
-  batch:
+        # include_metadata is required for the receiver to pass
+        # per-request metadata through the pipeline, in order for the
+        # headers_setter extension to see it.
+        include_metadata: true
+
+extensions:
+  # Configure the headers_setter extension to propagate the
+  # X-Scope-OrgID property in the outgoing context.
+  headers_setter:
+    headers:
+      - key: X-Scope-OrgID
+        from_context: X-Scope-OrgID
 
 exporters:
-  # otlp/out configures an arrow exporter
-  otlp/out:
-    endpoint: 0.0.0.0:5000
+  # The OTLP/Arrow exporter sends to a local corresponding with
+  # saas-collector.yaml.
+  otlp/arrow:
+    endpoint: 127.0.0.1:5000
+
+    # wait_for_ready lets the producer block until the connection
+    # is ready.
+    wait_for_ready: true
+    # For demonstration purposes, use an insecure port.  This would
+    # also be normal for a collector behind a loadbalancer that
+    # terminates TLS.
     tls:
       insecure: true
+    # Enable the Arrow exporter
     arrow:
       enabled: true
+
+      # disable_downgrade forces this connection to use Arrow.
+      disable_downgrade: true
+
       # num_streams can be set to the the number of available CPUs
       # to maximize throughput.
       num_streams: 4
 
+    # Associate the headers_setter extension with this exporter.
+    auth:
+      authenticator: headers_setter
+
   logging:      
-    loglevel: info
+    verbosity: normal
 
 service:
+  extensions: [headers_setter]
   pipelines:
     traces:
-      receivers: [otlp/in]
-      processors: [batch]
-      exporters: [logging, otlp/out]
+      receivers: [otlp/standard]
+      processors: []
+      exporters: [logging, otlp/arrow]
 
   telemetry:
+    # Enable a prometheus /metrics endpoint on :8888
     metrics:
-      address: localhost:8888
+      address: 127.0.0.1:8888

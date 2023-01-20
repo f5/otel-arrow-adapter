@@ -1,26 +1,29 @@
 receivers:
-  # otlp/in configures an arrow receiver
-  otlp/in:
+  otlp:
     protocols:
       grpc:
-        endpoint: 0.0.0.0:5000
+        endpoint: 127.0.0.1:5000
+
+        # include_metadata is required for the receiver to pass
+        # per-request metadata through to the pipeline.  This
+        # is supported for both arrow and standard modes.
+        include_metadata: true
+
+      # Enable arrow for the bridge.
       arrow:
         enabled: true
 
-processors:
-  batch:
-
 exporters:
   logging:      
-    loglevel: debug
+    verbosity: detailed
 
 service:
   pipelines:
     traces:
-      receivers: [otlp/in]
-      processors: [batch]
+      receivers: [otlp]
+      processors: []
       exporters: [logging]
 
   telemetry:
     metrics:
-      address: localhost:8889
+      address: 127.0.0.1:8889
