@@ -34,17 +34,17 @@ import (
 
 // Section identifiers used in the benchmark output.
 var (
-	BatchCreationSection     = NewSectionConfig("batch_creation_sec", "Creation (ms)")
-	SerializationSection     = NewSectionConfig("serialization_sec", "Serialization (ms)")
-	CompressionSection       = NewSectionConfig("compression_sec", "Compression (ms)")
-	DecompressionSection     = NewSectionConfig("decompression_sec", "Decompression (ms)")
-	DeserializationSection   = NewSectionConfig("deserialization_sec", "Deserialization (ms)")
-	TotalEncodingTimeSection = NewSectionConfig("total_encoding_time_sec", "Total encoding time (ms)")
-	TotalDecodingTimeSection = NewSectionConfig("total_decoding_time_sec", "Total decoding time (ms)")
-	TotalTimeSection         = NewSectionConfig("total_time_sec", "Total time (ms)")
-	ProcessingSection        = NewSectionConfig("processing_sec", "Batch processing (ms)")
-	UncompressedSizeSection  = NewSectionConfig("uncompressed_size", "Uncompressed size (bytes)")
-	CompressedSizeSection    = NewSectionConfig("compressed_size", "Compressed size (bytes)")
+	BatchCreationSection     = NewSectionConfig("batch_creation_sec", "Creation", false)
+	SerializationSection     = NewSectionConfig("serialization_sec", "Serialization", false)
+	CompressionSection       = NewSectionConfig("compression_sec", "Compression", false)
+	DecompressionSection     = NewSectionConfig("decompression_sec", "Decompression", false)
+	DeserializationSection   = NewSectionConfig("deserialization_sec", "Deserialization", false)
+	TotalEncodingTimeSection = NewSectionConfig("total_encoding_time_sec", "TOTAL ENCODING", false)
+	TotalDecodingTimeSection = NewSectionConfig("total_decoding_time_sec", "TOTAL DECODING", false)
+	TotalTimeSection         = NewSectionConfig("total_time_sec", "TOTAL", true)
+	ProcessingSection        = NewSectionConfig("processing_sec", "Batch processing", false)
+	UncompressedSizeSection  = NewSectionConfig("uncompressed_size", "Uncompressed (bytes)", false)
+	CompressedSizeSection    = NewSectionConfig("compressed_size", "Compressed (bytes)", false)
 )
 
 // Profiler is the main profiler object used to implement benchmarks.
@@ -67,6 +67,9 @@ type SectionConfig struct {
 
 	// Custom column configuration per column identifier.
 	columns map[string]*ColumnConfig
+
+	// True if the section is a total.
+	total bool
 }
 
 // ColumnConfig is the configuration for a column of the benchmark table output.
@@ -112,10 +115,13 @@ func (p *Profiler) Profile(profileable ProfileableSystem, maxIter uint64) error 
 		summaries: []BatchSummary{},
 		tags:      tags,
 	})
+	probe := NewSystemProbe()
 
 	for _, batchSize := range p.batchSizes {
+		probe.Reset()
 		profileable.StartProfiling(p.writer)
-		_, _ = fmt.Fprintf(p.writer, "Profiling '%s' (tags=[%v], batch-size=%d, dataset-size=%d)\n", profileable.Name(), strings.Join(profileable.Tags(), `,`), batchSize, profileable.DatasetSize())
+		batchStart := time.Now()
+		_, _ = fmt.Fprintf(p.writer, "Profiling '%s' (parameters tags=[%v], batch-size=%d, dataset-size=%d)", profileable.Name(), strings.Join(profileable.Tags(), `,`), batchSize, profileable.DatasetSize())
 
 		uncompressedSize := NewMetric()
 		compressedSize := NewMetric()
@@ -215,16 +221,16 @@ func (p *Profiler) Profile(profileable ProfileableSystem, maxIter uint64) error 
 					compression.Record(afterCompression.Sub(afterSerialization).Seconds())
 					decompression.Record(afterDecompression.Sub(afterCompression).Seconds())
 					deserialization.Record(afterDeserialization.Sub(afterDecompression).Seconds())
-
-					totalTime.Record(
-						afterBatchCreation.Sub(start).Seconds() +
-							afterProcessing.Sub(afterBatchCreation).Seconds() +
-							afterSerialization.Sub(afterProcessing).Seconds() +
-							afterCompression.Sub(afterSerialization).Seconds() +
-							afterDecompression.Sub(afterCompression).Seconds() +
-							afterDeserialization.Sub(afterDecompression).Seconds(),
-					)
 				}
+
+				totalTime.Record(
+					afterBatchCreation.Sub(start).Seconds() +
+						afterProcessing.Sub(afterBatchCreation).Seconds() +
+						afterSerialization.Sub(afterProcessing).Seconds() +
+						afterCompression.Sub(afterSerialization).Seconds() +
+						afterDecompression.Sub(afterCompression).Seconds() +
+						afterDeserialization.Sub(afterDecompression).Seconds(),
+				)
 			}
 		}
 
@@ -242,9 +248,11 @@ func (p *Profiler) Profile(profileable ProfileableSystem, maxIter uint64) error 
 			decompressionSec:     decompression.ComputeSummary(),
 			totalTimeSec:         totalTime.ComputeSummary(),
 			processingResults:    processingResults,
+			cpuMemUsage:          probe.MeasureUsage(),
 		})
 
 		profileable.EndProfiling(p.writer)
+		fmt.Printf(", total duration=%fs\n", time.Now().Sub(batchStart).Seconds())
 	}
 
 	return nil
@@ -271,27 +279,24 @@ func (p *Profiler) CheckProcessingResults() {
 
 func (p *Profiler) PrintResults(maxIter uint64) {
 	colorReset := "\033[0m"
-	colorCyan := "\033[36m"
+	colorGreen := "\033[32m"
 	colorYellow := "\033[33m"
 
 	// Time spent in each step + notes
 	println()
-	println(colorCyan)
-	println("======= Measurement of the time spent on the different steps for each protocol configuration ========", colorReset)
+	println(colorGreen)
+	println("======= MEASUREMENT OF THE TIME SPENT ON THE DIFFERENT STEPS FOR EACH PROTOCOL CONFIGURATION ========", colorReset)
 	p.PrintStepsTiming(maxIter)
-	println()
-	println("Total encoding time (i.e. approx. exporter time) = `creation` + `Serialization` + `Compression`")
-	println("Total decoding time (i.e. approx. receiver time) = `Decompression` + `Deserialization`")
 
 	// Message size and compression ratio
 	println()
-	println(colorCyan)
-	println("======== Measurement of message size and compression ratio for each protocol configuration ==========", colorReset)
+	println(colorGreen)
+	println("======== MEASUREMENT OF MESSAGE SIZE AND COMPRESSION RATIO FOR EACH PROTOCOL CONFIGURATION ==========", colorReset)
 	p.PrintCompressionRatio(maxIter)
 
 	// Notes on OTLP Arrow column
 	println()
-	println(colorYellow, "Notes for the OTLP Arrow column", colorReset)
+	println(colorYellow, "Notes for the OTLP Arrow column in each result table:", colorReset)
 	println("  - The `Creation` step represents the creation of the entire BatchArrowRecords, including creating")
 	println("    the Arrow Record, encoding it, compressing it, and embedding it in the BatchArrowRecords protobuf")
 	println("    message. The compression is performed internally by the Arrow lib during the encoding of the msg")
@@ -308,7 +313,7 @@ func (p *Profiler) PrintResults(maxIter uint64) {
 
 func (p *Profiler) PrintStepsTiming(_ uint64) {
 	_, _ = fmt.Fprintf(p.writer, "\n")
-	headers := []string{"Protobuf msg steps (ms)"}
+	headers := []string{"Proto msg step duration"}
 
 	for _, benchmark := range p.benchmarks {
 		headers = append(headers, fmt.Sprintf("%s %s - p99", benchmark.benchName, benchmark.tags))
@@ -317,6 +322,8 @@ func (p *Profiler) PrintStepsTiming(_ uint64) {
 	table := tablewriter.NewWriter(p.writer)
 	table.SetHeader(headers)
 	table.SetBorder(false)
+	table.SetHeaderAlignment(tablewriter.ALIGN_LEFT)
+	table.SetAutoWrapText(false)
 	headerColors := []tablewriter.Colors{tablewriter.Color(tablewriter.Normal, tablewriter.FgGreenColor)}
 
 	for i := 0; i < len(p.benchmarks); i++ {
@@ -351,23 +358,27 @@ func (p *Profiler) PrintStepsTiming(_ uint64) {
 	}
 
 	transform := func(value float64) float64 { return value * 1000.0 }
-	p.AddSection(BatchCreationSection, table, values, transform)
-	// p.AddSection(ProcessingSection, table, values, transform)
-	p.AddSection(SerializationSection, table, values, transform)
-	p.AddSection(CompressionSection, table, values, transform)
-	p.AddSection(DecompressionSection, table, values, transform)
-	p.AddSection(DeserializationSection, table, values, transform)
+	greenTitle := tablewriter.Color(tablewriter.Normal, tablewriter.FgGreenColor)
+	cyanTitle := tablewriter.Color(tablewriter.Normal, tablewriter.FgCyanColor)
+	p.AddSection(BatchCreationSection, table, values, transform, greenTitle)
+	// p.AddSection(ProcessingSection, table, values, transform, greenTitle)
+	p.AddSection(SerializationSection, table, values, transform, greenTitle)
+	p.AddSection(CompressionSection, table, values, transform, greenTitle)
 	p.AddSeparator(table)
-	p.AddSection(TotalEncodingTimeSection, table, values, transform)
-	p.AddSection(TotalDecodingTimeSection, table, values, transform)
-	p.AddSection(TotalTimeSection, table, values, transform)
+	p.AddSection(TotalEncodingTimeSection, table, values, transform, cyanTitle)
+	p.AddSection(DecompressionSection, table, values, transform, greenTitle)
+	p.AddSection(DeserializationSection, table, values, transform, greenTitle)
+	p.AddSeparator(table)
+	p.AddSection(TotalDecodingTimeSection, table, values, transform, cyanTitle)
+	p.AddSeparator(table)
+	p.AddSection(TotalTimeSection, table, values, transform, cyanTitle)
 
 	table.Render()
 }
 
 func (p *Profiler) PrintCompressionRatio(maxIter uint64) {
 	_, _ = fmt.Fprintf(p.writer, "\n")
-	headers := []string{"Protobuf msg (avg size)"}
+	headers := []string{"Proto msg size"}
 	for _, benchmark := range p.benchmarks {
 		headers = append(headers, fmt.Sprintf("%s %s - p99", benchmark.benchName, benchmark.tags))
 	}
@@ -408,16 +419,21 @@ func (p *Profiler) PrintCompressionRatio(maxIter uint64) {
 }
 
 func (p *Profiler) AddSeparator(table *tablewriter.Table) {
-	row := []string{"------------------------"}
+	row := []string{"========================"}
 	for i := 0; i < len(p.benchmarks); i++ {
 		row = append(row, "")
 	}
 	table.Append(row)
 }
 
-func (p *Profiler) AddSection(section *SectionConfig, table *tablewriter.Table, values map[string]*Summary, transform func(float64) float64) {
+func (p *Profiler) AddSection(
+	section *SectionConfig,
+	table *tablewriter.Table,
+	values map[string]*Summary,
+	transform func(float64) float64,
+	titleColor []int) {
 	titles := []string{section.Title}
-	colors := []tablewriter.Colors{tablewriter.Color(tablewriter.Normal, tablewriter.FgGreenColor)}
+	colors := []tablewriter.Colors{titleColor}
 	for i := 0; i < len(p.benchmarks); i++ {
 		result := p.benchmarks[i]
 		titles = append(titles, section.SubTitle(fmt.Sprintf("%s:%s", result.benchName, result.tags)))
@@ -425,7 +441,7 @@ func (p *Profiler) AddSection(section *SectionConfig, table *tablewriter.Table, 
 	}
 	table.Rich(titles, colors)
 
-	for _, batchSize := range p.batchSizes {
+	for i, batchSize := range p.batchSizes {
 		row := []string{fmt.Sprintf("batch_size: %d", batchSize)}
 		refImplName := ""
 		for _, result := range p.benchmarks {
@@ -437,29 +453,19 @@ func (p *Profiler) AddSection(section *SectionConfig, table *tablewriter.Table, 
 				refImplName = fmt.Sprintf("%s:%s", result.benchName, result.tags)
 			} else {
 				refKey := fmt.Sprintf("%s:%d:%s", refImplName, batchSize, section.ID)
-				improvement = fmt.Sprintf("(x%.2f)", values[refKey].P99/values[key].P99)
+				improvement = fmt.Sprintf(" (x%6.2f)", values[refKey].P99/values[key].P99)
 			}
 
 			value := transform(values[key].P99)
 			decoratedValue := "Not Applicable"
-			if value == math.Trunc(value) {
-				if metricNotApplicable {
-					decoratedValue = fmt.Sprintf("%d %s", int64(value), improvement)
-				}
-				row = append(row, decoratedValue)
-			} else {
-				if value >= 1.0 {
-					if metricNotApplicable {
-						decoratedValue = fmt.Sprintf("%.3f %s", value, improvement)
-					}
-					row = append(row, decoratedValue)
+			if metricNotApplicable {
+				if section.total {
+					decoratedValue = fmt.Sprintf("%7.3fms/msg%s, %s", value, improvement, result.summaries[i].cpuMemUsage.ToString())
 				} else {
-					if metricNotApplicable {
-						decoratedValue = fmt.Sprintf("%.5f %s", value, improvement)
-					}
-					row = append(row, decoratedValue)
+					decoratedValue = fmt.Sprintf("%7.3fms/msg%s", value, improvement)
 				}
 			}
+			row = append(row, decoratedValue)
 		}
 
 		table.Append(row)
@@ -676,12 +682,13 @@ func DefaultColumnConfig() *ColumnConfig {
 }
 
 // NewSectionConfig creates a new SectionConfig with default values.
-func NewSectionConfig(sectionID string, title string) *SectionConfig {
+func NewSectionConfig(sectionID string, title string, total bool) *SectionConfig {
 	return &SectionConfig{
 		ID:                  sectionID,
 		Title:               title,
 		defaultColumnConfig: DefaultColumnConfig(),
 		columns:             make(map[string]*ColumnConfig),
+		total:               total,
 	}
 }
 
@@ -721,4 +728,56 @@ func (c *ColumnConfig) SubTitle(subTitle string) *ColumnConfig {
 func (c *ColumnConfig) MetricNotApplicable() *ColumnConfig {
 	c.metricApplicable = false
 	return c
+}
+
+// SystemProbe is a probe that measures CPU and memory usage.
+type SystemProbe struct {
+	lastTime       time.Time // last time the probe was reset
+	lastMalloc     uint64    // last observed number of malloc
+	lastTotalAlloc uint64    // last observed number of total bytes allocated
+	lastNumGC      uint32    // last observed number of garbage collections
+}
+
+// CpuMemUsage contains the CPU and memory usage of a specific step.
+type CpuMemUsage struct {
+	heap      uint64  // heap memory usage in bytes
+	malloc    uint64  // number of malloc
+	bandwidth float64 // memory bandwidth in B/s
+	gcCount   uint32  // number of garbage collections
+}
+
+func NewSystemProbe() *SystemProbe {
+	return &SystemProbe{}
+}
+
+func (sp *SystemProbe) Reset() {
+	runtime.GC()
+
+	sp.lastTime = time.Now()
+
+	// Read memory stats and get the number of GCs
+	var m runtime.MemStats
+	runtime.ReadMemStats(&m)
+	sp.lastMalloc = m.Mallocs
+	sp.lastTotalAlloc = m.TotalAlloc
+	sp.lastNumGC = m.NumGC
+}
+
+func (sp *SystemProbe) MeasureUsage() *CpuMemUsage {
+	var m runtime.MemStats
+	runtime.ReadMemStats(&m)
+	durationSec := time.Now().Sub(sp.lastTime).Seconds()
+
+	return &CpuMemUsage{
+		heap:      m.Alloc,
+		malloc:    m.Mallocs - sp.lastMalloc,
+		bandwidth: float64(m.TotalAlloc-sp.lastTotalAlloc) / durationSec,
+		gcCount:   m.NumGC - sp.lastNumGC,
+	}
+}
+
+func (u *CpuMemUsage) ToString() string {
+	malloc, unitPrefix := humanize.ComputeSI(float64(u.malloc))
+	return fmt.Sprintf("heap{%s, %6.2f%s malloc/s, bw=%s/s, #gc=%2d}",
+		humanize.Bytes(u.heap), malloc, unitPrefix, humanize.Bytes(uint64(u.bandwidth)), u.gcCount)
 }

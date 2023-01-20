@@ -69,8 +69,7 @@ func main() {
 		maxIter := uint64(3)
 
 		// Compare the performance between the standard OTLP representation and the OTLP Arrow representation.
-		//profiler := benchmark.NewProfiler([]int{1000, 5000, 10000, 25000})
-		profiler := benchmark.NewProfiler([]int{10, 100, 1000, 2000, 5000, 10000}, "output/logs_benchmark.log", 2)
+		profiler := benchmark.NewProfiler([]int{100, 1000, 2000, 5000, 10000}, "output/logs_benchmark.log", 2)
 		profiler.Printf("Dataset '%s'\n", inputFiles[i])
 
 		// Build dataset from CSV file or from OTLP protobuf file
@@ -83,7 +82,7 @@ func main() {
 		}
 
 		otlpLogs := otlp.NewLogsProfileable(ds, compressionAlgo)
-		otlpArrowLogs := arrow.NewLogsProfileable([]string{"With dict"}, ds, &benchmark.Config{})
+		otlpArrowLogs := arrow.NewLogsProfileable([]string{"ZSTD"}, ds, &benchmark.Config{})
 
 		if err := profiler.Profile(otlpLogs, maxIter); err != nil {
 			panic(fmt.Errorf("expected no error, got %v", err))

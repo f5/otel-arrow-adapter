@@ -43,6 +43,7 @@ type BatchSummary struct {
 	decompressionSec     *Summary
 	totalTimeSec         *Summary
 	processingResults    []string
+	cpuMemUsage          *CpuMemUsage
 }
 
 type ProfilerResult struct {
