@@ -71,20 +71,38 @@ func main() {
 }
 
 func Report(name string, schema *arrow.Schema) {
+	pool := memory.NewGoAllocator()
 	println("--------------------------------------------------")
 	fmt.Printf("%s%s - Memory usage%s\n", ColorGreen, name, ColorReset)
 	ReportMemUsageOf("arrow.NewAdaptiveSchema(schema)", func() {
-		schema := carrow.NewAdaptiveSchema(schema)
+		schema := carrow.NewAdaptiveSchema(pool, schema)
 		defer schema.Release()
 	})
 	ReportMemUsageOf("NewRecordBuilder(schema)", func() {
-		array.NewRecordBuilder(memory.NewGoAllocator(), schema)
+		array.NewRecordBuilder(pool, schema)
 	})
 	ReportMemUsageOf("NewRecordBuilder(...).NewRecord() - empty", func() {
-		builder := array.NewRecordBuilder(memory.NewGoAllocator(), schema)
+		builder := array.NewRecordBuilder(pool, schema)
 		defer builder.Release()
 		record := builder.NewRecord()
 		defer record.Release()
+	})
+
+	adaptiveSchema := carrow.NewAdaptiveSchema(pool, schema)
+	builder := array.NewRecordBuilder(pool, adaptiveSchema.Schema())
+	defer builder.Release()
+	record := builder.NewRecord()
+	defer record.Release()
+	ReportMemUsageOf("reusedRecordBuilder.NewRecord() - empty", func() {
+		r := builder.NewRecord()
+		defer r.Release()
+	})
+	ReportMemUsageOf("adaptiveSchema.Analyze(...) + adaptiveSchema.UpdateSchema(...) if needed", func() {
+		overflowDetected, updates := adaptiveSchema.Analyze(record)
+		if overflowDetected {
+			println("overflow detected")
+			adaptiveSchema.UpdateSchema(updates)
+		}
 	})
 }
 
