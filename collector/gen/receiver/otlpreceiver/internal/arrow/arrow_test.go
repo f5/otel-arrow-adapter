@@ -791,3 +791,49 @@ func TestHeaderReceiverBothMetadata(t *testing.T) {
 		requireContainsAll(t, client.FromContext(cc).Metadata, expect)
 	}
 }
+
+func TestHeaderReceiverDuplicateMetadata(t *testing.T) {
+	expectStream := map[string][]string{
+		"K": {"k1", "k2"},
+
+		// "M" value does not appear b/c the same header
+		// appears in per-request metadata.
+		"M": {""},
+	}
+	expectRequest := map[string][]string{
+		"L": {"l1"},
+		"M": {"m1", "m2"},
+	}
+	expectCombined := map[string][]string{
+		"K": {"k1", "k2"},
+		"L": {"l1"},
+		"M": {"m1", "m2"},
+	}
+
+	var hpb bytes.Buffer
+
+	hpe := hpack.NewEncoder(&hpb)
+
+	ctx := metadata.NewIncomingContext(context.Background(), metadata.MD(expectStream))
+
+	h := newHeaderReceiver(ctx, true)
+
+	for i := 0; i < 3; i++ {
+		hpb.Reset()
+
+		for key, vals := range expectRequest {
+			for _, val := range vals {
+				err := hpe.WriteField(hpack.HeaderField{
+					Name:  key,
+					Value: val,
+				})
+				require.NoError(t, err)
+			}
+		}
+
+		cc, err := h.combineHeaders(ctx, hpb.Bytes())
+
+		require.NoError(t, err)
+		requireContainsAll(t, client.FromContext(cc).Metadata, expectCombined)
+	}
+}

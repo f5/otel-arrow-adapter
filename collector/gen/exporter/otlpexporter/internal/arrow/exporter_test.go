@@ -32,6 +32,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/atomic"
 	"golang.org/x/net/http2/hpack"
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 
 	"github.com/f5/otel-arrow-adapter/collector/gen/internal/testdata"
@@ -65,12 +66,16 @@ type exporterTestCase struct {
 }
 
 func newSingleStreamTestCase(t *testing.T) *exporterTestCase {
-	return newExporterTestCaseCommon(t, NotNoisy, 1, nil)
+	return newExporterTestCaseCommon(t, NotNoisy, 1, false, nil)
+}
+
+func newSingleStreamDowngradeDisabledTestCase(t *testing.T) *exporterTestCase {
+	return newExporterTestCaseCommon(t, NotNoisy, 1, true, nil)
 }
 
 func newSingleStreamMetadataTestCase(t *testing.T) *exporterTestCase {
 	var count int
-	return newExporterTestCaseCommon(t, NotNoisy, 1, func(ctx context.Context) (map[string]string, error) {
+	return newExporterTestCaseCommon(t, NotNoisy, 1, false, func(ctx context.Context) (map[string]string, error) {
 		defer func() { count++ }()
 		if count%2 == 0 {
 			return nil, nil
@@ -83,10 +88,10 @@ func newSingleStreamMetadataTestCase(t *testing.T) *exporterTestCase {
 }
 
 func newExporterNoisyTestCase(t *testing.T, numStreams int) *exporterTestCase {
-	return newExporterTestCaseCommon(t, Noisy, numStreams, nil)
+	return newExporterTestCaseCommon(t, Noisy, numStreams, false, nil)
 }
 
-func newExporterTestCaseCommon(t *testing.T, noisy noisyTest, numStreams int, metadataFunc func(ctx context.Context) (map[string]string, error)) *exporterTestCase {
+func newExporterTestCaseCommon(t *testing.T, noisy noisyTest, numStreams int, disableDowngrade bool, metadataFunc func(ctx context.Context) (map[string]string, error)) *exporterTestCase {
 	ctc := newCommonTestCase(t, noisy)
 
 	if metadataFunc == nil {
@@ -97,7 +102,7 @@ func newExporterTestCaseCommon(t *testing.T, noisy noisyTest, numStreams int, me
 		})
 	}
 
-	exp := NewExporter(numStreams, ctc.telset, nil, func() arrowRecord.ProducerAPI {
+	exp := NewExporter(numStreams, disableDowngrade, ctc.telset, nil, func() arrowRecord.ProducerAPI {
 		// Mock the close function, use a real producer for testing dataflow.
 		prod := arrowRecordMock.NewMockProducerAPI(ctc.ctrl)
 		real := arrowRecord.NewProducer()
@@ -292,6 +297,51 @@ func TestArrowExporterDowngrade(t *testing.T) {
 	require.Less(t, 1, len(tc.observedLogs.All()), "should have at least two logs: %v", tc.observedLogs.All())
 	require.Equal(t, tc.observedLogs.All()[0].Message, "arrow is not supported")
 	require.Contains(t, tc.observedLogs.All()[1].Message, "downgrading")
+}
+
+// TestArrowExporterDisableDowngrade tests that if the Recv() returns
+// any error downgrade still does not occur amd that the connection is
+// retried without error.
+func TestArrowExporterDisableDowngrade(t *testing.T) {
+	tc := newSingleStreamDowngradeDisabledTestCase(t)
+	badChannel := newArrowUnsupportedTestChannel()
+	goodChannel := newHealthyTestChannel()
+
+	fails := 0
+	tc.streamCall.AnyTimes().DoAndReturn(func(ctx context.Context, opts ...grpc.CallOption) (
+		arrowpb.ArrowStreamService_ArrowStreamClient,
+		error,
+	) {
+		defer func() { fails++ }()
+
+		if fails < 3 {
+			return tc.returnNewStream(badChannel)(ctx, opts...)
+		}
+		return tc.returnNewStream(goodChannel)(ctx, opts...)
+	})
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		outputData := <-goodChannel.sent
+		goodChannel.recv <- statusOKFor(outputData.BatchId)
+	}()
+
+	bg := context.Background()
+	require.NoError(t, tc.exporter.Start(bg))
+
+	sent, err := tc.exporter.SendAndWait(bg, twoTraces)
+	require.True(t, sent)
+	require.NoError(t, err)
+
+	wg.Wait()
+
+	require.NoError(t, tc.exporter.Shutdown(bg))
+
+	require.Less(t, 1, len(tc.observedLogs.All()), "should have at least two logs: %v", tc.observedLogs.All())
+	require.Equal(t, tc.observedLogs.All()[0].Message, "arrow is not supported")
+	require.NotContains(t, tc.observedLogs.All()[1].Message, "downgrading")
 }
 
 // TestArrowExporterConnectTimeout tests that an error is returned to

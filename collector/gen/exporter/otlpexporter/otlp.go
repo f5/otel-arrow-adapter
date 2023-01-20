@@ -116,7 +116,7 @@ func (e *baseExporter) start(ctx context.Context, host component.Host) (err erro
 			}
 		}
 
-		e.arrow = arrow.NewExporter(e.config.Arrow.NumStreams, e.settings.TelemetrySettings, e.callOptions, func() arrowRecord.ProducerAPI {
+		e.arrow = arrow.NewExporter(e.config.Arrow.NumStreams, e.config.Arrow.DisableDowngrade, e.settings.TelemetrySettings, e.callOptions, func() arrowRecord.ProducerAPI {
 			return arrowRecord.NewProducer()
 		}, arrowpb.NewArrowStreamServiceClient(e.clientConn), perRPCCreds)
 

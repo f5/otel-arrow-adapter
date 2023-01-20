@@ -141,13 +141,26 @@ func (h *headerReceiver) combineHeaders(ctx context.Context, hdrsBytes []byte) (
 
 	h.tmpHdrs = map[string][]string{}
 
-	for k, v := range h.streamHdrs {
-		h.tmpHdrs[k] = v
-	}
-
 	// Write calls the emitFunc, appending directly into `tmpHrs`.
 	if _, err := h.decoder.Write(hdrsBytes); err != nil {
 		return ctx, err
+	}
+
+	// Add streamHdrs that were not carried in the per-request headers.
+	for k, v := range h.streamHdrs {
+		// Note: This is done after the per-request metadata is defined
+		// in recognition of a potential for duplicated values stemming
+		// from the Arrow exporter's independent call to the Auth
+		// extension's GetRequestMetadata().  This paired with the
+		// headersetter's return of empty-string values means, we would
+		// end up with an empty-string element for any headersetter
+		// `from_context` rules b/c the stream uses background context.
+		// This allows static headers through.
+		//
+		// See https://github.com/open-telemetry/opentelemetry-collector/issues/6965
+		if _, ok := h.tmpHdrs[k]; !ok {
+			h.tmpHdrs[k] = v
+		}
 	}
 
 	// Release the temporary copy.

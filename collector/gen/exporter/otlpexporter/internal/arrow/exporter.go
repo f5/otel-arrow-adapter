@@ -34,6 +34,10 @@ type Exporter struct {
 	// numStreams is the number of streams that will be used.
 	numStreams int
 
+	// disableDowngrade prevents downgrade from occurring, supports
+	// forcing Arrow transport.
+	disableDowngrade bool
+
 	// telemetry includes logger, tracer, meter.
 	telemetry component.TelemetrySettings
 
@@ -77,6 +81,7 @@ type Exporter struct {
 // NewExporter configures a new Exporter.
 func NewExporter(
 	numStreams int,
+	disableDowngrade bool,
 	telemetry component.TelemetrySettings,
 	grpcOptions []grpc.CallOption,
 	newProducer func() arrowRecord.ProducerAPI,
@@ -85,6 +90,7 @@ func NewExporter(
 ) *Exporter {
 	return &Exporter{
 		numStreams:        numStreams,
+		disableDowngrade:  disableDowngrade,
 		telemetry:         telemetry,
 		grpcOptions:       grpcOptions,
 		newProducer:       newProducer,
@@ -127,7 +133,7 @@ func (e *Exporter) runStreamController(bgctx context.Context) {
 	for {
 		select {
 		case stream := <-e.returning:
-			if stream.client != nil {
+			if stream.client != nil || e.disableDowngrade {
 				// The stream closed or broken.  Restart it.
 				e.wg.Add(1)
 				go e.runArrowStream(bgctx)
