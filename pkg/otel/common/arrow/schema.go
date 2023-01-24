@@ -225,6 +225,7 @@ func (m *AdaptiveSchema) UpdateSchema(updates []SchemaUpdate) {
 	m.recBuilderCreatedCount++
 }
 
+// Recursively copy the dictionary values from the source array builders to the destination array builders.
 func copyDictValuesTo(srcFields []array.Builder, destFields []array.Builder) error {
 	if len(srcFields) != len(destFields) {
 		panic("The number of fields between the source and destination record builders must be the same")
@@ -240,6 +241,7 @@ func copyDictValuesTo(srcFields []array.Builder, destFields []array.Builder) err
 	return nil
 }
 
+// Recursively copy the dictionary values from the source array builder to the destination array builder.
 func copyFieldDictValuesTo(srcField array.Builder, destField array.Builder) (err error) {
 	if srcField.Type().ID() == arrow.DICTIONARY && destField.Type().ID() != arrow.DICTIONARY {
 		// The dictionary has been promoted to a string/binary field.

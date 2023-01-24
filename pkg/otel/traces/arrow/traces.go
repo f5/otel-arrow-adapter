@@ -44,25 +44,25 @@ type TracesBuilder struct {
 
 // NewTracesBuilder creates a new TracesBuilder with a given allocator.
 func NewTracesBuilder(schema *acommon.AdaptiveSchema) (*TracesBuilder, error) {
-	builder := schema.RecordBuilder()
-	rsb, ok := builder.Field(0).(*array.ListBuilder)
-	if !ok {
-		return nil, fmt.Errorf("expected field 0 to be a list builder, got %T", builder.Field(0))
-	}
-	return &TracesBuilder{
+	tracesBuilder := &TracesBuilder{
 		released: false,
 		schema:   schema,
-		builder:  builder,
-		rsb:      rsb,
-		rsp:      ResourceSpansBuilderFrom(rsb.ValueBuilder().(*array.StructBuilder)),
-	}, nil
+	}
+	if err := tracesBuilder.init(); err != nil {
+		return nil, err
+	}
+	return tracesBuilder, nil
 }
 
-func (b *TracesBuilder) Reset() error {
-	builder := b.schema.RecordBuilder()
-	rsb, ok := builder.Field(0).(*array.ListBuilder)
+func (b *TracesBuilder) init() error {
+	if b.builder != nil {
+		b.builder.Release()
+	}
+
+	b.builder = b.schema.RecordBuilder()
+	rsb, ok := b.builder.Field(0).(*array.ListBuilder)
 	if !ok {
-		return fmt.Errorf("expected field 0 to be a list builder, got %T", builder.Field(0))
+		return fmt.Errorf("expected field 0 to be a list builder, got %T", b.builder.Field(0))
 	}
 	b.rsb = rsb
 	b.rsp = ResourceSpansBuilderFrom(rsb.ValueBuilder().(*array.StructBuilder))
@@ -81,12 +81,16 @@ func (b *TracesBuilder) Build() (arrow.Record, error) {
 		return nil, fmt.Errorf("resource spans builder already released")
 	}
 
-	defer b.Release()
-
 	record := b.builder.NewRecord()
 
 	overflowDetected, updates := b.schema.Analyze(record)
 	if overflowDetected {
+		// Dictionary overflow detected =>
+		// * Update the schema
+		// * Reinitialize the trace builder
+
+		// The existing record is no longer valid, release it.
+		// A new record will be built after the schema update.
 		record.Release()
 
 		// Build a list of fields that overflowed
@@ -96,6 +100,9 @@ func (b *TracesBuilder) Build() (arrow.Record, error) {
 		}
 
 		b.schema.UpdateSchema(updates)
+		if err := b.init(); err != nil {
+			return nil, err
+		}
 
 		return nil, &acommon.DictionaryOverflowError{FieldNames: fieldNames}
 	}
