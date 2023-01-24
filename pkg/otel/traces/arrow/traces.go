@@ -45,10 +45,6 @@ type TracesBuilder struct {
 // NewTracesBuilder creates a new TracesBuilder with a given allocator.
 func NewTracesBuilder(schema *acommon.AdaptiveSchema) (*TracesBuilder, error) {
 	builder := schema.RecordBuilder()
-	err := schema.InitDictionaryBuilders(builder)
-	if err != nil {
-		return nil, err
-	}
 	rsb, ok := builder.Field(0).(*array.ListBuilder)
 	if !ok {
 		return nil, fmt.Errorf("expected field 0 to be a list builder, got %T", builder.Field(0))
@@ -60,6 +56,17 @@ func NewTracesBuilder(schema *acommon.AdaptiveSchema) (*TracesBuilder, error) {
 		rsb:      rsb,
 		rsp:      ResourceSpansBuilderFrom(rsb.ValueBuilder().(*array.StructBuilder)),
 	}, nil
+}
+
+func (b *TracesBuilder) Reset() error {
+	builder := b.schema.RecordBuilder()
+	rsb, ok := builder.Field(0).(*array.ListBuilder)
+	if !ok {
+		return fmt.Errorf("expected field 0 to be a list builder, got %T", builder.Field(0))
+	}
+	b.rsb = rsb
+	b.rsp = ResourceSpansBuilderFrom(rsb.ValueBuilder().(*array.StructBuilder))
+	return nil
 }
 
 // Build builds an Arrow Record from the builder.

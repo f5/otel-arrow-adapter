@@ -45,10 +45,6 @@ type MetricsBuilder struct {
 // NewMetricsBuilder creates a new MetricsBuilder with a given allocator.
 func NewMetricsBuilder(schema *acommon.AdaptiveSchema) (*MetricsBuilder, error) {
 	builder := schema.RecordBuilder()
-	err := schema.InitDictionaryBuilders(builder)
-	if err != nil {
-		return nil, err
-	}
 	rmb, ok := builder.Field(0).(*array.ListBuilder)
 	if !ok {
 		return nil, fmt.Errorf("expected field 0 to be a list builder, got %T", builder.Field(0))

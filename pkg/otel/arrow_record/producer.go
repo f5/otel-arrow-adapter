@@ -58,6 +58,8 @@ type Producer struct {
 	metricsSchema   *acommon.AdaptiveSchema
 	logsSchema      *acommon.AdaptiveSchema
 	tracesSchema    *acommon.AdaptiveSchema
+
+	traceBuilder *tracesarrow.TracesBuilder
 }
 
 type streamProducer struct {
@@ -96,6 +98,15 @@ func NewProducerWithOptions(options ...Option) *Producer {
 	for _, opt := range options {
 		opt(cfg)
 	}
+	traceSchema := acommon.NewAdaptiveSchema(
+		cfg.pool,
+		tracesarrow.Schema,
+		acommon.WithDictInitIndexSize(cfg.initIndexSize),
+		acommon.WithDictLimitIndexSize(cfg.limitIndexSize))
+	traceBuilder, err := tracesarrow.NewTracesBuilder(traceSchema)
+	if err != nil {
+		panic(err)
+	}
 	return &Producer{
 		pool:            cfg.pool,
 		zstd:            cfg.zstd,
@@ -111,11 +122,8 @@ func NewProducerWithOptions(options ...Option) *Producer {
 			logsarrow.Schema,
 			acommon.WithDictInitIndexSize(cfg.initIndexSize),
 			acommon.WithDictLimitIndexSize(cfg.limitIndexSize)),
-		tracesSchema: acommon.NewAdaptiveSchema(
-			cfg.pool,
-			tracesarrow.Schema,
-			acommon.WithDictInitIndexSize(cfg.initIndexSize),
-			acommon.WithDictLimitIndexSize(cfg.limitIndexSize)),
+		tracesSchema: traceSchema,
+		traceBuilder: traceBuilder,
 	}
 }
 
@@ -167,6 +175,8 @@ func (p *Producer) BatchArrowRecordsFromTraces(ts ptrace.Traces) (*colarspb.Batc
 	// Note: The record returned is wrapped into a RecordMessage and will
 	// be released by the Producer.Produce method.
 	record, err := recordBuilder[ptrace.Traces](func() (acommon.EntityBuilder[ptrace.Traces], error) {
+		//p.traceBuilder.Reset()
+		//return p.traceBuilder, nil
 		return tracesarrow.NewTracesBuilder(p.tracesSchema)
 	}, ts)
 	if err != nil {
@@ -202,6 +212,7 @@ func (p *Producer) Close() error {
 	p.metricsSchema.Release()
 	p.logsSchema.Release()
 	p.tracesSchema.Release()
+	p.traceBuilder.Release()
 	for _, sp := range p.streamProducers {
 		if err := sp.ipcWriter.Close(); err != nil {
 			return err
@@ -268,6 +279,15 @@ func (p *Producer) Produce(rms []*RecordMessage) (*colarspb.BatchArrowRecords, e
 		BatchId:           batchId,
 		OtlpArrowPayloads: oapl,
 	}, nil
+}
+
+func (p *Producer) ShowStats() {
+	println("Metrics schema stats:")
+	p.metricsSchema.ShowStats()
+	println("Logs schema stats:")
+	p.logsSchema.ShowStats()
+	println("Traces schema stats:")
+	p.tracesSchema.ShowStats()
 }
 
 func recordBuilder[T pmetric.Metrics | plog.Logs | ptrace.Traces](builder func() (acommon.EntityBuilder[T], error), entity T) (record arrow.Record, err error) {

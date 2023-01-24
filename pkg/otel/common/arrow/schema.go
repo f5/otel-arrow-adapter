@@ -48,6 +48,13 @@ type AdaptiveSchema struct {
 	fieldCapacities map[string]*BuilderCapacityWindow
 
 	recordBuilder *array.RecordBuilder
+
+	// Statistics
+	analyzeCount           int
+	updateSchemaCount      int
+	recBuilderCreatedCount int
+	recBuilderCallCount    int
+	dictOverflowCount      int
 }
 
 // BuilderCapacityWindow is a moving window on builder length observations collected
@@ -117,6 +124,7 @@ func NewAdaptiveSchema(pool memory.Allocator, schema *arrow.Schema, options ...O
 		dictionariesWithOverflow: make(map[string]string),
 		fieldCapacities:          make(map[string]*BuilderCapacityWindow),
 		recordBuilder:            array.NewRecordBuilder(pool, schema),
+		recBuilderCreatedCount:   1,
 	}
 }
 
@@ -129,7 +137,9 @@ func (m *AdaptiveSchema) Schema() *arrow.Schema {
 // The record builder is reused between calls to RecordBuilder if the schema has not been adapted in between.
 // Note: the caller is responsible for releasing the record builder.
 func (m *AdaptiveSchema) RecordBuilder() *array.RecordBuilder {
+	m.recBuilderCallCount++
 	m.recordBuilder.Retain()
+	// ToDo No evidence that this optimization make a real difference m.initSizeBuildersFromRecordBuilder(m.recordBuilder)
 	return m.recordBuilder
 }
 
@@ -142,6 +152,7 @@ func (m *AdaptiveSchema) RecordBuilder() *array.RecordBuilder {
 // Returns true if any of the dictionaries have overflowed and false
 // otherwise.
 func (m *AdaptiveSchema) Analyze(record arrow.Record) (overflowDetected bool, updates []SchemaUpdate) {
+	m.analyzeCount++
 	arrays := record.Columns()
 	overflowDetected = false
 
@@ -154,6 +165,7 @@ func (m *AdaptiveSchema) Analyze(record arrow.Record) (overflowDetected bool, up
 		d.init.Retain()
 		observedSize := uint64(d.init.Len())
 		if observedSize > d.upperLimit {
+			m.dictOverflowCount++
 			overflowDetected = true
 			newDict, newUpperLimit := m.promoteDictionaryType(observedSize, d.dictionary)
 			updates = append(updates, SchemaUpdate{
@@ -170,13 +182,14 @@ func (m *AdaptiveSchema) Analyze(record arrow.Record) (overflowDetected bool, up
 		}
 	}
 
-	m.collectSizeBuildersFromRecord(record)
+	// ToDo No evidence that this optimization make a real difference m.collectSizeBuildersFromRecord(record)
 
 	return overflowDetected, updates
 }
 
 // UpdateSchema updates the schema with the provided updates.
 func (m *AdaptiveSchema) UpdateSchema(updates []SchemaUpdate) {
+	m.updateSchemaCount++
 	m.rebuildSchema(updates)
 
 	// update dictionaries based on the updates
@@ -200,38 +213,87 @@ func (m *AdaptiveSchema) UpdateSchema(updates []SchemaUpdate) {
 	}
 
 	// Build a new record builder with the updated schema
+	// and transfer the dictionaries from the old record builder
+	// to the new one.
+	newRecBuilder := array.NewRecordBuilder(m.pool, m.schema)
+	if err := copyDictValuesTo(m.recordBuilder.Fields(), newRecBuilder.Fields()); err != nil {
+		panic(err)
+	}
 	m.recordBuilder.Release()
-	m.recordBuilder = array.NewRecordBuilder(m.pool, m.schema)
+	m.recordBuilder = newRecBuilder
+
+	m.recBuilderCreatedCount++
 }
 
-// InitDictionaryBuilders initializes the dictionary builders with the initial dictionary values
-// extracted for the previous processed records.
-func (m *AdaptiveSchema) InitDictionaryBuilders(builder *array.RecordBuilder) (err error) {
-	builders := builder.Fields()
-	for _, d := range m.dictionaries {
-		dict := getDictionaryBuilder(builders[d.ids[0]], d.ids[1:])
-		if d.init != nil {
-			switch init := d.init.(type) {
-			case *array.String:
-				err = dict.(*array.BinaryDictionaryBuilder).InsertStringDictValues(init)
-			case *array.Binary:
-				err = dict.(*array.BinaryDictionaryBuilder).InsertDictValues(init)
-			case *array.FixedSizeBinary:
-				err = dict.(*array.FixedSizeBinaryDictionaryBuilder).InsertDictValues(init)
-			case *array.Int32:
-				err = dict.(*array.Int32DictionaryBuilder).InsertDictValues(init)
-			default:
-				panic("InitDictionaryBuilders: unsupported dictionary type " + init.DataType().Name())
-			}
-			if err != nil {
+func copyDictValuesTo(srcFields []array.Builder, destFields []array.Builder) error {
+	if len(srcFields) != len(destFields) {
+		panic("The number of fields between the source and destination record builders must be the same")
+	}
+
+	for i := 0; i < len(srcFields); i++ {
+		srcField := srcFields[i]
+		destField := destFields[i]
+		if err := copyFieldDictValuesTo(srcField, destField); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func copyFieldDictValuesTo(srcField array.Builder, destField array.Builder) (err error) {
+	if srcField.Type().ID() == arrow.DICTIONARY && destField.Type().ID() != arrow.DICTIONARY {
+		// The dictionary has been promoted to a string/binary field.
+		return nil
+	}
+
+	if srcField.Type().ID() != destField.Type().ID() {
+		panic("The source and destination record builders must have the same schema (except for dictionary indices)")
+	}
+
+	switch builder := srcField.(type) {
+	case *array.StructBuilder:
+		for i := 0; i < builder.NumField(); i++ {
+			if err = copyFieldDictValuesTo(builder.FieldBuilder(i), destField.(*array.StructBuilder).FieldBuilder(i)); err != nil {
 				return
 			}
 		}
+	case *array.ListBuilder:
+		if err = copyFieldDictValuesTo(builder.ValueBuilder(), destField.(*array.ListBuilder).ValueBuilder()); err != nil {
+			return
+		}
+	case array.UnionBuilder:
+		typeCodes := builder.Type().(arrow.UnionType).TypeCodes()
+		for childID := 0; childID < len(typeCodes); childID++ {
+			if err = copyFieldDictValuesTo(builder.Child(int(typeCodes[childID])), destField.(array.UnionBuilder).Child(int(typeCodes[childID]))); err != nil {
+				return
+			}
+		}
+	case *array.MapBuilder:
+		if err = copyFieldDictValuesTo(builder.KeyBuilder(), destField.(*array.MapBuilder).KeyBuilder()); err != nil {
+			return err
+		}
+		if err = copyFieldDictValuesTo(builder.ItemBuilder(), destField.(*array.MapBuilder).ItemBuilder()); err != nil {
+			return err
+		}
+	case array.DictionaryBuilder:
+		srcDictArr := builder.NewDictionaryArray()
+		defer srcDictArr.Release()
+		srcDict := srcDictArr.Dictionary()
+		defer srcDict.Release()
+		switch dict := srcDict.(type) {
+		case *array.String:
+			err = destField.(*array.BinaryDictionaryBuilder).InsertStringDictValues(dict)
+		case *array.Binary:
+			err = destField.(*array.BinaryDictionaryBuilder).InsertDictValues(dict)
+		case *array.FixedSizeBinary:
+			err = destField.(*array.FixedSizeBinaryDictionaryBuilder).InsertDictValues(dict)
+		case *array.Int32:
+			err = destField.(*array.Int32DictionaryBuilder).InsertDictValues(dict)
+		default:
+			panic("copyFieldDictValuesTo: unsupported dictionary type " + dict.DataType().Name())
+		}
 	}
-
-	m.initSizeBuildersFromRecordBuilder(builder)
-
-	return
+	return nil
 }
 
 // Release releases all the dictionary arrays that were stored in the AdaptiveSchema.
@@ -249,6 +311,15 @@ func (m *AdaptiveSchema) Release() {
 func (m *AdaptiveSchema) DictionariesWithOverflow() map[string]string {
 	// TODO find a less "intrusive" way to test which dictionaries have overflowed, consider how to remove test-specific functionality from the code
 	return m.dictionariesWithOverflow
+}
+
+func (m *AdaptiveSchema) ShowStats() {
+	println("AdaptiveSchema stats:")
+	println("  analyzeCount: ", m.analyzeCount)
+	println("  updateSchemaCount: ", m.updateSchemaCount)
+	println("  RecordBuilder call: ", m.recBuilderCallCount)
+	println("  NewRecordBuilder: ", m.recBuilderCreatedCount)
+	println("  dictOverflowCount: ", m.dictOverflowCount)
 }
 
 func WithDictInitIndexSize(size uint64) Option {
@@ -562,34 +633,6 @@ func getDictionaryArray(arr arrow.Array, ids []int) *array.Dictionary {
 		}
 	default:
 		panic("getDictionaryArray: unsupported array type `" + arr.DataType().Name() + "`")
-	}
-}
-
-func getDictionaryBuilder(builder array.Builder, ids []int) array.DictionaryBuilder {
-	if len(ids) == 0 {
-		return builder.(array.DictionaryBuilder)
-	}
-
-	switch b := builder.(type) {
-	case *array.StructBuilder:
-		return getDictionaryBuilder(b.FieldBuilder(ids[0]), ids[1:])
-	case *array.ListBuilder:
-		return getDictionaryBuilder(b.ValueBuilder(), ids)
-	case *array.SparseUnionBuilder:
-		return getDictionaryBuilder(b.Child(ids[0]), ids[1:])
-	case *array.DenseUnionBuilder:
-		return getDictionaryBuilder(b.Child(ids[0]), ids[1:])
-	case *array.MapBuilder:
-		switch ids[0] {
-		case 0: // key
-			return getDictionaryBuilder(b.KeyBuilder(), ids[1:])
-		case 1: // value
-			return getDictionaryBuilder(b.ItemBuilder(), ids[1:])
-		default:
-			panic("getDictionaryBuilder: invalid map field id")
-		}
-	default:
-		panic("getDictionaryBuilder: unsupported array type `" + b.Type().Name() + "`")
 	}
 }
 

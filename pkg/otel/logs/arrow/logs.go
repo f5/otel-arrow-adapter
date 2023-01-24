@@ -45,10 +45,6 @@ type LogsBuilder struct {
 // NewLogsBuilder creates a new LogsBuilder with a given allocator.
 func NewLogsBuilder(schema *acommon.AdaptiveSchema) (*LogsBuilder, error) {
 	builder := schema.RecordBuilder()
-	err := schema.InitDictionaryBuilders(builder)
-	if err != nil {
-		return nil, err
-	}
 	rlb, ok := builder.Field(0).(*array.ListBuilder)
 	if !ok {
 		return nil, fmt.Errorf("expected field 0 to be a list, got %T", builder.Field(0))
