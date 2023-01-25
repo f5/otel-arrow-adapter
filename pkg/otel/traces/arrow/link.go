@@ -79,14 +79,11 @@ func (b *LinkBuilder) Append(link ptrace.SpanLink) error {
 	if err := b.sib.AppendBinary(sid[:]); err != nil {
 		return err
 	}
-	traceState := link.TraceState().AsRaw()
-	if traceState == "" {
-		b.tsb.AppendNull()
-	} else {
-		if err := b.tsb.AppendString(traceState); err != nil {
-			return err
-		}
+
+	if err := b.tsb.AppendString(link.TraceState().AsRaw()); err != nil {
+		return err
 	}
+
 	if err := b.ab.Append(link.Attributes()); err != nil {
 		return err
 	}
