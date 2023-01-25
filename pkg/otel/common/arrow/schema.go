@@ -21,6 +21,8 @@ import (
 	"github.com/apache/arrow/go/v11/arrow"
 	"github.com/apache/arrow/go/v11/arrow/array"
 	"github.com/apache/arrow/go/v11/arrow/memory"
+
+	carrow "github.com/f5/otel-arrow-adapter/pkg/arrow"
 )
 
 // A window on the last n capacities of each Arrow builder (present in a RecordBuilder) is maintained. The optimal
@@ -34,13 +36,14 @@ const builderCapacityWindowSize = 10
 // dictionary values for each dictionary field so that the dictionary builders
 // can be initialized with the initial dictionary values.
 type AdaptiveSchema struct {
-	pool   memory.Allocator
-	cfg    config        // configuration
-	schema *arrow.Schema // current schema
+	pool memory.Allocator
+	cfg  config // configuration
+
+	schema   *arrow.Schema // current schema
+	schemaID string        // current schema ID
 
 	// list of all dictionary fields
 	dictionaries map[string]*dictionaryField
-
 	// map of dictionary fields that have overflowed (used for test purpose)
 	// map = path -> dictionary index type
 	dictionariesWithOverflow map[string]string
@@ -120,6 +123,7 @@ func NewAdaptiveSchema(pool memory.Allocator, schema *arrow.Schema, options ...O
 		pool:                     pool,
 		cfg:                      cfg,
 		schema:                   schema,
+		schemaID:                 carrow.SchemaToID(schema),
 		dictionaries:             dictionaries,
 		dictionariesWithOverflow: make(map[string]string),
 		fieldCapacities:          make(map[string]*BuilderCapacityWindow),
@@ -131,6 +135,11 @@ func NewAdaptiveSchema(pool memory.Allocator, schema *arrow.Schema, options ...O
 // Schema returns the current schema.
 func (m *AdaptiveSchema) Schema() *arrow.Schema {
 	return m.schema
+}
+
+// SchemaID returns the current schema ID.
+func (m *AdaptiveSchema) SchemaID() string {
+	return m.schemaID
 }
 
 // RecordBuilder returns a record builder that can be used to build a record corresponding to the current schema.
@@ -416,6 +425,7 @@ func (m *AdaptiveSchema) rebuildSchema(updates []SchemaUpdate) {
 
 	metadata := m.schema.Metadata()
 	m.schema = arrow.NewSchema(newFields, &metadata)
+	m.schemaID = carrow.SchemaToID(m.schema)
 }
 
 // collectSizeBuildersFromRecord collects the size of each internal array present in the record

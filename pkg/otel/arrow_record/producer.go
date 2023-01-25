@@ -165,7 +165,8 @@ func (p *Producer) BatchArrowRecordsFromMetrics(metrics pmetric.Metrics) (*colar
 		return nil, err
 	}
 
-	rms := []*RecordMessage{NewMetricsMessage(record)}
+	schemaID := p.metricsSchema.SchemaID()
+	rms := []*RecordMessage{NewMetricsMessage(schemaID, record)}
 
 	bar, err := p.Produce(rms)
 	if err != nil {
@@ -186,7 +187,8 @@ func (p *Producer) BatchArrowRecordsFromLogs(ls plog.Logs) (*colarspb.BatchArrow
 		return nil, err
 	}
 
-	rms := []*RecordMessage{NewLogsMessage(record)}
+	schemaID := p.logsSchema.SchemaID()
+	rms := []*RecordMessage{NewLogsMessage(schemaID, record)}
 
 	bar, err := p.Produce(rms)
 	if err != nil {
@@ -207,7 +209,8 @@ func (p *Producer) BatchArrowRecordsFromTraces(ts ptrace.Traces) (*colarspb.Batc
 		return nil, err
 	}
 
-	rms := []*RecordMessage{NewTraceMessage(record)}
+	schemaID := p.tracesSchema.SchemaID()
+	rms := []*RecordMessage{NewTraceMessage(schemaID, record)}
 
 	bar, err := p.Produce(rms)
 	if err != nil {
