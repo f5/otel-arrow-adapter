@@ -262,19 +262,11 @@ func TestInitSizeBuilders(t *testing.T) {
 
 	record := recordBuilder.NewRecord()
 
-	// After this point, the builders should have a size based on the previous batch size, i.e. the next
-	// power of 2 after 127 (127 being the last batch size).
 	overflowDetected, schemaUpdates := sm.Analyze(record)
 	assert.False(t, overflowDetected)
 	assert.Len(t, schemaUpdates, 0)
 
 	recordBuilder = sm.RecordBuilder()
-
-	// ToDo Is it still necessary?
-	//require.Equal(t, 128, recordBuilder.Field(0).(*array.BinaryDictionaryBuilder).Cap())
-	//require.Equal(t, 128, recordBuilder.Field(1).(*array.StructBuilder).Cap())
-	//require.Equal(t, 128, recordBuilder.Field(1).(*array.StructBuilder).FieldBuilder(0).(*array.BinaryDictionaryBuilder).Cap())
-	//require.Equal(t, 128, recordBuilder.Field(1).(*array.StructBuilder).FieldBuilder(1).(*array.BinaryDictionaryBuilder).Cap())
 
 	// Test dictionary overflow and transfer of dictionary values to the new RecordBuilder (with a new schema)
 	// Add more than 255 dictinct values to the dictionaries. This should trigger a schema update.
@@ -297,13 +289,6 @@ func TestInitSizeBuilders(t *testing.T) {
 	sm.UpdateSchema(schemaUpdates)
 
 	recordBuilder = sm.RecordBuilder()
-
-	// 512 is the next power of 2 after 300 (300 being the last batch size).
-	// Is it still necessary?
-	//require.Equal(t, 512, recordBuilder.Field(0).(*array.BinaryDictionaryBuilder).Cap())
-	//require.Equal(t, 512, recordBuilder.Field(1).(*array.StructBuilder).Cap())
-	//require.Equal(t, 512, recordBuilder.Field(1).(*array.StructBuilder).FieldBuilder(0).(*array.BinaryDictionaryBuilder).Cap())
-	//require.Equal(t, 512, recordBuilder.Field(1).(*array.StructBuilder).FieldBuilder(1).(*array.BinaryDictionaryBuilder).Cap())
 
 	// Tne new RecordBuilder should have the dictionaries initialized with the values from the previous batch.
 	require.Equal(t, 100, recordBuilder.Field(0).(*array.BinaryDictionaryBuilder).NewDictionaryArray().Dictionary().Len())
