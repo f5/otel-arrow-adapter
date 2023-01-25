@@ -148,7 +148,6 @@ func (m *AdaptiveSchema) SchemaID() string {
 func (m *AdaptiveSchema) RecordBuilder() *array.RecordBuilder {
 	m.recBuilderCallCount++
 	m.recordBuilder.Retain()
-	// ToDo No evidence that this optimization make a real difference m.initSizeBuildersFromRecordBuilder(m.recordBuilder)
 	return m.recordBuilder
 }
 
@@ -190,8 +189,6 @@ func (m *AdaptiveSchema) Analyze(record arrow.Record) (overflowDetected bool, up
 			}
 		}
 	}
-
-	// ToDo No evidence that this optimization make a real difference m.collectSizeBuildersFromRecord(record)
 
 	return overflowDetected, updates
 }

@@ -69,8 +69,13 @@ func (b *EventBuilder) Append(event ptrace.SpanEvent) error {
 	b.builder.Append(true)
 	b.tunb.Append(arrow.Timestamp(event.Timestamp()))
 
-	if err := b.nb.AppendString(event.Name()); err != nil {
-		return err
+	name := event.Name()
+	if name == "" {
+		b.nb.AppendNull()
+	} else {
+		if err := b.nb.AppendString(name); err != nil {
+			return err
+		}
 	}
 
 	if err := b.ab.Append(event.Attributes()); err != nil {
