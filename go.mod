@@ -12,7 +12,7 @@ require (
 	github.com/dustin/go-humanize v1.0.0
 	github.com/fxamacker/cbor/v2 v2.4.0
 	github.com/golang/mock v1.6.0
-	github.com/klauspost/compress v1.15.13
+	github.com/klauspost/compress v1.15.15
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/pierrec/lz4 v2.0.5+incompatible
 	github.com/stretchr/testify v1.8.1
