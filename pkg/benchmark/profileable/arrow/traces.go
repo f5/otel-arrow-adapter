@@ -70,8 +70,12 @@ func (s *TracesProfileable) DatasetSize() int { return s.dataset.Len() }
 func (s *TracesProfileable) CompressionAlgorithm() benchmark.CompressionAlgorithm {
 	return s.compression
 }
-func (s *TracesProfileable) StartProfiling(_ io.Writer)       {}
-func (s *TracesProfileable) EndProfiling(_ io.Writer)         {}
+func (s *TracesProfileable) StartProfiling(_ io.Writer)       {
+	s.producer = arrow_record.NewProducerWithOptions(arrow_record.WithNoZstd())
+}
+func (s *TracesProfileable) EndProfiling(_ io.Writer)         {
+	s.producer.Close()
+}
 func (s *TracesProfileable) InitBatchSize(_ io.Writer, _ int) {}
 func (s *TracesProfileable) PrepareBatch(_ io.Writer, startAt, size int) {
 	s.traces = s.dataset.Traces(startAt, size)
