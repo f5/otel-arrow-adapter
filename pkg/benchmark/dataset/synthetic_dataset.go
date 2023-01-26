@@ -82,6 +82,10 @@ func NewFakeLogsDataset(size int) *FakeLogsDataset {
 	return &FakeLogsDataset{len: size, generator: datagen.NewLogsGenerator(entropy, entropy.NewStandardResourceAttributes(), entropy.NewStandardInstrumentationScopes())}
 }
 
+func (d *FakeLogsDataset) SizeInBytes() int {
+	return 0
+}
+
 func (d *FakeLogsDataset) Len() int {
 	return d.len
 }

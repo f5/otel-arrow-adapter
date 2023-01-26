@@ -128,7 +128,7 @@ func (s *TracesProfileable) ConvertOtlpArrowToOtlp(_ io.Writer) {
 			panic(err)
 		}
 		if len(traces) == 0 {
-			panic("no traces")
+			println("no traces")
 		}
 	}
 }
