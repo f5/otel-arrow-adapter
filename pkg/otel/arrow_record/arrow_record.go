@@ -78,13 +78,19 @@ func (rm *RecordMessage) PayloadType() PayloadType {
 func (rm *RecordMessage) ShowStats() {
 	schema := rm.record.Schema()
 	columns := rm.record.Columns()
+
+	println()
 	for i, field := range schema.Fields() {
 		ShowFieldStats("", &field, columns[i])
 	}
 }
 
 func ShowFieldStats(indent string, field *arrow.Field, column arrow.Array) {
-	fmt.Printf("%s%s:%s len=%d, nulls=%d\n", indent, field.Name, field.Type.Name(), column.Len(), column.NullN())
+	if column.Len() == column.NullN() {
+		fmt.Printf("# UNUSED %s%s:%s len=%d, nulls=%d\n", indent, field.Name, field.Type.Name(), column.Len(), column.NullN())
+	} else {
+		fmt.Printf("%s%s:%s len=%d, nulls=%d\n", indent, field.Name, field.Type.Name(), column.Len(), column.NullN())
+	}
 
 	switch dt := column.DataType().(type) {
 	case *arrow.StructType:
@@ -107,8 +113,5 @@ func ShowFieldStats(indent string, field *arrow.Field, column arrow.Array) {
 		valueField := dt.ValueField()
 		ShowFieldStats(indent+"  ", &keyField, column.(*array.Map).Keys())
 		ShowFieldStats(indent+"  ", &valueField, column.(*array.Map).Items())
-	case *arrow.DictionaryType:
-	default:
-		fmt.Printf("Field %s%s:%s not supported\n", indent, field.Name, dt.Name())
 	}
 }
