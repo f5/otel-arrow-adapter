@@ -34,6 +34,7 @@ type MetricsDataset interface {
 type LogsDataset interface {
 	Len() int
 	Logs(start, size int) []plog.Logs
+	SizeInBytes() int
 }
 
 type TraceDataset interface {
