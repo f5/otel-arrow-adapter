@@ -103,10 +103,6 @@ func (d *RealTraceDataset) Len() int {
 	return len(d.spans)
 }
 
-func (d *RealTraceDataset) Resize(size int) {
-	d.spans = d.spans[:size]
-}
-
 func (d *RealTraceDataset) Traces(offset, size int) []ptrace.Traces {
 	otlp := ptrace.NewTraces()
 	ssm := map[string]ptrace.ScopeSpans{}
