@@ -72,8 +72,18 @@ func (s *LogsProfileable) DatasetSize() int { return s.dataset.Len() }
 func (s *LogsProfileable) CompressionAlgorithm() benchmark.CompressionAlgorithm {
 	return s.compression
 }
-func (s *LogsProfileable) StartProfiling(_ io.Writer)       {}
-func (s *LogsProfileable) EndProfiling(_ io.Writer)         {}
+func (s *LogsProfileable) StartProfiling(_ io.Writer) {
+	s.producer = arrow_record.NewProducerWithOptions(arrow_record.WithNoZstd())
+	s.consumer = arrow_record.NewConsumer()
+}
+func (s *LogsProfileable) EndProfiling(_ io.Writer) {
+	if err := s.producer.Close(); err != nil {
+		panic(err)
+	}
+	if err := s.consumer.Close(); err != nil {
+		panic(err)
+	}
+}
 func (s *LogsProfileable) InitBatchSize(_ io.Writer, _ int) {}
 func (s *LogsProfileable) PrepareBatch(_ io.Writer, startAt, size int) {
 	s.logs = s.dataset.Logs(startAt, size)
