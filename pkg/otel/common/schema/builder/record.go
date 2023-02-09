@@ -139,6 +139,21 @@ func (rb *RecordBuilderExt) StringBuilder(name string) *StringBuilder {
 	}
 }
 
+// BooleanBuilder returns a BooleanBuilder wrapper for the field with the given
+// name. If the underlying builder doesn't exist, an empty wrapper is returned,
+// so that the feeding process can continue without panicking. This is useful
+// to handle optional fields.
+func (rb *RecordBuilderExt) BooleanBuilder(name string) *BooleanBuilder {
+	_, transformNode := rb.protoDataTypeAndTransformNode(name)
+	builder := rb.builder(name)
+
+	if builder == nil {
+		return &BooleanBuilder{builder: builder.(*array.BooleanBuilder), transformNode: transformNode, updateRequest: rb.updateRequest}
+	} else {
+		return &BooleanBuilder{builder: nil, transformNode: transformNode, updateRequest: rb.updateRequest}
+	}
+}
+
 // UInt8Builder returns a UInt8Builder wrapper for the field with the given
 // name. If the underlying builder doesn't exist, an empty wrapper is returned,
 // so that the feeding process can continue without panicking. This is useful

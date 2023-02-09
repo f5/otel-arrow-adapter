@@ -98,6 +98,17 @@ func (sb *StructBuilder) StructBuilder(name string) *StructBuilder {
 	}
 }
 
+func (sb *StructBuilder) BooleanBuilder(name string) *BooleanBuilder {
+	booleanBuilder := sb.getBuilder(name)
+	_, transformNode := sb.protoDataTypeAndTransformNode(name)
+
+	if booleanBuilder != nil {
+		return &BooleanBuilder{builder: booleanBuilder.(*array.BooleanBuilder), transformNode: transformNode, updateRequest: sb.updateRequest}
+	} else {
+		return &BooleanBuilder{builder: nil, transformNode: transformNode, updateRequest: sb.updateRequest}
+	}
+}
+
 func (sb *StructBuilder) AppendNull() {
 	sb.builder.AppendNull()
 }

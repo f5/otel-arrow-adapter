@@ -56,6 +56,7 @@ func (sub *SparseUnionBuilder) getBuilder(childCode arrow.UnionTypeCode) array.B
 	return nil
 }
 
+// Int64Builder returns a builder for the given child code.
 func (sub *SparseUnionBuilder) Int64Builder(code arrow.UnionTypeCode) *Int64Builder {
 	builder := sub.getBuilder(code)
 	_, transformNode := sub.protoDataTypeAndTransformNode(code)
@@ -67,6 +68,7 @@ func (sub *SparseUnionBuilder) Int64Builder(code arrow.UnionTypeCode) *Int64Buil
 	}
 }
 
+// Float64Builder returns a builder for the given child code.
 func (sub *SparseUnionBuilder) Float64Builder(code arrow.UnionTypeCode) *Float64Builder {
 	builder := sub.getBuilder(code)
 	_, transformNode := sub.protoDataTypeAndTransformNode(code)
@@ -75,6 +77,30 @@ func (sub *SparseUnionBuilder) Float64Builder(code arrow.UnionTypeCode) *Float64
 		return &Float64Builder{builder: builder.(*array.Float64Builder), transformNode: transformNode, updateRequest: sub.updateRequest}
 	} else {
 		return &Float64Builder{builder: nil, transformNode: transformNode, updateRequest: sub.updateRequest}
+	}
+}
+
+// StringBuilder returns a builder for the given child code.
+func (sub *SparseUnionBuilder) StringBuilder(code arrow.UnionTypeCode) *StringBuilder {
+	builder := sub.getBuilder(code)
+	_, transformNode := sub.protoDataTypeAndTransformNode(code)
+
+	if builder != nil {
+		return &StringBuilder{builder: builder.(*array.StringBuilder), transformNode: transformNode, updateRequest: sub.updateRequest}
+	} else {
+		return &StringBuilder{builder: nil, transformNode: transformNode, updateRequest: sub.updateRequest}
+	}
+}
+
+// BooleanBuilder returns a builder for the given child code.
+func (sub *SparseUnionBuilder) BooleanBuilder(code arrow.UnionTypeCode) *BooleanBuilder {
+	builder := sub.getBuilder(code)
+	_, transformNode := sub.protoDataTypeAndTransformNode(code)
+
+	if builder != nil {
+		return &BooleanBuilder{builder: builder.(*array.BooleanBuilder), transformNode: transformNode, updateRequest: sub.updateRequest}
+	} else {
+		return &BooleanBuilder{builder: nil, transformNode: transformNode, updateRequest: sub.updateRequest}
 	}
 }
 
