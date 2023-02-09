@@ -68,6 +68,18 @@ func (sub *SparseUnionBuilder) Uint8Builder(code arrow.UnionTypeCode) *Uint8Buil
 	}
 }
 
+// Uint32Builder returns a builder for the given child code.
+func (sub *SparseUnionBuilder) Uint32Builder(code arrow.UnionTypeCode) *Uint32Builder {
+	builder := sub.getBuilder(code)
+	_, transformNode := sub.protoDataTypeAndTransformNode(code)
+
+	if builder != nil {
+		return &Uint32Builder{builder: builder.(*array.Uint32Builder), transformNode: transformNode, updateRequest: sub.updateRequest}
+	} else {
+		return &Uint32Builder{builder: nil, transformNode: transformNode, updateRequest: sub.updateRequest}
+	}
+}
+
 // Uint64Builder returns a builder for the given child code.
 func (sub *SparseUnionBuilder) Uint64Builder(code arrow.UnionTypeCode) *Uint64Builder {
 	builder := sub.getBuilder(code)
@@ -77,6 +89,18 @@ func (sub *SparseUnionBuilder) Uint64Builder(code arrow.UnionTypeCode) *Uint64Bu
 		return &Uint64Builder{builder: builder.(*array.Uint64Builder), transformNode: transformNode, updateRequest: sub.updateRequest}
 	} else {
 		return &Uint64Builder{builder: nil, transformNode: transformNode, updateRequest: sub.updateRequest}
+	}
+}
+
+// Int32Builder returns a builder for the given child code.
+func (sub *SparseUnionBuilder) Int32Builder(code arrow.UnionTypeCode) *Int32Builder {
+	builder := sub.getBuilder(code)
+	_, transformNode := sub.protoDataTypeAndTransformNode(code)
+
+	if builder != nil {
+		return &Int32Builder{builder: builder.(*array.Int32Builder), transformNode: transformNode, updateRequest: sub.updateRequest}
+	} else {
+		return &Int32Builder{builder: nil, transformNode: transformNode, updateRequest: sub.updateRequest}
 	}
 }
 

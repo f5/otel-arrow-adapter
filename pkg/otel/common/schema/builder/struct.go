@@ -76,6 +76,17 @@ func (sb *StructBuilder) Uint8Builder(name string) *Uint8Builder {
 	}
 }
 
+func (sb *StructBuilder) Uint32Builder(name string) *Uint32Builder {
+	uint32Builder := sb.getBuilder(name)
+	_, transformNode := sb.protoDataTypeAndTransformNode(name)
+
+	if uint32Builder != nil {
+		return &Uint32Builder{builder: uint32Builder.(*array.Uint32Builder), transformNode: transformNode, updateRequest: sb.updateRequest}
+	} else {
+		return &Uint32Builder{builder: nil, transformNode: transformNode, updateRequest: sb.updateRequest}
+	}
+}
+
 func (sb *StructBuilder) Uint64Builder(name string) *Uint64Builder {
 	uint64Builder := sb.getBuilder(name)
 	_, transformNode := sb.protoDataTypeAndTransformNode(name)
@@ -84,6 +95,17 @@ func (sb *StructBuilder) Uint64Builder(name string) *Uint64Builder {
 		return &Uint64Builder{builder: uint64Builder.(*array.Uint64Builder), transformNode: transformNode, updateRequest: sb.updateRequest}
 	} else {
 		return &Uint64Builder{builder: nil, transformNode: transformNode, updateRequest: sb.updateRequest}
+	}
+}
+
+func (sb *StructBuilder) Int32Builder(name string) *Int32Builder {
+	int32Builder := sb.getBuilder(name)
+	_, transformNode := sb.protoDataTypeAndTransformNode(name)
+
+	if int32Builder != nil {
+		return &Int32Builder{builder: int32Builder.(*array.Int32Builder), transformNode: transformNode, updateRequest: sb.updateRequest}
+	} else {
+		return &Int32Builder{builder: nil, transformNode: transformNode, updateRequest: sb.updateRequest}
 	}
 }
 

@@ -56,6 +56,46 @@ func (b *Uint8Builder) AppendNonZero(value uint8) {
 	b.updateRequest.count++
 }
 
+// Uint32Builder is a wrapper around the arrow array builder for uint32.
+type Uint32Builder struct {
+	builder       *array.Uint32Builder
+	transformNode *schema.TransformNode
+	updateRequest *SchemaUpdateRequest
+}
+
+func (b *Uint32Builder) Append(value uint32) {
+	if b.builder != nil {
+		b.builder.Append(value)
+		return
+	}
+
+	// If the builder is nil, then the transform node is not optional.
+	b.transformNode.RemoveOptional()
+	b.updateRequest.count++
+}
+
+func (b *Uint32Builder) AppendNonZero(value uint32) {
+	if b.builder != nil {
+		if value != 0 {
+			b.builder.Append(value)
+		} else {
+			b.builder.AppendNull()
+		}
+		return
+	}
+
+	// If the builder is nil, then the transform node is not optional.
+	b.transformNode.RemoveOptional()
+	b.updateRequest.count++
+}
+
+func (b *Uint32Builder) AppendNull() {
+	if b.builder != nil {
+		b.builder.AppendNull()
+		return
+	}
+}
+
 // Uint64Builder is a wrapper around the arrow array builder for uint64.
 type Uint64Builder struct {
 	builder       *array.Uint64Builder
@@ -87,4 +127,11 @@ func (b *Uint64Builder) AppendNonZero(value uint64) {
 	// If the builder is nil, then the transform node is not optional.
 	b.transformNode.RemoveOptional()
 	b.updateRequest.count++
+}
+
+func (b *Uint64Builder) AppendNull() {
+	if b.builder != nil {
+		b.builder.AppendNull()
+		return
+	}
 }

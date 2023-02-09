@@ -169,11 +169,11 @@ func (rb *RecordBuilderExt) BinaryBuilder(name string) *BinaryBuilder {
 	}
 }
 
-// UInt8Builder returns a UInt8Builder wrapper for the field with the given
+// Uint8Builder returns a Uint8Builder wrapper for the field with the given
 // name. If the underlying builder doesn't exist, an empty wrapper is returned,
 // so that the feeding process can continue without panicking. This is useful
 // to handle optional fields.
-func (rb *RecordBuilderExt) UInt8Builder(name string) *Uint8Builder {
+func (rb *RecordBuilderExt) Uint8Builder(name string) *Uint8Builder {
 	_, transformNode := rb.protoDataTypeAndTransformNode(name)
 	builder := rb.builder(name)
 
@@ -184,11 +184,26 @@ func (rb *RecordBuilderExt) UInt8Builder(name string) *Uint8Builder {
 	}
 }
 
-// UInt64Builder returns a UInt64Builder wrapper for the field with the given
+// Uint32Builder returns a Uint32Builder wrapper for the field with the given
 // name. If the underlying builder doesn't exist, an empty wrapper is returned,
 // so that the feeding process can continue without panicking. This is useful
 // to handle optional fields.
-func (rb *RecordBuilderExt) UInt64Builder(name string) *Uint64Builder {
+func (rb *RecordBuilderExt) Uint32Builder(name string) *Uint32Builder {
+	_, transformNode := rb.protoDataTypeAndTransformNode(name)
+	builder := rb.builder(name)
+
+	if builder == nil {
+		return &Uint32Builder{builder: builder.(*array.Uint32Builder), transformNode: transformNode, updateRequest: rb.updateRequest}
+	} else {
+		return &Uint32Builder{builder: nil, transformNode: transformNode, updateRequest: rb.updateRequest}
+	}
+}
+
+// Uint64Builder returns a Uint64Builder wrapper for the field with the given
+// name. If the underlying builder doesn't exist, an empty wrapper is returned,
+// so that the feeding process can continue without panicking. This is useful
+// to handle optional fields.
+func (rb *RecordBuilderExt) Uint64Builder(name string) *Uint64Builder {
 	_, transformNode := rb.protoDataTypeAndTransformNode(name)
 	builder := rb.builder(name)
 
@@ -196,6 +211,21 @@ func (rb *RecordBuilderExt) UInt64Builder(name string) *Uint64Builder {
 		return &Uint64Builder{builder: builder.(*array.Uint64Builder), transformNode: transformNode, updateRequest: rb.updateRequest}
 	} else {
 		return &Uint64Builder{builder: nil, transformNode: transformNode, updateRequest: rb.updateRequest}
+	}
+}
+
+// Int32Builder returns a Int32Builder wrapper for the field with the given
+// name. If the underlying builder doesn't exist, an empty wrapper is returned,
+// so that the feeding process can continue without panicking. This is useful
+// to handle optional fields.
+func (rb *RecordBuilderExt) Int32Builder(name string) *Int32Builder {
+	_, transformNode := rb.protoDataTypeAndTransformNode(name)
+	builder := rb.builder(name)
+
+	if builder == nil {
+		return &Int32Builder{builder: builder.(*array.Int32Builder), transformNode: transformNode, updateRequest: rb.updateRequest}
+	} else {
+		return &Int32Builder{builder: nil, transformNode: transformNode, updateRequest: rb.updateRequest}
 	}
 }
 

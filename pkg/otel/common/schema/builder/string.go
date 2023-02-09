@@ -29,6 +29,13 @@ type StringBuilder struct {
 	updateRequest *SchemaUpdateRequest
 }
 
+func (b *StringBuilder) AppendNull() {
+	if b.builder != nil {
+		b.builder.AppendNull()
+		return
+	}
+}
+
 func (b *StringBuilder) Append(value string) {
 	if b.builder != nil {
 		if value == "" {

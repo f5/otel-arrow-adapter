@@ -23,6 +23,36 @@ import (
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema"
 )
 
+// Int32Builder is a wrapper around the arrow Int32Builder.
+type Int32Builder struct {
+	builder       *array.Int32Builder
+	transformNode *schema.TransformNode
+	updateRequest *SchemaUpdateRequest
+}
+
+// Append appends a value to the underlying builder and updates the
+// transform node if the builder is nil.
+func (b *Int32Builder) Append(value int32) {
+	if b.builder != nil {
+		b.builder.Append(value)
+		return
+	}
+
+	// If the builder is nil, then the transform node is not optional.
+	b.transformNode.RemoveOptional()
+	b.updateRequest.count++
+}
+
+// AppendNull appends a null value to the underlying builder. If the builder is
+// nil we do nothing as we have no information about the presence of this field
+// in the data.
+func (b *Int32Builder) AppendNull() {
+	if b.builder != nil {
+		b.builder.AppendNull()
+		return
+	}
+}
+
 // Int64Builder is a wrapper around the arrow Int64Builder.
 type Int64Builder struct {
 	builder       *array.Int64Builder
