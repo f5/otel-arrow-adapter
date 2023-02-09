@@ -73,6 +73,7 @@ var (
 
 	protoSchema = arrow.NewSchema([]arrow.Field{
 		{Name: Root, Type: arrow.StructOf([]arrow.Field{
+			{Name: Timestamp, Type: arrow.FixedWidthTypes.Timestamp_ns, Metadata: acommon.OptionalField},
 			{Name: U8, Type: arrow.PrimitiveTypes.Uint8, Metadata: acommon.OptionalField},
 			{Name: U64, Type: arrow.PrimitiveTypes.Uint64, Metadata: acommon.OptionalField},
 			{Name: I64, Type: arrow.PrimitiveTypes.Int64, Metadata: acommon.OptionalField},
@@ -96,14 +97,15 @@ func TestSchema(t *testing.T) {
 	recordBuilderExt := builder.NewRecordBuilderExt(memory.NewGoAllocator(), protoSchema)
 
 	rootData := RootData{
-		u8:     1,
-		u64:    2,
-		i64:    3,
-		bool:   true,
-		binary: []byte("binary"),
-		u32:    4,
-		i32:    5,
-		string: "string",
+		timestamp: arrow.Timestamp(10),
+		u8:        1,
+		u64:       2,
+		i64:       3,
+		bool:      true,
+		binary:    []byte("binary"),
+		u32:       4,
+		i32:       5,
+		string:    "string",
 		values: []ValueData{
 			I64ValueData{1},
 			F64ValueData{2.0},
@@ -129,15 +131,16 @@ func TestSchema(t *testing.T) {
 }
 
 type RootData struct {
-	u8     uint8
-	u64    uint64
-	i64    int64
-	bool   bool
-	binary []byte
-	u32    uint32
-	i32    int32
-	string string
-	values []ValueData
+	timestamp arrow.Timestamp
+	u8        uint8
+	u64       uint64
+	i64       int64
+	bool      bool
+	binary    []byte
+	u32       uint32
+	i32       int32
+	string    string
+	values    []ValueData
 }
 
 type ValueData interface {
@@ -188,16 +191,17 @@ func (v F64ValueData) F64() float64 {
 }
 
 type RootBuilder struct {
-	builder *builder.StructBuilder
-	u8      *builder.Uint8Builder
-	u64     *builder.Uint64Builder
-	i64     *builder.Int64Builder
-	bool    *builder.BooleanBuilder
-	binary  *builder.BinaryBuilder
-	u32     *builder.Uint32Builder
-	i32     *builder.Int32Builder
-	string  *builder.StringBuilder
-	values  *ValuesBuilder
+	builder   *builder.StructBuilder
+	timestamp *builder.TimestampBuilder
+	u8        *builder.Uint8Builder
+	u64       *builder.Uint64Builder
+	i64       *builder.Int64Builder
+	bool      *builder.BooleanBuilder
+	binary    *builder.BinaryBuilder
+	u32       *builder.Uint32Builder
+	i32       *builder.Int32Builder
+	string    *builder.StringBuilder
+	values    *ValuesBuilder
 }
 
 type ValuesBuilder struct {
@@ -217,16 +221,17 @@ type ValueBuilder struct {
 func NewRootBuilderFrom(recordBuilder *builder.RecordBuilderExt) *RootBuilder {
 	rootBuilder := recordBuilder.StructBuilder(Root)
 	b := &RootBuilder{
-		builder: rootBuilder,
-		u8:      rootBuilder.Uint8Builder(U8),
-		u64:     rootBuilder.Uint64Builder(U64),
-		i64:     rootBuilder.Int64Builder(I64),
-		bool:    rootBuilder.BooleanBuilder(Bool),
-		binary:  rootBuilder.BinaryBuilder(Binary),
-		u32:     rootBuilder.Uint32Builder(U32),
-		i32:     rootBuilder.Int32Builder(I32),
-		string:  rootBuilder.StringBuilder(String),
-		values:  NewValuesBuilder(rootBuilder.ListBuilder(Values)),
+		builder:   rootBuilder,
+		timestamp: rootBuilder.TimestampBuilder(Timestamp),
+		u8:        rootBuilder.Uint8Builder(U8),
+		u64:       rootBuilder.Uint64Builder(U64),
+		i64:       rootBuilder.Int64Builder(I64),
+		bool:      rootBuilder.BooleanBuilder(Bool),
+		binary:    rootBuilder.BinaryBuilder(Binary),
+		u32:       rootBuilder.Uint32Builder(U32),
+		i32:       rootBuilder.Int32Builder(I32),
+		string:    rootBuilder.StringBuilder(String),
+		values:    NewValuesBuilder(rootBuilder.ListBuilder(Values)),
 	}
 	return b
 }
@@ -237,6 +242,7 @@ func (b *RootBuilder) Append(data *RootData) {
 		return
 	}
 	b.builder.AppendStruct()
+	b.timestamp.Append(data.timestamp)
 	b.u8.AppendNonZero(data.u8)
 	b.u64.AppendNonZero(data.u64)
 	b.i64.Append(data.i64)

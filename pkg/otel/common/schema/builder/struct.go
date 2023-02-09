@@ -54,6 +54,17 @@ func (sb *StructBuilder) getBuilder(name string) array.Builder {
 	return nil
 }
 
+func (sb *StructBuilder) TimestampBuilder(name string) *TimestampBuilder {
+	timestampBuilder := sb.getBuilder(name)
+	_, transformNode := sb.protoDataTypeAndTransformNode(name)
+
+	if timestampBuilder != nil {
+		return &TimestampBuilder{builder: timestampBuilder.(*array.TimestampBuilder), transformNode: transformNode, updateRequest: sb.updateRequest}
+	} else {
+		return &TimestampBuilder{builder: nil, transformNode: transformNode, updateRequest: sb.updateRequest}
+	}
+}
+
 func (sb *StructBuilder) StringBuilder(name string) *StringBuilder {
 	stringBuilder := sb.getBuilder(name)
 	_, transformNode := sb.protoDataTypeAndTransformNode(name)

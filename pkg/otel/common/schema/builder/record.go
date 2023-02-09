@@ -124,6 +124,21 @@ func (rb *RecordBuilderExt) protoDataTypeAndTransformNode(name string) (arrow.Da
 	return rb.protoSchema.Field(protoFieldIndices[0]).Type, rb.transformTree.Children[protoFieldIndices[0]]
 }
 
+// TimestampBuilder returns a TimestampBuilder wrapper for the field with the
+// given name. If the underlying builder doesn't exist, an empty wrapper is
+// returned, so that the feeding process can continue without panicking. This
+// is useful to handle optional fields.
+func (rb *RecordBuilderExt) TimestampBuilder(name string) *TimestampBuilder {
+	_, transformNode := rb.protoDataTypeAndTransformNode(name)
+	builder := rb.builder(name)
+
+	if builder == nil {
+		return &TimestampBuilder{builder: builder.(*array.TimestampBuilder), transformNode: transformNode, updateRequest: rb.updateRequest}
+	} else {
+		return &TimestampBuilder{builder: nil, transformNode: transformNode, updateRequest: rb.updateRequest}
+	}
+}
+
 // StringBuilder returns a StringBuilder wrapper for the field with the given
 // name. If the underlying builder doesn't exist, an empty wrapper is returned,
 // so that the feeding process can continue without panicking. This is useful
