@@ -29,6 +29,7 @@ import (
 
 	colarspb "github.com/f5/otel-arrow-adapter/api/collector/arrow/v1"
 	acommon "github.com/f5/otel-arrow-adapter/pkg/otel/common/arrow"
+	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema"
 	logsarrow "github.com/f5/otel-arrow-adapter/pkg/otel/logs/arrow"
 	metricsarrow "github.com/f5/otel-arrow-adapter/pkg/otel/metrics/arrow"
 	tracesarrow "github.com/f5/otel-arrow-adapter/pkg/otel/traces/arrow"
@@ -57,9 +58,9 @@ type Producer struct {
 	batchId         int64
 
 	// Adaptive schemas for each OTEL entities
-	metricsSchema *acommon.AdaptiveSchema
-	logsSchema    *acommon.AdaptiveSchema
-	tracesSchema  *acommon.AdaptiveSchema
+	metricsSchema *schema.AdaptiveSchema
+	logsSchema    *schema.AdaptiveSchema
+	tracesSchema  *schema.AdaptiveSchema
 
 	// Builder for each OTEL entities
 	metricsBuilder *metricsarrow.MetricsBuilder
@@ -104,23 +105,23 @@ func NewProducerWithOptions(options ...Option) *Producer {
 		opt(cfg)
 	}
 
-	metricsSchema := acommon.NewAdaptiveSchema(
+	metricsSchema := schema.NewAdaptiveSchema(
 		cfg.pool,
 		metricsarrow.Schema,
-		acommon.WithDictInitIndexSize(cfg.initIndexSize),
-		acommon.WithDictLimitIndexSize(cfg.limitIndexSize))
+		schema.WithDictInitIndexSize(cfg.initIndexSize),
+		schema.WithDictLimitIndexSize(cfg.limitIndexSize))
 
-	logsSchema := acommon.NewAdaptiveSchema(
+	logsSchema := schema.NewAdaptiveSchema(
 		cfg.pool,
 		logsarrow.Schema,
-		acommon.WithDictInitIndexSize(cfg.initIndexSize),
-		acommon.WithDictLimitIndexSize(cfg.limitIndexSize))
+		schema.WithDictInitIndexSize(cfg.initIndexSize),
+		schema.WithDictLimitIndexSize(cfg.limitIndexSize))
 
-	tracesSchema := acommon.NewAdaptiveSchema(
+	tracesSchema := schema.NewAdaptiveSchema(
 		cfg.pool,
 		tracesarrow.Schema,
-		acommon.WithDictInitIndexSize(cfg.initIndexSize),
-		acommon.WithDictLimitIndexSize(cfg.limitIndexSize))
+		schema.WithDictInitIndexSize(cfg.initIndexSize),
+		schema.WithDictLimitIndexSize(cfg.limitIndexSize))
 
 	metricsBuilder, err := metricsarrow.NewMetricsBuilder(metricsSchema)
 	if err != nil {
@@ -220,17 +221,17 @@ func (p *Producer) BatchArrowRecordsFromTraces(ts ptrace.Traces) (*colarspb.Batc
 }
 
 // TracesAdaptiveSchema returns the adaptive schema used to encode traces.
-func (p *Producer) TracesAdaptiveSchema() *acommon.AdaptiveSchema {
+func (p *Producer) TracesAdaptiveSchema() *schema.AdaptiveSchema {
 	return p.tracesSchema
 }
 
 // LogsAdaptiveSchema returns the adaptive schema used to encode logs.
-func (p *Producer) LogsAdaptiveSchema() *acommon.AdaptiveSchema {
+func (p *Producer) LogsAdaptiveSchema() *schema.AdaptiveSchema {
 	return p.logsSchema
 }
 
 // MetricsAdaptiveSchema returns the adaptive schema used to encode metrics.
-func (p *Producer) MetricsAdaptiveSchema() *acommon.AdaptiveSchema {
+func (p *Producer) MetricsAdaptiveSchema() *schema.AdaptiveSchema {
 	return p.metricsSchema
 }
 
@@ -339,7 +340,7 @@ func recordBuilder[T pmetric.Metrics | plog.Logs | ptrace.Traces](builder func()
 
 		record, err = tb.Build()
 		if err != nil {
-			var overflowErr *acommon.DictionaryOverflowError
+			var overflowErr *schema.DictionaryOverflowError
 
 			if record != nil {
 				record.Release()

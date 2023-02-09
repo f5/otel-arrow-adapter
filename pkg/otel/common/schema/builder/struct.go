@@ -1,0 +1,107 @@
+/*
+ * Copyright The OpenTelemetry Authors
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *        http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ */
+
+package builder
+
+import (
+	"fmt"
+
+	"github.com/apache/arrow/go/v11/arrow"
+	"github.com/apache/arrow/go/v11/arrow/array"
+
+	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema"
+)
+
+type StructBuilder struct {
+	protoDataType *arrow.StructType
+	builder       *array.StructBuilder
+	transformNode *schema.TransformNode
+	updateRequest *SchemaUpdateRequest
+}
+
+func (sb *StructBuilder) protoDataTypeAndTransformNode(name string) (arrow.DataType, *schema.TransformNode) {
+	// Retrieve the transform node for the field.
+	protoFieldIdx, found := sb.protoDataType.FieldIdx(name)
+
+	if !found {
+		panic(fmt.Sprintf("field %q not found in the proto schema", name))
+	}
+
+	return sb.protoDataType.Field(protoFieldIdx).Type, sb.transformNode.Children[protoFieldIdx]
+}
+
+func (sb *StructBuilder) getBuilder(name string) array.Builder {
+	structType := sb.builder.Type().(*arrow.StructType)
+	fieldIdx, found := structType.FieldIdx(name)
+
+	if found {
+		return sb.builder.FieldBuilder(fieldIdx)
+	}
+	return nil
+}
+
+func (sb *StructBuilder) StringBuilder(name string) *StringBuilder {
+	stringBuilder := sb.getBuilder(name)
+	_, transformNode := sb.protoDataTypeAndTransformNode(name)
+
+	if stringBuilder != nil {
+		return &StringBuilder{builder: stringBuilder.(*array.StringBuilder), transformNode: transformNode, updateRequest: sb.updateRequest}
+	} else {
+		return &StringBuilder{builder: nil, transformNode: transformNode, updateRequest: sb.updateRequest}
+	}
+}
+
+func (sb *StructBuilder) Uint8Builder(name string) *Uint8Builder {
+	uint8Builder := sb.getBuilder(name)
+	_, transformNode := sb.protoDataTypeAndTransformNode(name)
+
+	if uint8Builder != nil {
+		return &Uint8Builder{builder: uint8Builder.(*array.Uint8Builder), transformNode: transformNode, updateRequest: sb.updateRequest}
+	} else {
+		return &Uint8Builder{builder: nil, transformNode: transformNode, updateRequest: sb.updateRequest}
+	}
+}
+
+func (sb *StructBuilder) ListBuilder(name string) *ListBuilder {
+	listBuilder := sb.getBuilder(name)
+	protoDataType, transformNode := sb.protoDataTypeAndTransformNode(name)
+
+	if listBuilder != nil {
+		return &ListBuilder{protoDataType: protoDataType.(*arrow.ListType), builder: listBuilder.(*array.ListBuilder), transformNode: transformNode, updateRequest: sb.updateRequest}
+	} else {
+		return &ListBuilder{protoDataType: protoDataType.(*arrow.ListType), builder: nil, transformNode: transformNode, updateRequest: sb.updateRequest}
+	}
+}
+
+func (sb *StructBuilder) StructBuilder(name string) *StructBuilder {
+	structBuilder := sb.getBuilder(name)
+	protoDataType, transformNode := sb.protoDataTypeAndTransformNode(name)
+
+	if structBuilder != nil {
+		return &StructBuilder{protoDataType: protoDataType.(*arrow.StructType), builder: structBuilder.(*array.StructBuilder), transformNode: transformNode, updateRequest: sb.updateRequest}
+	} else {
+		return &StructBuilder{protoDataType: protoDataType.(*arrow.StructType), builder: nil, transformNode: transformNode, updateRequest: sb.updateRequest}
+	}
+}
+
+func (sb *StructBuilder) AppendNull() {
+	sb.builder.AppendNull()
+}
+
+func (sb *StructBuilder) AppendStruct() {
+	sb.builder.Append(true)
+}

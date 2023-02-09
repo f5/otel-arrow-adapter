@@ -110,7 +110,7 @@ func (b *UnivariateMetricBuilder) Release() {
 // Append appends a new univariate metric to the builder.
 func (b *UnivariateMetricBuilder) Append(metric pmetric.Metric, smdata *ScopeMetricsSharedData, mdata *MetricSharedData) error {
 	if b.released {
-		return fmt.Errorf("UnivariateMetricBuilder: Append() called after Release()")
+		return fmt.Errorf("UnivariateMetricBuilder: AppendNItems() called after Release()")
 	}
 
 	switch metric.Type() {

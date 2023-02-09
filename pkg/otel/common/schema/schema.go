@@ -1,18 +1,21 @@
-// Copyright The OpenTelemetry Authors
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//       http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+/*
+ * Copyright The OpenTelemetry Authors
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *        http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ */
 
-package arrow
+package schema
 
 import (
 	"fmt"
@@ -30,6 +33,14 @@ import (
 // window therefore represents the depth of the history used to optimize the construction of the RecordBuilder.
 // In the current implementation is based on the max value of the last n observations (i.e. max(nth capacities)).
 const builderCapacityWindowSize = 10
+
+const OptionalKey = "#optional"
+
+var (
+	// OptionalField is a marker used by AdaptiveSchema to indicate that a field
+	// is optional in an Arrow Schema.
+	OptionalField = arrow.MetadataFrom(map[string]string{OptionalKey: "true"})
+)
 
 // AdaptiveSchema is a wrapper around [arrow.Schema] that can be used to detect
 // dictionary overflow and update the schema accordingly. It also maintains the
@@ -379,6 +390,7 @@ func (m *AdaptiveSchema) promoteDictionaryType(observedSize uint64, existingDT *
 	return dictType, upperLimit
 }
 
+// Updates the schema in function of the configuration provided.
 func initSchema(schema *arrow.Schema, cfg *config) *arrow.Schema {
 	var indexType arrow.DataType
 	switch {
@@ -747,4 +759,114 @@ func (w *BuilderCapacityWindow) Max() int {
 		}
 	}
 	return max
+}
+
+func StructFieldBuilder(dt *arrow.StructType, fieldName string, builder *array.StructBuilder) array.Builder {
+	if fieldIdx, found := dt.FieldIdx(fieldName); found {
+		return builder.FieldBuilder(fieldIdx)
+	} else {
+		return nil
+	}
+}
+
+// NewSchemaFrom creates a new schema from a prototype schema and a transformation tree.
+func NewSchemaFrom(prototype *arrow.Schema, transformTree *TransformNode) *arrow.Schema {
+	protoFields := prototype.Fields()
+	fields := make([]arrow.Field, 0, len(protoFields))
+
+	for i := 0; i < len(protoFields); i++ {
+		field := NewFieldFrom(&protoFields[i], transformTree.Children[i])
+		if field != nil {
+			fields = append(fields, *NewFieldFrom(&protoFields[i], transformTree.Children[i]))
+		}
+	}
+
+	metadata := prototype.Metadata()
+	return arrow.NewSchema(fields, &metadata)
+
+}
+
+// NewFieldFrom creates a new field from a prototype field and a transformation tree.
+func NewFieldFrom(prototype *arrow.Field, transformNode *TransformNode) *arrow.Field {
+	metadata := cleanMetadata(prototype.Metadata)
+	field := prototype
+
+	// remove metadata keys that are only used to specify transformations.
+
+	// apply transformations to the current prototype field.
+	// if a transformation returns nil, the field is removed.
+	for _, t := range transformNode.transformations {
+		field = t.Transform(field)
+		if field == nil {
+			return nil
+		}
+	}
+
+	switch dt := field.Type.(type) {
+	case *arrow.StructType:
+		oldFields := dt.Fields()
+		newFields := make([]arrow.Field, 0, len(oldFields))
+
+		for i := 0; i < len(oldFields); i++ {
+			newField := NewFieldFrom(&oldFields[i], transformNode.Children[i])
+			if newField != nil {
+				newFields = append(newFields, *newField)
+			}
+		}
+
+		return &arrow.Field{Name: field.Name, Type: arrow.StructOf(newFields...), Nullable: field.Nullable, Metadata: metadata}
+	case *arrow.ListType:
+		elemField := dt.ElemField()
+		newField := NewFieldFrom(&elemField, transformNode.Children[0])
+		return &arrow.Field{Name: field.Name, Type: arrow.ListOf(newField.Type), Nullable: field.Nullable, Metadata: metadata}
+	case arrow.UnionType:
+		oldFields := dt.Fields()
+		oldTypeCodes := dt.TypeCodes()
+		newFields := make([]arrow.Field, 0, len(oldFields))
+		newTypeCodes := make([]int8, 0, len(oldTypeCodes))
+
+		for i := 0; i < len(oldFields); i++ {
+			newField := NewFieldFrom(&oldFields[i], transformNode.Children[i])
+			if newField != nil {
+				newFields = append(newFields, *newField)
+				newTypeCodes = append(newTypeCodes, oldTypeCodes[i])
+			}
+		}
+
+		switch dt.(type) {
+		case *arrow.SparseUnionType:
+			return &arrow.Field{Name: field.Name, Type: arrow.SparseUnionOf(newFields, newTypeCodes), Nullable: field.Nullable, Metadata: metadata}
+		case *arrow.DenseUnionType:
+			return &arrow.Field{Name: field.Name, Type: arrow.DenseUnionOf(newFields, newTypeCodes), Nullable: field.Nullable, Metadata: metadata}
+		default:
+			panic("unknown union type")
+		}
+	case *arrow.MapType:
+		keyField := dt.KeyField()
+		newKeyField := NewFieldFrom(&keyField, transformNode.Children[0])
+		valueField := dt.ItemField()
+		newValueField := NewFieldFrom(&valueField, transformNode.Children[1])
+
+		if newKeyField == nil || newValueField == nil {
+			return nil
+		}
+		return &arrow.Field{Name: field.Name, Type: arrow.MapOf(newKeyField.Type, newValueField.Type), Nullable: field.Nullable, Metadata: metadata}
+	default:
+		return field
+	}
+}
+
+func cleanMetadata(metadata arrow.Metadata) arrow.Metadata {
+	keys := make([]string, 0, len(metadata.Keys()))
+	values := make([]string, 0, len(metadata.Values()))
+
+	for i, key := range metadata.Keys() {
+		if key == OptionalKey {
+			continue
+		}
+		keys = append(keys, key)
+		values = append(values, metadata.Values()[i])
+	}
+
+	return arrow.NewMetadata(keys, values)
 }

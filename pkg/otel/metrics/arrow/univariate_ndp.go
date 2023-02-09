@@ -99,7 +99,7 @@ func (b *NumberDataPointBuilder) Release() {
 // Append appends a new data point to the builder.
 func (b *NumberDataPointBuilder) Append(ndp pmetric.NumberDataPoint, smdata *ScopeMetricsSharedData, mdata *MetricSharedData) error {
 	if b.released {
-		return fmt.Errorf("QuantileValueBuilder: Append() called after Release()")
+		return fmt.Errorf("QuantileValueBuilder: AppendNItems() called after Release()")
 	}
 
 	b.builder.Append(true)

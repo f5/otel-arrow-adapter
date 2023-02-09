@@ -102,7 +102,7 @@ func (b *UnivariateSummaryDataPointBuilder) Release() {
 // Append appends a new summary data point to the builder.
 func (b *UnivariateSummaryDataPointBuilder) Append(sdp pmetric.SummaryDataPoint, smdata *ScopeMetricsSharedData, mdata *MetricSharedData) error {
 	if b.released {
-		return fmt.Errorf("UnivariateSummaryDataPointBuilder: Append() called after Release()")
+		return fmt.Errorf("UnivariateSummaryDataPointBuilder: AppendNItems() called after Release()")
 	}
 
 	b.builder.Append(true)

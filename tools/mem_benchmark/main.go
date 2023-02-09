@@ -26,7 +26,7 @@ import (
 	"github.com/apache/arrow/go/v11/arrow/memory"
 	"github.com/dustin/go-humanize"
 
-	carrow "github.com/f5/otel-arrow-adapter/pkg/otel/common/arrow"
+	carrow "github.com/f5/otel-arrow-adapter/pkg/otel/common/schema"
 	logs "github.com/f5/otel-arrow-adapter/pkg/otel/logs/arrow"
 	metrics "github.com/f5/otel-arrow-adapter/pkg/otel/metrics/arrow"
 	traces "github.com/f5/otel-arrow-adapter/pkg/otel/traces/arrow"

@@ -23,13 +23,15 @@ import (
 	"go.opentelemetry.io/collector/pdata/ptrace"
 
 	acommon "github.com/f5/otel-arrow-adapter/pkg/otel/common/arrow"
+	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/constants"
 )
 
 var (
+	// ResourceSpansDT is the data type for resource spans.
 	ResourceSpansDT = arrow.StructOf([]arrow.Field{
-		{Name: constants.Resource, Type: acommon.ResourceDT},
-		{Name: constants.SchemaUrl, Type: acommon.DefaultDictString},
+		{Name: constants.Resource, Type: acommon.ResourceDT, Metadata: schema.OptionalField},
+		{Name: constants.SchemaUrl, Type: acommon.DefaultDictString, Metadata: schema.OptionalField},
 		{Name: constants.ScopeSpans, Type: arrow.ListOf(ScopeSpansDT)},
 	}...)
 )
@@ -57,13 +59,17 @@ func NewResourceSpansBuilder(pool memory.Allocator) *ResourceSpansBuilder {
 
 // ResourceSpansBuilderFrom creates a new ResourceSpansBuilder from an existing builder.
 func ResourceSpansBuilderFrom(builder *array.StructBuilder) *ResourceSpansBuilder {
+	resourceBuilder := schema.StructFieldBuilder(ResourceSpansDT, constants.Resource, builder)
+	schemaUrlBuilder := schema.StructFieldBuilder(ResourceSpansDT, constants.SchemaUrl, builder)
+	scopeSpansBuilder := schema.StructFieldBuilder(ResourceSpansDT, constants.ScopeSpans, builder)
+
 	return &ResourceSpansBuilder{
 		released: false,
 		builder:  builder,
-		rb:       acommon.ResourceBuilderFrom(builder.FieldBuilder(0).(*array.StructBuilder)),
-		schb:     acommon.AdaptiveDictionaryBuilderFrom(builder.FieldBuilder(1)),
-		spsb:     builder.FieldBuilder(2).(*array.ListBuilder),
-		spb:      ScopeSpansBuilderFrom(builder.FieldBuilder(2).(*array.ListBuilder).ValueBuilder().(*array.StructBuilder)),
+		rb:       acommon.ResourceBuilderFrom(resourceBuilder.(*array.StructBuilder)),
+		schb:     acommon.AdaptiveDictionaryBuilderFrom(schemaUrlBuilder),
+		spsb:     scopeSpansBuilder.(*array.ListBuilder),
+		spb:      ScopeSpansBuilderFrom(scopeSpansBuilder.(*array.ListBuilder).ValueBuilder().(*array.StructBuilder)),
 	}
 }
 
@@ -87,17 +93,31 @@ func (b *ResourceSpansBuilder) Append(ss ptrace.ResourceSpans) error {
 	}
 
 	b.builder.Append(true)
-	if err := b.rb.Append(ss.Resource()); err != nil {
-		return err
+
+	// resource (optional)
+	resource := ss.Resource()
+	if resource.DroppedAttributesCount() > 0 && b.rb == nil {
+
 	}
-	schemaUrl := ss.SchemaUrl()
-	if schemaUrl == "" {
-		b.schb.AppendNull()
-	} else {
-		if err := b.schb.AppendString(schemaUrl); err != nil {
+	if b.rb != nil {
+		if err := b.rb.Append(resource); err != nil {
 			return err
 		}
 	}
+
+	// schema url (optional)
+	if b.schb != nil {
+		schemaUrl := ss.SchemaUrl()
+		if schemaUrl == "" {
+			b.schb.AppendNull()
+		} else {
+			if err := b.schb.AppendString(schemaUrl); err != nil {
+				return err
+			}
+		}
+	}
+
+	// scope spans (mandatory)
 	sspans := ss.ScopeSpans()
 	sc := sspans.Len()
 	if sc > 0 {
@@ -111,6 +131,7 @@ func (b *ResourceSpansBuilder) Append(ss ptrace.ResourceSpans) error {
 	} else {
 		b.spsb.Append(false)
 	}
+
 	return nil
 }
 

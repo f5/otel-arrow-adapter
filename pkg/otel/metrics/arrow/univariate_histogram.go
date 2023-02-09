@@ -87,7 +87,7 @@ func (b *UnivariateHistogramBuilder) Release() {
 // Append appends a new histogram to the builder.
 func (b *UnivariateHistogramBuilder) Append(histogram pmetric.Histogram, smdata *ScopeMetricsSharedData, mdata *MetricSharedData) error {
 	if b.released {
-		return fmt.Errorf("UnivariateHistogramBuilder: Append() called after Release()")
+		return fmt.Errorf("UnivariateHistogramBuilder: AppendNItems() called after Release()")
 	}
 
 	b.builder.Append(true)
