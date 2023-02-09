@@ -30,11 +30,13 @@ import (
 
 const (
 	Root      = "root"
-	Count     = "count"
+	U8        = "u8"
+	U64       = "u64"
 	SchemaUrl = "schema_url"
 	Values    = "values"
 	I64       = "i64"
 	F64       = "f64"
+	Bool      = "bool"
 )
 
 const (
@@ -55,7 +57,9 @@ var (
 
 	protoSchema = arrow.NewSchema([]arrow.Field{
 		{Name: Root, Type: arrow.StructOf([]arrow.Field{
-			{Name: Count, Type: arrow.PrimitiveTypes.Uint8, Metadata: acommon.OptionalField},
+			{Name: U8, Type: arrow.PrimitiveTypes.Uint8, Metadata: acommon.OptionalField},
+			{Name: U64, Type: arrow.PrimitiveTypes.Uint64, Metadata: acommon.OptionalField},
+			{Name: I64, Type: arrow.PrimitiveTypes.Int64, Metadata: acommon.OptionalField},
 			{Name: SchemaUrl, Type: arrow.BinaryTypes.String, Metadata: acommon.OptionalField},
 			{Name: Values, Type: arrow.ListOf(valueDT), Metadata: acommon.OptionalField},
 		}...)},
@@ -72,7 +76,9 @@ func TestSchema(t *testing.T) {
 	recordBuilderExt := builder.NewRecordBuilderExt(memory.NewGoAllocator(), protoSchema)
 
 	rootData := RootData{
-		count:  1,
+		u8:     1,
+		u64:    2,
+		i64:    3,
 		schema: "test",
 		values: []ValueData{
 			I64ValueData{1},
@@ -87,6 +93,11 @@ func TestSchema(t *testing.T) {
 		if recordBuilderExt.SchemaUpdateRequestCount() == 0 {
 			record := recordBuilderExt.NewRecord()
 			spew.Dump(record)
+			json, err := record.MarshalJSON()
+			if err != nil {
+				t.Fatal(err)
+			}
+			println(string(json))
 			break
 		}
 		recordBuilderExt.UpdateSchema()
@@ -94,7 +105,9 @@ func TestSchema(t *testing.T) {
 }
 
 type RootData struct {
-	count  uint8
+	u8     uint8
+	u64    uint64
+	i64    int64
 	schema string
 	values []ValueData
 }
@@ -148,7 +161,9 @@ func (v F64ValueData) F64() float64 {
 
 type RootBuilder struct {
 	builder *builder.StructBuilder
-	count   *builder.Uint8Builder
+	u8      *builder.Uint8Builder
+	u64     *builder.Uint64Builder
+	i64     *builder.Int64Builder
 	schema  *builder.StringBuilder
 	values  *ValuesBuilder
 }
@@ -168,7 +183,9 @@ func NewRootBuilderFrom(recordBuilder *builder.RecordBuilderExt) *RootBuilder {
 	rootBuilder := recordBuilder.StructBuilder(Root)
 	b := &RootBuilder{
 		builder: rootBuilder,
-		count:   rootBuilder.Uint8Builder(Count),
+		u8:      rootBuilder.Uint8Builder(U8),
+		u64:     rootBuilder.Uint64Builder(U64),
+		i64:     rootBuilder.Int64Builder(I64),
 		schema:  rootBuilder.StringBuilder(SchemaUrl),
 		values:  NewValuesBuilder(rootBuilder.ListBuilder(Values)),
 	}
@@ -181,7 +198,9 @@ func (b *RootBuilder) Append(data *RootData) {
 		return
 	}
 	b.builder.AppendStruct()
-	b.count.AppendNonZero(data.count)
+	b.u8.AppendNonZero(data.u8)
+	b.u64.AppendNonZero(data.u64)
+	b.i64.Append(data.i64)
 	b.schema.Append(data.schema)
 	b.values.Append(data.values)
 }

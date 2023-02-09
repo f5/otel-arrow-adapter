@@ -154,6 +154,21 @@ func (rb *RecordBuilderExt) BooleanBuilder(name string) *BooleanBuilder {
 	}
 }
 
+// BinaryBuilder returns a BinaryBuilder wrapper for the field with the given
+// name. If the underlying builder doesn't exist, an empty wrapper is returned,
+// so that the feeding process can continue without panicking. This is useful
+// to handle optional fields.
+func (rb *RecordBuilderExt) BinaryBuilder(name string) *BinaryBuilder {
+	_, transformNode := rb.protoDataTypeAndTransformNode(name)
+	builder := rb.builder(name)
+
+	if builder == nil {
+		return &BinaryBuilder{builder: builder.(*array.BinaryBuilder), transformNode: transformNode, updateRequest: rb.updateRequest}
+	} else {
+		return &BinaryBuilder{builder: nil, transformNode: transformNode, updateRequest: rb.updateRequest}
+	}
+}
+
 // UInt8Builder returns a UInt8Builder wrapper for the field with the given
 // name. If the underlying builder doesn't exist, an empty wrapper is returned,
 // so that the feeding process can continue without panicking. This is useful
@@ -166,6 +181,21 @@ func (rb *RecordBuilderExt) UInt8Builder(name string) *Uint8Builder {
 		return &Uint8Builder{builder: builder.(*array.Uint8Builder), transformNode: transformNode, updateRequest: rb.updateRequest}
 	} else {
 		return &Uint8Builder{builder: nil, transformNode: transformNode, updateRequest: rb.updateRequest}
+	}
+}
+
+// UInt64Builder returns a UInt64Builder wrapper for the field with the given
+// name. If the underlying builder doesn't exist, an empty wrapper is returned,
+// so that the feeding process can continue without panicking. This is useful
+// to handle optional fields.
+func (rb *RecordBuilderExt) UInt64Builder(name string) *Uint64Builder {
+	_, transformNode := rb.protoDataTypeAndTransformNode(name)
+	builder := rb.builder(name)
+
+	if builder == nil {
+		return &Uint64Builder{builder: builder.(*array.Uint64Builder), transformNode: transformNode, updateRequest: rb.updateRequest}
+	} else {
+		return &Uint64Builder{builder: nil, transformNode: transformNode, updateRequest: rb.updateRequest}
 	}
 }
 

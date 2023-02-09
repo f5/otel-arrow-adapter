@@ -56,6 +56,30 @@ func (sub *SparseUnionBuilder) getBuilder(childCode arrow.UnionTypeCode) array.B
 	return nil
 }
 
+// Uint8Builder returns a builder for the given child code.
+func (sub *SparseUnionBuilder) Uint8Builder(code arrow.UnionTypeCode) *Uint8Builder {
+	builder := sub.getBuilder(code)
+	_, transformNode := sub.protoDataTypeAndTransformNode(code)
+
+	if builder != nil {
+		return &Uint8Builder{builder: builder.(*array.Uint8Builder), transformNode: transformNode, updateRequest: sub.updateRequest}
+	} else {
+		return &Uint8Builder{builder: nil, transformNode: transformNode, updateRequest: sub.updateRequest}
+	}
+}
+
+// Uint64Builder returns a builder for the given child code.
+func (sub *SparseUnionBuilder) Uint64Builder(code arrow.UnionTypeCode) *Uint64Builder {
+	builder := sub.getBuilder(code)
+	_, transformNode := sub.protoDataTypeAndTransformNode(code)
+
+	if builder != nil {
+		return &Uint64Builder{builder: builder.(*array.Uint64Builder), transformNode: transformNode, updateRequest: sub.updateRequest}
+	} else {
+		return &Uint64Builder{builder: nil, transformNode: transformNode, updateRequest: sub.updateRequest}
+	}
+}
+
 // Int64Builder returns a builder for the given child code.
 func (sub *SparseUnionBuilder) Int64Builder(code arrow.UnionTypeCode) *Int64Builder {
 	builder := sub.getBuilder(code)
@@ -101,6 +125,18 @@ func (sub *SparseUnionBuilder) BooleanBuilder(code arrow.UnionTypeCode) *Boolean
 		return &BooleanBuilder{builder: builder.(*array.BooleanBuilder), transformNode: transformNode, updateRequest: sub.updateRequest}
 	} else {
 		return &BooleanBuilder{builder: nil, transformNode: transformNode, updateRequest: sub.updateRequest}
+	}
+}
+
+// BinaryBuilder returns a builder for the given child code.
+func (sub *SparseUnionBuilder) BinaryBuilder(code arrow.UnionTypeCode) *BinaryBuilder {
+	builder := sub.getBuilder(code)
+	_, transformNode := sub.protoDataTypeAndTransformNode(code)
+
+	if builder != nil {
+		return &BinaryBuilder{builder: builder.(*array.BinaryBuilder), transformNode: transformNode, updateRequest: sub.updateRequest}
+	} else {
+		return &BinaryBuilder{builder: nil, transformNode: transformNode, updateRequest: sub.updateRequest}
 	}
 }
 

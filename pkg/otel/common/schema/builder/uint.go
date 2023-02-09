@@ -23,6 +23,7 @@ import (
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema"
 )
 
+// Uint8Builder is a wrapper around the arrow array builder for uint8.
 type Uint8Builder struct {
 	builder       *array.Uint8Builder
 	transformNode *schema.TransformNode
@@ -34,6 +35,8 @@ func (b *Uint8Builder) Append(value uint8) {
 		b.builder.Append(value)
 		return
 	}
+
+	// If the builder is nil, then the transform node is not optional.
 	b.transformNode.RemoveOptional()
 	b.updateRequest.count++
 }
@@ -47,6 +50,41 @@ func (b *Uint8Builder) AppendNonZero(value uint8) {
 		}
 		return
 	}
+
+	// If the builder is nil, then the transform node is not optional.
+	b.transformNode.RemoveOptional()
+	b.updateRequest.count++
+}
+
+// Uint64Builder is a wrapper around the arrow array builder for uint64.
+type Uint64Builder struct {
+	builder       *array.Uint64Builder
+	transformNode *schema.TransformNode
+	updateRequest *SchemaUpdateRequest
+}
+
+func (b *Uint64Builder) Append(value uint64) {
+	if b.builder != nil {
+		b.builder.Append(value)
+		return
+	}
+
+	// If the builder is nil, then the transform node is not optional.
+	b.transformNode.RemoveOptional()
+	b.updateRequest.count++
+}
+
+func (b *Uint64Builder) AppendNonZero(value uint64) {
+	if b.builder != nil {
+		if value != 0 {
+			b.builder.Append(value)
+		} else {
+			b.builder.AppendNull()
+		}
+		return
+	}
+
+	// If the builder is nil, then the transform node is not optional.
 	b.transformNode.RemoveOptional()
 	b.updateRequest.count++
 }
