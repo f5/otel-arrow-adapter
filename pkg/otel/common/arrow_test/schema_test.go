@@ -83,6 +83,8 @@ var (
 			{Name: I32, Type: arrow.PrimitiveTypes.Int32, Metadata: acommon.OptionalField},
 			{Name: String, Type: arrow.BinaryTypes.String, Metadata: acommon.OptionalField},
 			{Name: Values, Type: arrow.ListOf(valueDT), Metadata: acommon.OptionalField},
+			{Name: FixedSize8Binary, Type: &arrow.FixedSizeBinaryType{ByteWidth: 8}, Metadata: acommon.OptionalField},
+			{Name: FixedSize16Binary, Type: &arrow.FixedSizeBinaryType{ByteWidth: 16}, Metadata: acommon.OptionalField},
 		}...)},
 	}, nil)
 )
@@ -110,6 +112,8 @@ func TestSchema(t *testing.T) {
 			I64ValueData{1},
 			F64ValueData{2.0},
 		},
+		fixedSize8:  [8]byte{1, 2, 3, 4, 5, 6, 7, 8},
+		fixedSize16: [16]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
 	}
 
 	for {
@@ -131,16 +135,18 @@ func TestSchema(t *testing.T) {
 }
 
 type RootData struct {
-	timestamp arrow.Timestamp
-	u8        uint8
-	u64       uint64
-	i64       int64
-	bool      bool
-	binary    []byte
-	u32       uint32
-	i32       int32
-	string    string
-	values    []ValueData
+	timestamp   arrow.Timestamp
+	u8          uint8
+	u64         uint64
+	i64         int64
+	bool        bool
+	binary      []byte
+	u32         uint32
+	i32         int32
+	string      string
+	values      []ValueData
+	fixedSize8  [8]byte
+	fixedSize16 [16]byte
 }
 
 type ValueData interface {
@@ -191,17 +197,19 @@ func (v F64ValueData) F64() float64 {
 }
 
 type RootBuilder struct {
-	builder   *builder.StructBuilder
-	timestamp *builder.TimestampBuilder
-	u8        *builder.Uint8Builder
-	u64       *builder.Uint64Builder
-	i64       *builder.Int64Builder
-	bool      *builder.BooleanBuilder
-	binary    *builder.BinaryBuilder
-	u32       *builder.Uint32Builder
-	i32       *builder.Int32Builder
-	string    *builder.StringBuilder
-	values    *ValuesBuilder
+	builder     *builder.StructBuilder
+	timestamp   *builder.TimestampBuilder
+	u8          *builder.Uint8Builder
+	u64         *builder.Uint64Builder
+	i64         *builder.Int64Builder
+	bool        *builder.BooleanBuilder
+	binary      *builder.BinaryBuilder
+	u32         *builder.Uint32Builder
+	i32         *builder.Int32Builder
+	string      *builder.StringBuilder
+	values      *ValuesBuilder
+	fixedSize8  *builder.FixedSizeBinaryBuilder
+	fixedSize16 *builder.FixedSizeBinaryBuilder
 }
 
 type ValuesBuilder struct {
@@ -221,17 +229,19 @@ type ValueBuilder struct {
 func NewRootBuilderFrom(recordBuilder *builder.RecordBuilderExt) *RootBuilder {
 	rootBuilder := recordBuilder.StructBuilder(Root)
 	b := &RootBuilder{
-		builder:   rootBuilder,
-		timestamp: rootBuilder.TimestampBuilder(Timestamp),
-		u8:        rootBuilder.Uint8Builder(U8),
-		u64:       rootBuilder.Uint64Builder(U64),
-		i64:       rootBuilder.Int64Builder(I64),
-		bool:      rootBuilder.BooleanBuilder(Bool),
-		binary:    rootBuilder.BinaryBuilder(Binary),
-		u32:       rootBuilder.Uint32Builder(U32),
-		i32:       rootBuilder.Int32Builder(I32),
-		string:    rootBuilder.StringBuilder(String),
-		values:    NewValuesBuilder(rootBuilder.ListBuilder(Values)),
+		builder:     rootBuilder,
+		timestamp:   rootBuilder.TimestampBuilder(Timestamp),
+		u8:          rootBuilder.Uint8Builder(U8),
+		u64:         rootBuilder.Uint64Builder(U64),
+		i64:         rootBuilder.Int64Builder(I64),
+		bool:        rootBuilder.BooleanBuilder(Bool),
+		binary:      rootBuilder.BinaryBuilder(Binary),
+		u32:         rootBuilder.Uint32Builder(U32),
+		i32:         rootBuilder.Int32Builder(I32),
+		string:      rootBuilder.StringBuilder(String),
+		values:      NewValuesBuilder(rootBuilder.ListBuilder(Values)),
+		fixedSize8:  rootBuilder.FixedSizeBinaryBuilder(FixedSize8Binary),
+		fixedSize16: rootBuilder.FixedSizeBinaryBuilder(FixedSize16Binary),
 	}
 	return b
 }
@@ -252,6 +262,8 @@ func (b *RootBuilder) Append(data *RootData) {
 	b.i32.Append(data.i32)
 	b.string.Append(data.string)
 	b.values.Append(data.values)
+	b.fixedSize8.Append(data.fixedSize8[:])
+	b.fixedSize16.Append(data.fixedSize16[:])
 }
 
 func NewValuesBuilder(builder *builder.ListBuilder) *ValuesBuilder {

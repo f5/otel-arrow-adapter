@@ -52,3 +52,33 @@ func (b *BinaryBuilder) AppendNull() {
 		return
 	}
 }
+
+// FixedSizeBinaryBuilder is a wrapper around the arrow FixedSizeBinaryBuilder.
+type FixedSizeBinaryBuilder struct {
+	builder       *array.FixedSizeBinaryBuilder
+	transformNode *schema.TransformNode
+	updateRequest *SchemaUpdateRequest
+}
+
+// Append appends a value to the underlying builder and updates the
+// transform node if the builder is nil.
+func (b *FixedSizeBinaryBuilder) Append(value []byte) {
+	if b.builder != nil {
+		b.builder.Append(value)
+		return
+	}
+
+	// If the builder is nil, then the transform node is not optional.
+	b.transformNode.RemoveOptional()
+	b.updateRequest.count++
+}
+
+// AppendNull appends a null value to the underlying builder. If the builder is
+// nil we do nothing as we have no information about the presence of this field
+// in the data.
+func (b *FixedSizeBinaryBuilder) AppendNull() {
+	if b.builder != nil {
+		b.builder.AppendNull()
+		return
+	}
+}

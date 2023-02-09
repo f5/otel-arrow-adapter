@@ -139,6 +139,21 @@ func (rb *RecordBuilderExt) TimestampBuilder(name string) *TimestampBuilder {
 	}
 }
 
+// FixedSizeBinaryBuilder returns a FixedSizeBinaryBuilder wrapper for the
+// field with the given name. If the underlying builder doesn't exist, an empty
+// wrapper is returned, so that the feeding process can continue without
+// panicking. This is useful to handle optional fields.
+func (rb *RecordBuilderExt) FixedSizeBinaryBuilder(name string) *FixedSizeBinaryBuilder {
+	_, transformNode := rb.protoDataTypeAndTransformNode(name)
+	builder := rb.builder(name)
+
+	if builder == nil {
+		return &FixedSizeBinaryBuilder{builder: builder.(*array.FixedSizeBinaryBuilder), transformNode: transformNode, updateRequest: rb.updateRequest}
+	} else {
+		return &FixedSizeBinaryBuilder{builder: nil, transformNode: transformNode, updateRequest: rb.updateRequest}
+	}
+}
+
 // StringBuilder returns a StringBuilder wrapper for the field with the given
 // name. If the underlying builder doesn't exist, an empty wrapper is returned,
 // so that the feeding process can continue without panicking. This is useful

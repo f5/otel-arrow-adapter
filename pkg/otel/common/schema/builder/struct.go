@@ -131,6 +131,17 @@ func (sb *StructBuilder) Int64Builder(name string) *Int64Builder {
 	}
 }
 
+func (sb *StructBuilder) FixedSizeBinaryBuilder(name string) *FixedSizeBinaryBuilder {
+	fixedSizeBinaryBuilder := sb.getBuilder(name)
+	_, transformNode := sb.protoDataTypeAndTransformNode(name)
+
+	if fixedSizeBinaryBuilder != nil {
+		return &FixedSizeBinaryBuilder{builder: fixedSizeBinaryBuilder.(*array.FixedSizeBinaryBuilder), transformNode: transformNode, updateRequest: sb.updateRequest}
+	} else {
+		return &FixedSizeBinaryBuilder{builder: nil, transformNode: transformNode, updateRequest: sb.updateRequest}
+	}
+}
+
 func (sb *StructBuilder) ListBuilder(name string) *ListBuilder {
 	listBuilder := sb.getBuilder(name)
 	protoDataType, transformNode := sb.protoDataTypeAndTransformNode(name)
