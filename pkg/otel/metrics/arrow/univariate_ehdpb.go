@@ -86,7 +86,7 @@ func (b *EHistogramDataPointBucketsBuilder) Release() {
 // Append appends a new histogram data point to the builder.
 func (b *EHistogramDataPointBucketsBuilder) Append(hdpb pmetric.ExponentialHistogramDataPointBuckets) error {
 	if b.released {
-		return fmt.Errorf("EHistogramDataPointBucketsBuilder: AppendNItems() called after Release()")
+		return fmt.Errorf("EHistogramDataPointBucketsBuilder: Reserve() called after Release()")
 	}
 
 	b.builder.Append(true)

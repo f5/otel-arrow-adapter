@@ -90,7 +90,7 @@ func (b *UnivariateSumBuilder) Release() {
 // Append appends a new univariate sum to the builder.
 func (b *UnivariateSumBuilder) Append(sum pmetric.Sum, smdata *ScopeMetricsSharedData, mdata *MetricSharedData) error {
 	if b.released {
-		return fmt.Errorf("UnivariateMetricBuilder: AppendNItems() called after Release()")
+		return fmt.Errorf("UnivariateMetricBuilder: Reserve() called after Release()")
 	}
 
 	b.builder.Append(true)

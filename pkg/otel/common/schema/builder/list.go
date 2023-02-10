@@ -44,6 +44,16 @@ func (lb *ListBuilder) valueBuilder() array.Builder {
 	}
 }
 
+func (lb *ListBuilder) Append(itemCount int, itemsAppender func()) {
+	if itemCount == 0 {
+		lb.AppendNull()
+		return
+	}
+
+	lb.Reserve(itemCount)
+	itemsAppender()
+}
+
 // AppendNull adds a null list to the underlying builder. If the builder is
 // nil we do nothing as we have no information about the presence of this field
 // in the data.
@@ -54,10 +64,10 @@ func (lb *ListBuilder) AppendNull() {
 	}
 }
 
-// AppendNItems adds a list to the underlying builder or updates the transform node
+// Reserve adds a list to the underlying builder or updates the transform node
 // if the builder is nil (and if the append parameter is true).
 // The list is initialized with the given number of items.
-func (lb *ListBuilder) AppendNItems(numItems int) {
+func (lb *ListBuilder) Reserve(numItems int) {
 	if lb.builder != nil {
 		lb.builder.Append(numItems > 0)
 		lb.builder.Reserve(numItems)

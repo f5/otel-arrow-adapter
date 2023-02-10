@@ -87,7 +87,7 @@ func (b *UnivariateEHistogramBuilder) Release() {
 // Append appends a new histogram to the builder.
 func (b *UnivariateEHistogramBuilder) Append(eh pmetric.ExponentialHistogram, smdata *ScopeMetricsSharedData, mdata *MetricSharedData) error {
 	if b.released {
-		return fmt.Errorf("UnivariateEHistogramBuilder: AppendNItems() called after Release()")
+		return fmt.Errorf("UnivariateEHistogramBuilder: Reserve() called after Release()")
 	}
 
 	b.builder.Append(true)

@@ -120,7 +120,7 @@ func (b *EHistogramDataPointBuilder) Release() {
 // Append appends a new histogram data point to the builder.
 func (b *EHistogramDataPointBuilder) Append(hdp pmetric.ExponentialHistogramDataPoint, smdata *ScopeMetricsSharedData, mdata *MetricSharedData) error {
 	if b.released {
-		return fmt.Errorf("EHistogramDataPointBuilder: AppendNItems() called after Release()")
+		return fmt.Errorf("EHistogramDataPointBuilder: Reserve() called after Release()")
 	}
 
 	b.builder.Append(true)

@@ -168,7 +168,7 @@ func (sub *SparseUnionBuilder) AppendNull() {
 	sub.builder.AppendNull()
 }
 
-func (sub *SparseUnionBuilder) AppendSparseUnion(code int8) {
+func (sub *SparseUnionBuilder) Append(code int8) {
 	if sub.builder != nil {
 		sub.builder.Append(code)
 		return

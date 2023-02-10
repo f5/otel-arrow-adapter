@@ -67,6 +67,10 @@ func NewRecordBuilderExt(allocator memory.Allocator, protoSchema *arrow.Schema) 
 	}
 }
 
+func (rb *RecordBuilderExt) Release() {
+	rb.recordBuilder.Release()
+}
+
 // RecordBuilder returns the underlying array.RecordBuilder.
 func (rb *RecordBuilderExt) RecordBuilder() *array.RecordBuilder {
 	return rb.recordBuilder
@@ -151,6 +155,21 @@ func (rb *RecordBuilderExt) FixedSizeBinaryBuilder(name string) *FixedSizeBinary
 		return &FixedSizeBinaryBuilder{builder: builder.(*array.FixedSizeBinaryBuilder), transformNode: transformNode, updateRequest: rb.updateRequest}
 	} else {
 		return &FixedSizeBinaryBuilder{builder: nil, transformNode: transformNode, updateRequest: rb.updateRequest}
+	}
+}
+
+// MapBuilder returns a MapBuilder wrapper for the field with the given name.
+// If the underlying builder doesn't exist, an empty wrapper is returned, so
+// that the feeding process can continue without panicking. This is useful to
+// handle optional fields.
+func (rb *RecordBuilderExt) MapBuilder(name string) *MapBuilder {
+	_, transformNode := rb.protoDataTypeAndTransformNode(name)
+	builder := rb.builder(name)
+
+	if builder == nil {
+		return &MapBuilder{builder: builder.(*array.MapBuilder), transformNode: transformNode, updateRequest: rb.updateRequest}
+	} else {
+		return &MapBuilder{builder: nil, transformNode: transformNode, updateRequest: rb.updateRequest}
 	}
 }
 

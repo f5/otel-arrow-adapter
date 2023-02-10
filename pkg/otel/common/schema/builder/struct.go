@@ -175,6 +175,17 @@ func (sb *StructBuilder) BooleanBuilder(name string) *BooleanBuilder {
 	}
 }
 
+func (sb *StructBuilder) MapBuilder(name string) *MapBuilder {
+	mapBuilder := sb.getBuilder(name)
+	protoDataType, transformNode := sb.protoDataTypeAndTransformNode(name)
+
+	if mapBuilder != nil {
+		return &MapBuilder{protoDataType: protoDataType.(*arrow.MapType), builder: mapBuilder.(*array.MapBuilder), transformNode: transformNode, updateRequest: sb.updateRequest}
+	} else {
+		return &MapBuilder{protoDataType: protoDataType.(*arrow.MapType), builder: nil, transformNode: transformNode, updateRequest: sb.updateRequest}
+	}
+}
+
 func (sb *StructBuilder) BinaryBuilder(name string) *BinaryBuilder {
 	binaryBuilder := sb.getBuilder(name)
 	_, transformNode := sb.protoDataTypeAndTransformNode(name)
@@ -186,10 +197,20 @@ func (sb *StructBuilder) BinaryBuilder(name string) *BinaryBuilder {
 	}
 }
 
-func (sb *StructBuilder) AppendNull() {
-	sb.builder.AppendNull()
-}
+func (sb *StructBuilder) Append(data interface{}, fieldAppenders func()) {
+	if sb.builder != nil {
+		if data == nil {
+			sb.builder.AppendNull()
+		} else {
+			sb.builder.Append(true)
+			fieldAppenders()
+		}
+		return
+	}
 
-func (sb *StructBuilder) AppendStruct() {
-	sb.builder.Append(true)
+	if data != nil {
+		// If the builder is nil, then the transform node is not optional.
+		sb.transformNode.RemoveOptional()
+		sb.updateRequest.count++
+	}
 }

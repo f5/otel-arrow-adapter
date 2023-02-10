@@ -22,7 +22,6 @@ import (
 
 	"github.com/apache/arrow/go/v11/arrow"
 	"github.com/apache/arrow/go/v11/arrow/memory"
-	"github.com/davecgh/go-spew/spew"
 
 	acommon "github.com/f5/otel-arrow-adapter/pkg/otel/common/schema"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/builder"
@@ -85,20 +84,26 @@ var (
 			{Name: Values, Type: arrow.ListOf(valueDT), Metadata: acommon.OptionalField},
 			{Name: FixedSize8Binary, Type: &arrow.FixedSizeBinaryType{ByteWidth: 8}, Metadata: acommon.OptionalField},
 			{Name: FixedSize16Binary, Type: &arrow.FixedSizeBinaryType{ByteWidth: 16}, Metadata: acommon.OptionalField},
+			{Name: Map, Type: arrow.MapOf(arrow.BinaryTypes.String, valueDT), Metadata: acommon.OptionalField},
 		}...)},
 	}, nil)
 )
 
-func TestTransformationTree(t *testing.T) {
-	transformTree := acommon.NewTransformTreeFrom(protoSchema, arrow.PrimitiveTypes.Uint8)
+func TestSchemaEvolution(t *testing.T) {
+	pool := memory.NewCheckedAllocator(memory.NewGoAllocator())
+	defer pool.AssertSize(t, 0)
 
-	spew.Dump(transformTree)
-}
+	recordBuilderExt := builder.NewRecordBuilderExt(pool, protoSchema)
+	defer recordBuilderExt.Release()
 
-func TestSchema(t *testing.T) {
-	recordBuilderExt := builder.NewRecordBuilderExt(memory.NewGoAllocator(), protoSchema)
+	rootBuilder := NewRootBuilderFrom(recordBuilderExt)
 
 	rootData := RootData{
+		timestamp: arrow.Timestamp(10),
+	}
+	AddAndCheck(t, &rootData, rootBuilder)
+
+	rootData = RootData{
 		timestamp: arrow.Timestamp(10),
 		u8:        1,
 		u64:       2,
@@ -112,26 +117,24 @@ func TestSchema(t *testing.T) {
 			I64ValueData{1},
 			F64ValueData{2.0},
 		},
-		fixedSize8:  [8]byte{1, 2, 3, 4, 5, 6, 7, 8},
-		fixedSize16: [16]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
+		fixedSize8:  []byte{1, 2, 3, 4, 5, 6, 7, 8},
+		fixedSize16: []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
+		hmap: map[string]ValueData{
+			"key1": I64ValueData{1},
+			"key2": F64ValueData{2},
+		},
 	}
+	AddAndCheck(t, &rootData, rootBuilder)
+}
 
-	for {
-		rootBuilder := NewRootBuilderFrom(recordBuilderExt)
-		rootBuilder.Append(&rootData)
-
-		if recordBuilderExt.SchemaUpdateRequestCount() == 0 {
-			record := recordBuilderExt.NewRecord()
-			spew.Dump(record)
-			json, err := record.MarshalJSON()
-			if err != nil {
-				t.Fatal(err)
-			}
-			println(string(json))
-			break
-		}
-		recordBuilderExt.UpdateSchema()
+func AddAndCheck(t *testing.T, data *RootData, rootBuilder *RootBuilder) {
+	record := rootBuilder.AppendData(data)
+	defer record.Release()
+	json, err := record.MarshalJSON()
+	if err != nil {
+		t.Fatal(err)
 	}
+	println(string(json))
 }
 
 type RootData struct {
@@ -145,8 +148,9 @@ type RootData struct {
 	i32         int32
 	string      string
 	values      []ValueData
-	fixedSize8  [8]byte
-	fixedSize16 [16]byte
+	fixedSize8  []byte
+	fixedSize16 []byte
+	hmap        map[string]ValueData
 }
 
 type ValueData interface {
@@ -197,24 +201,37 @@ func (v F64ValueData) F64() float64 {
 }
 
 type RootBuilder struct {
-	builder     *builder.StructBuilder
-	timestamp   *builder.TimestampBuilder
-	u8          *builder.Uint8Builder
-	u64         *builder.Uint64Builder
-	i64         *builder.Int64Builder
-	bool        *builder.BooleanBuilder
-	binary      *builder.BinaryBuilder
-	u32         *builder.Uint32Builder
-	i32         *builder.Int32Builder
-	string      *builder.StringBuilder
-	values      *ValuesBuilder
-	fixedSize8  *builder.FixedSizeBinaryBuilder
-	fixedSize16 *builder.FixedSizeBinaryBuilder
+	recordBuilder *builder.RecordBuilderExt
+	builder       *builder.StructBuilder
+	timestamp     *builder.TimestampBuilder
+	u8            *builder.Uint8Builder
+	u64           *builder.Uint64Builder
+	i64           *builder.Int64Builder
+	bool          *builder.BooleanBuilder
+	binary        *builder.BinaryBuilder
+	u32           *builder.Uint32Builder
+	i32           *builder.Int32Builder
+	string        *builder.StringBuilder
+	values        *ValuesBuilder
+	fixedSize8    *builder.FixedSizeBinaryBuilder
+	fixedSize16   *builder.FixedSizeBinaryBuilder
+	hmap          *HMapBuilder
 }
 
 type ValuesBuilder struct {
 	builder *builder.ListBuilder
 	values  *ValueBuilder
+}
+
+type HMapBuilder struct {
+	builder *builder.MapBuilder
+	keys    *builder.StringBuilder
+	values  *builder.SparseUnionBuilder
+	i64     *builder.Int64Builder
+	f64     *builder.Float64Builder
+	bool    *builder.BooleanBuilder
+	binary  *builder.BinaryBuilder
+	string  *builder.StringBuilder
 }
 
 type ValueBuilder struct {
@@ -227,43 +244,56 @@ type ValueBuilder struct {
 }
 
 func NewRootBuilderFrom(recordBuilder *builder.RecordBuilderExt) *RootBuilder {
-	rootBuilder := recordBuilder.StructBuilder(Root)
-	b := &RootBuilder{
-		builder:     rootBuilder,
-		timestamp:   rootBuilder.TimestampBuilder(Timestamp),
-		u8:          rootBuilder.Uint8Builder(U8),
-		u64:         rootBuilder.Uint64Builder(U64),
-		i64:         rootBuilder.Int64Builder(I64),
-		bool:        rootBuilder.BooleanBuilder(Bool),
-		binary:      rootBuilder.BinaryBuilder(Binary),
-		u32:         rootBuilder.Uint32Builder(U32),
-		i32:         rootBuilder.Int32Builder(I32),
-		string:      rootBuilder.StringBuilder(String),
-		values:      NewValuesBuilder(rootBuilder.ListBuilder(Values)),
-		fixedSize8:  rootBuilder.FixedSizeBinaryBuilder(FixedSize8Binary),
-		fixedSize16: rootBuilder.FixedSizeBinaryBuilder(FixedSize16Binary),
-	}
+	b := &RootBuilder{recordBuilder: recordBuilder}
+	b.init()
 	return b
 }
 
-func (b *RootBuilder) Append(data *RootData) {
-	if data == nil {
-		b.builder.AppendNull()
-		return
+func (b *RootBuilder) init() {
+	b.builder = b.recordBuilder.StructBuilder(Root)
+	b.timestamp = b.builder.TimestampBuilder(Timestamp)
+	b.u8 = b.builder.Uint8Builder(U8)
+	b.u64 = b.builder.Uint64Builder(U64)
+	b.i64 = b.builder.Int64Builder(I64)
+	b.bool = b.builder.BooleanBuilder(Bool)
+	b.binary = b.builder.BinaryBuilder(Binary)
+	b.u32 = b.builder.Uint32Builder(U32)
+	b.i32 = b.builder.Int32Builder(I32)
+	b.string = b.builder.StringBuilder(String)
+	b.values = NewValuesBuilder(b.builder.ListBuilder(Values))
+	b.fixedSize8 = b.builder.FixedSizeBinaryBuilder(FixedSize8Binary)
+	b.fixedSize16 = b.builder.FixedSizeBinaryBuilder(FixedSize16Binary)
+	b.hmap = NewHMapBuilder(b.builder.MapBuilder(Map))
+}
+
+func (b *RootBuilder) AppendData(data *RootData) arrow.Record {
+	for {
+		b.Append(data)
+
+		if b.recordBuilder.SchemaUpdateRequestCount() == 0 {
+			return b.recordBuilder.NewRecord()
+		}
+		b.recordBuilder.UpdateSchema()
+		b.init()
 	}
-	b.builder.AppendStruct()
-	b.timestamp.Append(data.timestamp)
-	b.u8.AppendNonZero(data.u8)
-	b.u64.AppendNonZero(data.u64)
-	b.i64.Append(data.i64)
-	b.bool.Append(data.bool)
-	b.binary.Append(data.binary)
-	b.u32.AppendNonZero(data.u32)
-	b.i32.Append(data.i32)
-	b.string.Append(data.string)
-	b.values.Append(data.values)
-	b.fixedSize8.Append(data.fixedSize8[:])
-	b.fixedSize16.Append(data.fixedSize16[:])
+}
+
+func (b *RootBuilder) Append(data *RootData) {
+	b.builder.Append(data, func() {
+		b.timestamp.Append(data.timestamp)
+		b.u8.AppendNonZero(data.u8)
+		b.u64.AppendNonZero(data.u64)
+		b.i64.Append(data.i64)
+		b.bool.Append(data.bool)
+		b.binary.Append(data.binary)
+		b.u32.AppendNonZero(data.u32)
+		b.i32.Append(data.i32)
+		b.string.Append(data.string)
+		b.values.Append(data.values)
+		b.fixedSize8.Append(data.fixedSize8[:])
+		b.fixedSize16.Append(data.fixedSize16[:])
+		b.hmap.Append(data.hmap)
+	})
 }
 
 func NewValuesBuilder(builder *builder.ListBuilder) *ValuesBuilder {
@@ -274,15 +304,50 @@ func NewValuesBuilder(builder *builder.ListBuilder) *ValuesBuilder {
 	return b
 }
 
+func NewHMapBuilder(builder *builder.MapBuilder) *HMapBuilder {
+	valuesBuilder := builder.ItemSparseUnionBuilder()
+	b := &HMapBuilder{
+		builder: builder,
+		keys:    builder.KeyStringBuilder(),
+		values:  valuesBuilder,
+		i64:     valuesBuilder.Int64Builder(I64Code),
+		f64:     valuesBuilder.Float64Builder(F64Code),
+		bool:    valuesBuilder.BooleanBuilder(BoolCode),
+		binary:  valuesBuilder.BinaryBuilder(BinaryCode),
+		string:  valuesBuilder.StringBuilder(StringCode),
+	}
+	return b
+}
+
+func (b *HMapBuilder) Append(data map[string]ValueData) {
+	b.builder.Append(len(data), func() {
+		for k, v := range data {
+			b.keys.Append(k)
+			if v.IsI64() {
+				b.values.Append(I64Code)
+				b.i64.Append(v.I64())
+				b.f64.AppendNull()
+				b.bool.AppendNull()
+				b.binary.AppendNull()
+				b.string.AppendNull()
+			} else {
+				b.values.Append(F64Code)
+				b.f64.Append(v.F64())
+				b.i64.AppendNull()
+				b.bool.AppendNull()
+				b.binary.AppendNull()
+				b.string.AppendNull()
+			}
+		}
+	})
+}
+
 func (b *ValuesBuilder) Append(data []ValueData) {
-	if data == nil || len(data) == 0 {
-		b.builder.AppendNull()
-		return
-	}
-	b.builder.AppendNItems(len(data))
-	for _, v := range data {
-		b.values.Append(v)
-	}
+	b.builder.Append(len(data), func() {
+		for _, v := range data {
+			b.values.Append(v)
+		}
+	})
 }
 
 func NewValueBuilder(builder *builder.SparseUnionBuilder) *ValueBuilder {
@@ -299,14 +364,14 @@ func NewValueBuilder(builder *builder.SparseUnionBuilder) *ValueBuilder {
 
 func (b *ValueBuilder) Append(data ValueData) {
 	if data.IsI64() {
-		b.builder.AppendSparseUnion(I64Code)
+		b.builder.Append(I64Code)
 		b.i64.Append(data.I64())
 		b.f64.AppendNull()
 		b.bool.AppendNull()
 		b.binary.AppendNull()
 		b.string.AppendNull()
 	} else {
-		b.builder.AppendSparseUnion(F64Code)
+		b.builder.Append(F64Code)
 		b.f64.Append(data.F64())
 		b.i64.AppendNull()
 		b.bool.AppendNull()

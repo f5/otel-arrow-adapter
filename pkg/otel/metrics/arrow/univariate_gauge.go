@@ -83,7 +83,7 @@ func (b *UnivariateGaugeBuilder) Release() {
 // Append appends a new univariate gauge to the builder.
 func (b *UnivariateGaugeBuilder) Append(gauge pmetric.Gauge, smdata *ScopeMetricsSharedData, mdata *MetricSharedData) error {
 	if b.released {
-		return fmt.Errorf("UnivariateGaugeBuilder: AppendNItems() called after Release()")
+		return fmt.Errorf("UnivariateGaugeBuilder: Reserve() called after Release()")
 	}
 
 	b.builder.Append(true)

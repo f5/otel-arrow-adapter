@@ -23,7 +23,7 @@ import (
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema"
 )
 
-// BooleanBuilder is a wrapper around the arrow BooleanBuilder.
+// MapBuilder is a wrapper around the arrow MapBuilder.
 type BooleanBuilder struct {
 	builder       *array.BooleanBuilder
 	transformNode *schema.TransformNode
@@ -38,9 +38,12 @@ func (b *BooleanBuilder) Append(value bool) {
 		return
 	}
 
-	// If the builder is nil, then the transform node is not optional.
-	b.transformNode.RemoveOptional()
-	b.updateRequest.count++
+	if value {
+		// If the builder is nil and value is true (default value being false),
+		// then the transform node is not optional.
+		b.transformNode.RemoveOptional()
+		b.updateRequest.count++
+	}
 }
 
 // AppendNull appends a null value to the underlying builder. If the builder is

@@ -38,9 +38,11 @@ func (b *Float64Builder) Append(value float64) {
 		return
 	}
 
-	// If the builder is nil, then the transform node is not optional.
-	b.transformNode.RemoveOptional()
-	b.updateRequest.count++
+	if value != 0.0 {
+		// If the builder is nil, then the transform node is not optional.
+		b.transformNode.RemoveOptional()
+		b.updateRequest.count++
+	}
 }
 
 // AppendNull adds a null value to the underlying builder. If the builder is

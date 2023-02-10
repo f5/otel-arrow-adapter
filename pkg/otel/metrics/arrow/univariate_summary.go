@@ -83,7 +83,7 @@ func (b *UnivariateSummaryBuilder) Release() {
 // Append appends a new univariate summary to the builder.
 func (b *UnivariateSummaryBuilder) Append(summary pmetric.Summary, smdata *ScopeMetricsSharedData, mdata *MetricSharedData) error {
 	if b.released {
-		return fmt.Errorf("UnivariateSummaryBuilder: AppendNItems() called after Release()")
+		return fmt.Errorf("UnivariateSummaryBuilder: Reserve() called after Release()")
 	}
 
 	b.builder.Append(true)

@@ -45,6 +45,9 @@ func (b *StringBuilder) Append(value string) {
 		b.builder.Append(value)
 		return
 	}
-	b.transformNode.RemoveOptional()
-	b.updateRequest.count++
+
+	if value != "" {
+		b.transformNode.RemoveOptional()
+		b.updateRequest.count++
+	}
 }

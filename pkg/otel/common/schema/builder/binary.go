@@ -38,9 +38,11 @@ func (b *BinaryBuilder) Append(value []byte) {
 		return
 	}
 
-	// If the builder is nil, then the transform node is not optional.
-	b.transformNode.RemoveOptional()
-	b.updateRequest.count++
+	if value != nil {
+		// If the builder is nil, then the transform node is not optional.
+		b.transformNode.RemoveOptional()
+		b.updateRequest.count++
+	}
 }
 
 // AppendNull appends a null value to the underlying builder. If the builder is
@@ -64,13 +66,19 @@ type FixedSizeBinaryBuilder struct {
 // transform node if the builder is nil.
 func (b *FixedSizeBinaryBuilder) Append(value []byte) {
 	if b.builder != nil {
-		b.builder.Append(value)
+		if value == nil {
+			b.builder.AppendNull()
+		} else {
+			b.builder.Append(value)
+		}
 		return
 	}
 
-	// If the builder is nil, then the transform node is not optional.
-	b.transformNode.RemoveOptional()
-	b.updateRequest.count++
+	if value != nil {
+		// If the builder is nil, then the transform node is not optional.
+		b.transformNode.RemoveOptional()
+		b.updateRequest.count++
+	}
 }
 
 // AppendNull appends a null value to the underlying builder. If the builder is

@@ -92,13 +92,13 @@ func (b *AttributesBuilder) Append(attrs pcommon.Map) error {
 
 	var err error
 	attrs.Range(func(key string, v pcommon.Value) bool {
-		// AppendNItems the key
+		// Reserve the key
 		err := b.kb.AppendString(key)
 		if err != nil {
 			return false
 		}
 
-		// AppendNItems the value
+		// Reserve the value
 		err = b.ib.Append(v)
 		return err == nil
 	})
@@ -139,13 +139,13 @@ func (b *AttributesBuilder) AppendUniqueAttributes(attrs pcommon.Map, smattrs *c
 			return true
 		}
 
-		// AppendNItems the key
+		// Reserve the key
 		err := b.kb.AppendString(key)
 		if err != nil {
 			return false
 		}
 
-		// AppendNItems the value
+		// Reserve the value
 		err = b.ib.Append(v)
 
 		uniqueAttrsCount--

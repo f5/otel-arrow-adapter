@@ -84,7 +84,7 @@ func (b *QuantileValueBuilder) Release() {
 // Append appends a new quantile value to the builder.
 func (b *QuantileValueBuilder) Append(sdp pmetric.SummaryDataPointValueAtQuantile) error {
 	if b.released {
-		return fmt.Errorf("QuantileValueBuilder: AppendNItems() called after Release()")
+		return fmt.Errorf("QuantileValueBuilder: Reserve() called after Release()")
 	}
 
 	b.builder.Append(true)

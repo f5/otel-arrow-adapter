@@ -852,7 +852,7 @@ func NewFieldFrom(prototype *arrow.Field, transformNode *TransformNode) *arrow.F
 		}
 		return &arrow.Field{Name: field.Name, Type: arrow.MapOf(newKeyField.Type, newValueField.Type), Nullable: field.Nullable, Metadata: metadata}
 	default:
-		return field
+		return &arrow.Field{Name: field.Name, Type: field.Type, Nullable: field.Nullable, Metadata: metadata}
 	}
 }
 
