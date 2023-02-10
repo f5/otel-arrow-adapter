@@ -39,9 +39,11 @@ func (b *TimestampBuilder) Append(value arrow.Timestamp) {
 		return
 	}
 
-	// If the builder is nil, then the transform node is not optional.
-	b.transformNode.RemoveOptional()
-	b.updateRequest.count++
+	if value != 0 {
+		// If the builder is nil, then the transform node is not optional.
+		b.transformNode.RemoveOptional()
+		b.updateRequest.count++
+	}
 }
 
 // AppendNull appends a null value to the underlying builder. If the builder is

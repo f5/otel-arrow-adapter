@@ -22,6 +22,7 @@ import (
 
 	"github.com/apache/arrow/go/v11/arrow"
 	"github.com/apache/arrow/go/v11/arrow/memory"
+	"github.com/stretchr/testify/assert"
 
 	acommon "github.com/f5/otel-arrow-adapter/pkg/otel/common/schema"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/builder"
@@ -89,7 +90,7 @@ var (
 	}, nil)
 )
 
-func TestSchemaEvolution(t *testing.T) {
+func TestTimestampOnly(t *testing.T) {
 	pool := memory.NewCheckedAllocator(memory.NewGoAllocator())
 	defer pool.AssertSize(t, 0)
 
@@ -101,7 +102,387 @@ func TestSchemaEvolution(t *testing.T) {
 	rootData := RootData{
 		timestamp: arrow.Timestamp(10),
 	}
-	AddAndCheck(t, &rootData, rootBuilder)
+	AddAndCheck(t, &rootData, rootBuilder, "[{\"root\":{\"timestamp\":\"1970-01-01 00:00:00.00000001\"}}\n]")
+}
+
+func TestU8Only(t *testing.T) {
+	pool := memory.NewCheckedAllocator(memory.NewGoAllocator())
+	defer pool.AssertSize(t, 0)
+
+	recordBuilderExt := builder.NewRecordBuilderExt(pool, protoSchema)
+	defer recordBuilderExt.Release()
+
+	rootBuilder := NewRootBuilderFrom(recordBuilderExt)
+
+	rootData := RootData{
+		u8: 1,
+	}
+	AddAndCheck(t, &rootData, rootBuilder, "[{\"root\":{\"u8\":1}}\n]")
+}
+
+func TestU64Only(t *testing.T) {
+	pool := memory.NewCheckedAllocator(memory.NewGoAllocator())
+	defer pool.AssertSize(t, 0)
+
+	recordBuilderExt := builder.NewRecordBuilderExt(pool, protoSchema)
+	defer recordBuilderExt.Release()
+
+	rootBuilder := NewRootBuilderFrom(recordBuilderExt)
+
+	rootData := RootData{
+		u64: 2,
+	}
+	AddAndCheck(t, &rootData, rootBuilder, "[{\"root\":{\"u64\":2}}\n]")
+}
+
+func TestI64Only(t *testing.T) {
+	pool := memory.NewCheckedAllocator(memory.NewGoAllocator())
+	defer pool.AssertSize(t, 0)
+
+	recordBuilderExt := builder.NewRecordBuilderExt(pool, protoSchema)
+	defer recordBuilderExt.Release()
+
+	rootBuilder := NewRootBuilderFrom(recordBuilderExt)
+
+	rootData := RootData{
+		i64: 3,
+	}
+	AddAndCheck(t, &rootData, rootBuilder, "[{\"root\":{\"i64\":3}}\n]")
+}
+
+func TestBoolOnly(t *testing.T) {
+	pool := memory.NewCheckedAllocator(memory.NewGoAllocator())
+	defer pool.AssertSize(t, 0)
+
+	recordBuilderExt := builder.NewRecordBuilderExt(pool, protoSchema)
+	defer recordBuilderExt.Release()
+
+	rootBuilder := NewRootBuilderFrom(recordBuilderExt)
+
+	rootData := RootData{
+		bool: true,
+	}
+	AddAndCheck(t, &rootData, rootBuilder, "[{\"root\":{\"bool\":true}}\n]")
+}
+
+func TestBinaryOnly(t *testing.T) {
+	pool := memory.NewCheckedAllocator(memory.NewGoAllocator())
+	defer pool.AssertSize(t, 0)
+
+	recordBuilderExt := builder.NewRecordBuilderExt(pool, protoSchema)
+	defer recordBuilderExt.Release()
+
+	rootBuilder := NewRootBuilderFrom(recordBuilderExt)
+
+	rootData := RootData{
+		binary: []byte("binary"),
+	}
+	AddAndCheck(t, &rootData, rootBuilder, "[{\"root\":{\"binary\":\"YmluYXJ5\"}}\n]")
+}
+
+func TestU32Only(t *testing.T) {
+	pool := memory.NewCheckedAllocator(memory.NewGoAllocator())
+	defer pool.AssertSize(t, 0)
+
+	recordBuilderExt := builder.NewRecordBuilderExt(pool, protoSchema)
+	defer recordBuilderExt.Release()
+
+	rootBuilder := NewRootBuilderFrom(recordBuilderExt)
+
+	rootData := RootData{
+		u32: 4,
+	}
+	AddAndCheck(t, &rootData, rootBuilder, "[{\"root\":{\"u32\":4}}\n]")
+}
+
+func TestI32Only(t *testing.T) {
+	pool := memory.NewCheckedAllocator(memory.NewGoAllocator())
+	defer pool.AssertSize(t, 0)
+
+	recordBuilderExt := builder.NewRecordBuilderExt(pool, protoSchema)
+	defer recordBuilderExt.Release()
+
+	rootBuilder := NewRootBuilderFrom(recordBuilderExt)
+
+	rootData := RootData{
+		i32: 5,
+	}
+	AddAndCheck(t, &rootData, rootBuilder, "[{\"root\":{\"i32\":5}}\n]")
+}
+
+func TestStringOnly(t *testing.T) {
+	pool := memory.NewCheckedAllocator(memory.NewGoAllocator())
+	defer pool.AssertSize(t, 0)
+
+	recordBuilderExt := builder.NewRecordBuilderExt(pool, protoSchema)
+	defer recordBuilderExt.Release()
+
+	rootBuilder := NewRootBuilderFrom(recordBuilderExt)
+
+	rootData := RootData{
+		string: "string",
+	}
+	AddAndCheck(t, &rootData, rootBuilder, "[{\"root\":{\"string\":\"string\"}}\n]")
+}
+
+func TestValuesOnly1(t *testing.T) {
+	pool := memory.NewCheckedAllocator(memory.NewGoAllocator())
+	defer pool.AssertSize(t, 0)
+
+	recordBuilderExt := builder.NewRecordBuilderExt(pool, protoSchema)
+	defer recordBuilderExt.Release()
+
+	rootBuilder := NewRootBuilderFrom(recordBuilderExt)
+
+	rootData := RootData{
+		values: []ValueData{
+			I64ValueData{1},
+		},
+	}
+	AddAndCheck(t, &rootData, rootBuilder, "[{\"root\":{\"values\":[[0,1]]}}\n]")
+}
+
+func TestValuesOnly2(t *testing.T) {
+	pool := memory.NewCheckedAllocator(memory.NewGoAllocator())
+	defer pool.AssertSize(t, 0)
+
+	recordBuilderExt := builder.NewRecordBuilderExt(pool, protoSchema)
+	defer recordBuilderExt.Release()
+
+	rootBuilder := NewRootBuilderFrom(recordBuilderExt)
+
+	rootData := RootData{
+		values: []ValueData{
+			F64ValueData{2},
+		},
+	}
+	AddAndCheck(t, &rootData, rootBuilder, "[{\"root\":{\"values\":[[1,2]]}}\n]")
+}
+
+func TestValuesOnly3(t *testing.T) {
+	pool := memory.NewCheckedAllocator(memory.NewGoAllocator())
+	defer pool.AssertSize(t, 0)
+
+	recordBuilderExt := builder.NewRecordBuilderExt(pool, protoSchema)
+	defer recordBuilderExt.Release()
+
+	rootBuilder := NewRootBuilderFrom(recordBuilderExt)
+
+	rootData := RootData{
+		values: []ValueData{
+			I64ValueData{1},
+			F64ValueData{2},
+		},
+	}
+	AddAndCheck(t, &rootData, rootBuilder, "[{\"root\":{\"values\":[[0,1],[1,2]]}}\n]")
+}
+
+func TestFixedSize8Only(t *testing.T) {
+	pool := memory.NewCheckedAllocator(memory.NewGoAllocator())
+	defer pool.AssertSize(t, 0)
+
+	recordBuilderExt := builder.NewRecordBuilderExt(pool, protoSchema)
+	defer recordBuilderExt.Release()
+
+	rootBuilder := NewRootBuilderFrom(recordBuilderExt)
+
+	rootData := RootData{
+		fixedSize8: []byte{1, 2, 3, 4, 5, 6, 7, 8},
+	}
+	AddAndCheck(t, &rootData, rootBuilder, "[{\"root\":{\"fixed_size_8_binary\":\"AQIDBAUGBwg=\"}}\n]")
+}
+
+func TestFixedSize16Only(t *testing.T) {
+	pool := memory.NewCheckedAllocator(memory.NewGoAllocator())
+	defer pool.AssertSize(t, 0)
+
+	recordBuilderExt := builder.NewRecordBuilderExt(pool, protoSchema)
+	defer recordBuilderExt.Release()
+
+	rootBuilder := NewRootBuilderFrom(recordBuilderExt)
+
+	rootData := RootData{
+		fixedSize16: []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
+	}
+	AddAndCheck(t, &rootData, rootBuilder, "[{\"root\":{\"fixed_size_16_binary\":\"AQIDBAUGBwgJCgsMDQ4PEA==\"}}\n]")
+}
+
+func TestHMapOnly1(t *testing.T) {
+	pool := memory.NewCheckedAllocator(memory.NewGoAllocator())
+	defer pool.AssertSize(t, 0)
+
+	recordBuilderExt := builder.NewRecordBuilderExt(pool, protoSchema)
+	defer recordBuilderExt.Release()
+
+	rootBuilder := NewRootBuilderFrom(recordBuilderExt)
+
+	rootData := RootData{
+		hmap: map[string]ValueData{
+			"key1": I64ValueData{1},
+		},
+	}
+	AddAndCheck(t, &rootData, rootBuilder, "[{\"root\":{\"map\":[{\"key\":\"key1\",\"value\":[0,1]}]}}\n]")
+}
+
+func TestHMapOnly2(t *testing.T) {
+	pool := memory.NewCheckedAllocator(memory.NewGoAllocator())
+	defer pool.AssertSize(t, 0)
+
+	recordBuilderExt := builder.NewRecordBuilderExt(pool, protoSchema)
+	defer recordBuilderExt.Release()
+
+	rootBuilder := NewRootBuilderFrom(recordBuilderExt)
+
+	rootData := RootData{
+		hmap: map[string]ValueData{
+			"key2": F64ValueData{2},
+		},
+	}
+	AddAndCheck(t, &rootData, rootBuilder, "[{\"root\":{\"map\":[{\"key\":\"key2\",\"value\":[1,2]}]}}\n]")
+}
+
+func TestSchemaEvolution(t *testing.T) {
+	pool := memory.NewCheckedAllocator(memory.NewGoAllocator())
+	defer pool.AssertSize(t, 0)
+
+	recordBuilderExt := builder.NewRecordBuilderExt(pool, protoSchema)
+	defer recordBuilderExt.Release()
+
+	rootBuilder := NewRootBuilderFrom(recordBuilderExt)
+	rootData := RootData{
+		timestamp: arrow.Timestamp(10),
+	}
+	AddAndCheck(t, &rootData, rootBuilder, "[{\"root\":{\"timestamp\":\"1970-01-01 00:00:00.00000001\"}}\n]")
+
+	rootData = RootData{
+		timestamp: arrow.Timestamp(10),
+		u8:        1,
+	}
+	AddAndCheck(t, &rootData, rootBuilder, "[{\"root\":{\"timestamp\":\"1970-01-01 00:00:00.00000001\",\"u8\":1}}\n]")
+
+	rootData = RootData{
+		timestamp: arrow.Timestamp(10),
+		u8:        1,
+		u64:       2,
+	}
+	AddAndCheck(t, &rootData, rootBuilder, "[{\"root\":{\"timestamp\":\"1970-01-01 00:00:00.00000001\",\"u8\":1,\"u64\":2}}\n]")
+
+	rootData = RootData{
+		timestamp: arrow.Timestamp(10),
+		u8:        1,
+		u64:       2,
+		i64:       3,
+	}
+	AddAndCheck(t, &rootData, rootBuilder, "[{\"root\":{\"timestamp\":\"1970-01-01 00:00:00.00000001\",\"u8\":1,\"u64\":2,\"i64\":3}}\n]")
+
+	rootData = RootData{
+		timestamp: arrow.Timestamp(10),
+		u8:        1,
+		u64:       2,
+		i64:       3,
+		bool:      true,
+	}
+	AddAndCheck(t, &rootData, rootBuilder, "[{\"root\":{\"timestamp\":\"1970-01-01 00:00:00.00000001\",\"u8\":1,\"u64\":2,\"i64\":3,\"bool\":true}}\n]")
+
+	rootData = RootData{
+		timestamp: arrow.Timestamp(10),
+		u8:        1,
+		u64:       2,
+		i64:       3,
+		bool:      true,
+		binary:    []byte("binary"),
+	}
+	AddAndCheck(t, &rootData, rootBuilder, "[{\"root\":{\"timestamp\":\"1970-01-01 00:00:00.00000001\",\"u8\":1,\"u64\":2,\"i64\":3,\"bool\":true,\"binary\":\"YmluYXJ5\"}}\n]")
+
+	rootData = RootData{
+		timestamp: arrow.Timestamp(10),
+		u8:        1,
+		u64:       2,
+		i64:       3,
+		bool:      true,
+		binary:    []byte("binary"),
+		u32:       4,
+	}
+	AddAndCheck(t, &rootData, rootBuilder, "[{\"root\":{\"timestamp\":\"1970-01-01 00:00:00.00000001\",\"u8\":1,\"u64\":2,\"i64\":3,\"bool\":true,\"binary\":\"YmluYXJ5\",\"u32\":4}}\n]")
+
+	rootData = RootData{
+		timestamp: arrow.Timestamp(10),
+		u8:        1,
+		u64:       2,
+		i64:       3,
+		bool:      true,
+		binary:    []byte("binary"),
+		u32:       4,
+		i32:       5,
+	}
+	AddAndCheck(t, &rootData, rootBuilder, "[{\"root\":{\"timestamp\":\"1970-01-01 00:00:00.00000001\",\"u8\":1,\"u64\":2,\"i64\":3,\"bool\":true,\"binary\":\"YmluYXJ5\",\"u32\":4,\"i32\":5}}\n]")
+
+	rootData = RootData{
+		timestamp: arrow.Timestamp(10),
+		u8:        1,
+		u64:       2,
+		i64:       3,
+		bool:      true,
+		binary:    []byte("binary"),
+		u32:       4,
+		i32:       5,
+		string:    "string",
+	}
+	AddAndCheck(t, &rootData, rootBuilder, "[{\"root\":{\"timestamp\":\"1970-01-01 00:00:00.00000001\",\"u8\":1,\"u64\":2,\"i64\":3,\"bool\":true,\"binary\":\"YmluYXJ5\",\"u32\":4,\"i32\":5,\"string\":\"string\"}}\n]")
+
+	rootData = RootData{
+		timestamp: arrow.Timestamp(10),
+		u8:        1,
+		u64:       2,
+		i64:       3,
+		bool:      true,
+		binary:    []byte("binary"),
+		u32:       4,
+		i32:       5,
+		string:    "string",
+		values: []ValueData{
+			I64ValueData{1},
+			F64ValueData{2.0},
+		},
+	}
+	AddAndCheck(t, &rootData, rootBuilder, "[{\"root\":{\"binary\":\"YmluYXJ5\",\"bool\":true,\"i32\":5,\"i64\":3,\"string\":\"string\",\"timestamp\":\"1970-01-01 00:00:00.00000001\",\"u32\":4,\"u64\":2,\"u8\":1,\"values\":[[0,1],[1,2]]}}\n]")
+
+	rootData = RootData{
+		timestamp: arrow.Timestamp(10),
+		u8:        1,
+		u64:       2,
+		i64:       3,
+		bool:      true,
+		binary:    []byte("binary"),
+		u32:       4,
+		i32:       5,
+		string:    "string",
+		values: []ValueData{
+			I64ValueData{1},
+			F64ValueData{2.0},
+		},
+		fixedSize8: []byte{1, 2, 3, 4, 5, 6, 7, 8},
+	}
+	AddAndCheck(t, &rootData, rootBuilder, "[{\"root\":{\"binary\":\"YmluYXJ5\",\"bool\":true,\"fixed_size_8_binary\":\"AQIDBAUGBwg=\",\"i32\":5,\"i64\":3,\"string\":\"string\",\"timestamp\":\"1970-01-01 00:00:00.00000001\",\"u32\":4,\"u64\":2,\"u8\":1,\"values\":[[0,1],[1,2]]}}\n]")
+
+	rootData = RootData{
+		timestamp: arrow.Timestamp(10),
+		u8:        1,
+		u64:       2,
+		i64:       3,
+		bool:      true,
+		binary:    []byte("binary"),
+		u32:       4,
+		i32:       5,
+		string:    "string",
+		values: []ValueData{
+			I64ValueData{1},
+			F64ValueData{2.0},
+		},
+		fixedSize8:  []byte{1, 2, 3, 4, 5, 6, 7, 8},
+		fixedSize16: []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
+	}
+	AddAndCheck(t, &rootData, rootBuilder, "[{\"root\":{\"binary\":\"YmluYXJ5\",\"bool\":true,\"fixed_size_16_binary\":\"AQIDBAUGBwgJCgsMDQ4PEA==\",\"fixed_size_8_binary\":\"AQIDBAUGBwg=\",\"i32\":5,\"i64\":3,\"string\":\"string\",\"timestamp\":\"1970-01-01 00:00:00.00000001\",\"u32\":4,\"u64\":2,\"u8\":1,\"values\":[[0,1],[1,2]]}}\n]")
 
 	rootData = RootData{
 		timestamp: arrow.Timestamp(10),
@@ -121,20 +502,57 @@ func TestSchemaEvolution(t *testing.T) {
 		fixedSize16: []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
 		hmap: map[string]ValueData{
 			"key1": I64ValueData{1},
-			"key2": F64ValueData{2},
 		},
 	}
-	AddAndCheck(t, &rootData, rootBuilder)
+	AddAndCheck(t, &rootData, rootBuilder, "[{\"root\":{\"binary\":\"YmluYXJ5\",\"bool\":true,\"fixed_size_16_binary\":\"AQIDBAUGBwgJCgsMDQ4PEA==\",\"fixed_size_8_binary\":\"AQIDBAUGBwg=\",\"i32\":5,\"i64\":3,\"map\":[{\"key\":\"key1\",\"value\":[0,1]}],\"string\":\"string\",\"timestamp\":\"1970-01-01 00:00:00.00000001\",\"u32\":4,\"u64\":2,\"u8\":1,\"values\":[[0,1],[1,2]]}}\n]")
+
+	rootData = RootData{
+		timestamp: arrow.Timestamp(10),
+		u8:        1,
+		u64:       2,
+		i64:       3,
+		bool:      true,
+		binary:    []byte("binary"),
+		u32:       4,
+		i32:       5,
+		string:    "string",
+		values: []ValueData{
+			I64ValueData{1},
+			F64ValueData{2.0},
+		},
+		fixedSize8:  []byte{1, 2, 3, 4, 5, 6, 7, 8},
+		fixedSize16: []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
+		hmap: map[string]ValueData{
+			"key2": F64ValueData{2.0},
+		},
+	}
+	AddAndCheck(t, &rootData, rootBuilder, "[{\"root\":{\"binary\":\"YmluYXJ5\",\"bool\":true,\"fixed_size_16_binary\":\"AQIDBAUGBwgJCgsMDQ4PEA==\",\"fixed_size_8_binary\":\"AQIDBAUGBwg=\",\"i32\":5,\"i64\":3,\"map\":[{\"key\":\"key2\",\"value\":[1,2]}],\"string\":\"string\",\"timestamp\":\"1970-01-01 00:00:00.00000001\",\"u32\":4,\"u64\":2,\"u8\":1,\"values\":[[0,1],[1,2]]}}\n]")
+
+	rootData = RootData{
+		timestamp: arrow.Timestamp(10),
+		u8:        2,
+		u64:       3,
+		i64:       0,
+		bool:      false,
+		binary:    []byte("binary"),
+		u32:       0,
+		i32:       6,
+		string:    "",
+		values: []ValueData{
+			F64ValueData{2.0},
+		},
+	}
+	AddAndCheck(t, &rootData, rootBuilder, "[{\"root\":{\"binary\":\"YmluYXJ5\",\"bool\":false,\"fixed_size_16_binary\":null,\"fixed_size_8_binary\":null,\"i32\":6,\"i64\":0,\"map\":null,\"string\":null,\"timestamp\":\"1970-01-01 00:00:00.00000001\",\"u32\":null,\"u64\":3,\"u8\":2,\"values\":[[1,2]]}}\n]")
 }
 
-func AddAndCheck(t *testing.T, data *RootData, rootBuilder *RootBuilder) {
+func AddAndCheck(t *testing.T, data *RootData, rootBuilder *RootBuilder, expectedJson string) {
 	record := rootBuilder.AppendData(data)
 	defer record.Release()
 	json, err := record.MarshalJSON()
 	if err != nil {
 		t.Fatal(err)
 	}
-	println(string(json))
+	assert.JSONEq(t, expectedJson, string(json))
 }
 
 type RootData struct {
