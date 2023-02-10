@@ -57,11 +57,11 @@ const (
 var (
 	valueDT = arrow.SparseUnionOf(
 		[]arrow.Field{
-			{Name: I64, Type: arrow.PrimitiveTypes.Int64, Metadata: acommon.OptionalField},
-			{Name: F64, Type: arrow.PrimitiveTypes.Float64, Metadata: acommon.OptionalField},
-			{Name: Bool, Type: arrow.FixedWidthTypes.Boolean, Metadata: acommon.OptionalField},
-			{Name: Binary, Type: arrow.BinaryTypes.Binary, Metadata: acommon.OptionalField},
-			{Name: String, Type: arrow.BinaryTypes.String, Metadata: acommon.OptionalField},
+			{Name: I64, Type: arrow.PrimitiveTypes.Int64, Metadata: acommon.Metadata(acommon.Optional)},
+			{Name: F64, Type: arrow.PrimitiveTypes.Float64, Metadata: acommon.Metadata(acommon.Optional)},
+			{Name: Bool, Type: arrow.FixedWidthTypes.Boolean, Metadata: acommon.Metadata(acommon.Optional)},
+			{Name: Binary, Type: arrow.BinaryTypes.Binary, Metadata: acommon.Metadata(acommon.Optional, acommon.Dictionary)},
+			{Name: String, Type: arrow.BinaryTypes.String, Metadata: acommon.Metadata(acommon.Optional, acommon.Dictionary)},
 		},
 		[]arrow.UnionTypeCode{
 			I64Code,
@@ -73,19 +73,19 @@ var (
 
 	protoSchema = arrow.NewSchema([]arrow.Field{
 		{Name: Root, Type: arrow.StructOf([]arrow.Field{
-			{Name: Timestamp, Type: arrow.FixedWidthTypes.Timestamp_ns, Metadata: acommon.OptionalField},
-			{Name: U8, Type: arrow.PrimitiveTypes.Uint8, Metadata: acommon.OptionalField},
-			{Name: U64, Type: arrow.PrimitiveTypes.Uint64, Metadata: acommon.OptionalField},
-			{Name: I64, Type: arrow.PrimitiveTypes.Int64, Metadata: acommon.OptionalField},
-			{Name: Bool, Type: arrow.FixedWidthTypes.Boolean, Metadata: acommon.OptionalField},
-			{Name: Binary, Type: arrow.BinaryTypes.Binary, Metadata: acommon.OptionalField},
-			{Name: U32, Type: arrow.PrimitiveTypes.Uint32, Metadata: acommon.OptionalField},
-			{Name: I32, Type: arrow.PrimitiveTypes.Int32, Metadata: acommon.OptionalField},
-			{Name: String, Type: arrow.BinaryTypes.String, Metadata: acommon.OptionalField},
-			{Name: Values, Type: arrow.ListOf(valueDT), Metadata: acommon.OptionalField},
-			{Name: FixedSize8Binary, Type: &arrow.FixedSizeBinaryType{ByteWidth: 8}, Metadata: acommon.OptionalField},
-			{Name: FixedSize16Binary, Type: &arrow.FixedSizeBinaryType{ByteWidth: 16}, Metadata: acommon.OptionalField},
-			{Name: Map, Type: arrow.MapOf(arrow.BinaryTypes.String, valueDT), Metadata: acommon.OptionalField},
+			{Name: Timestamp, Type: arrow.FixedWidthTypes.Timestamp_ns, Metadata: acommon.Metadata(acommon.Optional)},
+			{Name: U8, Type: arrow.PrimitiveTypes.Uint8, Metadata: acommon.Metadata(acommon.Optional)},
+			{Name: U64, Type: arrow.PrimitiveTypes.Uint64, Metadata: acommon.Metadata(acommon.Optional)},
+			{Name: I64, Type: arrow.PrimitiveTypes.Int64, Metadata: acommon.Metadata(acommon.Optional)},
+			{Name: Bool, Type: arrow.FixedWidthTypes.Boolean, Metadata: acommon.Metadata(acommon.Optional)},
+			{Name: Binary, Type: arrow.BinaryTypes.Binary, Metadata: acommon.Metadata(acommon.Optional, acommon.Dictionary)},
+			{Name: U32, Type: arrow.PrimitiveTypes.Uint32, Metadata: acommon.Metadata(acommon.Optional, acommon.Dictionary)},
+			{Name: I32, Type: arrow.PrimitiveTypes.Int32, Metadata: acommon.Metadata(acommon.Optional)},
+			{Name: String, Type: arrow.BinaryTypes.String, Metadata: acommon.Metadata(acommon.Optional, acommon.Dictionary)},
+			{Name: Values, Type: arrow.ListOf(valueDT), Metadata: acommon.Metadata(acommon.Optional)},
+			{Name: FixedSize8Binary, Type: &arrow.FixedSizeBinaryType{ByteWidth: 8}, Metadata: acommon.Metadata(acommon.Optional, acommon.Dictionary)},
+			{Name: FixedSize16Binary, Type: &arrow.FixedSizeBinaryType{ByteWidth: 16}, Metadata: acommon.Metadata(acommon.Optional, acommon.Dictionary)},
+			{Name: Map, Type: arrow.MapOf(arrow.BinaryTypes.String, valueDT), Metadata: acommon.Metadata(acommon.Optional)},
 		}...)},
 	}, nil)
 )
@@ -540,9 +540,13 @@ func TestSchemaEvolution(t *testing.T) {
 		string:    "",
 		values: []ValueData{
 			F64ValueData{2.0},
+			StringValueData{"string"},
+		},
+		hmap: map[string]ValueData{
+			"key1": StringValueData{"string"},
 		},
 	}
-	AddAndCheck(t, &rootData, rootBuilder, "[{\"root\":{\"binary\":\"YmluYXJ5\",\"bool\":false,\"fixed_size_16_binary\":null,\"fixed_size_8_binary\":null,\"i32\":6,\"i64\":0,\"map\":null,\"string\":null,\"timestamp\":\"1970-01-01 00:00:00.00000001\",\"u32\":null,\"u64\":3,\"u8\":2,\"values\":[[1,2]]}}\n]")
+	AddAndCheck(t, &rootData, rootBuilder, "[{\"root\":{\"binary\":\"YmluYXJ5\",\"bool\":false,\"fixed_size_16_binary\":null,\"fixed_size_8_binary\":null,\"i32\":6,\"i64\":0,\"map\":[{\"key\":\"key1\",\"value\":[4,\"string\"]}],\"string\":null,\"timestamp\":\"1970-01-01 00:00:00.00000001\",\"u32\":null,\"u64\":3,\"u8\":2,\"values\":[[1,2],[4,\"string\"]]}}\n]")
 }
 
 func AddAndCheck(t *testing.T, data *RootData, rootBuilder *RootBuilder, expectedJson string) {
@@ -574,8 +578,10 @@ type RootData struct {
 type ValueData interface {
 	IsI64() bool
 	IsF64() bool
+	IsString() bool
 	I64() int64
 	F64() float64
+	String() string
 }
 
 type I64ValueData struct {
@@ -590,11 +596,19 @@ func (v I64ValueData) IsF64() bool {
 	return false
 }
 
+func (v I64ValueData) IsString() bool {
+	return false
+}
+
 func (v I64ValueData) I64() int64 {
 	return v.i64
 }
 
 func (v I64ValueData) F64() float64 {
+	panic("not implemented")
+}
+
+func (v I64ValueData) String() string {
 	panic("not implemented")
 }
 
@@ -610,12 +624,48 @@ func (v F64ValueData) IsF64() bool {
 	return true
 }
 
+func (v F64ValueData) IsString() bool {
+	return false
+}
+
 func (v F64ValueData) I64() int64 {
 	panic("not implemented")
 }
 
 func (v F64ValueData) F64() float64 {
 	return v.f64
+}
+
+func (v F64ValueData) String() string {
+	panic("not implemented")
+}
+
+type StringValueData struct {
+	string string
+}
+
+func (v StringValueData) IsI64() bool {
+	return false
+}
+
+func (v StringValueData) IsF64() bool {
+	return false
+}
+
+func (v StringValueData) IsString() bool {
+	return true
+}
+
+func (v StringValueData) I64() int64 {
+	panic("not implemented")
+}
+
+func (v StringValueData) F64() float64 {
+	panic("not implemented")
+}
+
+func (v StringValueData) String() string {
+	return v.string
 }
 
 type RootBuilder struct {
@@ -748,13 +798,20 @@ func (b *HMapBuilder) Append(data map[string]ValueData) {
 				b.bool.AppendNull()
 				b.binary.AppendNull()
 				b.string.AppendNull()
-			} else {
+			} else if v.IsF64() {
 				b.values.Append(F64Code)
 				b.f64.Append(v.F64())
 				b.i64.AppendNull()
 				b.bool.AppendNull()
 				b.binary.AppendNull()
 				b.string.AppendNull()
+			} else if v.IsString() {
+				b.values.Append(StringCode)
+				b.string.Append(v.String())
+				b.i64.AppendNull()
+				b.f64.AppendNull()
+				b.bool.AppendNull()
+				b.binary.AppendNull()
 			}
 		}
 	})
@@ -788,12 +845,19 @@ func (b *ValueBuilder) Append(data ValueData) {
 		b.bool.AppendNull()
 		b.binary.AppendNull()
 		b.string.AppendNull()
-	} else {
+	} else if data.IsF64() {
 		b.builder.Append(F64Code)
 		b.f64.Append(data.F64())
 		b.i64.AppendNull()
 		b.bool.AppendNull()
 		b.binary.AppendNull()
 		b.string.AppendNull()
+	} else if data.IsString() {
+		b.builder.Append(StringCode)
+		b.string.Append(data.String())
+		b.i64.AppendNull()
+		b.f64.AppendNull()
+		b.bool.AppendNull()
+		b.binary.AppendNull()
 	}
 }

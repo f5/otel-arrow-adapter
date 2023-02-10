@@ -67,9 +67,9 @@ func (b *MapBuilder) AppendNull() {
 }
 
 func (b *MapBuilder) KeyStringBuilder() *StringBuilder {
-	var keyBuilder *array.StringBuilder
+	var keyBuilder array.Builder
 	if b.builder != nil {
-		keyBuilder = b.builder.KeyBuilder().(*array.StringBuilder)
+		keyBuilder = b.builder.KeyBuilder()
 	}
 
 	return &StringBuilder{
@@ -80,9 +80,9 @@ func (b *MapBuilder) KeyStringBuilder() *StringBuilder {
 }
 
 func (b *MapBuilder) KeyBinaryBuilder() *BinaryBuilder {
-	var keyBuilder *array.BinaryBuilder
+	var keyBuilder array.Builder
 	if b.builder != nil {
-		keyBuilder = b.builder.KeyBuilder().(*array.BinaryBuilder)
+		keyBuilder = b.builder.KeyBuilder()
 	}
 
 	return &BinaryBuilder{
@@ -93,9 +93,9 @@ func (b *MapBuilder) KeyBinaryBuilder() *BinaryBuilder {
 }
 
 func (b *MapBuilder) KeyFixedSizeBinaryBuilder() *FixedSizeBinaryBuilder {
-	var keyBuilder *array.FixedSizeBinaryBuilder
+	var keyBuilder array.Builder
 	if b.builder != nil {
-		keyBuilder = b.builder.KeyBuilder().(*array.FixedSizeBinaryBuilder)
+		keyBuilder = b.builder.KeyBuilder()
 	}
 
 	return &FixedSizeBinaryBuilder{
@@ -132,9 +132,9 @@ func (b *MapBuilder) KeyFloat64Builder() *Float64Builder {
 }
 
 func (b *MapBuilder) KeyUint32Builder() *Uint32Builder {
-	var keyBuilder *array.Uint32Builder
+	var keyBuilder array.Builder
 	if b.builder != nil {
-		keyBuilder = b.builder.KeyBuilder().(*array.Uint32Builder)
+		keyBuilder = b.builder.KeyBuilder()
 	}
 
 	return &Uint32Builder{
@@ -145,9 +145,9 @@ func (b *MapBuilder) KeyUint32Builder() *Uint32Builder {
 }
 
 func (b *MapBuilder) KeyUint64Builder() *Uint64Builder {
-	var keyBuilder *array.Uint64Builder
+	var keyBuilder array.Builder
 	if b.builder != nil {
-		keyBuilder = b.builder.KeyBuilder().(*array.Uint64Builder)
+		keyBuilder = b.builder.KeyBuilder()
 	}
 
 	return &Uint64Builder{

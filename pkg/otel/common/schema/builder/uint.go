@@ -25,14 +25,26 @@ import (
 
 // Uint8Builder is a wrapper around the arrow array builder for uint8.
 type Uint8Builder struct {
-	builder       *array.Uint8Builder
+	builder       array.Builder
 	transformNode *schema.TransformNode
 	updateRequest *SchemaUpdateRequest
 }
 
 func (b *Uint8Builder) Append(value uint8) {
 	if b.builder != nil {
-		b.builder.Append(value)
+		switch builder := b.builder.(type) {
+		case *array.Uint8Builder:
+			builder.Append(value)
+		case *array.Uint8DictionaryBuilder:
+			if err := builder.Append(value); err != nil {
+				// Should never happen.
+				panic(err)
+			}
+		default:
+			// Should never happen.
+			panic("unknown builder type")
+		}
+
 		return
 	}
 
@@ -46,7 +58,18 @@ func (b *Uint8Builder) Append(value uint8) {
 func (b *Uint8Builder) AppendNonZero(value uint8) {
 	if b.builder != nil {
 		if value != 0 {
-			b.builder.Append(value)
+			switch builder := b.builder.(type) {
+			case *array.Uint8Builder:
+				builder.Append(value)
+			case *array.Uint8DictionaryBuilder:
+				if err := builder.Append(value); err != nil {
+					// Should never happen.
+					panic(err)
+				}
+			default:
+				// Should never happen.
+				panic("unknown builder type")
+			}
 		} else {
 			b.builder.AppendNull()
 		}
@@ -62,14 +85,25 @@ func (b *Uint8Builder) AppendNonZero(value uint8) {
 
 // Uint32Builder is a wrapper around the arrow array builder for uint32.
 type Uint32Builder struct {
-	builder       *array.Uint32Builder
+	builder       array.Builder
 	transformNode *schema.TransformNode
 	updateRequest *SchemaUpdateRequest
 }
 
 func (b *Uint32Builder) Append(value uint32) {
 	if b.builder != nil {
-		b.builder.Append(value)
+		switch builder := b.builder.(type) {
+		case *array.Uint32Builder:
+			builder.Append(value)
+		case *array.Uint32DictionaryBuilder:
+			if err := builder.Append(value); err != nil {
+				// Should never happen.
+				panic(err)
+			}
+		default:
+			// Should never happen.
+			panic("unknown builder type")
+		}
 		return
 	}
 
@@ -83,7 +117,18 @@ func (b *Uint32Builder) Append(value uint32) {
 func (b *Uint32Builder) AppendNonZero(value uint32) {
 	if b.builder != nil {
 		if value != 0 {
-			b.builder.Append(value)
+			switch builder := b.builder.(type) {
+			case *array.Uint32Builder:
+				builder.Append(value)
+			case *array.Uint32DictionaryBuilder:
+				if err := builder.Append(value); err != nil {
+					// Should never happen.
+					panic(err)
+				}
+			default:
+				// Should never happen.
+				panic("unknown builder type")
+			}
 		} else {
 			b.builder.AppendNull()
 		}
@@ -106,14 +151,25 @@ func (b *Uint32Builder) AppendNull() {
 
 // Uint64Builder is a wrapper around the arrow array builder for uint64.
 type Uint64Builder struct {
-	builder       *array.Uint64Builder
+	builder       array.Builder
 	transformNode *schema.TransformNode
 	updateRequest *SchemaUpdateRequest
 }
 
 func (b *Uint64Builder) Append(value uint64) {
 	if b.builder != nil {
-		b.builder.Append(value)
+		switch builder := b.builder.(type) {
+		case *array.Uint64Builder:
+			builder.Append(value)
+		case *array.Uint64DictionaryBuilder:
+			if err := builder.Append(value); err != nil {
+				// Should never happen.
+				panic(err)
+			}
+		default:
+			// Should never happen.
+			panic("unknown builder type")
+		}
 		return
 	}
 
@@ -127,7 +183,18 @@ func (b *Uint64Builder) Append(value uint64) {
 func (b *Uint64Builder) AppendNonZero(value uint64) {
 	if b.builder != nil {
 		if value != 0 {
-			b.builder.Append(value)
+			switch builder := b.builder.(type) {
+			case *array.Uint64Builder:
+				builder.Append(value)
+			case *array.Uint64DictionaryBuilder:
+				if err := builder.Append(value); err != nil {
+					// Should never happen.
+					panic(err)
+				}
+			default:
+				// Should never happen.
+				panic("unknown builder type")
+			}
 		} else {
 			b.builder.AppendNull()
 		}

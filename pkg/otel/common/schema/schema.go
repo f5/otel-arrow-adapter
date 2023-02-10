@@ -34,13 +34,31 @@ import (
 // In the current implementation is based on the max value of the last n observations (i.e. max(nth capacities)).
 const builderCapacityWindowSize = 10
 
-const OptionalKey = "#optional"
+// Metadata constants used to mark fields as optional or dictionary.
 
-var (
-	// OptionalField is a marker used by AdaptiveSchema to indicate that a field
-	// is optional in an Arrow Schema.
-	OptionalField = arrow.MetadataFrom(map[string]string{OptionalKey: "true"})
+type MetadataKey int
+
+const (
+	Optional MetadataKey = iota
+	Dictionary
+
+	OptionalKey   = "#optional"
+	DictionaryKey = "#dictionary"
 )
+
+// Metadata returns a map of Arrow metadata for the given metadata keys.
+func Metadata(keys ...MetadataKey) arrow.Metadata {
+	m := make(map[string]string, len(keys))
+	for _, key := range keys {
+		switch key {
+		case Optional:
+			m[OptionalKey] = "true"
+		case Dictionary:
+			m[DictionaryKey] = "true"
+		}
+	}
+	return arrow.MetadataFrom(m)
+}
 
 // AdaptiveSchema is a wrapper around [arrow.Schema] that can be used to detect
 // dictionary overflow and update the schema accordingly. It also maintains the
@@ -795,7 +813,7 @@ func NewFieldFrom(prototype *arrow.Field, transformNode *TransformNode) *arrow.F
 
 	// apply transformations to the current prototype field.
 	// if a transformation returns nil, the field is removed.
-	for _, t := range transformNode.transformations {
+	for _, t := range transformNode.transforms {
 		field = t.Transform(field)
 		if field == nil {
 			return nil

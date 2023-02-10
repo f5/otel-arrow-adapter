@@ -32,13 +32,24 @@ func (t *DictionaryField) Transform(field *arrow.Field) *arrow.Field {
 		// value type.
 		return &arrow.Field{Name: field.Name, Type: field.Type.(*arrow.DictionaryType).ValueType, Nullable: field.Nullable, Metadata: field.Metadata}
 	} else {
-		// Index type defined, so the dictionary is upgraded to the given
-		// index type.
-		dictType := &arrow.DictionaryType{
-			IndexType: t.IndexType,
-			ValueType: field.Type.(*arrow.DictionaryType).ValueType,
-			Ordered:   false,
+		switch field.Type.(type) {
+		case *arrow.DictionaryType:
+			// Index type defined, so the dictionary is upgraded to the given
+			// index type.
+			dictType := &arrow.DictionaryType{
+				IndexType: t.IndexType,
+				ValueType: field.Type.(*arrow.DictionaryType).ValueType,
+				Ordered:   false,
+			}
+			return &arrow.Field{Name: field.Name, Type: dictType, Nullable: field.Nullable, Metadata: field.Metadata}
+		default:
+			// Index type defined, so field is converted to a dictionary.
+			dictType := &arrow.DictionaryType{
+				IndexType: t.IndexType,
+				ValueType: field.Type,
+				Ordered:   false,
+			}
+			return &arrow.Field{Name: field.Name, Type: dictType, Nullable: field.Nullable, Metadata: field.Metadata}
 		}
-		return &arrow.Field{Name: field.Name, Type: dictType, Nullable: field.Nullable, Metadata: field.Metadata}
 	}
 }

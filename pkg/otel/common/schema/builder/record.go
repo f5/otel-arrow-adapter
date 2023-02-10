@@ -152,7 +152,7 @@ func (rb *RecordBuilderExt) FixedSizeBinaryBuilder(name string) *FixedSizeBinary
 	builder := rb.builder(name)
 
 	if builder == nil {
-		return &FixedSizeBinaryBuilder{builder: builder.(*array.FixedSizeBinaryBuilder), transformNode: transformNode, updateRequest: rb.updateRequest}
+		return &FixedSizeBinaryBuilder{builder: builder, transformNode: transformNode, updateRequest: rb.updateRequest}
 	} else {
 		return &FixedSizeBinaryBuilder{builder: nil, transformNode: transformNode, updateRequest: rb.updateRequest}
 	}
@@ -182,7 +182,7 @@ func (rb *RecordBuilderExt) StringBuilder(name string) *StringBuilder {
 	builder := rb.builder(name)
 
 	if builder == nil {
-		return &StringBuilder{builder: builder.(*array.StringBuilder), transformNode: transformNode, updateRequest: rb.updateRequest}
+		return &StringBuilder{builder: builder, transformNode: transformNode, updateRequest: rb.updateRequest}
 	} else {
 		return &StringBuilder{builder: nil, transformNode: transformNode, updateRequest: rb.updateRequest}
 	}
@@ -212,7 +212,7 @@ func (rb *RecordBuilderExt) BinaryBuilder(name string) *BinaryBuilder {
 	builder := rb.builder(name)
 
 	if builder == nil {
-		return &BinaryBuilder{builder: builder.(*array.BinaryBuilder), transformNode: transformNode, updateRequest: rb.updateRequest}
+		return &BinaryBuilder{builder: builder, transformNode: transformNode, updateRequest: rb.updateRequest}
 	} else {
 		return &BinaryBuilder{builder: nil, transformNode: transformNode, updateRequest: rb.updateRequest}
 	}
@@ -227,7 +227,7 @@ func (rb *RecordBuilderExt) Uint8Builder(name string) *Uint8Builder {
 	builder := rb.builder(name)
 
 	if builder == nil {
-		return &Uint8Builder{builder: builder.(*array.Uint8Builder), transformNode: transformNode, updateRequest: rb.updateRequest}
+		return &Uint8Builder{builder: builder, transformNode: transformNode, updateRequest: rb.updateRequest}
 	} else {
 		return &Uint8Builder{builder: nil, transformNode: transformNode, updateRequest: rb.updateRequest}
 	}
@@ -242,7 +242,7 @@ func (rb *RecordBuilderExt) Uint32Builder(name string) *Uint32Builder {
 	builder := rb.builder(name)
 
 	if builder == nil {
-		return &Uint32Builder{builder: builder.(*array.Uint32Builder), transformNode: transformNode, updateRequest: rb.updateRequest}
+		return &Uint32Builder{builder: builder, transformNode: transformNode, updateRequest: rb.updateRequest}
 	} else {
 		return &Uint32Builder{builder: nil, transformNode: transformNode, updateRequest: rb.updateRequest}
 	}
@@ -257,7 +257,7 @@ func (rb *RecordBuilderExt) Uint64Builder(name string) *Uint64Builder {
 	builder := rb.builder(name)
 
 	if builder == nil {
-		return &Uint64Builder{builder: builder.(*array.Uint64Builder), transformNode: transformNode, updateRequest: rb.updateRequest}
+		return &Uint64Builder{builder: builder, transformNode: transformNode, updateRequest: rb.updateRequest}
 	} else {
 		return &Uint64Builder{builder: nil, transformNode: transformNode, updateRequest: rb.updateRequest}
 	}

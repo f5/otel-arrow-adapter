@@ -24,7 +24,7 @@ import (
 )
 
 type StringBuilder struct {
-	builder       *array.StringBuilder
+	builder       array.Builder
 	transformNode *schema.TransformNode
 	updateRequest *SchemaUpdateRequest
 }
@@ -42,7 +42,20 @@ func (b *StringBuilder) Append(value string) {
 			b.builder.AppendNull()
 			return
 		}
-		b.builder.Append(value)
+
+		switch builder := b.builder.(type) {
+		case *array.StringBuilder:
+			builder.Append(value)
+		case *array.BinaryDictionaryBuilder:
+			if err := builder.AppendString(value); err != nil {
+				// Should never happen.
+				panic(err)
+			}
+		default:
+			// Should never happen.
+			panic("unknown builder type")
+		}
+
 		return
 	}
 

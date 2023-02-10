@@ -62,7 +62,7 @@ func (sub *SparseUnionBuilder) Uint8Builder(code arrow.UnionTypeCode) *Uint8Buil
 	_, transformNode := sub.protoDataTypeAndTransformNode(code)
 
 	if builder != nil {
-		return &Uint8Builder{builder: builder.(*array.Uint8Builder), transformNode: transformNode, updateRequest: sub.updateRequest}
+		return &Uint8Builder{builder: builder, transformNode: transformNode, updateRequest: sub.updateRequest}
 	} else {
 		return &Uint8Builder{builder: nil, transformNode: transformNode, updateRequest: sub.updateRequest}
 	}
@@ -74,7 +74,7 @@ func (sub *SparseUnionBuilder) Uint32Builder(code arrow.UnionTypeCode) *Uint32Bu
 	_, transformNode := sub.protoDataTypeAndTransformNode(code)
 
 	if builder != nil {
-		return &Uint32Builder{builder: builder.(*array.Uint32Builder), transformNode: transformNode, updateRequest: sub.updateRequest}
+		return &Uint32Builder{builder: builder, transformNode: transformNode, updateRequest: sub.updateRequest}
 	} else {
 		return &Uint32Builder{builder: nil, transformNode: transformNode, updateRequest: sub.updateRequest}
 	}
@@ -86,7 +86,7 @@ func (sub *SparseUnionBuilder) Uint64Builder(code arrow.UnionTypeCode) *Uint64Bu
 	_, transformNode := sub.protoDataTypeAndTransformNode(code)
 
 	if builder != nil {
-		return &Uint64Builder{builder: builder.(*array.Uint64Builder), transformNode: transformNode, updateRequest: sub.updateRequest}
+		return &Uint64Builder{builder: builder, transformNode: transformNode, updateRequest: sub.updateRequest}
 	} else {
 		return &Uint64Builder{builder: nil, transformNode: transformNode, updateRequest: sub.updateRequest}
 	}
@@ -134,7 +134,7 @@ func (sub *SparseUnionBuilder) StringBuilder(code arrow.UnionTypeCode) *StringBu
 	_, transformNode := sub.protoDataTypeAndTransformNode(code)
 
 	if builder != nil {
-		return &StringBuilder{builder: builder.(*array.StringBuilder), transformNode: transformNode, updateRequest: sub.updateRequest}
+		return &StringBuilder{builder: builder, transformNode: transformNode, updateRequest: sub.updateRequest}
 	} else {
 		return &StringBuilder{builder: nil, transformNode: transformNode, updateRequest: sub.updateRequest}
 	}
@@ -158,7 +158,7 @@ func (sub *SparseUnionBuilder) BinaryBuilder(code arrow.UnionTypeCode) *BinaryBu
 	_, transformNode := sub.protoDataTypeAndTransformNode(code)
 
 	if builder != nil {
-		return &BinaryBuilder{builder: builder.(*array.BinaryBuilder), transformNode: transformNode, updateRequest: sub.updateRequest}
+		return &BinaryBuilder{builder: builder, transformNode: transformNode, updateRequest: sub.updateRequest}
 	} else {
 		return &BinaryBuilder{builder: nil, transformNode: transformNode, updateRequest: sub.updateRequest}
 	}

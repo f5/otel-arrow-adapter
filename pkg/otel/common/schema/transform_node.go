@@ -31,20 +31,26 @@ type FieldTransform interface {
 // TransformNode is a node in a transformation tree.
 // It can be a leaf node or a node with children.
 type TransformNode struct {
-	name            string
-	transformations []FieldTransform
-	Children        []*TransformNode
+	name       string
+	transforms []FieldTransform
+	Children   []*TransformNode
 }
 
 // NewTransformTreeFrom creates a transformation tree from a prototype schema.
 // The dictIndexType and the field metadata are used to transform the prototype
 // schema into the target schema.
 //
-// If dictIndexType is nil, then dictionary fields are downgraded to their
-// value type.
+// Optional fields:
+// By default all fields marked as optional in the prototype schema are removed
+// from the target schema. This behavior can be changed if data is available for
+// this field.
 //
-// The metadata #optionial is used to remove fields from the prototype schema.
-// Removed fields can be added back by changing the transformation tree.
+// Dictionary fields:
+// By default all fields marked as dictionary fields in the prototype schema are
+// converted to their dictionary representation. This behavior can be changed if
+// the number of unique values is higher than the size of dictIndexType.
+// If dictIndexType is nil, then fields marked as dictionary fields are not
+// converted to their dictionary representation.
 func NewTransformTreeFrom(prototype *arrow.Schema, dictIndexType arrow.DataType) *TransformNode {
 	protoFields := prototype.Fields()
 	rootTNode := TransformNode{Children: make([]*TransformNode, 0, len(protoFields))}
@@ -57,23 +63,33 @@ func NewTransformTreeFrom(prototype *arrow.Schema, dictIndexType arrow.DataType)
 }
 
 func newTransformNodeFrom(prototype *arrow.Field, dictIndexType arrow.DataType) *TransformNode {
-	var transform FieldTransform
-
-	transform = &transform2.IdentityField{}
+	var transforms []FieldTransform
 
 	// Check if the field is optional and if so, remove it by emitting a
 	// NoField transformation.
 	metadata := prototype.Metadata
 	keyIdx := metadata.FindKey(OptionalKey)
 	if keyIdx != -1 {
-		transform = &transform2.NoField{}
+		transforms = append(transforms, &transform2.NoField{})
 	}
 
-	node := TransformNode{name: prototype.Name, transformations: []FieldTransform{transform}}
+	// Check if the field is a dictionary field and if so, convert it to its
+	// dictionary representation by emitting a DictionaryField transformation.
+	keyIdx = metadata.FindKey(DictionaryKey)
+	if keyIdx != -1 {
+		transforms = append(transforms, &transform2.DictionaryField{IndexType: dictIndexType})
+	}
+
+	// If no transformation was added, then add an Identity transformation.
+	if len(transforms) == 0 {
+		transforms = append(transforms, &transform2.IdentityField{})
+	}
+
+	node := TransformNode{name: prototype.Name, transforms: transforms}
 
 	switch dt := prototype.Type.(type) {
 	case *arrow.DictionaryType:
-		node.transformations = append(node.transformations, &transform2.DictionaryField{IndexType: dictIndexType})
+		node.transforms = append(node.transforms, &transform2.DictionaryField{IndexType: dictIndexType})
 	case *arrow.StructType:
 		node.Children = make([]*TransformNode, 0, len(dt.Fields()))
 		for _, child := range prototype.Type.(*arrow.StructType).Fields() {
@@ -102,12 +118,12 @@ func newTransformNodeFrom(prototype *arrow.Field, dictIndexType arrow.DataType) 
 func (t *TransformNode) RemoveOptional() {
 	n := 0
 
-	for _, transform := range t.transformations {
+	for _, transform := range t.transforms {
 		if _, ok := transform.(*transform2.NoField); !ok {
-			t.transformations[n] = transform
+			t.transforms[n] = transform
 			n++
 		}
 	}
 
-	t.transformations = t.transformations[:n]
+	t.transforms = t.transforms[:n]
 }

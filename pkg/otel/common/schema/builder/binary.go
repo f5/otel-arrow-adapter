@@ -25,7 +25,7 @@ import (
 
 // BinaryBuilder is a wrapper around the arrow BinaryBuilder.
 type BinaryBuilder struct {
-	builder       *array.BinaryBuilder
+	builder       array.Builder
 	transformNode *schema.TransformNode
 	updateRequest *SchemaUpdateRequest
 }
@@ -34,7 +34,23 @@ type BinaryBuilder struct {
 // transform node if the builder is nil.
 func (b *BinaryBuilder) Append(value []byte) {
 	if b.builder != nil {
-		b.builder.Append(value)
+		if value == nil {
+			b.builder.AppendNull()
+			return
+		}
+
+		switch builder := b.builder.(type) {
+		case *array.BinaryBuilder:
+			builder.Append(value)
+		case *array.BinaryDictionaryBuilder:
+			if err := builder.Append(value); err != nil {
+				// Should never happen.
+				panic(err)
+			}
+		default:
+			// Should never happen.
+			panic("unknown builder type")
+		}
 		return
 	}
 
@@ -57,7 +73,7 @@ func (b *BinaryBuilder) AppendNull() {
 
 // FixedSizeBinaryBuilder is a wrapper around the arrow FixedSizeBinaryBuilder.
 type FixedSizeBinaryBuilder struct {
-	builder       *array.FixedSizeBinaryBuilder
+	builder       array.Builder
 	transformNode *schema.TransformNode
 	updateRequest *SchemaUpdateRequest
 }
@@ -68,9 +84,22 @@ func (b *FixedSizeBinaryBuilder) Append(value []byte) {
 	if b.builder != nil {
 		if value == nil {
 			b.builder.AppendNull()
-		} else {
-			b.builder.Append(value)
+			return
 		}
+
+		switch builder := b.builder.(type) {
+		case *array.FixedSizeBinaryBuilder:
+			builder.Append(value)
+		case *array.FixedSizeBinaryDictionaryBuilder:
+			if err := builder.Append(value); err != nil {
+				// Should never happen.
+				panic(err)
+			}
+		default:
+			// Should never happen.
+			panic("unknown builder type")
+		}
+
 		return
 	}
 
