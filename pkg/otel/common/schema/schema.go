@@ -806,7 +806,6 @@ func NewSchemaFrom(prototype *arrow.Schema, transformTree *TransformNode) *arrow
 
 // NewFieldFrom creates a new field from a prototype field and a transformation tree.
 func NewFieldFrom(prototype *arrow.Field, transformNode *TransformNode) *arrow.Field {
-	metadata := cleanMetadata(prototype.Metadata)
 	field := prototype
 
 	// remove metadata keys that are only used to specify transformations.
@@ -819,6 +818,7 @@ func NewFieldFrom(prototype *arrow.Field, transformNode *TransformNode) *arrow.F
 			return nil
 		}
 	}
+	metadata := cleanMetadata(field.Metadata)
 
 	switch dt := field.Type.(type) {
 	case *arrow.StructType:
@@ -879,7 +879,7 @@ func cleanMetadata(metadata arrow.Metadata) arrow.Metadata {
 	values := make([]string, 0, len(metadata.Values()))
 
 	for i, key := range metadata.Keys() {
-		if key == OptionalKey {
+		if key == OptionalKey || key == DictionaryKey {
 			continue
 		}
 		keys = append(keys, key)

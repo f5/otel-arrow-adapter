@@ -18,6 +18,7 @@
 package arrow_test
 
 import (
+	"math"
 	"testing"
 
 	"github.com/apache/arrow/go/v11/arrow"
@@ -26,6 +27,7 @@ import (
 
 	acommon "github.com/f5/otel-arrow-adapter/pkg/otel/common/schema"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/builder"
+	config "github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/config"
 )
 
 const (
@@ -90,11 +92,15 @@ var (
 	}, nil)
 )
 
+var DictConfig = &config.DictionaryConfig{
+	MaxCard: math.MaxUint16,
+}
+
 func TestTimestampOnly(t *testing.T) {
 	pool := memory.NewCheckedAllocator(memory.NewGoAllocator())
 	defer pool.AssertSize(t, 0)
 
-	recordBuilderExt := builder.NewRecordBuilderExt(pool, protoSchema)
+	recordBuilderExt := builder.NewRecordBuilderExt(pool, protoSchema, DictConfig)
 	defer recordBuilderExt.Release()
 
 	rootBuilder := NewRootBuilderFrom(recordBuilderExt)
@@ -109,7 +115,7 @@ func TestU8Only(t *testing.T) {
 	pool := memory.NewCheckedAllocator(memory.NewGoAllocator())
 	defer pool.AssertSize(t, 0)
 
-	recordBuilderExt := builder.NewRecordBuilderExt(pool, protoSchema)
+	recordBuilderExt := builder.NewRecordBuilderExt(pool, protoSchema, DictConfig)
 	defer recordBuilderExt.Release()
 
 	rootBuilder := NewRootBuilderFrom(recordBuilderExt)
@@ -124,7 +130,7 @@ func TestU64Only(t *testing.T) {
 	pool := memory.NewCheckedAllocator(memory.NewGoAllocator())
 	defer pool.AssertSize(t, 0)
 
-	recordBuilderExt := builder.NewRecordBuilderExt(pool, protoSchema)
+	recordBuilderExt := builder.NewRecordBuilderExt(pool, protoSchema, DictConfig)
 	defer recordBuilderExt.Release()
 
 	rootBuilder := NewRootBuilderFrom(recordBuilderExt)
@@ -139,7 +145,7 @@ func TestI64Only(t *testing.T) {
 	pool := memory.NewCheckedAllocator(memory.NewGoAllocator())
 	defer pool.AssertSize(t, 0)
 
-	recordBuilderExt := builder.NewRecordBuilderExt(pool, protoSchema)
+	recordBuilderExt := builder.NewRecordBuilderExt(pool, protoSchema, DictConfig)
 	defer recordBuilderExt.Release()
 
 	rootBuilder := NewRootBuilderFrom(recordBuilderExt)
@@ -154,7 +160,7 @@ func TestBoolOnly(t *testing.T) {
 	pool := memory.NewCheckedAllocator(memory.NewGoAllocator())
 	defer pool.AssertSize(t, 0)
 
-	recordBuilderExt := builder.NewRecordBuilderExt(pool, protoSchema)
+	recordBuilderExt := builder.NewRecordBuilderExt(pool, protoSchema, DictConfig)
 	defer recordBuilderExt.Release()
 
 	rootBuilder := NewRootBuilderFrom(recordBuilderExt)
@@ -169,7 +175,7 @@ func TestBinaryOnly(t *testing.T) {
 	pool := memory.NewCheckedAllocator(memory.NewGoAllocator())
 	defer pool.AssertSize(t, 0)
 
-	recordBuilderExt := builder.NewRecordBuilderExt(pool, protoSchema)
+	recordBuilderExt := builder.NewRecordBuilderExt(pool, protoSchema, DictConfig)
 	defer recordBuilderExt.Release()
 
 	rootBuilder := NewRootBuilderFrom(recordBuilderExt)
@@ -184,7 +190,7 @@ func TestU32Only(t *testing.T) {
 	pool := memory.NewCheckedAllocator(memory.NewGoAllocator())
 	defer pool.AssertSize(t, 0)
 
-	recordBuilderExt := builder.NewRecordBuilderExt(pool, protoSchema)
+	recordBuilderExt := builder.NewRecordBuilderExt(pool, protoSchema, DictConfig)
 	defer recordBuilderExt.Release()
 
 	rootBuilder := NewRootBuilderFrom(recordBuilderExt)
@@ -199,7 +205,7 @@ func TestI32Only(t *testing.T) {
 	pool := memory.NewCheckedAllocator(memory.NewGoAllocator())
 	defer pool.AssertSize(t, 0)
 
-	recordBuilderExt := builder.NewRecordBuilderExt(pool, protoSchema)
+	recordBuilderExt := builder.NewRecordBuilderExt(pool, protoSchema, DictConfig)
 	defer recordBuilderExt.Release()
 
 	rootBuilder := NewRootBuilderFrom(recordBuilderExt)
@@ -214,7 +220,7 @@ func TestStringOnly(t *testing.T) {
 	pool := memory.NewCheckedAllocator(memory.NewGoAllocator())
 	defer pool.AssertSize(t, 0)
 
-	recordBuilderExt := builder.NewRecordBuilderExt(pool, protoSchema)
+	recordBuilderExt := builder.NewRecordBuilderExt(pool, protoSchema, DictConfig)
 	defer recordBuilderExt.Release()
 
 	rootBuilder := NewRootBuilderFrom(recordBuilderExt)
@@ -229,7 +235,7 @@ func TestValuesOnly1(t *testing.T) {
 	pool := memory.NewCheckedAllocator(memory.NewGoAllocator())
 	defer pool.AssertSize(t, 0)
 
-	recordBuilderExt := builder.NewRecordBuilderExt(pool, protoSchema)
+	recordBuilderExt := builder.NewRecordBuilderExt(pool, protoSchema, DictConfig)
 	defer recordBuilderExt.Release()
 
 	rootBuilder := NewRootBuilderFrom(recordBuilderExt)
@@ -246,7 +252,7 @@ func TestValuesOnly2(t *testing.T) {
 	pool := memory.NewCheckedAllocator(memory.NewGoAllocator())
 	defer pool.AssertSize(t, 0)
 
-	recordBuilderExt := builder.NewRecordBuilderExt(pool, protoSchema)
+	recordBuilderExt := builder.NewRecordBuilderExt(pool, protoSchema, DictConfig)
 	defer recordBuilderExt.Release()
 
 	rootBuilder := NewRootBuilderFrom(recordBuilderExt)
@@ -263,7 +269,7 @@ func TestValuesOnly3(t *testing.T) {
 	pool := memory.NewCheckedAllocator(memory.NewGoAllocator())
 	defer pool.AssertSize(t, 0)
 
-	recordBuilderExt := builder.NewRecordBuilderExt(pool, protoSchema)
+	recordBuilderExt := builder.NewRecordBuilderExt(pool, protoSchema, DictConfig)
 	defer recordBuilderExt.Release()
 
 	rootBuilder := NewRootBuilderFrom(recordBuilderExt)
@@ -281,7 +287,7 @@ func TestFixedSize8Only(t *testing.T) {
 	pool := memory.NewCheckedAllocator(memory.NewGoAllocator())
 	defer pool.AssertSize(t, 0)
 
-	recordBuilderExt := builder.NewRecordBuilderExt(pool, protoSchema)
+	recordBuilderExt := builder.NewRecordBuilderExt(pool, protoSchema, DictConfig)
 	defer recordBuilderExt.Release()
 
 	rootBuilder := NewRootBuilderFrom(recordBuilderExt)
@@ -296,7 +302,7 @@ func TestFixedSize16Only(t *testing.T) {
 	pool := memory.NewCheckedAllocator(memory.NewGoAllocator())
 	defer pool.AssertSize(t, 0)
 
-	recordBuilderExt := builder.NewRecordBuilderExt(pool, protoSchema)
+	recordBuilderExt := builder.NewRecordBuilderExt(pool, protoSchema, DictConfig)
 	defer recordBuilderExt.Release()
 
 	rootBuilder := NewRootBuilderFrom(recordBuilderExt)
@@ -311,7 +317,7 @@ func TestHMapOnly1(t *testing.T) {
 	pool := memory.NewCheckedAllocator(memory.NewGoAllocator())
 	defer pool.AssertSize(t, 0)
 
-	recordBuilderExt := builder.NewRecordBuilderExt(pool, protoSchema)
+	recordBuilderExt := builder.NewRecordBuilderExt(pool, protoSchema, DictConfig)
 	defer recordBuilderExt.Release()
 
 	rootBuilder := NewRootBuilderFrom(recordBuilderExt)
@@ -328,7 +334,7 @@ func TestHMapOnly2(t *testing.T) {
 	pool := memory.NewCheckedAllocator(memory.NewGoAllocator())
 	defer pool.AssertSize(t, 0)
 
-	recordBuilderExt := builder.NewRecordBuilderExt(pool, protoSchema)
+	recordBuilderExt := builder.NewRecordBuilderExt(pool, protoSchema, DictConfig)
 	defer recordBuilderExt.Release()
 
 	rootBuilder := NewRootBuilderFrom(recordBuilderExt)
@@ -341,11 +347,42 @@ func TestHMapOnly2(t *testing.T) {
 	AddAndCheck(t, &rootData, rootBuilder, "[{\"root\":{\"map\":[{\"key\":\"key2\",\"value\":[1,2]}]}}\n]")
 }
 
+func TestFullSchema(t *testing.T) {
+	pool := memory.NewCheckedAllocator(memory.NewGoAllocator())
+	defer pool.AssertSize(t, 0)
+
+	recordBuilderExt := builder.NewRecordBuilderExt(pool, protoSchema, DictConfig)
+	defer recordBuilderExt.Release()
+
+	rootBuilder := NewRootBuilderFrom(recordBuilderExt)
+
+	rootData := RootData{
+		timestamp: arrow.Timestamp(10),
+		u8:        2,
+		u64:       3,
+		i64:       0,
+		bool:      false,
+		binary:    []byte("binary"),
+		u32:       0,
+		i32:       6,
+		string:    "",
+		values: []ValueData{
+			F64ValueData{2.0},
+			StringValueData{"string"},
+			StringValueData{"string"},
+		},
+		hmap: map[string]ValueData{
+			"key1": StringValueData{"string"},
+		},
+	}
+	AddAndCheck(t, &rootData, rootBuilder, "[{\"root\":{\"binary\":\"YmluYXJ5\",\"i32\":6,\"map\":[{\"key\":\"key1\",\"value\":[4,\"string\"]}],\"timestamp\":\"1970-01-01 00:00:00.00000001\",\"u64\":3,\"u8\":2,\"values\":[[1,2],[4,\"string\"],[4,\"string\"]]}}\n]")
+}
+
 func TestSchemaEvolution(t *testing.T) {
 	pool := memory.NewCheckedAllocator(memory.NewGoAllocator())
 	defer pool.AssertSize(t, 0)
 
-	recordBuilderExt := builder.NewRecordBuilderExt(pool, protoSchema)
+	recordBuilderExt := builder.NewRecordBuilderExt(pool, protoSchema, DictConfig)
 	defer recordBuilderExt.Release()
 
 	rootBuilder := NewRootBuilderFrom(recordBuilderExt)
@@ -556,6 +593,7 @@ func AddAndCheck(t *testing.T, data *RootData, rootBuilder *RootBuilder, expecte
 	if err != nil {
 		t.Fatal(err)
 	}
+	println(string(json))
 	assert.JSONEq(t, expectedJson, string(json))
 }
 
@@ -738,10 +776,11 @@ func (b *RootBuilder) AppendData(data *RootData) arrow.Record {
 	for {
 		b.Append(data)
 
-		if b.recordBuilder.SchemaUpdateRequestCount() == 0 {
-			return b.recordBuilder.NewRecord()
+		record, err := b.recordBuilder.NewRecord2()
+		if err == nil {
+			return record
 		}
-		b.recordBuilder.UpdateSchema()
+
 		b.init()
 	}
 }
