@@ -623,17 +623,11 @@ func TestDictionaryOverflow(t *testing.T) {
 		/* binary */ arrow.PrimitiveTypes.Uint8, arrow.BinaryTypes.Binary,
 	)
 
+	// Insert 1 more value in `string` and `binary` fields.
+	// The value inserted in `string` is new so this dictionary should overflow.
+	// The value inserted in `binary` is already present in the dictionary.
 	rootData = RootData{
 		string: "string" + strconv.Itoa(math.MaxUint8+1),
-		binary: []byte("binary" + strconv.Itoa(1)),
-	}
-	AppendAndAssertSchema(
-		t, &rootData, rootBuilder,
-		/* string */ arrow.PrimitiveTypes.Uint8, arrow.BinaryTypes.String,
-		/* binary */ arrow.PrimitiveTypes.Uint8, arrow.BinaryTypes.Binary,
-	)
-	rootData = RootData{
-		string: "string" + strconv.Itoa(math.MaxUint8+2),
 		binary: []byte("binary" + strconv.Itoa(1)),
 	}
 	AppendAndAssertSchema(
@@ -642,6 +636,23 @@ func TestDictionaryOverflow(t *testing.T) {
 		/* binary */ arrow.PrimitiveTypes.Uint8, arrow.BinaryTypes.Binary,
 	)
 
+	// Insert 1 more value in `string` and `binary` fields.
+	// The new value inserted in `string` should not overflow the dictionary
+	// because the dictionary index is now 16 bits.
+	// The value inserted in `binary` should overflow the dictionary because
+	// the dictionary index is still 8 bits. So after the insertion the
+	// dictionary index should be 16 bits.
+	// This test also checks that the dictionary values are transferred
+	// correctly when the underlying RecordBuilder is recreated.
+	rootData = RootData{
+		string: "string" + strconv.Itoa(math.MaxUint8+2),
+		binary: []byte("binary" + strconv.Itoa(math.MaxUint8+1)),
+	}
+	AppendAndAssertSchema(
+		t, &rootData, rootBuilder,
+		/* string */ arrow.PrimitiveTypes.Uint16, arrow.BinaryTypes.String,
+		/* binary */ arrow.PrimitiveTypes.Uint16, arrow.BinaryTypes.Binary,
+	)
 }
 
 func assertDictionary(t *testing.T, expectedIndex arrow.DataType, expectedItem arrow.DataType, dictType arrow.DataType) {
@@ -875,7 +886,7 @@ func (b *RootBuilder) AppendData(data *RootData) arrow.Record {
 	for {
 		b.Append(data)
 
-		record, err := b.recordBuilder.NewRecord2()
+		record, err := b.recordBuilder.NewRecord()
 		if err == nil {
 			return record
 		}

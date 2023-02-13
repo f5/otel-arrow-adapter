@@ -18,6 +18,7 @@
 package schema
 
 import (
+	"errors"
 	"fmt"
 	"math"
 
@@ -26,6 +27,10 @@ import (
 	"github.com/apache/arrow/go/v11/arrow/memory"
 
 	carrow "github.com/f5/otel-arrow-adapter/pkg/arrow"
+)
+
+var (
+	ErrSchemaNotUpToDate = errors.New("schema not up to date")
 )
 
 // A window on the last n capacities of each Arrow builder (present in a RecordBuilder) is maintained. The optimal
@@ -251,7 +256,7 @@ func (m *AdaptiveSchema) UpdateSchema(updates []SchemaUpdate) {
 	// and transfer the dictionaries from the old record builder
 	// to the new one.
 	newRecBuilder := array.NewRecordBuilder(m.pool, m.schema)
-	if err := copyDictValuesTo(m.recordBuilder.Fields(), newRecBuilder.Fields()); err != nil {
+	if err := CopyDictValuesTo(m.recordBuilder.Fields(), newRecBuilder.Fields()); err != nil {
 		panic(err)
 	}
 	m.recordBuilder.Release()
@@ -260,8 +265,9 @@ func (m *AdaptiveSchema) UpdateSchema(updates []SchemaUpdate) {
 	m.recBuilderCreatedCount++
 }
 
-// Recursively copy the dictionary values from the source array builders to the destination array builders.
-func copyDictValuesTo(srcFields []array.Builder, destFields []array.Builder) error {
+// CopyDictValuesTo recursively copy the dictionary values from the source array
+// builders to the destination array builders.
+func CopyDictValuesTo(srcFields []array.Builder, destFields []array.Builder) error {
 	if len(srcFields) != len(destFields) {
 		panic("The number of fields between the source and destination record builders must be the same")
 	}
@@ -276,7 +282,8 @@ func copyDictValuesTo(srcFields []array.Builder, destFields []array.Builder) err
 	return nil
 }
 
-// Recursively copy the dictionary values from the source array builder to the destination array builder.
+// Recursively copy the dictionary values from the source array builder to the
+// destination array builder.
 func copyFieldDictValuesTo(srcField array.Builder, destField array.Builder) (err error) {
 	if srcField.Type().ID() == arrow.DICTIONARY && destField.Type().ID() != arrow.DICTIONARY {
 		// The dictionary has been promoted to a string/binary field.
@@ -326,6 +333,8 @@ func copyFieldDictValuesTo(srcField array.Builder, destField array.Builder) (err
 			err = destField.(*array.FixedSizeBinaryDictionaryBuilder).InsertDictValues(dict)
 		case *array.Int32:
 			err = destField.(*array.Int32DictionaryBuilder).InsertDictValues(dict)
+		case *array.Uint32:
+			err = destField.(*array.Uint32DictionaryBuilder).InsertDictValues(dict)
 		default:
 			panic("copyFieldDictValuesTo: unsupported dictionary type " + dict.DataType().Name())
 		}

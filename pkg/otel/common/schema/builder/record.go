@@ -84,19 +84,16 @@ func (rb *RecordBuilderExt) RecordBuilder() *array.RecordBuilder {
 	return rb.recordBuilder
 }
 
-// NewRecord returns a new record from the underlying array.RecordBuilder.
-func (rb *RecordBuilderExt) NewRecord() arrow.Record {
-	return rb.recordBuilder.NewRecord()
-}
-
-func (rb *RecordBuilderExt) NewRecord2() (arrow.Record, error) {
+// NewRecord returns a new record from the underlying array.RecordBuilder or
+// ErrSchemaNotUpToDate if the schema is not up-to-date.
+func (rb *RecordBuilderExt) NewRecord() (arrow.Record, error) {
 	// If field optionality has changed, update the schema
 	if !rb.IsSchemaUpToDate() {
 		rb.UpdateSchema()
-		return nil, fmt.Errorf("schema is not up to date")
+		return nil, schema.ErrSchemaNotUpToDate
 	}
 
-	record := rb.NewRecord()
+	record := rb.recordBuilder.NewRecord()
 
 	// Detect dictionary overflow
 	fields := rb.recordBuilder.Schema().Fields()
@@ -107,8 +104,9 @@ func (rb *RecordBuilderExt) NewRecord2() (arrow.Record, error) {
 
 	// If dictionary overflow is detected, update the schema
 	if !rb.IsSchemaUpToDate() {
+		record.Release()
 		rb.UpdateSchema()
-		return nil, fmt.Errorf("schema is not up to date")
+		return nil, schema.ErrSchemaNotUpToDate
 	} else {
 		return record, nil
 	}
@@ -184,8 +182,17 @@ func (rb *RecordBuilderExt) builder(name string) array.Builder {
 // the initial prototype schema.
 func (rb *RecordBuilderExt) UpdateSchema() {
 	s := schema.NewSchemaFrom(rb.protoSchema, rb.transformTree)
+
+	// Build a new record builder with the updated schema
+	// and transfer the dictionaries from the old record builder
+	// to the new one.
+	newRecBuilder := array.NewRecordBuilder(rb.allocator, s)
+	if err := schema.CopyDictValuesTo(rb.recordBuilder.Fields(), newRecBuilder.Fields()); err != nil {
+		panic(err)
+	}
 	rb.recordBuilder.Release()
-	rb.recordBuilder = array.NewRecordBuilder(rb.allocator, s)
+	rb.recordBuilder = newRecBuilder
+
 	rb.updateRequest.Reset()
 }
 

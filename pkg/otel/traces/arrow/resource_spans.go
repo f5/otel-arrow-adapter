@@ -30,8 +30,8 @@ import (
 var (
 	// ResourceSpansDT is the data type for resource spans.
 	ResourceSpansDT = arrow.StructOf([]arrow.Field{
-		{Name: constants.Resource, Type: acommon.ResourceDT, Metadata: schema.OptionalField},
-		{Name: constants.SchemaUrl, Type: acommon.DefaultDictString, Metadata: schema.OptionalField},
+		{Name: constants.Resource, Type: acommon.ResourceDT, Metadata: schema.Metadata(schema.Optional)},
+		{Name: constants.SchemaUrl, Type: acommon.DefaultDictString, Metadata: schema.Metadata(schema.Optional)},
 		{Name: constants.ScopeSpans, Type: arrow.ListOf(ScopeSpansDT)},
 	}...)
 )
