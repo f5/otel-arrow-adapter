@@ -22,6 +22,7 @@ import (
 	"github.com/apache/arrow/go/v11/arrow/array"
 
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema"
+	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/update"
 )
 
 // MapBuilder is a wrapper around the arrow MapBuilder.
@@ -29,7 +30,7 @@ type MapBuilder struct {
 	protoDataType *arrow.MapType
 	builder       *array.MapBuilder
 	transformNode *schema.TransformNode
-	updateRequest *SchemaUpdateRequest
+	updateRequest *update.SchemaUpdateRequest
 }
 
 func (b *MapBuilder) Append(mapLen int, mapAppender func()) {
@@ -52,7 +53,7 @@ func (b *MapBuilder) Reserve(numEntries int) {
 	if numEntries > 0 {
 		// If the builder is nil, then the transform node is not optional.
 		b.transformNode.RemoveOptional()
-		b.updateRequest.count++
+		b.updateRequest.Inc()
 	}
 }
 

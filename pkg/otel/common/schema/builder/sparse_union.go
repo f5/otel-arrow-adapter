@@ -24,13 +24,14 @@ import (
 	"github.com/apache/arrow/go/v11/arrow/array"
 
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema"
+	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/update"
 )
 
 type SparseUnionBuilder struct {
 	protoDataType *arrow.SparseUnionType
 	builder       *array.SparseUnionBuilder
 	transformNode *schema.TransformNode
-	updateRequest *SchemaUpdateRequest
+	updateRequest *update.SchemaUpdateRequest
 }
 
 func (sub *SparseUnionBuilder) protoDataTypeAndTransformNode(childCode arrow.UnionTypeCode) (arrow.DataType, *schema.TransformNode) {
@@ -176,5 +177,5 @@ func (sub *SparseUnionBuilder) Append(code int8) {
 
 	// If the builder is nil, then the transform node is not optional.
 	sub.transformNode.RemoveOptional()
-	sub.updateRequest.count++
+	sub.updateRequest.Inc()
 }

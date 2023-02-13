@@ -22,8 +22,9 @@ import (
 
 	"github.com/apache/arrow/go/v11/arrow"
 
-	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/config"
+	cfg "github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/config"
 	transform2 "github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/transform"
+	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/update"
 )
 
 // FieldTransform is an interface to apply a transformation to a field.
@@ -54,20 +55,34 @@ type TransformNode struct {
 // the number of unique values is higher than the size of dictIndexType.
 // If dictIndexType is nil, then fields marked as dictionary fields are not
 // converted to their dictionary representation.
-func NewTransformTreeFrom(prototype *arrow.Schema, dictConfig *builder.DictionaryConfig) (*TransformNode, map[string]*transform2.DictionaryField) {
+func NewTransformTreeFrom(
+	prototype *arrow.Schema,
+	dictConfig *cfg.DictionaryConfig,
+	schemaUpdateRequest *update.SchemaUpdateRequest,
+) (*TransformNode, map[string]*transform2.DictionaryField) {
 	dictTransformNodes := make(map[string]*transform2.DictionaryField)
 
 	protoFields := prototype.Fields()
 	rootTNode := TransformNode{Children: make([]*TransformNode, 0, len(protoFields))}
 
 	for i := 0; i < len(protoFields); i++ {
-		rootTNode.Children = append(rootTNode.Children, newTransformNodeFrom(&protoFields[i], dictConfig, dictTransformNodes))
+		rootTNode.Children = append(rootTNode.Children, newTransformNodeFrom(
+			&protoFields[i],
+			dictConfig,
+			dictTransformNodes,
+			schemaUpdateRequest,
+		))
 	}
 
 	return &rootTNode, dictTransformNodes
 }
 
-func newTransformNodeFrom(prototype *arrow.Field, dictConfig *builder.DictionaryConfig, dictTransformNodes map[string]*transform2.DictionaryField) *TransformNode {
+func newTransformNodeFrom(
+	prototype *arrow.Field,
+	dictConfig *cfg.DictionaryConfig,
+	dictTransformNodes map[string]*transform2.DictionaryField,
+	schemaUpdateRequest *update.SchemaUpdateRequest,
+) *TransformNode {
 	var transforms []FieldTransform
 
 	// Check if the field is optional and if so, remove it by emitting a
@@ -83,7 +98,7 @@ func newTransformNodeFrom(prototype *arrow.Field, dictConfig *builder.Dictionary
 	keyIdx = metadata.FindKey(DictionaryKey)
 	if keyIdx != -1 {
 		dictId := strconv.Itoa(len(dictTransformNodes))
-		dictTransform := transform2.NewDictionaryField(dictId, dictConfig)
+		dictTransform := transform2.NewDictionaryField(dictId, dictConfig, schemaUpdateRequest)
 		dictTransformNodes[dictId] = dictTransform
 		transforms = append(transforms, dictTransform)
 	}
@@ -98,29 +113,54 @@ func newTransformNodeFrom(prototype *arrow.Field, dictConfig *builder.Dictionary
 	switch dt := prototype.Type.(type) {
 	case *arrow.DictionaryType:
 		dictId := strconv.Itoa(len(dictTransformNodes))
-		dictTransform := transform2.NewDictionaryField(dictId, dictConfig)
+		dictTransform := transform2.NewDictionaryField(dictId, dictConfig, schemaUpdateRequest)
 		dictTransformNodes[dictId] = dictTransform
 		node.transforms = append(node.transforms, dictTransform)
 	case *arrow.StructType:
 		node.Children = make([]*TransformNode, 0, len(dt.Fields()))
 		for _, child := range prototype.Type.(*arrow.StructType).Fields() {
-			node.Children = append(node.Children, newTransformNodeFrom(&child, dictConfig, dictTransformNodes))
+			node.Children = append(node.Children, newTransformNodeFrom(
+				&child,
+				dictConfig,
+				dictTransformNodes,
+				schemaUpdateRequest,
+			))
 		}
 	case *arrow.ListType:
 		elemField := dt.ElemField()
 		node.Children = make([]*TransformNode, 0, 1)
-		node.Children = append(node.Children, newTransformNodeFrom(&elemField, dictConfig, dictTransformNodes))
+		node.Children = append(node.Children, newTransformNodeFrom(
+			&elemField,
+			dictConfig,
+			dictTransformNodes,
+			schemaUpdateRequest,
+		))
 	case arrow.UnionType:
 		node.Children = make([]*TransformNode, 0, len(dt.Fields()))
 		for _, child := range dt.Fields() {
-			node.Children = append(node.Children, newTransformNodeFrom(&child, dictConfig, dictTransformNodes))
+			node.Children = append(node.Children, newTransformNodeFrom(
+				&child,
+				dictConfig,
+				dictTransformNodes,
+				schemaUpdateRequest,
+			))
 		}
 	case *arrow.MapType:
 		node.Children = make([]*TransformNode, 0, 2)
 		keyField := dt.KeyField()
-		node.Children = append(node.Children, newTransformNodeFrom(&keyField, dictConfig, dictTransformNodes))
+		node.Children = append(node.Children, newTransformNodeFrom(
+			&keyField,
+			dictConfig,
+			dictTransformNodes,
+			schemaUpdateRequest,
+		))
 		valueField := dt.ItemField()
-		node.Children = append(node.Children, newTransformNodeFrom(&valueField, dictConfig, dictTransformNodes))
+		node.Children = append(node.Children, newTransformNodeFrom(
+			&valueField,
+			dictConfig,
+			dictTransformNodes,
+			schemaUpdateRequest,
+		))
 	}
 
 	return &node

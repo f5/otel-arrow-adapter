@@ -22,13 +22,14 @@ import (
 	"github.com/apache/arrow/go/v11/arrow/array"
 
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema"
+	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/update"
 )
 
 // TimestampBuilder is a wrapper around the arrow TimestampBuilder.
 type TimestampBuilder struct {
 	builder       *array.TimestampBuilder
 	transformNode *schema.TransformNode
-	updateRequest *SchemaUpdateRequest
+	updateRequest *update.SchemaUpdateRequest
 }
 
 // Append appends a value to the underlying builder and updates the
@@ -42,7 +43,7 @@ func (b *TimestampBuilder) Append(value arrow.Timestamp) {
 	if value != 0 {
 		// If the builder is nil, then the transform node is not optional.
 		b.transformNode.RemoveOptional()
-		b.updateRequest.count++
+		b.updateRequest.Inc()
 	}
 }
 

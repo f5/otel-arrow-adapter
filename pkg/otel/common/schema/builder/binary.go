@@ -21,13 +21,14 @@ import (
 	"github.com/apache/arrow/go/v11/arrow/array"
 
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema"
+	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/update"
 )
 
 // BinaryBuilder is a wrapper around the arrow BinaryBuilder.
 type BinaryBuilder struct {
 	builder       array.Builder
 	transformNode *schema.TransformNode
-	updateRequest *SchemaUpdateRequest
+	updateRequest *update.SchemaUpdateRequest
 }
 
 // Append appends a value to the underlying builder and updates the
@@ -57,7 +58,7 @@ func (b *BinaryBuilder) Append(value []byte) {
 	if value != nil {
 		// If the builder is nil, then the transform node is not optional.
 		b.transformNode.RemoveOptional()
-		b.updateRequest.count++
+		b.updateRequest.Inc()
 	}
 }
 
@@ -75,7 +76,7 @@ func (b *BinaryBuilder) AppendNull() {
 type FixedSizeBinaryBuilder struct {
 	builder       array.Builder
 	transformNode *schema.TransformNode
-	updateRequest *SchemaUpdateRequest
+	updateRequest *update.SchemaUpdateRequest
 }
 
 // Append appends a value to the underlying builder and updates the
@@ -106,7 +107,7 @@ func (b *FixedSizeBinaryBuilder) Append(value []byte) {
 	if value != nil {
 		// If the builder is nil, then the transform node is not optional.
 		b.transformNode.RemoveOptional()
-		b.updateRequest.count++
+		b.updateRequest.Inc()
 	}
 }
 

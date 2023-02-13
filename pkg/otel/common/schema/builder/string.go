@@ -21,12 +21,13 @@ import (
 	"github.com/apache/arrow/go/v11/arrow/array"
 
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema"
+	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/update"
 )
 
 type StringBuilder struct {
 	builder       array.Builder
 	transformNode *schema.TransformNode
-	updateRequest *SchemaUpdateRequest
+	updateRequest *update.SchemaUpdateRequest
 }
 
 func (b *StringBuilder) AppendNull() {
@@ -61,6 +62,6 @@ func (b *StringBuilder) Append(value string) {
 
 	if value != "" {
 		b.transformNode.RemoveOptional()
-		b.updateRequest.count++
+		b.updateRequest.Inc()
 	}
 }

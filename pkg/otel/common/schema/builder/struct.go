@@ -24,13 +24,14 @@ import (
 	"github.com/apache/arrow/go/v11/arrow/array"
 
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema"
+	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/update"
 )
 
 type StructBuilder struct {
 	protoDataType *arrow.StructType
 	builder       *array.StructBuilder
 	transformNode *schema.TransformNode
-	updateRequest *SchemaUpdateRequest
+	updateRequest *update.SchemaUpdateRequest
 }
 
 func (sb *StructBuilder) protoDataTypeAndTransformNode(name string) (arrow.DataType, *schema.TransformNode) {
@@ -211,6 +212,6 @@ func (sb *StructBuilder) Append(data interface{}, fieldAppenders func()) {
 	if data != nil {
 		// If the builder is nil, then the transform node is not optional.
 		sb.transformNode.RemoveOptional()
-		sb.updateRequest.count++
+		sb.updateRequest.Inc()
 	}
 }

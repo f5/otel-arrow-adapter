@@ -27,6 +27,7 @@ import (
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/config"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/transform"
+	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/update"
 )
 
 // RecordBuilderExt is a wrapper/decorator around array.RecordBuilder that
@@ -53,19 +54,14 @@ type RecordBuilderExt struct {
 	dictTransformNodes map[string]*transform.DictionaryField
 
 	// The pending schema update requests.
-	updateRequest *SchemaUpdateRequest
-}
-
-// SchemaUpdateRequest is a request to update the schema of the underlying
-// array.RecordBuilder.
-type SchemaUpdateRequest struct {
-	count int
+	updateRequest *update.SchemaUpdateRequest
 }
 
 // NewRecordBuilderExt creates a new RecordBuilderExt from the given allocator
 // and a prototype schema.
 func NewRecordBuilderExt(allocator memory.Allocator, protoSchema *arrow.Schema, dictConfig *builder.DictionaryConfig) *RecordBuilderExt {
-	transformTree, dictTransformNodes := schema.NewTransformTreeFrom(protoSchema, dictConfig)
+	schemaUpdateRequest := update.NewSchemaUpdateRequest()
+	transformTree, dictTransformNodes := schema.NewTransformTreeFrom(protoSchema, dictConfig, schemaUpdateRequest)
 	s := schema.NewSchemaFrom(protoSchema, transformTree)
 	recordBuilder := array.NewRecordBuilder(allocator, s)
 
@@ -75,7 +71,7 @@ func NewRecordBuilderExt(allocator memory.Allocator, protoSchema *arrow.Schema, 
 		protoSchema:        protoSchema,
 		transformTree:      transformTree,
 		dictTransformNodes: dictTransformNodes,
-		updateRequest:      &SchemaUpdateRequest{count: 0},
+		updateRequest:      schemaUpdateRequest,
 	}
 }
 
@@ -166,11 +162,11 @@ func (rb *RecordBuilderExt) detectDictionaryOverflow(field *arrow.Field, column 
 }
 
 func (rb *RecordBuilderExt) IsSchemaUpToDate() bool {
-	return rb.updateRequest.count == 0
+	return rb.updateRequest.Count() == 0
 }
 
 func (rb *RecordBuilderExt) SchemaUpdateRequestReset() {
-	rb.updateRequest.count = 0
+	rb.updateRequest.Reset()
 }
 
 func (rb *RecordBuilderExt) builder(name string) array.Builder {
@@ -190,7 +186,7 @@ func (rb *RecordBuilderExt) UpdateSchema() {
 	s := schema.NewSchemaFrom(rb.protoSchema, rb.transformTree)
 	rb.recordBuilder.Release()
 	rb.recordBuilder = array.NewRecordBuilder(rb.allocator, s)
-	rb.updateRequest.count = 0
+	rb.updateRequest.Reset()
 }
 
 func (rb *RecordBuilderExt) protoDataTypeAndTransformNode(name string) (arrow.DataType, *schema.TransformNode) {

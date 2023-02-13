@@ -21,13 +21,14 @@ import (
 	"github.com/apache/arrow/go/v11/arrow/array"
 
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema"
+	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/update"
 )
 
 // Int32Builder is a wrapper around the arrow Int32Builder.
 type Int32Builder struct {
 	builder       *array.Int32Builder
 	transformNode *schema.TransformNode
-	updateRequest *SchemaUpdateRequest
+	updateRequest *update.SchemaUpdateRequest
 }
 
 // Append appends a value to the underlying builder and updates the
@@ -41,7 +42,7 @@ func (b *Int32Builder) Append(value int32) {
 	if value != 0 {
 		// If the builder is nil, then the transform node is not optional.
 		b.transformNode.RemoveOptional()
-		b.updateRequest.count++
+		b.updateRequest.Inc()
 	}
 }
 
@@ -59,7 +60,7 @@ func (b *Int32Builder) AppendNull() {
 type Int64Builder struct {
 	builder       *array.Int64Builder
 	transformNode *schema.TransformNode
-	updateRequest *SchemaUpdateRequest
+	updateRequest *update.SchemaUpdateRequest
 }
 
 // Append appends a value to the underlying builder and updates the
@@ -73,7 +74,7 @@ func (b *Int64Builder) Append(value int64) {
 	if value != 0 {
 		// If the builder is nil, then the transform node is not optional.
 		b.transformNode.RemoveOptional()
-		b.updateRequest.count++
+		b.updateRequest.Inc()
 	}
 }
 

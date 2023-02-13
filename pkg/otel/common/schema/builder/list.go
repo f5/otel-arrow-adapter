@@ -22,6 +22,7 @@ import (
 	"github.com/apache/arrow/go/v11/arrow/array"
 
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema"
+	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/update"
 )
 
 // ListBuilder is a wrapper around the arrow.ListBuilder.
@@ -29,7 +30,7 @@ type ListBuilder struct {
 	protoDataType *arrow.ListType
 	builder       *array.ListBuilder
 	transformNode *schema.TransformNode
-	updateRequest *SchemaUpdateRequest
+	updateRequest *update.SchemaUpdateRequest
 }
 
 func (lb *ListBuilder) valueProtoDataTypeAndTransformNode() (arrow.DataType, *schema.TransformNode) {
@@ -77,7 +78,7 @@ func (lb *ListBuilder) Reserve(numItems int) {
 	// If the builder is nil, then the transform node is not optional.
 	if numItems > 0 {
 		lb.transformNode.RemoveOptional()
-		lb.updateRequest.count++
+		lb.updateRequest.Inc()
 	}
 }
 

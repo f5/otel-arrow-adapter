@@ -22,7 +22,8 @@ import (
 
 	"github.com/apache/arrow/go/v11/arrow"
 
-	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/config"
+	cfg "github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/config"
+	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/update"
 )
 
 const DictIdKey = "dictId"
@@ -40,12 +41,15 @@ type DictionaryField struct {
 	indexMaxCard []uint64
 	indexTypes   []arrow.DataType
 	currentIndex int
+
+	schemaUpdateRequest *update.SchemaUpdateRequest
 }
 
-func NewDictionaryField(dictID string, config *builder.DictionaryConfig) *DictionaryField {
+func NewDictionaryField(dictID string, config *cfg.DictionaryConfig, schemaUpdateRequest *update.SchemaUpdateRequest) *DictionaryField {
 	df := DictionaryField{
-		DictID:      dictID,
-		cardinality: 0,
+		DictID:              dictID,
+		cardinality:         0,
+		schemaUpdateRequest: schemaUpdateRequest,
 	}
 	df.initIndices(config)
 	return &df
@@ -54,6 +58,13 @@ func NewDictionaryField(dictID string, config *builder.DictionaryConfig) *Dictio
 func (t *DictionaryField) SetCardinality(card uint64) {
 	t.cardinality = card
 	t.updateIndexType()
+}
+
+func (t *DictionaryField) IndexType() arrow.DataType {
+	if t.indexTypes == nil {
+		return nil
+	}
+	return t.indexTypes[t.currentIndex]
 }
 
 func (t *DictionaryField) Transform(field *arrow.Field) *arrow.Field {
@@ -73,7 +84,7 @@ func (t *DictionaryField) Transform(field *arrow.Field) *arrow.Field {
 			// Index type defined, so the dictionary is upgraded to the given
 			// index type.
 			dictType := &arrow.DictionaryType{
-				IndexType: t.indexTypes[t.currentIndex],
+				IndexType: t.IndexType(),
 				ValueType: field.Type.(*arrow.DictionaryType).ValueType,
 				Ordered:   false,
 			}
@@ -81,7 +92,7 @@ func (t *DictionaryField) Transform(field *arrow.Field) *arrow.Field {
 		default:
 			// Index type defined, so field is converted to a dictionary.
 			dictType := &arrow.DictionaryType{
-				IndexType: t.indexTypes[t.currentIndex],
+				IndexType: t.IndexType(),
 				ValueType: field.Type,
 				Ordered:   false,
 			}
@@ -95,6 +106,8 @@ func (t *DictionaryField) updateIndexType() {
 		return
 	}
 
+	currentIndex := t.currentIndex
+
 	for t.currentIndex < len(t.indexTypes) && t.cardinality > t.indexMaxCard[t.currentIndex] {
 		t.currentIndex++
 	}
@@ -102,10 +115,13 @@ func (t *DictionaryField) updateIndexType() {
 		t.indexTypes = nil
 		t.indexMaxCard = nil
 		t.currentIndex = 0
+		t.schemaUpdateRequest.Inc()
+	} else if t.currentIndex != currentIndex {
+		t.schemaUpdateRequest.Inc()
 	}
 }
 
-func (t *DictionaryField) initIndices(config *builder.DictionaryConfig) {
+func (t *DictionaryField) initIndices(config *cfg.DictionaryConfig) {
 	t.indexTypes = nil
 	t.indexMaxCard = nil
 	t.currentIndex = 0
@@ -114,15 +130,9 @@ func (t *DictionaryField) initIndices(config *builder.DictionaryConfig) {
 		return
 	}
 
-	if config.MaxCard <= math.MaxUint64 {
-		t.indexTypes = []arrow.DataType{arrow.PrimitiveTypes.Uint8, arrow.PrimitiveTypes.Uint16, arrow.PrimitiveTypes.Uint32, arrow.PrimitiveTypes.Uint64}
-		t.indexMaxCard = []uint64{math.MaxUint8, math.MaxUint16, math.MaxUint32, math.MaxUint64}
-		return
-	}
-
-	if config.MaxCard <= math.MaxUint32 {
-		t.indexTypes = []arrow.DataType{arrow.PrimitiveTypes.Uint8, arrow.PrimitiveTypes.Uint16, arrow.PrimitiveTypes.Uint32}
-		t.indexMaxCard = []uint64{math.MaxUint8, math.MaxUint16, math.MaxUint32}
+	if config.MaxCard <= math.MaxUint8 {
+		t.indexTypes = []arrow.DataType{arrow.PrimitiveTypes.Uint8}
+		t.indexMaxCard = []uint64{math.MaxUint8}
 		return
 	}
 
@@ -132,9 +142,15 @@ func (t *DictionaryField) initIndices(config *builder.DictionaryConfig) {
 		return
 	}
 
-	if config.MaxCard <= math.MaxUint8 {
-		t.indexTypes = []arrow.DataType{arrow.PrimitiveTypes.Uint8}
-		t.indexMaxCard = []uint64{math.MaxUint8}
+	if config.MaxCard <= math.MaxUint32 {
+		t.indexTypes = []arrow.DataType{arrow.PrimitiveTypes.Uint8, arrow.PrimitiveTypes.Uint16, arrow.PrimitiveTypes.Uint32}
+		t.indexMaxCard = []uint64{math.MaxUint8, math.MaxUint16, math.MaxUint32}
+		return
+	}
+
+	if config.MaxCard <= math.MaxUint64 {
+		t.indexTypes = []arrow.DataType{arrow.PrimitiveTypes.Uint8, arrow.PrimitiveTypes.Uint16, arrow.PrimitiveTypes.Uint32, arrow.PrimitiveTypes.Uint64}
+		t.indexMaxCard = []uint64{math.MaxUint8, math.MaxUint16, math.MaxUint32, math.MaxUint64}
 		return
 	}
 }

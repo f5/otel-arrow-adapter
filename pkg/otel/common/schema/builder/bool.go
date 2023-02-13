@@ -21,13 +21,14 @@ import (
 	"github.com/apache/arrow/go/v11/arrow/array"
 
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema"
+	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/update"
 )
 
 // MapBuilder is a wrapper around the arrow MapBuilder.
 type BooleanBuilder struct {
 	builder       *array.BooleanBuilder
 	transformNode *schema.TransformNode
-	updateRequest *SchemaUpdateRequest
+	updateRequest *update.SchemaUpdateRequest
 }
 
 // Append appends a value to the underlying builder and updates the
@@ -42,7 +43,7 @@ func (b *BooleanBuilder) Append(value bool) {
 		// If the builder is nil and value is true (default value being false),
 		// then the transform node is not optional.
 		b.transformNode.RemoveOptional()
-		b.updateRequest.count++
+		b.updateRequest.Inc()
 	}
 }
 

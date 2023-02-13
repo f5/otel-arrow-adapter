@@ -21,13 +21,14 @@ import (
 	"github.com/apache/arrow/go/v11/arrow/array"
 
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema"
+	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/update"
 )
 
 // Uint8Builder is a wrapper around the arrow array builder for uint8.
 type Uint8Builder struct {
 	builder       array.Builder
 	transformNode *schema.TransformNode
-	updateRequest *SchemaUpdateRequest
+	updateRequest *update.SchemaUpdateRequest
 }
 
 func (b *Uint8Builder) Append(value uint8) {
@@ -51,7 +52,7 @@ func (b *Uint8Builder) Append(value uint8) {
 	if value != 0 {
 		// If the builder is nil, then the transform node is not optional.
 		b.transformNode.RemoveOptional()
-		b.updateRequest.count++
+		b.updateRequest.Inc()
 	}
 }
 
@@ -79,7 +80,7 @@ func (b *Uint8Builder) AppendNonZero(value uint8) {
 	if value != 0 {
 		// If the builder is nil, then the transform node is not optional.
 		b.transformNode.RemoveOptional()
-		b.updateRequest.count++
+		b.updateRequest.Inc()
 	}
 }
 
@@ -87,7 +88,7 @@ func (b *Uint8Builder) AppendNonZero(value uint8) {
 type Uint32Builder struct {
 	builder       array.Builder
 	transformNode *schema.TransformNode
-	updateRequest *SchemaUpdateRequest
+	updateRequest *update.SchemaUpdateRequest
 }
 
 func (b *Uint32Builder) Append(value uint32) {
@@ -110,7 +111,7 @@ func (b *Uint32Builder) Append(value uint32) {
 	if value != 0 {
 		// If the builder is nil, then the transform node is not optional.
 		b.transformNode.RemoveOptional()
-		b.updateRequest.count++
+		b.updateRequest.Inc()
 	}
 }
 
@@ -138,7 +139,7 @@ func (b *Uint32Builder) AppendNonZero(value uint32) {
 	if value != 0 {
 		// If the builder is nil, then the transform node is not optional.
 		b.transformNode.RemoveOptional()
-		b.updateRequest.count++
+		b.updateRequest.Inc()
 	}
 }
 
@@ -153,7 +154,7 @@ func (b *Uint32Builder) AppendNull() {
 type Uint64Builder struct {
 	builder       array.Builder
 	transformNode *schema.TransformNode
-	updateRequest *SchemaUpdateRequest
+	updateRequest *update.SchemaUpdateRequest
 }
 
 func (b *Uint64Builder) Append(value uint64) {
@@ -176,7 +177,7 @@ func (b *Uint64Builder) Append(value uint64) {
 	if value != 0 {
 		// If the builder is nil, then the transform node is not optional.
 		b.transformNode.RemoveOptional()
-		b.updateRequest.count++
+		b.updateRequest.Inc()
 	}
 }
 
@@ -204,7 +205,7 @@ func (b *Uint64Builder) AppendNonZero(value uint64) {
 	if value != 0 {
 		// If the builder is nil, then the transform node is not optional.
 		b.transformNode.RemoveOptional()
-		b.updateRequest.count++
+		b.updateRequest.Inc()
 	}
 }
 

@@ -21,13 +21,14 @@ import (
 	"github.com/apache/arrow/go/v11/arrow/array"
 
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema"
+	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/update"
 )
 
 // Float64Builder is a wrapper around the arrow array builder for float64.
 type Float64Builder struct {
 	builder       *array.Float64Builder
 	transformNode *schema.TransformNode
-	updateRequest *SchemaUpdateRequest
+	updateRequest *update.SchemaUpdateRequest
 }
 
 // Append adds a value to the underlying builder or updates the transform node
@@ -41,7 +42,7 @@ func (b *Float64Builder) Append(value float64) {
 	if value != 0.0 {
 		// If the builder is nil, then the transform node is not optional.
 		b.transformNode.RemoveOptional()
-		b.updateRequest.count++
+		b.updateRequest.Inc()
 	}
 }
 
