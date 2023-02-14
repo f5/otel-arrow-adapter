@@ -34,6 +34,19 @@ type SparseUnionBuilder struct {
 	updateRequest *update.SchemaUpdateRequest
 }
 
+func (sub *SparseUnionBuilder) NewSparseUnionArray() *array.SparseUnion {
+	if sub.builder != nil {
+		return sub.builder.NewSparseUnionArray()
+	}
+	return nil
+}
+
+func (sub *SparseUnionBuilder) Release() {
+	if sub.builder != nil {
+		sub.builder.Release()
+	}
+}
+
 func (sub *SparseUnionBuilder) protoDataTypeAndTransformNode(childCode arrow.UnionTypeCode) (arrow.DataType, *schema.TransformNode) {
 	for i, code := range sub.protoDataType.TypeCodes() {
 		if code == childCode {

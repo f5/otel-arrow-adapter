@@ -198,13 +198,13 @@ func (sb *StructBuilder) BinaryBuilder(name string) *BinaryBuilder {
 	}
 }
 
-func (sb *StructBuilder) Append(data interface{}, fieldAppenders func()) {
+func (sb *StructBuilder) Append(data interface{}, fieldAppenders func() error) (err error) {
 	if sb.builder != nil {
 		if data == nil {
 			sb.builder.AppendNull()
 		} else {
 			sb.builder.Append(true)
-			fieldAppenders()
+			err = fieldAppenders()
 		}
 		return
 	}
@@ -213,5 +213,19 @@ func (sb *StructBuilder) Append(data interface{}, fieldAppenders func()) {
 		// If the builder is nil, then the transform node is not optional.
 		sb.transformNode.RemoveOptional()
 		sb.updateRequest.Inc()
+	}
+	return
+}
+
+func (sb *StructBuilder) NewStructArray() *array.Struct {
+	if sb.builder != nil {
+		return sb.builder.NewStructArray()
+	}
+	return nil
+}
+
+func (sb *StructBuilder) Release() {
+	if sb.builder != nil {
+		sb.builder.Release()
 	}
 }

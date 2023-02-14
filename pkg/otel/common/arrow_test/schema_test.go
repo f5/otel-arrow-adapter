@@ -669,7 +669,7 @@ func assertDictionary(t *testing.T, expectedIndex arrow.DataType, expectedItem a
 }
 
 func AppendAndJsonAssert(t *testing.T, data *RootData, rootBuilder *RootBuilder, expectedJson string) {
-	record := rootBuilder.AppendData(data)
+	record := rootBuilder.AppendData(t, data)
 	defer record.Release()
 	json, err := record.MarshalJSON()
 	if err != nil {
@@ -684,7 +684,7 @@ func AppendAndAssertSchema(
 	stringExpectedIndex arrow.DataType, stringExpectedValue arrow.DataType,
 	binaryExpectedIndex arrow.DataType, binaryExpectedValue arrow.DataType,
 ) {
-	record := rootBuilder.AppendData(data)
+	record := rootBuilder.AppendData(t, data)
 	defer record.Release()
 
 	schema := record.Schema()
@@ -882,9 +882,10 @@ func (b *RootBuilder) init() {
 	b.hmap = NewHMapBuilder(b.builder.MapBuilder(Map))
 }
 
-func (b *RootBuilder) AppendData(data *RootData) arrow.Record {
+func (b *RootBuilder) AppendData(t *testing.T, data *RootData) arrow.Record {
 	for {
-		b.Append(data)
+		err := b.Append(data)
+		assert.NoError(t, err)
 
 		record, err := b.recordBuilder.NewRecord()
 		if err == nil {
@@ -895,8 +896,8 @@ func (b *RootBuilder) AppendData(data *RootData) arrow.Record {
 	}
 }
 
-func (b *RootBuilder) Append(data *RootData) {
-	b.builder.Append(data, func() {
+func (b *RootBuilder) Append(data *RootData) error {
+	return b.builder.Append(data, func() error {
 		b.timestamp.Append(data.timestamp)
 		b.u8.AppendNonZero(data.u8)
 		b.u64.AppendNonZero(data.u64)
@@ -909,7 +910,7 @@ func (b *RootBuilder) Append(data *RootData) {
 		b.values.Append(data.values)
 		b.fixedSize8.Append(data.fixedSize8[:])
 		b.fixedSize16.Append(data.fixedSize16[:])
-		b.hmap.Append(data.hmap)
+		return b.hmap.Append(data.hmap)
 	})
 }
 
@@ -936,8 +937,8 @@ func NewHMapBuilder(builder *builder.MapBuilder) *HMapBuilder {
 	return b
 }
 
-func (b *HMapBuilder) Append(data map[string]ValueData) {
-	b.builder.Append(len(data), func() {
+func (b *HMapBuilder) Append(data map[string]ValueData) error {
+	return b.builder.Append(len(data), func() error {
 		for k, v := range data {
 			b.keys.Append(k)
 			if v.IsI64() {
@@ -963,6 +964,7 @@ func (b *HMapBuilder) Append(data map[string]ValueData) {
 				b.binary.AppendNull()
 			}
 		}
+		return nil
 	})
 }
 

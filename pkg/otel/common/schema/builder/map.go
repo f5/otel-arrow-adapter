@@ -33,13 +33,13 @@ type MapBuilder struct {
 	updateRequest *update.SchemaUpdateRequest
 }
 
-func (b *MapBuilder) Append(mapLen int, mapAppender func()) {
+func (b *MapBuilder) Append(mapLen int, mapAppender func() error) error {
 	if mapLen == 0 {
 		b.AppendNull()
-		return
+		return nil
 	}
 	b.Reserve(mapLen)
-	mapAppender()
+	return mapAppender()
 }
 
 // Reserve reserves space for the given number of entries in the map.
@@ -64,6 +64,20 @@ func (b *MapBuilder) AppendNull() {
 	if b.builder != nil {
 		b.builder.AppendNull()
 		return
+	}
+}
+
+func (b *MapBuilder) NewMapArray() *array.Map {
+	if b.builder != nil {
+		return b.builder.NewMapArray()
+	}
+
+	return nil
+}
+
+func (b *MapBuilder) Release() {
+	if b.builder != nil {
+		b.builder.Release()
 	}
 }
 
