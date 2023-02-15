@@ -24,6 +24,7 @@ import (
 	"github.com/apache/arrow/go/v11/arrow/array"
 	"github.com/apache/arrow/go/v11/arrow/memory"
 
+	carrow "github.com/f5/otel-arrow-adapter/pkg/arrow"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/config"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/transform"
@@ -55,6 +56,9 @@ type RecordBuilderExt struct {
 
 	// The pending schema update requests.
 	updateRequest *update.SchemaUpdateRequest
+
+	// The current schema ID.
+	schemaID string
 }
 
 // NewRecordBuilderExt creates a new RecordBuilderExt from the given allocator
@@ -63,6 +67,7 @@ func NewRecordBuilderExt(allocator memory.Allocator, protoSchema *arrow.Schema, 
 	schemaUpdateRequest := update.NewSchemaUpdateRequest()
 	transformTree, dictTransformNodes := schema.NewTransformTreeFrom(protoSchema, dictConfig, schemaUpdateRequest)
 	s := schema.NewSchemaFrom(protoSchema, transformTree)
+	schemaID := carrow.SchemaToID(s)
 	recordBuilder := array.NewRecordBuilder(allocator, s)
 
 	return &RecordBuilderExt{
@@ -72,7 +77,12 @@ func NewRecordBuilderExt(allocator memory.Allocator, protoSchema *arrow.Schema, 
 		transformTree:      transformTree,
 		dictTransformNodes: dictTransformNodes,
 		updateRequest:      schemaUpdateRequest,
+		schemaID:           schemaID,
 	}
+}
+
+func (rb *RecordBuilderExt) SchemaID() string {
+	return rb.schemaID
 }
 
 func (rb *RecordBuilderExt) Release() {
@@ -187,13 +197,119 @@ func (rb *RecordBuilderExt) UpdateSchema() {
 	// and transfer the dictionaries from the old record builder
 	// to the new one.
 	newRecBuilder := array.NewRecordBuilder(rb.allocator, s)
-	if err := schema.CopyDictValuesTo(rb.recordBuilder.Fields(), newRecBuilder.Fields()); err != nil {
+	if err := copyDictValuesTo(rb.recordBuilder, newRecBuilder); err != nil {
 		panic(err)
 	}
 	rb.recordBuilder.Release()
 	rb.recordBuilder = newRecBuilder
+	rb.schemaID = carrow.SchemaToID(s)
 
 	rb.updateRequest.Reset()
+}
+
+// CopyDictValuesTo recursively copy the dictionary values from the source
+// record builder to the destination record builder.
+func copyDictValuesTo(srcRecBuilder *array.RecordBuilder, destRecBuilder *array.RecordBuilder) error {
+	srcSchema := srcRecBuilder.Schema()
+	destSchema := destRecBuilder.Schema()
+
+	for srcFieldIdx, srcField := range srcSchema.Fields() {
+		srcBuilder := srcRecBuilder.Field(srcFieldIdx)
+		destFieldIndices := destSchema.FieldIndices(srcField.Name)
+		if len(destFieldIndices) == 1 {
+			destBuilder := destRecBuilder.Field(destFieldIndices[0])
+			if err := copyFieldDictValuesTo(srcBuilder, destBuilder); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+// Recursively copy the dictionary values from the source array builder to the
+// destination array builder.
+func copyFieldDictValuesTo(srcBuilder array.Builder, destBuilder array.Builder) (err error) {
+	srcDT := srcBuilder.Type()
+	destDT := destBuilder.Type()
+
+	if srcDT.ID() == arrow.DICTIONARY && destDT.ID() != arrow.DICTIONARY {
+		// The dictionary has been promoted to a string/binary field.
+		return nil
+	}
+
+	if srcDT.ID() != destDT.ID() {
+		panic("The source and destination record builders must have the same schema (except for dictionary indices)")
+	}
+
+	switch sBuilder := srcBuilder.(type) {
+	case *array.StructBuilder:
+		dBuilder, ok := destBuilder.(*array.StructBuilder)
+		if !ok {
+			return nil
+		}
+		for i := 0; i < sBuilder.NumField(); i++ {
+			srcSubField := srcDT.(*arrow.StructType).Fields()[i]
+			destSubFieldIdx, found := destDT.(*arrow.StructType).FieldIdx(srcSubField.Name)
+			if !found {
+				continue
+			}
+			if err = copyFieldDictValuesTo(sBuilder.FieldBuilder(i), dBuilder.FieldBuilder(destSubFieldIdx)); err != nil {
+				return
+			}
+		}
+	case *array.ListBuilder:
+		if err = copyFieldDictValuesTo(sBuilder.ValueBuilder(), destBuilder.(*array.ListBuilder).ValueBuilder()); err != nil {
+			return
+		}
+	case array.UnionBuilder:
+		srcTypeCodes := srcDT.(arrow.UnionType).TypeCodes()
+		destUnionDT := destDT.(arrow.UnionType)
+		destTypeCodes := destUnionDT.TypeCodes()
+		destChildIDs := destUnionDT.ChildIDs()
+		for srcChildID := 0; srcChildID < len(srcTypeCodes); srcChildID++ {
+			srcTypeCode := srcTypeCodes[srcChildID]
+			destChildID := -1
+			for i, destTypeCode := range destTypeCodes {
+				if srcTypeCode == destTypeCode {
+					destChildID = destChildIDs[i]
+					break
+				}
+			}
+			if destChildID == -1 {
+				continue
+			}
+			if err = copyFieldDictValuesTo(sBuilder.Child(srcChildID), destBuilder.(array.UnionBuilder).Child(destChildID)); err != nil {
+				return
+			}
+		}
+	case *array.MapBuilder:
+		if err = copyFieldDictValuesTo(sBuilder.KeyBuilder(), destBuilder.(*array.MapBuilder).KeyBuilder()); err != nil {
+			return err
+		}
+		if err = copyFieldDictValuesTo(sBuilder.ItemBuilder(), destBuilder.(*array.MapBuilder).ItemBuilder()); err != nil {
+			return err
+		}
+	case array.DictionaryBuilder:
+		srcDictArr := sBuilder.NewDictionaryArray()
+		defer srcDictArr.Release()
+		srcDict := srcDictArr.Dictionary()
+		defer srcDict.Release()
+		switch dict := srcDict.(type) {
+		case *array.String:
+			err = destBuilder.(*array.BinaryDictionaryBuilder).InsertStringDictValues(dict)
+		case *array.Binary:
+			err = destBuilder.(*array.BinaryDictionaryBuilder).InsertDictValues(dict)
+		case *array.FixedSizeBinary:
+			err = destBuilder.(*array.FixedSizeBinaryDictionaryBuilder).InsertDictValues(dict)
+		case *array.Int32:
+			err = destBuilder.(*array.Int32DictionaryBuilder).InsertDictValues(dict)
+		case *array.Uint32:
+			err = destBuilder.(*array.Uint32DictionaryBuilder).InsertDictValues(dict)
+		default:
+			panic("copyFieldDictValuesTo: unsupported dictionary type " + dict.DataType().Name())
+		}
+	}
+	return nil
 }
 
 func (rb *RecordBuilderExt) protoDataTypeAndTransformNode(name string) (arrow.DataType, *schema.TransformNode) {
@@ -359,7 +475,7 @@ func (rb *RecordBuilderExt) Int32Builder(name string) *Int32Builder {
 	b := rb.builder(name)
 
 	if b == nil {
-		return &Int32Builder{builder: b.(*array.Int32Builder), transformNode: transformNode, updateRequest: rb.updateRequest}
+		return &Int32Builder{builder: b, transformNode: transformNode, updateRequest: rb.updateRequest}
 	} else {
 		return &Int32Builder{builder: nil, transformNode: transformNode, updateRequest: rb.updateRequest}
 	}
@@ -374,7 +490,7 @@ func (rb *RecordBuilderExt) Int64Builder(name string) *Int64Builder {
 	b := rb.builder(name)
 
 	if b == nil {
-		return &Int64Builder{builder: b.(*array.Int64Builder), transformNode: transformNode, updateRequest: rb.updateRequest}
+		return &Int64Builder{builder: b, transformNode: transformNode, updateRequest: rb.updateRequest}
 	} else {
 		return &Int64Builder{builder: nil, transformNode: transformNode, updateRequest: rb.updateRequest}
 	}
@@ -418,7 +534,7 @@ func (rb *RecordBuilderExt) ListBuilder(name string) *ListBuilder {
 	protoDataType, transformNode := rb.protoDataTypeAndTransformNode(name)
 	b := rb.builder(name)
 
-	if b == nil {
+	if b != nil {
 		return &ListBuilder{protoDataType: protoDataType.(*arrow.ListType), builder: b.(*array.ListBuilder), transformNode: transformNode, updateRequest: rb.updateRequest}
 	} else {
 		return &ListBuilder{protoDataType: protoDataType.(*arrow.ListType), builder: nil, transformNode: transformNode, updateRequest: rb.updateRequest}

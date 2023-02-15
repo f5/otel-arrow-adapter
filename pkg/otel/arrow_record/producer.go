@@ -30,7 +30,9 @@ import (
 	colarspb "github.com/f5/otel-arrow-adapter/api/collector/arrow/v1"
 	acommon "github.com/f5/otel-arrow-adapter/pkg/otel/common/arrow"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema"
-	logsarrow "github.com/f5/otel-arrow-adapter/pkg/otel/logs/arrow"
+	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/builder"
+	builder2 "github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/config"
+	logsarrow "github.com/f5/otel-arrow-adapter/pkg/otel/logs/arrow2"
 	metricsarrow "github.com/f5/otel-arrow-adapter/pkg/otel/metrics/arrow"
 	tracesarrow "github.com/f5/otel-arrow-adapter/pkg/otel/traces/arrow"
 )
@@ -66,6 +68,8 @@ type Producer struct {
 	metricsBuilder *metricsarrow.MetricsBuilder
 	logsBuilder    *logsarrow.LogsBuilder
 	tracesBuilder  *tracesarrow.TracesBuilder
+
+	logsRecordBuilder *builder.RecordBuilderExt
 }
 
 type streamProducer struct {
@@ -123,12 +127,17 @@ func NewProducerWithOptions(options ...Option) *Producer {
 		schema.WithDictInitIndexSize(cfg.initIndexSize),
 		schema.WithDictLimitIndexSize(cfg.limitIndexSize))
 
+	// ToDo must be released
+	logsRecordBuilder := builder.NewRecordBuilderExt(cfg.pool, logsarrow.Schema, &builder2.DictionaryConfig{
+		MaxCard: math.MaxUint16,
+	})
+
 	metricsBuilder, err := metricsarrow.NewMetricsBuilder(metricsSchema)
 	if err != nil {
 		panic(err)
 	}
 
-	logsBuidler, err := logsarrow.NewLogsBuilder(logsSchema)
+	logsBuidler, err := logsarrow.NewLogsBuilder(logsRecordBuilder)
 	if err != nil {
 		panic(err)
 	}
@@ -151,6 +160,8 @@ func NewProducerWithOptions(options ...Option) *Producer {
 		metricsBuilder: metricsBuilder,
 		logsBuilder:    logsBuidler,
 		tracesBuilder:  tracesBuilder,
+
+		logsRecordBuilder: logsRecordBuilder,
 	}
 }
 
@@ -188,7 +199,7 @@ func (p *Producer) BatchArrowRecordsFromLogs(ls plog.Logs) (*colarspb.BatchArrow
 		return nil, err
 	}
 
-	schemaID := p.logsSchema.SchemaID()
+	schemaID := p.logsRecordBuilder.SchemaID()
 	rms := []*RecordMessage{NewLogsMessage(schemaID, record)}
 
 	bar, err := p.Produce(rms)
@@ -243,6 +254,7 @@ func (p *Producer) Close() error {
 	p.metricsBuilder.Release()
 	p.logsBuilder.Release()
 	p.tracesBuilder.Release()
+	p.logsRecordBuilder.Release()
 	for _, sp := range p.streamProducers {
 		if err := sp.ipcWriter.Close(); err != nil {
 			return err

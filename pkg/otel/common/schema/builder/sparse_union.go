@@ -112,7 +112,7 @@ func (sub *SparseUnionBuilder) Int32Builder(code arrow.UnionTypeCode) *Int32Buil
 	_, transformNode := sub.protoDataTypeAndTransformNode(code)
 
 	if builder != nil {
-		return &Int32Builder{builder: builder.(*array.Int32Builder), transformNode: transformNode, updateRequest: sub.updateRequest}
+		return &Int32Builder{builder: builder, transformNode: transformNode, updateRequest: sub.updateRequest}
 	} else {
 		return &Int32Builder{builder: nil, transformNode: transformNode, updateRequest: sub.updateRequest}
 	}
@@ -124,7 +124,7 @@ func (sub *SparseUnionBuilder) Int64Builder(code arrow.UnionTypeCode) *Int64Buil
 	_, transformNode := sub.protoDataTypeAndTransformNode(code)
 
 	if builder != nil {
-		return &Int64Builder{builder: builder.(*array.Int64Builder), transformNode: transformNode, updateRequest: sub.updateRequest}
+		return &Int64Builder{builder: builder, transformNode: transformNode, updateRequest: sub.updateRequest}
 	} else {
 		return &Int64Builder{builder: nil, transformNode: transformNode, updateRequest: sub.updateRequest}
 	}

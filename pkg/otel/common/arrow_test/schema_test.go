@@ -907,7 +907,9 @@ func (b *RootBuilder) Append(data *RootData) error {
 		b.u32.AppendNonZero(data.u32)
 		b.i32.Append(data.i32)
 		b.string.Append(data.string)
-		b.values.Append(data.values)
+		if err := b.values.Append(data.values); err != nil {
+			return err
+		}
 		b.fixedSize8.Append(data.fixedSize8[:])
 		b.fixedSize16.Append(data.fixedSize16[:])
 		return b.hmap.Append(data.hmap)
@@ -968,11 +970,12 @@ func (b *HMapBuilder) Append(data map[string]ValueData) error {
 	})
 }
 
-func (b *ValuesBuilder) Append(data []ValueData) {
-	b.builder.Append(len(data), func() {
+func (b *ValuesBuilder) Append(data []ValueData) error {
+	return b.builder.Append(len(data), func() error {
 		for _, v := range data {
 			b.values.Append(v)
 		}
+		return nil
 	})
 }
 

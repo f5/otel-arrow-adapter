@@ -26,7 +26,7 @@ import (
 
 // Int32Builder is a wrapper around the arrow Int32Builder.
 type Int32Builder struct {
-	builder       *array.Int32Builder
+	builder       array.Builder
 	transformNode *schema.TransformNode
 	updateRequest *update.SchemaUpdateRequest
 }
@@ -35,7 +35,19 @@ type Int32Builder struct {
 // transform node if the builder is nil.
 func (b *Int32Builder) Append(value int32) {
 	if b.builder != nil {
-		b.builder.Append(value)
+		switch builder := b.builder.(type) {
+		case *array.Int32Builder:
+			builder.Append(value)
+		case *array.Int32DictionaryBuilder:
+			if err := builder.Append(value); err != nil {
+				// Should never happen.
+				panic(err)
+			}
+		default:
+			// Should never happen.
+			panic("unknown builder type")
+		}
+
 		return
 	}
 
@@ -58,7 +70,7 @@ func (b *Int32Builder) AppendNull() {
 
 // Int64Builder is a wrapper around the arrow Int64Builder.
 type Int64Builder struct {
-	builder       *array.Int64Builder
+	builder       array.Builder
 	transformNode *schema.TransformNode
 	updateRequest *update.SchemaUpdateRequest
 }
@@ -67,7 +79,19 @@ type Int64Builder struct {
 // transform node if the builder is nil.
 func (b *Int64Builder) Append(value int64) {
 	if b.builder != nil {
-		b.builder.Append(value)
+		switch builder := b.builder.(type) {
+		case *array.Int64Builder:
+			builder.Append(value)
+		case *array.Int64DictionaryBuilder:
+			if err := builder.Append(value); err != nil {
+				// Should never happen.
+				panic(err)
+			}
+		default:
+			// Should never happen.
+			panic("unknown builder type")
+		}
+
 		return
 	}
 

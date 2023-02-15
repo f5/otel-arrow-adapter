@@ -1,201 +1,38 @@
-// Copyright The OpenTelemetry Authors
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//       http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+/*
+ * Copyright The OpenTelemetry Authors
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *        http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ */
 
-package arrow
+package arrow2
 
 import (
 	"fmt"
-	"sort"
 
 	"github.com/apache/arrow/go/v11/arrow"
 	"github.com/apache/arrow/go/v11/arrow/array"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 )
 
-// This file contains a set of utility functions to help extract data from Arrow records, arrays, structs, ...
-
-// Constants used to create schema id signature.
-
-const BoolSig = "Bol"
-const U8Sig = "U8"
-const U16Sig = "U16"
-const U32Sig = "U32"
-const U64Sig = "U64"
-const I8Sig = "I8"
-const I16Sig = "I16"
-const I32Sig = "I32"
-const I64Sig = "I64"
-const F32Sig = "F32"
-const F64Sig = "F64"
-const BinarySig = "Bin"
-const FixedSizeBinarySig = "FSB"
-const StringSig = "Str"
-const Timestamp = "Tns" // Timestamp in nanoseconds.
-const DictionarySig = "Dic"
-const DenseUnionSig = "DU"
-const SparseUnionSig = "SU"
-const MapSig = "Map"
-
-// SortableField is a wrapper around arrow.Field that implements sort.Interface.
-type SortableField struct {
-	name  *string
-	field *arrow.Field
-}
-
-type Fields []SortableField
-
-func (d Fields) Less(i, j int) bool {
-	return *d[i].name < *d[j].name
-}
-func (d Fields) Len() int      { return len(d) }
-func (d Fields) Swap(i, j int) { d[i], d[j] = d[j], d[i] }
-
-// SchemaToID creates a unique id for a schema.
-// Fields are sorted by name before creating the id (done at each nested level).
-func SchemaToID(schema *arrow.Schema) string {
-	schemaID := ""
-	fields := sortedFields(schema.Fields())
-
-	for i := range fields {
-		field := &fields[i]
-		if i != 0 {
-			schemaID += ","
-		}
-		schemaID += FieldToID(field.field)
-	}
-
-	return schemaID
-}
-
-func sortedFields(fields []arrow.Field) []SortableField {
-	sortedField := make([]SortableField, len(fields))
-	for i := 0; i < len(fields); i++ {
-		sortedField[i] = SortableField{
-			name:  &fields[i].Name,
-			field: &fields[i],
-		}
-	}
-	sort.Sort(Fields(sortedField))
-
-	return sortedField
-}
-
-// FieldToID creates a unique id for a field.
-func FieldToID(field *arrow.Field) string {
-	return field.Name + ":" + DataTypeToID(field.Type)
-}
-
-// DataTypeToID creates a unique id for a data type.
-func DataTypeToID(dt arrow.DataType) string {
-	id := ""
-	switch t := dt.(type) {
-	case *arrow.BooleanType:
-		id += BoolSig
-	case *arrow.Int8Type:
-		id += I8Sig
-	case *arrow.Int16Type:
-		id += I16Sig
-	case *arrow.Int32Type:
-		id += I32Sig
-	case *arrow.Int64Type:
-		id += I64Sig
-	case *arrow.Uint8Type:
-		id += U8Sig
-	case *arrow.Uint16Type:
-		id += U16Sig
-	case *arrow.Uint32Type:
-		id += U32Sig
-	case *arrow.Uint64Type:
-		id += U64Sig
-	case *arrow.Float32Type:
-		id += F32Sig
-	case *arrow.Float64Type:
-		id += F64Sig
-	case *arrow.StringType:
-		id += StringSig
-	case *arrow.BinaryType:
-		id += BinarySig
-	case *arrow.TimestampType:
-		id += Timestamp
-	case *arrow.StructType:
-		id += "{"
-		fields := sortedFields(t.Fields())
-
-		for i := range fields {
-			if i > 0 {
-				id += ","
-			}
-			id += FieldToID(fields[i].field)
-		}
-		id += "}"
-	case *arrow.ListType:
-		id += "["
-
-		elemField := t.ElemField()
-
-		id += DataTypeToID(elemField.Type)
-		id += "]"
-	case *arrow.DictionaryType:
-		id += DictionarySig + "<"
-		id += DataTypeToID(t.IndexType)
-		id += ","
-		id += DataTypeToID(t.ValueType)
-		id += ">"
-	case *arrow.DenseUnionType:
-		id += DenseUnionSig + "{"
-		fields := sortedFields(t.Fields())
-
-		for i := range fields {
-			if i > 0 {
-				id += ","
-			}
-			id += FieldToID(fields[i].field)
-		}
-
-		id += "}"
-	case *arrow.SparseUnionType:
-		id += SparseUnionSig + "{"
-		fields := sortedFields(t.Fields())
-
-		for i := range fields {
-			if i > 0 {
-				id += ","
-			}
-			id += FieldToID(fields[i].field)
-		}
-
-		id += "}"
-	case *arrow.MapType:
-		id += MapSig + "<"
-		id += DataTypeToID(t.KeyType())
-		id += ","
-		id += DataTypeToID(t.ItemType())
-		id += ">"
-	case *arrow.FixedSizeBinaryType:
-		id += fmt.Sprintf("%s<%d>", FixedSizeBinarySig, t.ByteWidth)
-	default:
-		panic("unsupported data type " + dt.String())
-	}
-
-	return id
-}
-
-// ListOfStructsFieldIDFromSchema returns the field id of a list of structs field from an Arrow schema.
+// ListOfStructsFieldIDFromSchema returns the field id of a list of structs
+// field from an Arrow schema or -1 for an unknown field.
+//
+// An error is returned if the field is not a list of structs.
 func ListOfStructsFieldIDFromSchema(schema *arrow.Schema, fieldName string) (int, *arrow.StructType, error) {
 	ids := schema.FieldIndices(fieldName)
 	if len(ids) == 0 {
-		return 0, nil, fmt.Errorf("no field %q in schema", fieldName)
+		return -1, nil, nil
 	}
 	if len(ids) > 1 {
 		return 0, nil, fmt.Errorf("more than one field %q in schema", fieldName)
@@ -212,11 +49,18 @@ func ListOfStructsFieldIDFromSchema(schema *arrow.Schema, fieldName string) (int
 	}
 }
 
-// ListOfStructsFieldIDFromStruct returns the field id of a list of structs field from an Arrow struct.
+// ListOfStructsFieldIDFromStruct returns the field id of a list of structs
+// field from an Arrow struct or -1 if the field is not found.
+//
+// An error is returned if the field is not a list of structs.
 func ListOfStructsFieldIDFromStruct(dt *arrow.StructType, fieldName string) (int, *arrow.StructType, error) {
+	if dt == nil {
+		return -1, nil, nil
+	}
+
 	id, ok := dt.FieldIdx(fieldName)
 	if !ok {
-		return 0, nil, fmt.Errorf("field %q not found", fieldName)
+		return -1, nil, nil
 	}
 
 	if lt, ok := dt.Field(id).Type.(*arrow.ListType); ok {
@@ -230,11 +74,33 @@ func ListOfStructsFieldIDFromStruct(dt *arrow.StructType, fieldName string) (int
 	}
 }
 
-// StructFieldIDFromStruct returns the field id of a struct field from an Arrow struct.
-func StructFieldIDFromStruct(dt *arrow.StructType, fieldName string) (int, *arrow.StructType, error) {
+// FieldIDFromStruct returns the field id of a named field from an Arrow struct
+// or -1 for an unknown field.
+func FieldIDFromStruct(dt *arrow.StructType, fieldName string) (int, *arrow.DataType) {
+	if dt == nil {
+		return -1, nil
+	}
+
 	id, found := dt.FieldIdx(fieldName)
 	if !found {
-		return 0, nil, fmt.Errorf("no field %q in struct type", fieldName)
+		return -1, nil
+	}
+	field := dt.Field(id)
+	return id, &field.Type
+}
+
+// StructFieldIDFromStruct returns the field id of a struct field from an Arrow
+// struct or -1 for an unknown field.
+//
+// An error is returned if the field is not a struct.
+func StructFieldIDFromStruct(dt *arrow.StructType, fieldName string) (int, *arrow.StructType, error) {
+	if dt == nil {
+		return -1, nil, nil
+	}
+
+	id, found := dt.FieldIdx(fieldName)
+	if !found {
+		return -1, nil, nil
 	}
 	if st, ok := dt.Field(id).Type.(*arrow.StructType); ok {
 		return id, st, nil
@@ -243,23 +109,17 @@ func StructFieldIDFromStruct(dt *arrow.StructType, fieldName string) (int, *arro
 	}
 }
 
-// FieldIDFromStruct returns the field id of a named field from an Arrow struct.
-func FieldIDFromStruct(dt *arrow.StructType, fieldName string) (int, *arrow.DataType, error) {
-	id, found := dt.FieldIdx(fieldName)
-	if !found {
-		return -1, nil, fmt.Errorf("no field %q in struct type", fieldName)
+// StringFromStruct returns the string value for a specific row in an Arrow struct.
+func StringFromStruct(arr arrow.Array, row int, id int) (string, error) {
+	structArr, ok := arr.(*array.Struct)
+	if !ok {
+		return "", fmt.Errorf("array id %d is not of type struct", id)
 	}
-	field := dt.Field(id)
-	return id, &field.Type, nil
-}
-
-// OptionalFieldIDFromStruct returns the field id of a named field from an Arrow struct or -1 if the field is unknown.
-func OptionalFieldIDFromStruct(dt *arrow.StructType, fieldName string) (id int) {
-	id, found := dt.FieldIdx(fieldName)
-	if !found {
-		id = -1
+	if structArr != nil {
+		return StringFromArray(structArr.Field(id), row)
+	} else {
+		return "", fmt.Errorf("column array is not of type struct")
 	}
-	return
 }
 
 // ListOfStructs is a wrapper around an Arrow list of structs used to expose utility functions.
@@ -302,37 +162,6 @@ func ListOfStructsFromRecord(record arrow.Record, fieldID int, row int) (*ListOf
 	}
 }
 
-// ListOfStructsFromStruct return a ListOfStructs from a struct field.
-func ListOfStructsFromStruct(parent *array.Struct, fieldID int, row int) (*ListOfStructs, error) {
-	arr := parent.Field(fieldID)
-	if listArr, ok := arr.(*array.List); ok {
-		if listArr.IsNull(row) {
-			return nil, nil
-		}
-
-		switch structArr := listArr.ListValues().(type) {
-		case *array.Struct:
-			dt, ok := structArr.DataType().(*arrow.StructType)
-			if !ok {
-				return nil, fmt.Errorf("field id %d is not a list of structs", fieldID)
-			}
-			start := int(listArr.Offsets()[row])
-			end := int(listArr.Offsets()[row+1])
-
-			return &ListOfStructs{
-				dt:    dt,
-				arr:   structArr,
-				start: start,
-				end:   end,
-			}, nil
-		default:
-			return nil, fmt.Errorf("field id %d is not a list of structs", fieldID)
-		}
-	} else {
-		return nil, fmt.Errorf("field id %d is not a list", fieldID)
-	}
-}
-
 // Start returns the start index of the list of structs.
 func (los *ListOfStructs) Start() int {
 	return los.start
@@ -364,32 +193,52 @@ func (los *ListOfStructs) FieldByID(id int) arrow.Array {
 	return los.arr.Field(id)
 }
 
-// StringFieldByID returns the string value of a field id for a specific row.
+// StringFieldByID returns the string value of a field id for a specific row
+// or empty string if the field doesn't exist.
 func (los *ListOfStructs) StringFieldByID(fieldID int, row int) (string, error) {
+	if fieldID == -1 {
+		return "", nil
+	}
 	column := los.arr.Field(fieldID)
 	return StringFromArray(column, row)
 }
 
-// U32FieldByID returns the uint32 value of a field id for a specific row.
+// U32FieldByID returns the uint32 value of a field id for a specific row or 0
+// if the field doesn't exist.
 func (los *ListOfStructs) U32FieldByID(fieldID int, row int) (uint32, error) {
+	if fieldID == -1 {
+		return 0, nil
+	}
 	column := los.arr.Field(fieldID)
 	return U32FromArray(column, row)
 }
 
-// U64FieldByID returns the uint64 value of a field id for a specific row.
+// U64FieldByID returns the uint64 value of a field id for a specific row or 0
+// if the field doesn't exist.
 func (los *ListOfStructs) U64FieldByID(fieldID int, row int) (uint64, error) {
+	if fieldID == -1 {
+		return 0, nil
+	}
 	column := los.arr.Field(fieldID)
 	return U64FromArray(column, row)
 }
 
-// TimestampFieldByID returns the timestamp value of a field id for a specific row.
+// TimestampFieldByID returns the timestamp value of a field id for a specific
+// row or a zero timestamp if the field doesn't exist.
 func (los *ListOfStructs) TimestampFieldByID(fieldID int, row int) (arrow.Timestamp, error) {
+	if fieldID == -1 {
+		return arrow.Timestamp(0), nil
+	}
 	column := los.arr.Field(fieldID)
 	return TimestampFromArray(column, row)
 }
 
-// OptionalTimestampFieldByID returns the timestamp value of a field id for a specific row or nil if the field is null.
+// OptionalTimestampFieldByID returns the timestamp value of a field id for a
+// specific row or nil if the field is null.
 func (los *ListOfStructs) OptionalTimestampFieldByID(fieldID int, row int) *pcommon.Timestamp {
+	if fieldID == -1 {
+		return nil
+	}
 	column := los.arr.Field(fieldID)
 	if column.IsNull(row) {
 		return nil
@@ -741,8 +590,12 @@ func U32FromArray(arr arrow.Array, row int) (uint32, error) {
 	}
 }
 
-// U32FromStruct returns the uint32 value for a specific row in an Arrow struct.
+// U32FromStruct returns the uint32 value for a specific row in an Arrow struct
+// or 0 if the field doesn't exist.
 func U32FromStruct(structArr *array.Struct, row int, fieldID int) (uint32, error) {
+	if fieldID == -1 {
+		return 0, nil
+	}
 	return U32FromArray(structArr.Field(fieldID), row)
 }
 
@@ -806,32 +659,6 @@ func StringFromArray(arr arrow.Array, row int) (string, error) {
 		default:
 			return "", fmt.Errorf("column is not of type string")
 		}
-	}
-}
-
-// StringFromStruct returns the string value for a specific row in an Arrow struct.
-func StringFromStruct(arr arrow.Array, row int, id int) (string, error) {
-	structArr, ok := arr.(*array.Struct)
-	if !ok {
-		return "", fmt.Errorf("array id %d is not of type struct", id)
-	}
-	if structArr != nil {
-		return StringFromArray(structArr.Field(id), row)
-	} else {
-		return "", fmt.Errorf("column array is not of type struct")
-	}
-}
-
-// I32FromStruct returns the int32 value for a specific row in an Arrow struct.
-func I32FromStruct(arr arrow.Array, row int, id int) (int32, error) {
-	structArr, ok := arr.(*array.Struct)
-	if !ok {
-		return 0, fmt.Errorf("array id %d is not of type struct", id)
-	}
-	if structArr != nil {
-		return I32FromArray(structArr.Field(id), row)
-	} else {
-		return 0, fmt.Errorf("column array is not of type struct")
 	}
 }
 

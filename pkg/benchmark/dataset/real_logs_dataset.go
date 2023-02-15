@@ -76,6 +76,11 @@ func (d *RealLogsDataset) Len() int {
 	return len(d.logs)
 }
 
+// Resize resizes the dataset to the specified size.
+func (d *RealLogsDataset) Resize(size int) {
+	d.logs = d.logs[:size]
+}
+
 // Logs returns a subset of log records from the original dataset.
 func (d *RealLogsDataset) Logs(offset, size int) []plog.Logs {
 	resourceLogs := map[plog.ResourceLogs]map[plog.ScopeLogs][]plog.LogRecord{}

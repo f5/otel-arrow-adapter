@@ -71,12 +71,16 @@ func main() {
 
 		// Compare the performance between the standard OTLP representation and the OTLP Arrow representation.
 		profiler := benchmark.NewProfiler([]int{10, 100, 1000, 2000, 5000, 10000}, "output/logs_benchmark.log", 2)
+		//profiler := benchmark.NewProfiler([]int{10}, "output/logs_benchmark.log", 2)
 
 		// Build dataset from CSV file or from OTLP protobuf file
 		if strings.HasSuffix(inputFile, ".csv") {
 			ds = CsvToLogsDataset(inputFile)
 		} else if strings.HasSuffix(inputFile, ".pb") {
-			ds = dataset.NewRealLogsDataset(inputFiles[i])
+			// ToDo Remove
+			rds := dataset.NewRealLogsDataset(inputFiles[i])
+			//rds.Resize(10)
+			ds = rds
 		} else {
 			log.Fatal("Unsupported input file format (only .csv and .pb are supported)")
 		}

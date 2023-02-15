@@ -154,6 +154,16 @@ func newTransformNodeFrom(
 			dictTransformNodes,
 			schemaUpdateRequest,
 		))
+
+		// ToDo remove this workaround once the arrow library supports map types with metadata (see https://github.com/apache/arrow/issues/34186).
+		if keyField.Type == arrow.BinaryTypes.String {
+			dictId := strconv.Itoa(len(dictTransformNodes))
+			dictTransform := transform2.NewDictionaryField(dictId, dictConfig, schemaUpdateRequest)
+			dictTransformNodes[dictId] = dictTransform
+
+			node.Children[0].transforms = []FieldTransform{dictTransform}
+		}
+
 		valueField := dt.ItemField()
 		node.Children = append(node.Children, newTransformNodeFrom(
 			&valueField,
@@ -161,6 +171,22 @@ func newTransformNodeFrom(
 			dictTransformNodes,
 			schemaUpdateRequest,
 		))
+
+		// ToDo remove this workaround once the arrow library supports map types with metadata (see https://github.com/apache/arrow/issues/34186).
+		if valueField.Type == arrow.BinaryTypes.String {
+			dictId := strconv.Itoa(len(dictTransformNodes))
+			dictTransform := transform2.NewDictionaryField(dictId, dictConfig, schemaUpdateRequest)
+			dictTransformNodes[dictId] = dictTransform
+
+			node.Children[1].transforms = []FieldTransform{dictTransform}
+		}
+		if valueField.Type == arrow.BinaryTypes.Binary {
+			dictId := strconv.Itoa(len(dictTransformNodes))
+			dictTransform := transform2.NewDictionaryField(dictId, dictConfig, schemaUpdateRequest)
+			dictTransformNodes[dictId] = dictTransform
+
+			node.Children[1].transforms = []FieldTransform{dictTransform}
+		}
 	}
 
 	return &node

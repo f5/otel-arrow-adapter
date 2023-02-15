@@ -45,14 +45,14 @@ func (lb *ListBuilder) valueBuilder() array.Builder {
 	}
 }
 
-func (lb *ListBuilder) Append(itemCount int, itemsAppender func()) {
+func (lb *ListBuilder) Append(itemCount int, itemsAppender func() error) error {
 	if itemCount == 0 {
 		lb.AppendNull()
-		return
+		return nil
 	}
 
 	lb.Reserve(itemCount)
-	itemsAppender()
+	return itemsAppender()
 }
 
 // AppendNull adds a null list to the underlying builder. If the builder is
@@ -93,5 +93,16 @@ func (lb *ListBuilder) SparseUnionBuilder() *SparseUnionBuilder {
 		return &SparseUnionBuilder{protoDataType: protoDataType.(*arrow.SparseUnionType), builder: builder.(*array.SparseUnionBuilder), transformNode: transformNode, updateRequest: lb.updateRequest}
 	} else {
 		return &SparseUnionBuilder{protoDataType: protoDataType.(*arrow.SparseUnionType), builder: nil, transformNode: transformNode, updateRequest: lb.updateRequest}
+	}
+}
+
+func (lb *ListBuilder) StructBuilder() *StructBuilder {
+	builder := lb.valueBuilder()
+	protoDataType, transformNode := lb.valueProtoDataTypeAndTransformNode()
+
+	if builder != nil {
+		return &StructBuilder{protoDataType: protoDataType.(*arrow.StructType), builder: builder.(*array.StructBuilder), transformNode: transformNode, updateRequest: lb.updateRequest}
+	} else {
+		return &StructBuilder{protoDataType: protoDataType.(*arrow.StructType), builder: nil, transformNode: transformNode, updateRequest: lb.updateRequest}
 	}
 }

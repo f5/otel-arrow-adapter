@@ -18,8 +18,8 @@ import (
 	"github.com/apache/arrow/go/v11/arrow"
 	"go.opentelemetry.io/collector/pdata/plog"
 
-	arrowutils "github.com/f5/otel-arrow-adapter/pkg/arrow"
-	"github.com/f5/otel-arrow-adapter/pkg/otel/common/otlp"
+	arrowutils "github.com/f5/otel-arrow-adapter/pkg/arrow2"
+	otlp "github.com/f5/otel-arrow-adapter/pkg/otel/common/otlp2"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/constants"
 )
 
@@ -31,15 +31,16 @@ type ScopeLogsIds struct {
 }
 
 func NewScopeLogsIds(dt *arrow.StructType) (*ScopeLogsIds, error) {
+	if dt == nil {
+		return nil, nil
+	}
+
 	id, scopeSpansDT, err := arrowutils.ListOfStructsFieldIDFromStruct(dt, constants.ScopeLogs)
 	if err != nil {
 		return nil, err
 	}
 
-	schemaId, _, err := arrowutils.FieldIDFromStruct(scopeSpansDT, constants.SchemaUrl)
-	if err != nil {
-		return nil, err
-	}
+	schemaId, _ := arrowutils.FieldIDFromStruct(scopeSpansDT, constants.SchemaUrl)
 
 	scopeIds, err := otlp.NewScopeIds(scopeSpansDT)
 	if err != nil {

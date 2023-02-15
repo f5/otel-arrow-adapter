@@ -46,6 +46,10 @@ func (sb *StructBuilder) protoDataTypeAndTransformNode(name string) (arrow.DataT
 }
 
 func (sb *StructBuilder) getBuilder(name string) array.Builder {
+	if sb.builder == nil {
+		return nil
+	}
+
 	structType := sb.builder.Type().(*arrow.StructType)
 	fieldIdx, found := structType.FieldIdx(name)
 
@@ -115,7 +119,7 @@ func (sb *StructBuilder) Int32Builder(name string) *Int32Builder {
 	_, transformNode := sb.protoDataTypeAndTransformNode(name)
 
 	if int32Builder != nil {
-		return &Int32Builder{builder: int32Builder.(*array.Int32Builder), transformNode: transformNode, updateRequest: sb.updateRequest}
+		return &Int32Builder{builder: int32Builder, transformNode: transformNode, updateRequest: sb.updateRequest}
 	} else {
 		return &Int32Builder{builder: nil, transformNode: transformNode, updateRequest: sb.updateRequest}
 	}
@@ -126,7 +130,7 @@ func (sb *StructBuilder) Int64Builder(name string) *Int64Builder {
 	_, transformNode := sb.protoDataTypeAndTransformNode(name)
 
 	if int64Builder != nil {
-		return &Int64Builder{builder: int64Builder.(*array.Int64Builder), transformNode: transformNode, updateRequest: sb.updateRequest}
+		return &Int64Builder{builder: int64Builder, transformNode: transformNode, updateRequest: sb.updateRequest}
 	} else {
 		return &Int64Builder{builder: nil, transformNode: transformNode, updateRequest: sb.updateRequest}
 	}
@@ -187,6 +191,17 @@ func (sb *StructBuilder) MapBuilder(name string) *MapBuilder {
 	}
 }
 
+func (sb *StructBuilder) SparseUnionBuilder(name string) *SparseUnionBuilder {
+	sparseUnionBuilder := sb.getBuilder(name)
+	protoDataType, transformNode := sb.protoDataTypeAndTransformNode(name)
+
+	if sparseUnionBuilder != nil {
+		return &SparseUnionBuilder{protoDataType: protoDataType.(*arrow.SparseUnionType), builder: sparseUnionBuilder.(*array.SparseUnionBuilder), transformNode: transformNode, updateRequest: sb.updateRequest}
+	} else {
+		return &SparseUnionBuilder{protoDataType: protoDataType.(*arrow.SparseUnionType), builder: nil, transformNode: transformNode, updateRequest: sb.updateRequest}
+	}
+}
+
 func (sb *StructBuilder) BinaryBuilder(name string) *BinaryBuilder {
 	binaryBuilder := sb.getBuilder(name)
 	_, transformNode := sb.protoDataTypeAndTransformNode(name)
@@ -204,8 +219,9 @@ func (sb *StructBuilder) Append(data interface{}, fieldAppenders func() error) (
 			sb.builder.AppendNull()
 		} else {
 			sb.builder.Append(true)
-			err = fieldAppenders()
 		}
+
+		err = fieldAppenders()
 		return
 	}
 
@@ -213,6 +229,8 @@ func (sb *StructBuilder) Append(data interface{}, fieldAppenders func() error) (
 		// If the builder is nil, then the transform node is not optional.
 		sb.transformNode.RemoveOptional()
 		sb.updateRequest.Inc()
+
+		err = fieldAppenders()
 	}
 	return
 }

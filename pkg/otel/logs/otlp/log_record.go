@@ -22,8 +22,8 @@ import (
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/plog"
 
-	arrowutils "github.com/f5/otel-arrow-adapter/pkg/arrow"
-	"github.com/f5/otel-arrow-adapter/pkg/otel/common/otlp"
+	arrowutils "github.com/f5/otel-arrow-adapter/pkg/arrow2"
+	otlp "github.com/f5/otel-arrow-adapter/pkg/otel/common/otlp2"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/constants"
 )
 
@@ -47,55 +47,21 @@ func NewLogRecordIds(scopeLogsDT *arrow.StructType) (*LogRecordIds, error) {
 		return nil, err
 	}
 
-	timeUnixNano, _, err := arrowutils.FieldIDFromStruct(logDT, constants.TimeUnixNano)
-	if err != nil {
-		return nil, err
-	}
-
-	observedTimeUnixNano, _, err := arrowutils.FieldIDFromStruct(logDT, constants.ObservedTimeUnixNano)
-	if err != nil {
-		return nil, err
-	}
-
-	traceID, _, err := arrowutils.FieldIDFromStruct(logDT, constants.TraceId)
-	if err != nil {
-		return nil, err
-	}
-
-	spanID, _, err := arrowutils.FieldIDFromStruct(logDT, constants.SpanId)
-	if err != nil {
-		return nil, err
-	}
-
-	severityNumber, _, err := arrowutils.FieldIDFromStruct(logDT, constants.SeverityNumber)
-	if err != nil {
-		return nil, err
-	}
-
-	severityText, _, err := arrowutils.FieldIDFromStruct(logDT, constants.SeverityText)
-	if err != nil {
-		return nil, err
-	}
-
-	body, _, err := arrowutils.FieldIDFromStruct(logDT, constants.Body)
-	if err != nil {
-		return nil, err
-	}
+	timeUnixNano, _ := arrowutils.FieldIDFromStruct(logDT, constants.TimeUnixNano)
+	observedTimeUnixNano, _ := arrowutils.FieldIDFromStruct(logDT, constants.ObservedTimeUnixNano)
+	traceID, _ := arrowutils.FieldIDFromStruct(logDT, constants.TraceId)
+	spanID, _ := arrowutils.FieldIDFromStruct(logDT, constants.SpanId)
+	severityNumber, _ := arrowutils.FieldIDFromStruct(logDT, constants.SeverityNumber)
+	severityText, _ := arrowutils.FieldIDFromStruct(logDT, constants.SeverityText)
+	body, _ := arrowutils.FieldIDFromStruct(logDT, constants.Body)
 
 	attributes, err := otlp.NewAttributeIds(logDT)
 	if err != nil {
 		return nil, err
 	}
 
-	droppedAttributesCount, _, err := arrowutils.FieldIDFromStruct(logDT, constants.DroppedAttributesCount)
-	if err != nil {
-		return nil, err
-	}
-
-	flags, _, err := arrowutils.FieldIDFromStruct(logDT, constants.Flags)
-	if err != nil {
-		return nil, err
-	}
+	droppedAttributesCount, _ := arrowutils.FieldIDFromStruct(logDT, constants.DroppedAttributesCount)
+	flags, _ := arrowutils.FieldIDFromStruct(logDT, constants.Flags)
 
 	return &LogRecordIds{
 		Id:                   id,
