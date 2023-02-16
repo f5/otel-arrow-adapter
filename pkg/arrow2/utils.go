@@ -111,6 +111,10 @@ func StructFieldIDFromStruct(dt *arrow.StructType, fieldName string) (int, *arro
 
 // StringFromStruct returns the string value for a specific row in an Arrow struct.
 func StringFromStruct(arr arrow.Array, row int, id int) (string, error) {
+	if id == -1 {
+		return "", nil
+	}
+
 	structArr, ok := arr.(*array.Struct)
 	if !ok {
 		return "", fmt.Errorf("array id %d is not of type struct", id)
@@ -254,18 +258,27 @@ func (los *ListOfStructs) OptionalTimestampFieldByID(fieldID int, row int) *pcom
 
 // I32FieldByID returns the int32 value of a field id for a specific row.
 func (los *ListOfStructs) I32FieldByID(fieldID int, row int) (int32, error) {
+	if fieldID == -1 {
+		return 0, nil
+	}
 	column := los.arr.Field(fieldID)
 	return I32FromArray(column, row)
 }
 
 // I64FieldByID returns the int64 value of a field id for a specific row.
 func (los *ListOfStructs) I64FieldByID(fieldID int, row int) (int64, error) {
+	if fieldID == -1 {
+		return 0, nil
+	}
 	column := los.arr.Field(fieldID)
 	return I64FromArray(column, row)
 }
 
 // F64FieldByID returns the float64 value of a field id for a specific row.
 func (los *ListOfStructs) F64FieldByID(fieldID int, row int) (float64, error) {
+	if fieldID == -1 {
+		return 0.0, nil
+	}
 	column := los.arr.Field(fieldID)
 	return F64FromArray(column, row)
 }
@@ -278,18 +291,27 @@ func (los *ListOfStructs) F64OrNilFieldByID(fieldID int, row int) (*float64, err
 
 // BoolFieldByID returns the bool value of a field id for a specific row.
 func (los *ListOfStructs) BoolFieldByID(fieldID int, row int) (bool, error) {
+	if fieldID == -1 {
+		return false, nil
+	}
 	column := los.arr.Field(fieldID)
 	return BoolFromArray(column, row)
 }
 
 // BinaryFieldByID returns the binary value of a field id for a specific row.
 func (los *ListOfStructs) BinaryFieldByID(fieldID int, row int) ([]byte, error) {
+	if fieldID == -1 {
+		return nil, nil
+	}
 	column := los.arr.Field(fieldID)
 	return BinaryFromArray(column, row)
 }
 
 // FixedSizeBinaryFieldByID returns the fixed size binary value of a field id for a specific row.
 func (los *ListOfStructs) FixedSizeBinaryFieldByID(fieldID int, row int) ([]byte, error) {
+	if fieldID == -1 {
+		return nil, nil
+	}
 	column := los.arr.Field(fieldID)
 	return FixedSizeBinaryFromArray(column, row)
 }

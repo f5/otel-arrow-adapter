@@ -22,14 +22,10 @@ import (
 
 	"github.com/apache/arrow/go/v11/arrow"
 	"github.com/apache/arrow/go/v11/arrow/array"
-	"github.com/apache/arrow/go/v11/arrow/memory"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common"
-	acommon "github.com/f5/otel-arrow-adapter/pkg/otel/common/schema"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/builder"
-	cfg "github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/config"
-	"github.com/f5/otel-arrow-adapter/pkg/otel/constants"
 )
 
 // Arrow data types used to build the attribute map.
@@ -55,12 +51,8 @@ type AttributesBuilder struct {
 //
 // Once the builder is no longer needed, Build() or Release() must be called to free the
 // memory allocated by the builder.
-func NewAttributesBuilder(pool memory.Allocator, dictConfig *cfg.DictionaryConfig) *AttributesBuilder {
-	schema := arrow.NewSchema([]arrow.Field{
-		{Name: constants.Attributes, Type: AttributesDT, Metadata: acommon.Metadata(acommon.Optional)},
-	}, nil)
-	rBuilder := builder.NewRecordBuilderExt(pool, schema, dictConfig)
-	return AttributesBuilderFrom(rBuilder.MapBuilder(constants.Attributes))
+func NewAttributesBuilder(builder *builder.MapBuilder) *AttributesBuilder {
+	return AttributesBuilderFrom(builder)
 }
 
 // AttributesBuilderFrom creates a new AttributesBuilder from an existing MapBuilder.

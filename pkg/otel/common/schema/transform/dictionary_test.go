@@ -25,13 +25,19 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	cfg "github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/config"
+	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/events"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/update"
 )
+
+var evts = &events.Events{
+	DictionariesWithOverflow:     make(map[string]bool),
+	DictionariesIndexTypeChanged: make(map[string]string),
+}
 
 func TestNoDictionary(t *testing.T) {
 	schemaUpdateRequest := update.NewSchemaUpdateRequest()
 
-	dict := NewDictionaryField("1", nil, schemaUpdateRequest)
+	dict := NewDictionaryField("", "1", nil, schemaUpdateRequest, evts)
 	assert.Nil(t, dict.IndexType(), "index type should be nil (no dictionary config)")
 	assert.Equal(t, 0, schemaUpdateRequest.Count())
 
@@ -46,7 +52,7 @@ func TestDictUint8Overflow(t *testing.T) {
 		MaxCard: math.MaxUint8,
 	}
 
-	dict := NewDictionaryField("1", &dictConfig, schemaUpdateRequest)
+	dict := NewDictionaryField("", "1", &dictConfig, schemaUpdateRequest, evts)
 	assert.Equal(t, arrow.PrimitiveTypes.Uint8, dict.IndexType(), "index type should be uint8")
 	assert.Equal(t, 0, schemaUpdateRequest.Count())
 
@@ -69,7 +75,7 @@ func TestDictUint16Overflow(t *testing.T) {
 		MaxCard: math.MaxUint16,
 	}
 
-	dict := NewDictionaryField("1", &dictConfig, schemaUpdateRequest)
+	dict := NewDictionaryField("", "1", &dictConfig, schemaUpdateRequest, evts)
 	assert.Equal(t, arrow.PrimitiveTypes.Uint8, dict.IndexType(), "index type should be uint8")
 	assert.Equal(t, 0, schemaUpdateRequest.Count())
 
@@ -101,7 +107,7 @@ func TestDictUint32Overflow(t *testing.T) {
 		MaxCard: math.MaxUint32,
 	}
 
-	dict := NewDictionaryField("1", &dictConfig, schemaUpdateRequest)
+	dict := NewDictionaryField("", "1", &dictConfig, schemaUpdateRequest, evts)
 	assert.Equal(t, arrow.PrimitiveTypes.Uint8, dict.IndexType(), "index type should be uint8")
 	assert.Equal(t, 0, schemaUpdateRequest.Count())
 
@@ -142,7 +148,7 @@ func TestDictUint64Overflow(t *testing.T) {
 		MaxCard: math.MaxUint64,
 	}
 
-	dict := NewDictionaryField("1", &dictConfig, schemaUpdateRequest)
+	dict := NewDictionaryField("", "1", &dictConfig, schemaUpdateRequest, evts)
 	assert.Equal(t, arrow.PrimitiveTypes.Uint8, dict.IndexType(), "index type should be uint8")
 	assert.Equal(t, 0, schemaUpdateRequest.Count())
 

@@ -22,12 +22,10 @@ import (
 
 	"github.com/apache/arrow/go/v11/arrow"
 	"github.com/apache/arrow/go/v11/arrow/array"
-	"github.com/apache/arrow/go/v11/arrow/memory"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 
 	acommon "github.com/f5/otel-arrow-adapter/pkg/otel/common/schema"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/builder"
-	cfg "github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/config"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/constants"
 )
 
@@ -51,12 +49,8 @@ type ScopeBuilder struct {
 }
 
 // NewScopeBuilder creates a new instrumentation scope array builder with a given allocator.
-func NewScopeBuilder(pool memory.Allocator, dictConfig *cfg.DictionaryConfig) *ScopeBuilder {
-	schema := arrow.NewSchema([]arrow.Field{
-		{Name: constants.Scope, Type: ScopeDT, Metadata: acommon.Metadata(acommon.Optional)},
-	}, nil)
-	rBuilder := builder.NewRecordBuilderExt(pool, schema, dictConfig)
-	return ScopeBuilderFrom(rBuilder.StructBuilder(constants.Scope))
+func NewScopeBuilder(builder *builder.StructBuilder) *ScopeBuilder {
+	return ScopeBuilderFrom(builder)
 }
 
 // ScopeBuilderFrom creates a new instrumentation scope array builder from an existing struct builder.
@@ -83,7 +77,7 @@ func (b *ScopeBuilder) Append(scope pcommon.InstrumentationScope) error {
 		if err := b.ab.Append(scope.Attributes()); err != nil {
 			return err
 		}
-		b.dacb.Append(scope.DroppedAttributesCount())
+		b.dacb.AppendNonZero(scope.DroppedAttributesCount())
 		return nil
 	})
 }

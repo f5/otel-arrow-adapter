@@ -22,12 +22,10 @@ import (
 
 	"github.com/apache/arrow/go/v11/arrow"
 	"github.com/apache/arrow/go/v11/arrow/array"
-	"github.com/apache/arrow/go/v11/arrow/memory"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 
 	acommon "github.com/f5/otel-arrow-adapter/pkg/otel/common/schema"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/builder"
-	cfg "github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/config"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/constants"
 )
 
@@ -59,12 +57,8 @@ type ResourceBuilder struct {
 }
 
 // NewResourceBuilder creates a new resource builder with a given allocator.
-func NewResourceBuilder(pool memory.Allocator, dictConfig *cfg.DictionaryConfig) *ResourceBuilder {
-	schema := arrow.NewSchema([]arrow.Field{
-		{Name: constants.Resource, Type: ResourceDT, Metadata: acommon.Metadata(acommon.Optional)},
-	}, nil)
-	rBuilder := builder.NewRecordBuilderExt(pool, schema, dictConfig)
-	return ResourceBuilderFrom(rBuilder.StructBuilder(constants.Resource))
+func NewResourceBuilder(builder *builder.StructBuilder) *ResourceBuilder {
+	return ResourceBuilderFrom(builder)
 }
 
 // ResourceBuilderFrom creates a new resource builder from an existing struct builder.

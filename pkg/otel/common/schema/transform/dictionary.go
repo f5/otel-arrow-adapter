@@ -23,6 +23,7 @@ import (
 	"github.com/apache/arrow/go/v11/arrow"
 
 	cfg "github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/config"
+	events "github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/events"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/update"
 )
 
@@ -32,6 +33,8 @@ const DictIdKey = "dictId"
 // a given index type.
 // If the index type is nil, the dictionary is downgraded to its value type.
 type DictionaryField struct {
+	path string
+
 	// Dictionary ID
 	DictID string
 
@@ -43,13 +46,22 @@ type DictionaryField struct {
 	currentIndex int
 
 	schemaUpdateRequest *update.SchemaUpdateRequest
+	events              *events.Events
 }
 
-func NewDictionaryField(dictID string, config *cfg.DictionaryConfig, schemaUpdateRequest *update.SchemaUpdateRequest) *DictionaryField {
+func NewDictionaryField(
+	path string,
+	dictID string,
+	config *cfg.DictionaryConfig,
+	schemaUpdateRequest *update.SchemaUpdateRequest,
+	events *events.Events,
+) *DictionaryField {
 	df := DictionaryField{
+		path:                path,
 		DictID:              dictID,
 		cardinality:         0,
 		schemaUpdateRequest: schemaUpdateRequest,
+		events:              events,
 	}
 	df.initIndices(config)
 	return &df
@@ -69,9 +81,15 @@ func (t *DictionaryField) IndexType() arrow.DataType {
 
 func (t *DictionaryField) Transform(field *arrow.Field) *arrow.Field {
 	if t.indexTypes == nil {
-		// No index type defined, so the dictionary is downgraded to its
-		// value type.
-		return &arrow.Field{Name: field.Name, Type: field.Type.(*arrow.DictionaryType).ValueType, Nullable: field.Nullable, Metadata: field.Metadata}
+		switch fieldType := field.Type.(type) {
+		case *arrow.DictionaryType:
+			// No index type defined, so the dictionary is downgraded to its
+			// value type.
+			return &arrow.Field{Name: field.Name, Type: fieldType.ValueType, Nullable: field.Nullable, Metadata: field.Metadata}
+		default:
+			// No index type defined, so the field is not transformed.
+			return field
+		}
 	} else {
 		// Add the dictionary ID to the metadata to ease the process checking
 		// dictionary overflow.
@@ -116,8 +134,10 @@ func (t *DictionaryField) updateIndexType() {
 		t.indexMaxCard = nil
 		t.currentIndex = 0
 		t.schemaUpdateRequest.Inc()
+		t.events.DictionariesWithOverflow[t.path] = true
 	} else if t.currentIndex != currentIndex {
 		t.schemaUpdateRequest.Inc()
+		t.events.DictionariesIndexTypeChanged[t.path] = t.indexTypes[t.currentIndex].Name()
 	}
 }
 
@@ -126,7 +146,7 @@ func (t *DictionaryField) initIndices(config *cfg.DictionaryConfig) {
 	t.indexMaxCard = nil
 	t.currentIndex = 0
 
-	if config == nil {
+	if config == nil || config.MaxCard == 0 {
 		return
 	}
 

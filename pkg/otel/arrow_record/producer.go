@@ -32,7 +32,7 @@ import (
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/builder"
 	builder2 "github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/config"
-	logsarrow "github.com/f5/otel-arrow-adapter/pkg/otel/logs/arrow2"
+	logsarrow "github.com/f5/otel-arrow-adapter/pkg/otel/logs/arrow"
 	metricsarrow "github.com/f5/otel-arrow-adapter/pkg/otel/metrics/arrow"
 	tracesarrow "github.com/f5/otel-arrow-adapter/pkg/otel/traces/arrow"
 )
@@ -115,21 +115,14 @@ func NewProducerWithOptions(options ...Option) *Producer {
 		schema.WithDictInitIndexSize(cfg.initIndexSize),
 		schema.WithDictLimitIndexSize(cfg.limitIndexSize))
 
-	logsSchema := schema.NewAdaptiveSchema(
-		cfg.pool,
-		logsarrow.Schema,
-		schema.WithDictInitIndexSize(cfg.initIndexSize),
-		schema.WithDictLimitIndexSize(cfg.limitIndexSize))
-
 	tracesSchema := schema.NewAdaptiveSchema(
 		cfg.pool,
 		tracesarrow.Schema,
 		schema.WithDictInitIndexSize(cfg.initIndexSize),
 		schema.WithDictLimitIndexSize(cfg.limitIndexSize))
 
-	// ToDo must be released
 	logsRecordBuilder := builder.NewRecordBuilderExt(cfg.pool, logsarrow.Schema, &builder2.DictionaryConfig{
-		MaxCard: math.MaxUint16,
+		MaxCard: cfg.limitIndexSize,
 	})
 
 	metricsBuilder, err := metricsarrow.NewMetricsBuilder(metricsSchema)
@@ -154,7 +147,6 @@ func NewProducerWithOptions(options ...Option) *Producer {
 		batchId:         0,
 
 		metricsSchema: metricsSchema,
-		logsSchema:    logsSchema,
 		tracesSchema:  tracesSchema,
 
 		metricsBuilder: metricsBuilder,
@@ -236,25 +228,26 @@ func (p *Producer) TracesAdaptiveSchema() *schema.AdaptiveSchema {
 	return p.tracesSchema
 }
 
-// LogsAdaptiveSchema returns the adaptive schema used to encode logs.
-func (p *Producer) LogsAdaptiveSchema() *schema.AdaptiveSchema {
-	return p.logsSchema
-}
-
 // MetricsAdaptiveSchema returns the adaptive schema used to encode metrics.
 func (p *Producer) MetricsAdaptiveSchema() *schema.AdaptiveSchema {
 	return p.metricsSchema
 }
 
+// LogRecordBuilderExt returns the record builder used to encode logs.
+func (p *Producer) LogRecordBuilderExt() *builder.RecordBuilderExt {
+	return p.logsRecordBuilder
+}
+
 // Close closes all stream producers.
 func (p *Producer) Close() error {
 	p.metricsSchema.Release()
-	p.logsSchema.Release()
 	p.tracesSchema.Release()
 	p.metricsBuilder.Release()
 	p.logsBuilder.Release()
 	p.tracesBuilder.Release()
+
 	p.logsRecordBuilder.Release()
+
 	for _, sp := range p.streamProducers {
 		if err := sp.ipcWriter.Close(); err != nil {
 			return err
@@ -333,7 +326,7 @@ func (p *Producer) ShowStats() {
 }
 
 func recordBuilder[T pmetric.Metrics | plog.Logs | ptrace.Traces](builder func() (acommon.EntityBuilder[T], error), entity T) (record arrow.Record, err error) {
-	dictionaryOverflowCount := 0
+	schemaNotUpToDateCount := 0
 
 	// Build an Arrow Record from an OTEL entity.
 	//
@@ -352,22 +345,15 @@ func recordBuilder[T pmetric.Metrics | plog.Logs | ptrace.Traces](builder func()
 
 		record, err = tb.Build()
 		if err != nil {
-			var overflowErr *schema.DictionaryOverflowError
-
 			if record != nil {
 				record.Release()
 			}
 
 			switch {
-			case errors.As(err, &overflowErr):
-				dictionaryOverflowCount++
-				// 4 is the maximum number of dictionary overflow errors we can handle.
-				// uint8 --> uint16
-				// uint16 --> uint32
-				// uint32 --> uint64
-				// uint64 --> string | binary
-				if dictionaryOverflowCount > 4 {
-					panic("Dictionary overflowed too many times. This shouldn't happen.")
+			case errors.As(err, &schema.ErrSchemaNotUpToDate):
+				schemaNotUpToDateCount++
+				if schemaNotUpToDateCount > 5 {
+					panic("Too many consecutive schema updates. This shouldn't happen.")
 				}
 			default:
 				return

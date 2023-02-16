@@ -23,6 +23,7 @@ import (
 	"github.com/apache/arrow/go/v11/arrow"
 
 	cfg "github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/config"
+	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/events"
 	transform2 "github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/transform"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/update"
 )
@@ -59,6 +60,7 @@ func NewTransformTreeFrom(
 	prototype *arrow.Schema,
 	dictConfig *cfg.DictionaryConfig,
 	schemaUpdateRequest *update.SchemaUpdateRequest,
+	events *events.Events,
 ) (*TransformNode, map[string]*transform2.DictionaryField) {
 	dictTransformNodes := make(map[string]*transform2.DictionaryField)
 
@@ -67,10 +69,12 @@ func NewTransformTreeFrom(
 
 	for i := 0; i < len(protoFields); i++ {
 		rootTNode.Children = append(rootTNode.Children, newTransformNodeFrom(
+			"",
 			&protoFields[i],
 			dictConfig,
 			dictTransformNodes,
 			schemaUpdateRequest,
+			events,
 		))
 	}
 
@@ -78,12 +82,20 @@ func NewTransformTreeFrom(
 }
 
 func newTransformNodeFrom(
+	path string,
 	prototype *arrow.Field,
 	dictConfig *cfg.DictionaryConfig,
 	dictTransformNodes map[string]*transform2.DictionaryField,
 	schemaUpdateRequest *update.SchemaUpdateRequest,
+	events *events.Events,
 ) *TransformNode {
 	var transforms []FieldTransform
+
+	// Update the current path.
+	if len(path) > 0 {
+		path += "."
+	}
+	path += prototype.Name
 
 	// Check if the field is optional and if so, remove it by emitting a
 	// NoField transformation.
@@ -98,7 +110,7 @@ func newTransformNodeFrom(
 	keyIdx = metadata.FindKey(DictionaryKey)
 	if keyIdx != -1 {
 		dictId := strconv.Itoa(len(dictTransformNodes))
-		dictTransform := transform2.NewDictionaryField(dictId, dictConfig, schemaUpdateRequest)
+		dictTransform := transform2.NewDictionaryField(path, dictId, dictConfig, schemaUpdateRequest, events)
 		dictTransformNodes[dictId] = dictTransform
 		transforms = append(transforms, dictTransform)
 	}
@@ -113,52 +125,66 @@ func newTransformNodeFrom(
 	switch dt := prototype.Type.(type) {
 	case *arrow.DictionaryType:
 		dictId := strconv.Itoa(len(dictTransformNodes))
-		dictTransform := transform2.NewDictionaryField(dictId, dictConfig, schemaUpdateRequest)
+		dictTransform := transform2.NewDictionaryField(path, dictId, dictConfig, schemaUpdateRequest, events)
 		dictTransformNodes[dictId] = dictTransform
 		node.transforms = append(node.transforms, dictTransform)
 	case *arrow.StructType:
 		node.Children = make([]*TransformNode, 0, len(dt.Fields()))
 		for _, child := range prototype.Type.(*arrow.StructType).Fields() {
 			node.Children = append(node.Children, newTransformNodeFrom(
+				path,
 				&child,
 				dictConfig,
 				dictTransformNodes,
 				schemaUpdateRequest,
+				events,
 			))
 		}
 	case *arrow.ListType:
 		elemField := dt.ElemField()
 		node.Children = make([]*TransformNode, 0, 1)
 		node.Children = append(node.Children, newTransformNodeFrom(
+			path,
 			&elemField,
 			dictConfig,
 			dictTransformNodes,
 			schemaUpdateRequest,
+			events,
 		))
 	case arrow.UnionType:
 		node.Children = make([]*TransformNode, 0, len(dt.Fields()))
 		for _, child := range dt.Fields() {
 			node.Children = append(node.Children, newTransformNodeFrom(
+				path,
 				&child,
 				dictConfig,
 				dictTransformNodes,
 				schemaUpdateRequest,
+				events,
 			))
 		}
 	case *arrow.MapType:
 		node.Children = make([]*TransformNode, 0, 2)
 		keyField := dt.KeyField()
 		node.Children = append(node.Children, newTransformNodeFrom(
+			path,
 			&keyField,
 			dictConfig,
 			dictTransformNodes,
 			schemaUpdateRequest,
+			events,
 		))
 
 		// ToDo remove this workaround once the arrow library supports map types with metadata (see https://github.com/apache/arrow/issues/34186).
 		if keyField.Type == arrow.BinaryTypes.String {
 			dictId := strconv.Itoa(len(dictTransformNodes))
-			dictTransform := transform2.NewDictionaryField(dictId, dictConfig, schemaUpdateRequest)
+			dictTransform := transform2.NewDictionaryField(
+				path,
+				dictId,
+				dictConfig,
+				schemaUpdateRequest,
+				events,
+			)
 			dictTransformNodes[dictId] = dictTransform
 
 			node.Children[0].transforms = []FieldTransform{dictTransform}
@@ -166,23 +192,25 @@ func newTransformNodeFrom(
 
 		valueField := dt.ItemField()
 		node.Children = append(node.Children, newTransformNodeFrom(
+			path,
 			&valueField,
 			dictConfig,
 			dictTransformNodes,
 			schemaUpdateRequest,
+			events,
 		))
 
 		// ToDo remove this workaround once the arrow library supports map types with metadata (see https://github.com/apache/arrow/issues/34186).
 		if valueField.Type == arrow.BinaryTypes.String {
 			dictId := strconv.Itoa(len(dictTransformNodes))
-			dictTransform := transform2.NewDictionaryField(dictId, dictConfig, schemaUpdateRequest)
+			dictTransform := transform2.NewDictionaryField(path, dictId, dictConfig, schemaUpdateRequest, events)
 			dictTransformNodes[dictId] = dictTransform
 
 			node.Children[1].transforms = []FieldTransform{dictTransform}
 		}
 		if valueField.Type == arrow.BinaryTypes.Binary {
 			dictId := strconv.Itoa(len(dictTransformNodes))
-			dictTransform := transform2.NewDictionaryField(dictId, dictConfig, schemaUpdateRequest)
+			dictTransform := transform2.NewDictionaryField(path, dictId, dictConfig, schemaUpdateRequest, events)
 			dictTransformNodes[dictId] = dictTransform
 
 			node.Children[1].transforms = []FieldTransform{dictTransform}

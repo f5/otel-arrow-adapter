@@ -27,6 +27,7 @@ import (
 	carrow "github.com/f5/otel-arrow-adapter/pkg/arrow"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/config"
+	events "github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/events"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/transform"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/update"
 )
@@ -59,13 +60,19 @@ type RecordBuilderExt struct {
 
 	// The current schema ID.
 	schemaID string
+
+	events *events.Events
 }
 
 // NewRecordBuilderExt creates a new RecordBuilderExt from the given allocator
 // and a prototype schema.
 func NewRecordBuilderExt(allocator memory.Allocator, protoSchema *arrow.Schema, dictConfig *builder.DictionaryConfig) *RecordBuilderExt {
 	schemaUpdateRequest := update.NewSchemaUpdateRequest()
-	transformTree, dictTransformNodes := schema.NewTransformTreeFrom(protoSchema, dictConfig, schemaUpdateRequest)
+	evts := &events.Events{
+		DictionariesWithOverflow:     make(map[string]bool),
+		DictionariesIndexTypeChanged: make(map[string]string),
+	}
+	transformTree, dictTransformNodes := schema.NewTransformTreeFrom(protoSchema, dictConfig, schemaUpdateRequest, evts)
 	s := schema.NewSchemaFrom(protoSchema, transformTree)
 	schemaID := carrow.SchemaToID(s)
 	recordBuilder := array.NewRecordBuilder(allocator, s)
@@ -78,7 +85,12 @@ func NewRecordBuilderExt(allocator memory.Allocator, protoSchema *arrow.Schema, 
 		dictTransformNodes: dictTransformNodes,
 		updateRequest:      schemaUpdateRequest,
 		schemaID:           schemaID,
+		events:             evts,
 	}
+}
+
+func (rb *RecordBuilderExt) Events() *events.Events {
+	return rb.events
 }
 
 func (rb *RecordBuilderExt) SchemaID() string {
@@ -339,7 +351,7 @@ func (rb *RecordBuilderExt) TimestampBuilder(name string) *TimestampBuilder {
 	_, transformNode := rb.protoDataTypeAndTransformNode(name)
 	b := rb.builder(name)
 
-	if b == nil {
+	if b != nil {
 		return &TimestampBuilder{builder: b.(*array.TimestampBuilder), transformNode: transformNode, updateRequest: rb.updateRequest}
 	} else {
 		return &TimestampBuilder{builder: nil, transformNode: transformNode, updateRequest: rb.updateRequest}
@@ -354,7 +366,7 @@ func (rb *RecordBuilderExt) FixedSizeBinaryBuilder(name string) *FixedSizeBinary
 	_, transformNode := rb.protoDataTypeAndTransformNode(name)
 	b := rb.builder(name)
 
-	if b == nil {
+	if b != nil {
 		return &FixedSizeBinaryBuilder{builder: b, transformNode: transformNode, updateRequest: rb.updateRequest}
 	} else {
 		return &FixedSizeBinaryBuilder{builder: nil, transformNode: transformNode, updateRequest: rb.updateRequest}
@@ -366,13 +378,23 @@ func (rb *RecordBuilderExt) FixedSizeBinaryBuilder(name string) *FixedSizeBinary
 // that the feeding process can continue without panicking. This is useful to
 // handle optional fields.
 func (rb *RecordBuilderExt) MapBuilder(name string) *MapBuilder {
-	_, transformNode := rb.protoDataTypeAndTransformNode(name)
+	dt, transformNode := rb.protoDataTypeAndTransformNode(name)
 	b := rb.builder(name)
 
-	if b == nil {
-		return &MapBuilder{builder: b.(*array.MapBuilder), transformNode: transformNode, updateRequest: rb.updateRequest}
+	if b != nil {
+		return &MapBuilder{
+			protoDataType: dt.(*arrow.MapType),
+			builder:       b.(*array.MapBuilder),
+			transformNode: transformNode,
+			updateRequest: rb.updateRequest,
+		}
 	} else {
-		return &MapBuilder{builder: nil, transformNode: transformNode, updateRequest: rb.updateRequest}
+		return &MapBuilder{
+			protoDataType: dt.(*arrow.MapType),
+			builder:       nil,
+			transformNode: transformNode,
+			updateRequest: rb.updateRequest,
+		}
 	}
 }
 
@@ -384,7 +406,7 @@ func (rb *RecordBuilderExt) StringBuilder(name string) *StringBuilder {
 	_, transformNode := rb.protoDataTypeAndTransformNode(name)
 	b := rb.builder(name)
 
-	if b == nil {
+	if b != nil {
 		return &StringBuilder{builder: b, transformNode: transformNode, updateRequest: rb.updateRequest}
 	} else {
 		return &StringBuilder{builder: nil, transformNode: transformNode, updateRequest: rb.updateRequest}
@@ -399,7 +421,7 @@ func (rb *RecordBuilderExt) BooleanBuilder(name string) *BooleanBuilder {
 	_, transformNode := rb.protoDataTypeAndTransformNode(name)
 	b := rb.builder(name)
 
-	if b == nil {
+	if b != nil {
 		return &BooleanBuilder{builder: b.(*array.BooleanBuilder), transformNode: transformNode, updateRequest: rb.updateRequest}
 	} else {
 		return &BooleanBuilder{builder: nil, transformNode: transformNode, updateRequest: rb.updateRequest}
@@ -414,7 +436,7 @@ func (rb *RecordBuilderExt) BinaryBuilder(name string) *BinaryBuilder {
 	_, transformNode := rb.protoDataTypeAndTransformNode(name)
 	b := rb.builder(name)
 
-	if b == nil {
+	if b != nil {
 		return &BinaryBuilder{builder: b, transformNode: transformNode, updateRequest: rb.updateRequest}
 	} else {
 		return &BinaryBuilder{builder: nil, transformNode: transformNode, updateRequest: rb.updateRequest}
@@ -429,7 +451,7 @@ func (rb *RecordBuilderExt) Uint8Builder(name string) *Uint8Builder {
 	_, transformNode := rb.protoDataTypeAndTransformNode(name)
 	b := rb.builder(name)
 
-	if b == nil {
+	if b != nil {
 		return &Uint8Builder{builder: b, transformNode: transformNode, updateRequest: rb.updateRequest}
 	} else {
 		return &Uint8Builder{builder: nil, transformNode: transformNode, updateRequest: rb.updateRequest}
@@ -444,7 +466,7 @@ func (rb *RecordBuilderExt) Uint32Builder(name string) *Uint32Builder {
 	_, transformNode := rb.protoDataTypeAndTransformNode(name)
 	b := rb.builder(name)
 
-	if b == nil {
+	if b != nil {
 		return &Uint32Builder{builder: b, transformNode: transformNode, updateRequest: rb.updateRequest}
 	} else {
 		return &Uint32Builder{builder: nil, transformNode: transformNode, updateRequest: rb.updateRequest}
@@ -459,7 +481,7 @@ func (rb *RecordBuilderExt) Uint64Builder(name string) *Uint64Builder {
 	_, transformNode := rb.protoDataTypeAndTransformNode(name)
 	b := rb.builder(name)
 
-	if b == nil {
+	if b != nil {
 		return &Uint64Builder{builder: b, transformNode: transformNode, updateRequest: rb.updateRequest}
 	} else {
 		return &Uint64Builder{builder: nil, transformNode: transformNode, updateRequest: rb.updateRequest}
@@ -474,7 +496,7 @@ func (rb *RecordBuilderExt) Int32Builder(name string) *Int32Builder {
 	_, transformNode := rb.protoDataTypeAndTransformNode(name)
 	b := rb.builder(name)
 
-	if b == nil {
+	if b != nil {
 		return &Int32Builder{builder: b, transformNode: transformNode, updateRequest: rb.updateRequest}
 	} else {
 		return &Int32Builder{builder: nil, transformNode: transformNode, updateRequest: rb.updateRequest}
@@ -489,7 +511,7 @@ func (rb *RecordBuilderExt) Int64Builder(name string) *Int64Builder {
 	_, transformNode := rb.protoDataTypeAndTransformNode(name)
 	b := rb.builder(name)
 
-	if b == nil {
+	if b != nil {
 		return &Int64Builder{builder: b, transformNode: transformNode, updateRequest: rb.updateRequest}
 	} else {
 		return &Int64Builder{builder: nil, transformNode: transformNode, updateRequest: rb.updateRequest}
@@ -504,7 +526,7 @@ func (rb *RecordBuilderExt) Float64Builder(name string) *Float64Builder {
 	_, transformNode := rb.protoDataTypeAndTransformNode(name)
 	b := rb.builder(name)
 
-	if b == nil {
+	if b != nil {
 		return &Float64Builder{builder: b.(*array.Float64Builder), transformNode: transformNode, updateRequest: rb.updateRequest}
 	} else {
 		return &Float64Builder{builder: nil, transformNode: transformNode, updateRequest: rb.updateRequest}

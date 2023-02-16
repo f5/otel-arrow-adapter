@@ -185,9 +185,19 @@ func (sb *StructBuilder) MapBuilder(name string) *MapBuilder {
 	protoDataType, transformNode := sb.protoDataTypeAndTransformNode(name)
 
 	if mapBuilder != nil {
-		return &MapBuilder{protoDataType: protoDataType.(*arrow.MapType), builder: mapBuilder.(*array.MapBuilder), transformNode: transformNode, updateRequest: sb.updateRequest}
+		return &MapBuilder{
+			protoDataType: protoDataType.(*arrow.MapType),
+			builder:       mapBuilder.(*array.MapBuilder),
+			transformNode: transformNode,
+			updateRequest: sb.updateRequest,
+		}
 	} else {
-		return &MapBuilder{protoDataType: protoDataType.(*arrow.MapType), builder: nil, transformNode: transformNode, updateRequest: sb.updateRequest}
+		return &MapBuilder{
+			protoDataType: protoDataType.(*arrow.MapType),
+			builder:       nil,
+			transformNode: transformNode,
+			updateRequest: sb.updateRequest,
+		}
 	}
 }
 

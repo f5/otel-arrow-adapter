@@ -218,6 +218,7 @@ func (b *MapBuilder) KeyMapBuilder() *MapBuilder {
 	}
 
 	return &MapBuilder{
+		protoDataType: b.protoDataType.KeyType().(*arrow.MapType),
 		builder:       keyBuilder,
 		transformNode: b.transformNode.Children[0],
 		updateRequest: b.updateRequest,
@@ -440,6 +441,7 @@ func (b *MapBuilder) ItemMapBuilder() *MapBuilder {
 	}
 
 	return &MapBuilder{
+		protoDataType: b.protoDataType.ItemType().(*arrow.MapType),
 		builder:       valueBuilder,
 		transformNode: b.transformNode.Children[1],
 		updateRequest: b.updateRequest,
