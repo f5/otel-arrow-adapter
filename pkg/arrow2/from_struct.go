@@ -1,0 +1,114 @@
+/*
+ * Copyright The OpenTelemetry Authors
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *        http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ */
+
+package arrow2
+
+// Utility functions to extract ids, and values from Struct data type or from
+// Arrow arrays.
+
+import (
+	"fmt"
+
+	"github.com/apache/arrow/go/v11/arrow"
+	"github.com/apache/arrow/go/v11/arrow/array"
+)
+
+// U32FromStruct returns the uint32 value for a specific row in an Arrow struct
+// or 0 if the field doesn't exist.
+func U32FromStruct(structArr *array.Struct, row int, fieldID int) (uint32, error) {
+	if fieldID == -1 {
+		return 0, nil
+	}
+	return U32FromArray(structArr.Field(fieldID), row)
+}
+
+// ListOfStructsFieldIDFromStruct returns the field id of a list of structs
+// field from an Arrow struct or -1 if the field is not found.
+//
+// An error is returned if the field is not a list of structs.
+func ListOfStructsFieldIDFromStruct(dt *arrow.StructType, fieldName string) (int, *arrow.StructType, error) {
+	if dt == nil {
+		return -1, nil, nil
+	}
+
+	id, ok := dt.FieldIdx(fieldName)
+	if !ok {
+		return -1, nil, nil
+	}
+
+	if lt, ok := dt.Field(id).Type.(*arrow.ListType); ok {
+		st, ok := lt.ElemField().Type.(*arrow.StructType)
+		if !ok {
+			return 0, nil, fmt.Errorf("field %q is not a list of structs", fieldName)
+		}
+		return id, st, nil
+	} else {
+		return 0, nil, fmt.Errorf("field %q is not a list", fieldName)
+	}
+}
+
+// FieldIDFromStruct returns the field id of a named field from an Arrow struct
+// or -1 for an unknown field.
+func FieldIDFromStruct(dt *arrow.StructType, fieldName string) (int, *arrow.DataType) {
+	if dt == nil {
+		return -1, nil
+	}
+
+	id, found := dt.FieldIdx(fieldName)
+	if !found {
+		return -1, nil
+	}
+	field := dt.Field(id)
+	return id, &field.Type
+}
+
+// StructFieldIDFromStruct returns the field id of a struct field from an Arrow
+// struct or -1 for an unknown field.
+//
+// An error is returned if the field is not a struct.
+func StructFieldIDFromStruct(dt *arrow.StructType, fieldName string) (int, *arrow.StructType, error) {
+	if dt == nil {
+		return -1, nil, nil
+	}
+
+	id, found := dt.FieldIdx(fieldName)
+	if !found {
+		return -1, nil, nil
+	}
+	if st, ok := dt.Field(id).Type.(*arrow.StructType); ok {
+		return id, st, nil
+	} else {
+		return 0, nil, fmt.Errorf("field %q is not a struct", fieldName)
+	}
+}
+
+// StringFromStruct returns the string value for a specific row in an Arrow struct.
+func StringFromStruct(arr arrow.Array, row int, id int) (string, error) {
+	if id == -1 {
+		return "", nil
+	}
+
+	structArr, ok := arr.(*array.Struct)
+	if !ok {
+		return "", fmt.Errorf("array id %d is not of type struct", id)
+	}
+	if structArr != nil {
+		return StringFromArray(structArr.Field(id), row)
+	} else {
+		return "", fmt.Errorf("column array is not of type struct")
+	}
+}
