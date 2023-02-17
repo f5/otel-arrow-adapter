@@ -30,10 +30,7 @@ type AttributeIds struct {
 }
 
 func NewAttributeIds(structDT *arrow.StructType) (*AttributeIds, error) {
-	id, found := structDT.FieldIdx(constants.Attributes)
-	if !found {
-		id = -1
-	}
+	id, _ := arrowutils.FieldIDFromStruct(structDT, constants.Attributes)
 	return &AttributeIds{Id: id}, nil
 }
 

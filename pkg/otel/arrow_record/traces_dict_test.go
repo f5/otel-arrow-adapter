@@ -69,9 +69,8 @@ func TestTracesWithNoDictionary(t *testing.T) {
 		)
 	}
 
-	schema := producer.TracesAdaptiveSchema()
-	dictWithOverflow := schema.DictionariesWithOverflow()
-	require.Equal(t, 0, len(dictWithOverflow))
+	builder := producer.TracesRecordBuilderExt()
+	require.Equal(t, 0, len(builder.Events().DictionariesWithOverflow))
 }
 
 // TestTracesSingleBatchWithDictionaryOverflow
@@ -118,12 +117,12 @@ func TestTracesSingleBatchWithDictionaryOverflow(t *testing.T) {
 		)
 	}
 
-	schema := producer.TracesAdaptiveSchema()
-	dictWithOverflow := schema.DictionariesWithOverflow()
-	require.Equal(t, 3, len(dictWithOverflow))
-	require.Equal(t, "uint16", dictWithOverflow["resource_spans.scope_spans.spans.name"])
-	require.Equal(t, "uint16", dictWithOverflow["resource_spans.scope_spans.spans.attributes.value.str"])
-	require.Equal(t, "uint16", dictWithOverflow["resource_spans.scope_spans.spans.attributes.value.binary"])
+	builder := producer.TracesRecordBuilderExt()
+	dictionariesIndexTypeChanged := builder.Events().DictionariesIndexTypeChanged
+	require.Equal(t, 3, len(dictionariesIndexTypeChanged))
+	require.Equal(t, "uint16", dictionariesIndexTypeChanged["resource_spans.item.scope_spans.item.spans.item.name"])
+	require.Equal(t, "uint16", dictionariesIndexTypeChanged["resource_spans.item.scope_spans.item.spans.item.attributes.value.str"])
+	require.Equal(t, "uint16", dictionariesIndexTypeChanged["resource_spans.item.scope_spans.item.spans.item.attributes.value.binary"])
 }
 
 // TestTracesMultiBatchWithDictionaryOverflow
@@ -171,12 +170,12 @@ func TestTracesMultiBatchWithDictionaryOverflow(t *testing.T) {
 		)
 	}
 
-	schema := producer.TracesAdaptiveSchema()
-	dictWithOverflow := schema.DictionariesWithOverflow()
-	require.Equal(t, 3, len(dictWithOverflow))
-	require.Equal(t, "uint16", dictWithOverflow["resource_spans.scope_spans.spans.name"])
-	require.Equal(t, "uint16", dictWithOverflow["resource_spans.scope_spans.spans.attributes.value.str"])
-	require.Equal(t, "uint16", dictWithOverflow["resource_spans.scope_spans.spans.attributes.value.binary"])
+	builder := producer.TracesRecordBuilderExt()
+	dictionariesIndexTypeChanged := builder.Events().DictionariesIndexTypeChanged
+	require.Equal(t, 3, len(dictionariesIndexTypeChanged))
+	require.Equal(t, "uint16", dictionariesIndexTypeChanged["resource_spans.item.scope_spans.item.spans.item.name"])
+	require.Equal(t, "uint16", dictionariesIndexTypeChanged["resource_spans.item.scope_spans.item.spans.item.attributes.value.str"])
+	require.Equal(t, "uint16", dictionariesIndexTypeChanged["resource_spans.item.scope_spans.item.spans.item.attributes.value.binary"])
 }
 
 // TestTracesSingleBatchWithDictionaryLimit
@@ -223,12 +222,12 @@ func TestTracesSingleBatchWithDictionaryLimit(t *testing.T) {
 		)
 	}
 
-	schema := producer.TracesAdaptiveSchema()
-	dictWithOverflow := schema.DictionariesWithOverflow()
-	require.Equal(t, 3, len(dictWithOverflow))
-	require.Equal(t, "utf8", dictWithOverflow["resource_spans.scope_spans.spans.name"])
-	require.Equal(t, "utf8", dictWithOverflow["resource_spans.scope_spans.spans.attributes.value.str"])
-	require.Equal(t, "binary", dictWithOverflow["resource_spans.scope_spans.spans.attributes.value.binary"])
+	builder := producer.TracesRecordBuilderExt()
+	dictionaryWithOverflow := builder.Events().DictionariesWithOverflow
+	require.Equal(t, 3, len(dictionaryWithOverflow))
+	require.True(t, dictionaryWithOverflow["resource_spans.item.scope_spans.item.spans.item.name"])
+	require.True(t, dictionaryWithOverflow["resource_spans.item.scope_spans.item.spans.item.attributes.value.str"])
+	require.True(t, dictionaryWithOverflow["resource_spans.item.scope_spans.item.spans.item.attributes.value.binary"])
 }
 
 func GenerateTraces(initValue int, spanCount int) ptrace.Traces {

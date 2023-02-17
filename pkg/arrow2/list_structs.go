@@ -328,6 +328,9 @@ func (los *ListOfStructs) StructArray(name string, row int) (*arrow.StructType, 
 
 // StructByID returns the underlying arrow struct stype and arrow array for a field id for a specific row.
 func (los *ListOfStructs) StructByID(fieldID int, row int) (*arrow.StructType, *array.Struct, error) {
+	if fieldID == -1 {
+		return nil, nil, nil
+	}
 	column := los.arr.Field(fieldID)
 	switch structArr := column.(type) {
 	case *array.Struct:
@@ -347,6 +350,9 @@ func (los *ListOfStructs) IsNull(row int) bool {
 
 // ListValuesById return the list array for a field id for a specific row.
 func (los *ListOfStructs) ListValuesById(row int, fieldID int) (arr arrow.Array, start int, end int, err error) {
+	if fieldID == -1 {
+		return nil, 0, 0, nil
+	}
 	column := los.arr.Field(fieldID)
 	switch listArr := column.(type) {
 	case *array.List:
@@ -364,6 +370,9 @@ func (los *ListOfStructs) ListValuesById(row int, fieldID int) (arr arrow.Array,
 
 // ListOfStructsById returns the list of structs for a field id for a specific row.
 func (los *ListOfStructs) ListOfStructsById(row int, fieldID int) (*ListOfStructs, error) {
+	if fieldID == -1 {
+		return nil, nil
+	}
 	column := los.arr.Field(fieldID)
 	switch listArr := column.(type) {
 	case *array.List:

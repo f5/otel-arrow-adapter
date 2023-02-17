@@ -15,14 +15,12 @@
 package otlp
 
 import (
-	"fmt"
-
 	"github.com/apache/arrow/go/v11/arrow"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/ptrace"
 
-	arrowutils "github.com/f5/otel-arrow-adapter/pkg/arrow"
-	"github.com/f5/otel-arrow-adapter/pkg/otel/common/otlp"
+	arrowutils "github.com/f5/otel-arrow-adapter/pkg/arrow2"
+	otlp "github.com/f5/otel-arrow-adapter/pkg/otel/common/otlp2"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/constants"
 )
 
@@ -40,18 +38,9 @@ func NewEventIds(spansDT *arrow.StructType) (*EventIds, error) {
 		return nil, err
 	}
 
-	timeUnixNanoID, timeUnixNanoFound := eventDT.FieldIdx(constants.TimeUnixNano)
-	if !timeUnixNanoFound {
-		return nil, fmt.Errorf("field %s not found", constants.TimeUnixNano)
-	}
-	nameID, nameFound := eventDT.FieldIdx(constants.Name)
-	if !nameFound {
-		return nil, fmt.Errorf("field %s not found", constants.Name)
-	}
-	droppedAttributesCountId, droppedAttributesCountFound := eventDT.FieldIdx(constants.DroppedAttributesCount)
-	if !droppedAttributesCountFound {
-		return nil, fmt.Errorf("field %s not found", constants.DroppedAttributesCount)
-	}
+	timeUnixNanoID, _ := arrowutils.FieldIDFromStruct(eventDT, constants.TimeUnixNano)
+	nameID, _ := arrowutils.FieldIDFromStruct(eventDT, constants.Name)
+	droppedAttributesCountId, _ := arrowutils.FieldIDFromStruct(eventDT, constants.DroppedAttributesCount)
 	attributesID, err := otlp.NewAttributeIds(eventDT)
 	if err != nil {
 		return nil, err

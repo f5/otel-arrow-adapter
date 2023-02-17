@@ -90,6 +90,10 @@ func (b *AttributesBuilder) Append(attrs pcommon.Map) error {
 	return b.builder.Append(attrs.Len(), func() error {
 		var err error
 		attrs.Range(func(key string, v pcommon.Value) bool {
+			if key == "" {
+				// Skip entries with empty keys
+				return true
+			}
 			b.kb.Append(key)
 			return b.ib.Append(v) == nil
 		})

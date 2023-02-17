@@ -69,7 +69,7 @@ func TestLogsWithNoDictionary(t *testing.T) {
 		)
 	}
 
-	builder := producer.LogRecordBuilderExt()
+	builder := producer.LogsRecordBuilderExt()
 	require.Equal(t, 0, len(builder.Events().DictionariesWithOverflow))
 }
 
@@ -117,7 +117,7 @@ func TestLogsSingleBatchWithDictionaryOverflow(t *testing.T) {
 		)
 	}
 
-	builder := producer.LogRecordBuilderExt()
+	builder := producer.LogsRecordBuilderExt()
 	dictionariesIndexTypeChanged := builder.Events().DictionariesIndexTypeChanged
 	require.Equal(t, 4, len(dictionariesIndexTypeChanged))
 	require.Equal(t, "uint16", dictionariesIndexTypeChanged["resource_logs.item.scope_logs.item.logs.item.severity_text"])
@@ -171,7 +171,7 @@ func TestLogsMultiBatchWithDictionaryOverflow(t *testing.T) {
 		)
 	}
 
-	builder := producer.LogRecordBuilderExt()
+	builder := producer.LogsRecordBuilderExt()
 	dictionariesIndexTypeChanged := builder.Events().DictionariesIndexTypeChanged
 	require.Equal(t, 4, len(dictionariesIndexTypeChanged))
 	require.Equal(t, "uint16", dictionariesIndexTypeChanged["resource_logs.item.scope_logs.item.logs.item.severity_text"])
@@ -224,7 +224,7 @@ func TestLogsSingleBatchWithDictionaryLimit(t *testing.T) {
 		)
 	}
 
-	builder := producer.LogRecordBuilderExt()
+	builder := producer.LogsRecordBuilderExt()
 	dictionaryWithOverflow := builder.Events().DictionariesWithOverflow
 	require.Equal(t, 4, len(dictionaryWithOverflow))
 	require.True(t, dictionaryWithOverflow["resource_logs.item.scope_logs.item.logs.item.severity_text"])

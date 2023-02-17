@@ -112,3 +112,20 @@ func StringFromStruct(arr arrow.Array, row int, id int) (string, error) {
 		return "", fmt.Errorf("column array is not of type struct")
 	}
 }
+
+// I32FromStruct returns the int32 value for a specific field+row in an Arrow
+// Array struct.
+func I32FromStruct(arr arrow.Array, row int, id int) (int32, error) {
+	if id == -1 {
+		return 0, nil
+	}
+	structArr, ok := arr.(*array.Struct)
+	if !ok {
+		return 0, fmt.Errorf("array id %d is not of type struct", id)
+	}
+	if structArr != nil {
+		return I32FromArray(structArr.Field(id), row)
+	} else {
+		return 0, fmt.Errorf("column array is not of type struct")
+	}
+}
