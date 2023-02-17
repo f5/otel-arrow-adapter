@@ -21,9 +21,9 @@ import (
 	"github.com/apache/arrow/go/v11/arrow/array"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 
-	arrowutils "github.com/f5/otel-arrow-adapter/pkg/arrow"
+	arrowutils "github.com/f5/otel-arrow-adapter/pkg/arrow2"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/constants"
-	ametric "github.com/f5/otel-arrow-adapter/pkg/otel/metrics/arrow"
+	ametric "github.com/f5/otel-arrow-adapter/pkg/otel/metrics/arrow2"
 )
 
 type UnivariateMetricIds struct {
@@ -36,55 +36,49 @@ type UnivariateMetricIds struct {
 }
 
 func NewUnivariateMetricIds(parentDT *arrow.StructType) (*UnivariateMetricIds, error) {
-	id, found := parentDT.FieldIdx(constants.Data)
-	if !found {
-		return nil, fmt.Errorf("field %q not found in struct", constants.Data)
+	id, _ := arrowutils.FieldIDFromStruct(parentDT, constants.Data)
+
+	if id == -1 {
+		return &UnivariateMetricIds{
+			Id:                      id,
+			UnivariateGaugeIds:      nil,
+			UnivariateSumIds:        nil,
+			UnivariateSummaryIds:    nil,
+			UnivariateHistogramIds:  nil,
+			UnivariateEHistogramIds: nil,
+		}, nil
 	}
+
 	dataDT, ok := parentDT.Field(id).Type.(*arrow.SparseUnionType)
 	if !ok {
 		return nil, fmt.Errorf("field %q is not a sparse union", constants.Data)
 	}
 
-	gaugeDT, ok := dataDT.Fields()[ametric.GaugeCode].Type.(*arrow.StructType)
-	if !ok {
-		return nil, fmt.Errorf("gauge field is not a struct")
-	}
+	gaugeDT := arrowutils.StructFromSparseUnion(dataDT, ametric.GaugeCode)
 	gaugeIds, err := NewUnivariateGaugeIds(gaugeDT)
 	if err != nil {
 		return nil, err
 	}
 
-	sumDT, ok := dataDT.Fields()[ametric.SumCode].Type.(*arrow.StructType)
-	if !ok {
-		return nil, fmt.Errorf("sum field is not a struct")
-	}
+	sumDT := arrowutils.StructFromSparseUnion(dataDT, ametric.SumCode)
 	sumIds, err := NewUnivariateSumIds(sumDT)
 	if err != nil {
 		return nil, err
 	}
 
-	summaryDT, ok := dataDT.Fields()[ametric.SummaryCode].Type.(*arrow.StructType)
-	if !ok {
-		return nil, fmt.Errorf("summary field is not a struct")
-	}
+	summaryDT := arrowutils.StructFromSparseUnion(dataDT, ametric.SummaryCode)
 	summaryIds, err := NewUnivariateSummaryIds(summaryDT)
 	if err != nil {
 		return nil, err
 	}
 
-	histogramDT, ok := dataDT.Fields()[ametric.HistogramCode].Type.(*arrow.StructType)
-	if !ok {
-		return nil, fmt.Errorf("histogram field is not a struct")
-	}
+	histogramDT := arrowutils.StructFromSparseUnion(dataDT, ametric.HistogramCode)
 	histogramIds, err := NewUnivariateHistogramIds(histogramDT)
 	if err != nil {
 		return nil, err
 	}
 
-	ehistogramDT, ok := dataDT.Fields()[ametric.ExpHistogramCode].Type.(*arrow.StructType)
-	if !ok {
-		return nil, fmt.Errorf("ehistogram field is not a struct")
-	}
+	ehistogramDT := arrowutils.StructFromSparseUnion(dataDT, ametric.ExpHistogramCode)
 	ehistogramIds, err := NewUnivariateEHistogramIds(ehistogramDT)
 	if err != nil {
 		return nil, err

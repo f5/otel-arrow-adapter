@@ -22,8 +22,8 @@ import (
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 
-	arrowutils "github.com/f5/otel-arrow-adapter/pkg/arrow"
-	"github.com/f5/otel-arrow-adapter/pkg/otel/common/otlp"
+	arrowutils "github.com/f5/otel-arrow-adapter/pkg/arrow2"
+	otlp "github.com/f5/otel-arrow-adapter/pkg/otel/common/otlp2"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/constants"
 )
 
@@ -47,25 +47,10 @@ func NewExemplarIds(ndp *arrow.StructType) (*ExemplarIds, error) {
 		return nil, err
 	}
 
-	timeUnixNanoId, timeUnixNanoFound := exemplarDT.FieldIdx(constants.TimeUnixNano)
-	if !timeUnixNanoFound {
-		return nil, fmt.Errorf("field %s not found", constants.TimeUnixNano)
-	}
-
-	spanIdId, spanIdFound := exemplarDT.FieldIdx(constants.SpanId)
-	if !spanIdFound {
-		return nil, fmt.Errorf("field %s not found", constants.SpanId)
-	}
-
-	traceIdId, traceIdFound := exemplarDT.FieldIdx(constants.TraceId)
-	if !traceIdFound {
-		return nil, fmt.Errorf("field %s not found", constants.TraceId)
-	}
-
-	valueId, valueFound := exemplarDT.FieldIdx(constants.MetricValue)
-	if !valueFound {
-		return nil, fmt.Errorf("field %s not found", constants.MetricValue)
-	}
+	timeUnixNanoId, _ := arrowutils.FieldIDFromStruct(exemplarDT, constants.TimeUnixNano)
+	spanIdId, _ := arrowutils.FieldIDFromStruct(exemplarDT, constants.SpanId)
+	traceIdId, _ := arrowutils.FieldIDFromStruct(exemplarDT, constants.TraceId)
+	valueId, _ := arrowutils.FieldIDFromStruct(exemplarDT, constants.MetricValue)
 
 	return &ExemplarIds{
 		Id:           id,

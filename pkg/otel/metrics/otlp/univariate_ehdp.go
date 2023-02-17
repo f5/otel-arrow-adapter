@@ -15,14 +15,12 @@
 package otlp
 
 import (
-	"fmt"
-
 	"github.com/apache/arrow/go/v11/arrow"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 
-	arrowutils "github.com/f5/otel-arrow-adapter/pkg/arrow"
-	"github.com/f5/otel-arrow-adapter/pkg/otel/common/otlp"
+	arrowutils "github.com/f5/otel-arrow-adapter/pkg/arrow2"
+	otlp "github.com/f5/otel-arrow-adapter/pkg/otel/common/otlp2"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/constants"
 )
 
@@ -57,35 +55,12 @@ func NewUnivariateEHistogramDataPointIds(parentDT *arrow.StructType) (*Univariat
 		return nil, err
 	}
 
-	startTimeUnixNanoID, found := ehdpDT.FieldIdx(constants.StartTimeUnixNano)
-	if !found {
-		return nil, fmt.Errorf("field %q not found", constants.StartTimeUnixNano)
-	}
-
-	timeUnixNanoID, found := ehdpDT.FieldIdx(constants.TimeUnixNano)
-	if !found {
-		return nil, fmt.Errorf("field %q not found", constants.TimeUnixNano)
-	}
-
-	countID, found := ehdpDT.FieldIdx(constants.HistogramCount)
-	if !found {
-		return nil, fmt.Errorf("field %q not found", constants.HistogramCount)
-	}
-
-	sumID, found := ehdpDT.FieldIdx(constants.HistogramSum)
-	if !found {
-		return nil, fmt.Errorf("field %q not found", constants.HistogramSum)
-	}
-
-	scaleID, found := ehdpDT.FieldIdx(constants.ExpHistogramScale)
-	if !found {
-		return nil, fmt.Errorf("field %q not found", constants.ExpHistogramScale)
-	}
-
-	zeroCountID, found := ehdpDT.FieldIdx(constants.ExpHistogramZeroCount)
-	if !found {
-		return nil, fmt.Errorf("field %q not found", constants.ExpHistogramZeroCount)
-	}
+	startTimeUnixNanoID, _ := arrowutils.FieldIDFromStruct(ehdpDT, constants.StartTimeUnixNano)
+	timeUnixNanoID, _ := arrowutils.FieldIDFromStruct(ehdpDT, constants.TimeUnixNano)
+	countID, _ := arrowutils.FieldIDFromStruct(ehdpDT, constants.HistogramCount)
+	sumID, _ := arrowutils.FieldIDFromStruct(ehdpDT, constants.HistogramSum)
+	scaleID, _ := arrowutils.FieldIDFromStruct(ehdpDT, constants.ExpHistogramScale)
+	zeroCountID, _ := arrowutils.FieldIDFromStruct(ehdpDT, constants.ExpHistogramZeroCount)
 
 	positiveID, positiveDT, err := arrowutils.StructFieldIDFromStruct(ehdpDT, constants.ExpHistogramPositive)
 	if err != nil {
@@ -110,20 +85,9 @@ func NewUnivariateEHistogramDataPointIds(parentDT *arrow.StructType) (*Univariat
 		return nil, err
 	}
 
-	flagsID, found := ehdpDT.FieldIdx(constants.Flags)
-	if !found {
-		return nil, fmt.Errorf("field %q not found", constants.Flags)
-	}
-
-	minID, found := ehdpDT.FieldIdx(constants.HistogramMin)
-	if !found {
-		return nil, fmt.Errorf("field %q not found", constants.HistogramMin)
-	}
-
-	maxID, found := ehdpDT.FieldIdx(constants.HistogramMax)
-	if !found {
-		return nil, fmt.Errorf("field %q not found", constants.HistogramMax)
-	}
+	flagsID, _ := arrowutils.FieldIDFromStruct(ehdpDT, constants.Flags)
+	minID, _ := arrowutils.FieldIDFromStruct(ehdpDT, constants.HistogramMin)
+	maxID, _ := arrowutils.FieldIDFromStruct(ehdpDT, constants.HistogramMax)
 
 	return &UnivariateEHistogramDataPointIds{
 		Id:                id,

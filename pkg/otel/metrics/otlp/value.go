@@ -20,8 +20,8 @@ import (
 	"github.com/apache/arrow/go/v11/arrow/array"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 
-	arrowutils "github.com/f5/otel-arrow-adapter/pkg/arrow"
-	"github.com/f5/otel-arrow-adapter/pkg/otel/metrics/arrow"
+	arrowutils "github.com/f5/otel-arrow-adapter/pkg/arrow2"
+	arrow "github.com/f5/otel-arrow-adapter/pkg/otel/metrics/arrow2"
 )
 
 func UpdateValueFromExemplar(v pmetric.Exemplar, vArr *array.SparseUnion, row int) error {

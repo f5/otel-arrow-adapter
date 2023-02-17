@@ -15,14 +15,12 @@
 package otlp
 
 import (
-	"fmt"
-
 	"github.com/apache/arrow/go/v11/arrow"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 
-	arrowutils "github.com/f5/otel-arrow-adapter/pkg/arrow"
-	"github.com/f5/otel-arrow-adapter/pkg/otel/common/otlp"
+	arrowutils "github.com/f5/otel-arrow-adapter/pkg/arrow2"
+	otlp "github.com/f5/otel-arrow-adapter/pkg/otel/common/otlp2"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/constants"
 )
 
@@ -48,35 +46,16 @@ func NewUnivariateSdpIds(parentDT *arrow.StructType) (*UnivariateSdpIds, error) 
 		return nil, err
 	}
 
-	startTimeUnixNanoId, found := sdpDT.FieldIdx(constants.StartTimeUnixNano)
-	if !found {
-		return nil, fmt.Errorf("field %q not found", constants.StartTimeUnixNano)
-	}
-
-	timeUnixNanoId, found := sdpDT.FieldIdx(constants.TimeUnixNano)
-	if !found {
-		return nil, fmt.Errorf("field %q not found", constants.TimeUnixNano)
-	}
-
-	countId, found := sdpDT.FieldIdx(constants.SummaryCount)
-	if !found {
-		return nil, fmt.Errorf("field %q not found", constants.SummaryCount)
-	}
-
-	sumId, found := sdpDT.FieldIdx(constants.SummarySum)
-	if !found {
-		return nil, fmt.Errorf("field %q not found", constants.SummarySum)
-	}
-
+	startTimeUnixNanoId, _ := arrowutils.FieldIDFromStruct(sdpDT, constants.StartTimeUnixNano)
+	timeUnixNanoId, _ := arrowutils.FieldIDFromStruct(sdpDT, constants.TimeUnixNano)
+	countId, _ := arrowutils.FieldIDFromStruct(sdpDT, constants.SummaryCount)
+	sumId, _ := arrowutils.FieldIDFromStruct(sdpDT, constants.SummarySum)
 	quantileValues, err := NewQuantileValueIds(sdpDT)
 	if err != nil {
 		return nil, err
 	}
 
-	flagsId, found := sdpDT.FieldIdx(constants.Flags)
-	if !found {
-		return nil, fmt.Errorf("field %q not found", constants.Flags)
-	}
+	flagsId, _ := arrowutils.FieldIDFromStruct(sdpDT, constants.Flags)
 
 	return &UnivariateSdpIds{
 		Id:                id,

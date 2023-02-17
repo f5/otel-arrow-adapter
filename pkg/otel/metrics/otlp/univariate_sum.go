@@ -21,7 +21,7 @@ import (
 	"github.com/apache/arrow/go/v11/arrow/array"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 
-	arrowutils "github.com/f5/otel-arrow-adapter/pkg/arrow"
+	arrowutils "github.com/f5/otel-arrow-adapter/pkg/arrow2"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/constants"
 )
 
@@ -37,15 +37,8 @@ func NewUnivariateSumIds(parentDT *arrow.StructType) (*UnivariateSumIds, error) 
 		return nil, err
 	}
 
-	aggrTempId, found := parentDT.FieldIdx(constants.AggregationTemporality)
-	if !found {
-		return nil, fmt.Errorf("missing field %q", constants.AggregationTemporality)
-	}
-
-	isMonotonicId, found := parentDT.FieldIdx(constants.IsMonotonic)
-	if !found {
-		return nil, fmt.Errorf("missing field %q", constants.IsMonotonic)
-	}
+	aggrTempId, _ := arrowutils.FieldIDFromStruct(parentDT, constants.AggregationTemporality)
+	isMonotonicId, _ := arrowutils.FieldIDFromStruct(parentDT, constants.IsMonotonic)
 
 	return &UnivariateSumIds{
 		DataPoints:             dataPoints,

@@ -15,12 +15,10 @@
 package otlp
 
 import (
-	"fmt"
-
 	"github.com/apache/arrow/go/v11/arrow"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 
-	arrowutils "github.com/f5/otel-arrow-adapter/pkg/arrow"
+	arrowutils "github.com/f5/otel-arrow-adapter/pkg/arrow2"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/constants"
 )
 
@@ -36,15 +34,8 @@ func NewQuantileValueIds(parentDT *arrow.StructType) (*QuantileValueIds, error) 
 		return nil, err
 	}
 
-	quantile, quantileFound := quantileValueDT.FieldIdx(constants.SummaryQuantile)
-	if !quantileFound {
-		return nil, fmt.Errorf("field %q not found", constants.SummaryQuantile)
-	}
-
-	value, valueFound := quantileValueDT.FieldIdx(constants.SummaryValue)
-	if !valueFound {
-		return nil, fmt.Errorf("field %q not found", constants.SummaryValue)
-	}
+	quantile, _ := arrowutils.FieldIDFromStruct(quantileValueDT, constants.SummaryQuantile)
+	value, _ := arrowutils.FieldIDFromStruct(quantileValueDT, constants.SummaryValue)
 
 	return &QuantileValueIds{
 		Id:       id,

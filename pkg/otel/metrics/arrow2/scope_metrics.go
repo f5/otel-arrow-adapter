@@ -128,8 +128,17 @@ func (b *ScopeMetricsBuilder) Append(sm pmetric.ScopeMetrics) error {
 			return err
 		}
 
-		b.sstunb.Append(arrow.Timestamp(*sharedData.StartTime))
-		b.stunb.Append(arrow.Timestamp(*sharedData.Time))
+		if sharedData.StartTime != nil {
+			b.sstunb.Append(arrow.Timestamp(*sharedData.StartTime))
+		} else {
+			b.sstunb.AppendNull()
+		}
+
+		if sharedData.Time != nil {
+			b.stunb.Append(arrow.Timestamp(*sharedData.Time))
+		} else {
+			b.stunb.AppendNull()
+		}
 
 		return nil
 	})

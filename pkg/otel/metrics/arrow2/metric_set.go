@@ -106,8 +106,17 @@ func (b *MetricSetBuilder) Append(metric pmetric.Metric, smdata *ScopeMetricsSha
 			return err
 		}
 
-		b.sstunb.Append(arrow.Timestamp(*mdata.StartTime))
-		b.stunb.Append(arrow.Timestamp(*mdata.Time))
+		if mdata != nil && mdata.StartTime != nil {
+			b.sstunb.Append(arrow.Timestamp(*mdata.StartTime))
+		} else {
+			b.sstunb.AppendNull()
+		}
+
+		if mdata != nil && mdata.Time != nil {
+			b.stunb.Append(arrow.Timestamp(*mdata.Time))
+		} else {
+			b.stunb.AppendNull()
+		}
 
 		return nil
 	})

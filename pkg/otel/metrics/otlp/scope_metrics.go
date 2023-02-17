@@ -19,8 +19,8 @@ import (
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 
-	arrowutils "github.com/f5/otel-arrow-adapter/pkg/arrow"
-	"github.com/f5/otel-arrow-adapter/pkg/otel/common/otlp"
+	arrowutils "github.com/f5/otel-arrow-adapter/pkg/arrow2"
+	otlp "github.com/f5/otel-arrow-adapter/pkg/otel/common/otlp2"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/constants"
 )
 
@@ -40,7 +40,7 @@ func NewScopeMetricsIds(dt *arrow.StructType) (*ScopeMetricsIds, error) {
 		return nil, err
 	}
 
-	schemaId, _, err := arrowutils.FieldIDFromStruct(scopeMetricsDT, constants.SchemaUrl)
+	schemaId, _ := arrowutils.FieldIDFromStruct(scopeMetricsDT, constants.SchemaUrl)
 	if err != nil {
 		return nil, err
 	}
@@ -92,8 +92,8 @@ func AppendScopeMetricsInto(resMetrics pmetric.ResourceMetrics, arrowResMetrics 
 		scopeMetrics.SetSchemaUrl(schemaUrl)
 
 		sdata := &SharedData{}
+		sdata.Attributes = pcommon.NewMap()
 		if ids.SharedAttributeIds != nil {
-			sdata.Attributes = pcommon.NewMap()
 			err = otlp.AppendAttributesInto(sdata.Attributes, arrowScopeMetrics.Array(), scopeMetricsIdx, ids.SharedAttributeIds)
 			if err != nil {
 				return err

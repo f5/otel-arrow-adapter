@@ -129,3 +129,52 @@ func I32FromStruct(arr arrow.Array, row int, id int) (int32, error) {
 		return 0, fmt.Errorf("column array is not of type struct")
 	}
 }
+
+// OptionalFieldIDFromStruct returns the field id of a named field from an Arrow struct or -1 if the field is unknown.
+func OptionalFieldIDFromStruct(dt *arrow.StructType, fieldName string) (id int) {
+	if dt == nil {
+		id = -1
+		return
+	}
+
+	id, found := dt.FieldIdx(fieldName)
+	if !found {
+		id = -1
+	}
+	return
+}
+
+// ListOfStructsFromStruct return a ListOfStructs from a struct field.
+func ListOfStructsFromStruct(parent *array.Struct, fieldID int, row int) (*ListOfStructs, error) {
+	if fieldID == -1 {
+		return nil, nil
+	}
+
+	arr := parent.Field(fieldID)
+	if listArr, ok := arr.(*array.List); ok {
+		if listArr.IsNull(row) {
+			return nil, nil
+		}
+
+		switch structArr := listArr.ListValues().(type) {
+		case *array.Struct:
+			dt, ok := structArr.DataType().(*arrow.StructType)
+			if !ok {
+				return nil, fmt.Errorf("field id %d is not a list of structs", fieldID)
+			}
+			start := int(listArr.Offsets()[row])
+			end := int(listArr.Offsets()[row+1])
+
+			return &ListOfStructs{
+				dt:    dt,
+				arr:   structArr,
+				start: start,
+				end:   end,
+			}, nil
+		default:
+			return nil, fmt.Errorf("field id %d is not a list of structs", fieldID)
+		}
+	} else {
+		return nil, fmt.Errorf("field id %d is not a list", fieldID)
+	}
+}

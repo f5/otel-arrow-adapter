@@ -34,6 +34,20 @@ type SparseUnionBuilder struct {
 	updateRequest *update.SchemaUpdateRequest
 }
 
+func NewSparseUnionBuilder(
+	protoDataType *arrow.SparseUnionType,
+	builder *array.SparseUnionBuilder,
+	transformNode *schema.TransformNode,
+	updateRequest *update.SchemaUpdateRequest,
+) *SparseUnionBuilder {
+	return &SparseUnionBuilder{
+		protoDataType: protoDataType,
+		builder:       builder,
+		transformNode: transformNode,
+		updateRequest: updateRequest,
+	}
+}
+
 func (sub *SparseUnionBuilder) NewSparseUnionArray() *array.SparseUnion {
 	if sub.builder != nil {
 		return sub.builder.NewSparseUnionArray()
@@ -191,7 +205,9 @@ func (sub *SparseUnionBuilder) StructBuilder(code arrow.UnionTypeCode) *StructBu
 }
 
 func (sub *SparseUnionBuilder) AppendNull() {
-	sub.builder.AppendNull()
+	if sub.builder != nil {
+		sub.builder.AppendNull()
+	}
 }
 
 func (sub *SparseUnionBuilder) Append(code int8) {

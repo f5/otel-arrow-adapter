@@ -22,8 +22,8 @@ import (
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 
-	arrowutils "github.com/f5/otel-arrow-adapter/pkg/arrow"
-	"github.com/f5/otel-arrow-adapter/pkg/otel/common/otlp"
+	arrowutils "github.com/f5/otel-arrow-adapter/pkg/arrow2"
+	otlp "github.com/f5/otel-arrow-adapter/pkg/otel/common/otlp2"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/constants"
 )
 
@@ -48,30 +48,16 @@ func NewUnivariateNdpIds(parentDT *arrow.StructType) (*UnivariateNdpIds, error) 
 		return nil, err
 	}
 
-	startTimeUnixNanoId, found := univariateNdpDT.FieldIdx(constants.StartTimeUnixNano)
-	if !found {
-		return nil, fmt.Errorf("field %q not found", constants.StartTimeUnixNano)
-	}
-
-	timeUnixNanoId, found := univariateNdpDT.FieldIdx(constants.TimeUnixNano)
-	if !found {
-		return nil, fmt.Errorf("field %q not found", constants.TimeUnixNano)
-	}
-
-	metricValueId, found := univariateNdpDT.FieldIdx(constants.MetricValue)
-	if !found {
-		return nil, fmt.Errorf("field %q not found", constants.MetricValue)
-	}
+	startTimeUnixNanoId, _ := arrowutils.FieldIDFromStruct(univariateNdpDT, constants.StartTimeUnixNano)
+	timeUnixNanoId, _ := arrowutils.FieldIDFromStruct(univariateNdpDT, constants.TimeUnixNano)
+	metricValueId, _ := arrowutils.FieldIDFromStruct(univariateNdpDT, constants.MetricValue)
 
 	exemplars, err := NewExemplarIds(univariateNdpDT)
 	if err != nil {
 		return nil, err
 	}
 
-	flagsId, found := univariateNdpDT.FieldIdx(constants.Flags)
-	if !found {
-		return nil, fmt.Errorf("field %q not found", constants.Flags)
-	}
+	flagsId, _ := arrowutils.FieldIDFromStruct(univariateNdpDT, constants.Flags)
 
 	return &UnivariateNdpIds{
 		Id:                id,
