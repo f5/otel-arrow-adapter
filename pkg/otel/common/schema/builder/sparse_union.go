@@ -178,6 +178,18 @@ func (sub *SparseUnionBuilder) BinaryBuilder(code arrow.UnionTypeCode) *BinaryBu
 	}
 }
 
+// StructBuilder returns a builder for the given child code.
+func (sub *SparseUnionBuilder) StructBuilder(code arrow.UnionTypeCode) *StructBuilder {
+	builder := sub.getBuilder(code)
+	structDT, transformNode := sub.protoDataTypeAndTransformNode(code)
+
+	if builder != nil {
+		return &StructBuilder{protoDataType: structDT.(*arrow.StructType), builder: builder.(*array.StructBuilder), transformNode: transformNode, updateRequest: sub.updateRequest}
+	} else {
+		return &StructBuilder{protoDataType: structDT.(*arrow.StructType), builder: nil, transformNode: transformNode, updateRequest: sub.updateRequest}
+	}
+}
+
 func (sub *SparseUnionBuilder) AppendNull() {
 	sub.builder.AppendNull()
 }

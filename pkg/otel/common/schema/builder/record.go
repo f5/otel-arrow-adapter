@@ -562,3 +562,18 @@ func (rb *RecordBuilderExt) ListBuilder(name string) *ListBuilder {
 		return &ListBuilder{protoDataType: protoDataType.(*arrow.ListType), builder: nil, transformNode: transformNode, updateRequest: rb.updateRequest}
 	}
 }
+
+// SparseUnionBuilder returns a SparseUnionBuilder wrapper for the field with
+// the given name. If the underlying builder doesn't exist, an empty wrapper is
+// returned, so that the feeding process can continue without panicking. This
+// is useful to handle optional fields.
+func (rb *RecordBuilderExt) SparseUnionBuilder(name string) *SparseUnionBuilder {
+	protoDataType, transformNode := rb.protoDataTypeAndTransformNode(name)
+	b := rb.builder(name)
+
+	if b != nil {
+		return &SparseUnionBuilder{protoDataType: protoDataType.(*arrow.SparseUnionType), builder: b.(*array.SparseUnionBuilder), transformNode: transformNode, updateRequest: rb.updateRequest}
+	} else {
+		return &SparseUnionBuilder{protoDataType: protoDataType.(*arrow.SparseUnionType), builder: nil, transformNode: transformNode, updateRequest: rb.updateRequest}
+	}
+}

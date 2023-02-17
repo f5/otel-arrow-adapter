@@ -106,3 +106,25 @@ func (lb *ListBuilder) StructBuilder() *StructBuilder {
 		return &StructBuilder{protoDataType: protoDataType.(*arrow.StructType), builder: nil, transformNode: transformNode, updateRequest: lb.updateRequest}
 	}
 }
+
+func (lb *ListBuilder) Uint64Builder() *Uint64Builder {
+	builder := lb.valueBuilder()
+	_, transformNode := lb.valueProtoDataTypeAndTransformNode()
+
+	if builder != nil {
+		return &Uint64Builder{builder: builder.(*array.Uint64Builder), transformNode: transformNode, updateRequest: lb.updateRequest}
+	} else {
+		return &Uint64Builder{builder: nil, transformNode: transformNode, updateRequest: lb.updateRequest}
+	}
+}
+
+func (lb *ListBuilder) Float64Builder() *Float64Builder {
+	builder := lb.valueBuilder()
+	_, transformNode := lb.valueProtoDataTypeAndTransformNode()
+
+	if builder != nil {
+		return &Float64Builder{builder: builder.(*array.Float64Builder), transformNode: transformNode, updateRequest: lb.updateRequest}
+	} else {
+		return &Float64Builder{builder: nil, transformNode: transformNode, updateRequest: lb.updateRequest}
+	}
+}

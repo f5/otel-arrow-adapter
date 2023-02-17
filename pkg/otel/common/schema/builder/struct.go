@@ -136,6 +136,17 @@ func (sb *StructBuilder) Int64Builder(name string) *Int64Builder {
 	}
 }
 
+func (sb *StructBuilder) Float64Builder(name string) *Float64Builder {
+	float64Builder := sb.getBuilder(name)
+	_, transformNode := sb.protoDataTypeAndTransformNode(name)
+
+	if float64Builder != nil {
+		return &Float64Builder{builder: float64Builder.(*array.Float64Builder), transformNode: transformNode, updateRequest: sb.updateRequest}
+	} else {
+		return &Float64Builder{builder: nil, transformNode: transformNode, updateRequest: sb.updateRequest}
+	}
+}
+
 func (sb *StructBuilder) FixedSizeBinaryBuilder(name string) *FixedSizeBinaryBuilder {
 	fixedSizeBinaryBuilder := sb.getBuilder(name)
 	_, transformNode := sb.protoDataTypeAndTransformNode(name)
@@ -220,6 +231,12 @@ func (sb *StructBuilder) BinaryBuilder(name string) *BinaryBuilder {
 		return &BinaryBuilder{builder: binaryBuilder, transformNode: transformNode, updateRequest: sb.updateRequest}
 	} else {
 		return &BinaryBuilder{builder: nil, transformNode: transformNode, updateRequest: sb.updateRequest}
+	}
+}
+
+func (sb *StructBuilder) AppendNull() {
+	if sb.builder != nil {
+		sb.builder.AppendNull()
 	}
 }
 
