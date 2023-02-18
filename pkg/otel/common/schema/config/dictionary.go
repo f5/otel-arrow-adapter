@@ -17,13 +17,13 @@
 
 package builder
 
-// DictionaryConfig is a configuration for a dictionary field.
+// Dictionary is a configuration for a dictionary field.
 // The MaxCard is the maximum cardinality of the dictionary field. If the
 // cardinality of the dictionary field is higher than MaxCard, then the
 // dictionary field will be automatically converted to its base type.
 //
 // if MaxCard is equal to 0, then the dictionary field will be converted to its
 // base type no matter what.
-type DictionaryConfig struct {
+type Dictionary struct {
 	MaxCard uint64
 }

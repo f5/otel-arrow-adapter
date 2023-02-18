@@ -66,7 +66,7 @@ type RecordBuilderExt struct {
 
 // NewRecordBuilderExt creates a new RecordBuilderExt from the given allocator
 // and a prototype schema.
-func NewRecordBuilderExt(allocator memory.Allocator, protoSchema *arrow.Schema, dictConfig *builder.DictionaryConfig) *RecordBuilderExt {
+func NewRecordBuilderExt(allocator memory.Allocator, protoSchema *arrow.Schema, dictConfig *builder.Dictionary) *RecordBuilderExt {
 	schemaUpdateRequest := update.NewSchemaUpdateRequest()
 	evts := &events.Events{
 		DictionariesWithOverflow:     make(map[string]bool),

@@ -31,7 +31,7 @@ import (
 	acommon "github.com/f5/otel-arrow-adapter/pkg/otel/common/arrow"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/builder"
-	builder2 "github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/config"
+	config "github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/config"
 	logsarrow "github.com/f5/otel-arrow-adapter/pkg/otel/logs/arrow"
 	metricsarrow "github.com/f5/otel-arrow-adapter/pkg/otel/metrics/arrow2"
 	tracesarrow "github.com/f5/otel-arrow-adapter/pkg/otel/traces/arrow"
@@ -64,6 +64,7 @@ type Producer struct {
 	logsBuilder    *logsarrow.LogsBuilder
 	tracesBuilder  *tracesarrow.TracesBuilder
 
+	// Record builder for each OTEL entities
 	metricsRecordBuilder *builder.RecordBuilderExt
 	logsRecordBuilder    *builder.RecordBuilderExt
 	tracesRecordBuilder  *builder.RecordBuilderExt
@@ -106,15 +107,15 @@ func NewProducerWithOptions(options ...Option) *Producer {
 		opt(cfg)
 	}
 
-	metricsRecordBuilder := builder.NewRecordBuilderExt(cfg.pool, metricsarrow.Schema, &builder2.DictionaryConfig{
+	metricsRecordBuilder := builder.NewRecordBuilderExt(cfg.pool, metricsarrow.Schema, &config.Dictionary{
 		MaxCard: cfg.limitIndexSize,
 	})
 
-	logsRecordBuilder := builder.NewRecordBuilderExt(cfg.pool, logsarrow.Schema, &builder2.DictionaryConfig{
+	logsRecordBuilder := builder.NewRecordBuilderExt(cfg.pool, logsarrow.Schema, &config.Dictionary{
 		MaxCard: cfg.limitIndexSize,
 	})
 
-	tracesRecordBuilder := builder.NewRecordBuilderExt(cfg.pool, tracesarrow.Schema, &builder2.DictionaryConfig{
+	tracesRecordBuilder := builder.NewRecordBuilderExt(cfg.pool, tracesarrow.Schema, &config.Dictionary{
 		MaxCard: cfg.limitIndexSize,
 	})
 

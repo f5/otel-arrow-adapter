@@ -52,7 +52,7 @@ type DictionaryField struct {
 func NewDictionaryField(
 	path string,
 	dictID string,
-	config *cfg.DictionaryConfig,
+	config *cfg.Dictionary,
 	schemaUpdateRequest *update.SchemaUpdateRequest,
 	events *events.Events,
 ) *DictionaryField {
@@ -141,7 +141,7 @@ func (t *DictionaryField) updateIndexType() {
 	}
 }
 
-func (t *DictionaryField) initIndices(config *cfg.DictionaryConfig) {
+func (t *DictionaryField) initIndices(config *cfg.Dictionary) {
 	t.indexTypes = nil
 	t.indexMaxCard = nil
 	t.currentIndex = 0

@@ -93,7 +93,7 @@ var (
 	}, nil)
 )
 
-var DictConfig = &config.DictionaryConfig{
+var DictConfig = &config.Dictionary{
 	MaxCard: math.MaxUint16,
 }
 

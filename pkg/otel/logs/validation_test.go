@@ -34,7 +34,7 @@ import (
 	logsotlp "github.com/f5/otel-arrow-adapter/pkg/otel/logs/otlp"
 )
 
-var DefaultDictConfig = &cfg.DictionaryConfig{
+var DefaultDictConfig = &cfg.Dictionary{
 	MaxCard: math.MaxUint16,
 }
 

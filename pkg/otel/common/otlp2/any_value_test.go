@@ -34,7 +34,7 @@ import (
 	cfg "github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/config"
 )
 
-var DefaultDictConfig = &cfg.DictionaryConfig{
+var DefaultDictConfig = &cfg.Dictionary{
 	MaxCard: math.MaxUint16,
 }
 

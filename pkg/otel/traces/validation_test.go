@@ -35,7 +35,7 @@ import (
 	tracesotlp "github.com/f5/otel-arrow-adapter/pkg/otel/traces/otlp"
 )
 
-var DefaultDictConfig = &cfg.DictionaryConfig{
+var DefaultDictConfig = &cfg.Dictionary{
 	MaxCard: math.MaxUint16,
 }
 

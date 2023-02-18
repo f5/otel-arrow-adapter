@@ -48,7 +48,7 @@ func TestNoDictionary(t *testing.T) {
 
 func TestDictUint8Overflow(t *testing.T) {
 	schemaUpdateRequest := update.NewSchemaUpdateRequest()
-	dictConfig := cfg.DictionaryConfig{
+	dictConfig := cfg.Dictionary{
 		MaxCard: math.MaxUint8,
 	}
 
@@ -71,7 +71,7 @@ func TestDictUint8Overflow(t *testing.T) {
 
 func TestDictUint16Overflow(t *testing.T) {
 	schemaUpdateRequest := update.NewSchemaUpdateRequest()
-	dictConfig := cfg.DictionaryConfig{
+	dictConfig := cfg.Dictionary{
 		MaxCard: math.MaxUint16,
 	}
 
@@ -103,7 +103,7 @@ func TestDictUint16Overflow(t *testing.T) {
 
 func TestDictUint32Overflow(t *testing.T) {
 	schemaUpdateRequest := update.NewSchemaUpdateRequest()
-	dictConfig := cfg.DictionaryConfig{
+	dictConfig := cfg.Dictionary{
 		MaxCard: math.MaxUint32,
 	}
 
@@ -144,7 +144,7 @@ func TestDictUint32Overflow(t *testing.T) {
 
 func TestDictUint64Overflow(t *testing.T) {
 	schemaUpdateRequest := update.NewSchemaUpdateRequest()
-	dictConfig := cfg.DictionaryConfig{
+	dictConfig := cfg.Dictionary{
 		MaxCard: math.MaxUint64,
 	}
 

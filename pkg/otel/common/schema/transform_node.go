@@ -58,7 +58,7 @@ type TransformNode struct {
 // converted to their dictionary representation.
 func NewTransformTreeFrom(
 	prototype *arrow.Schema,
-	dictConfig *cfg.DictionaryConfig,
+	dictConfig *cfg.Dictionary,
 	schemaUpdateRequest *update.SchemaUpdateRequest,
 	events *events.Events,
 ) (*TransformNode, map[string]*transform2.DictionaryField) {
@@ -84,7 +84,7 @@ func NewTransformTreeFrom(
 func newTransformNodeFrom(
 	path string,
 	prototype *arrow.Field,
-	dictConfig *cfg.DictionaryConfig,
+	dictConfig *cfg.Dictionary,
 	dictTransformNodes map[string]*transform2.DictionaryField,
 	schemaUpdateRequest *update.SchemaUpdateRequest,
 	events *events.Events,
@@ -220,6 +220,11 @@ func newTransformNodeFrom(
 	return &node
 }
 
+// RemoveOptional removes all transformations that are marked as optional.
+// This will take effect on the next cycle of appending data.
+//
+// To avoid data loss, the methods `Append` and `AppendNull` should be called
+// again after calling this method.
 func (t *TransformNode) RemoveOptional() {
 	n := 0
 
