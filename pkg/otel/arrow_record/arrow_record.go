@@ -79,7 +79,6 @@ func (rm *RecordMessage) ShowStats() {
 	schema := rm.record.Schema()
 	columns := rm.record.Columns()
 
-	println()
 	for i, field := range schema.Fields() {
 		ShowFieldStats("", &field, columns[i])
 	}
