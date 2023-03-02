@@ -44,6 +44,10 @@ var help = flag.Bool("help", false, "Show help")
 // The dataset can be generated from a CSV file (ext .csv) or from a OTLP protobuf file (ext .pb).
 
 func main() {
+	// By default, the benchmark runs in streaming mode (standard OTLP Arrow mode).
+	// To run in unary RPC mode, use the flag -unaryrpc.
+	unaryRpcPtr := flag.Bool("unaryrpc", false, "unary rpc mode")
+
 	// Parse the flag
 	flag.Parse()
 
@@ -87,13 +91,23 @@ func main() {
 		profiler.Printf("Dataset '%s' (%s) loaded\n", inputFiles[i], humanize.Bytes(uint64(ds.SizeInBytes())))
 
 		otlpLogs := otlp.NewLogsProfileable(ds, compressionAlgo)
-		otlpArrowLogs := arrow.NewLogsProfileable([]string{}, ds, &benchmark.Config{})
+		otlpArrowLogs := arrow.NewLogsProfileable([]string{"stream mode"}, ds, &benchmark.Config{})
 
 		if err := profiler.Profile(otlpLogs, maxIter); err != nil {
 			panic(fmt.Errorf("expected no error, got %v", err))
 		}
 		if err := profiler.Profile(otlpArrowLogs, maxIter); err != nil {
 			panic(fmt.Errorf("expected no error, got %v", err))
+		}
+
+		// If the unary RPC mode is enabled,
+		// run the OTLP Arrow benchmark in unary RPC mode.
+		if *unaryRpcPtr {
+			otlpArrowLogs := arrow.NewLogsProfileable([]string{"unary rpc mode"}, ds, &benchmark.Config{})
+			otlpArrowLogs.EnableUnaryRpcMode()
+			if err := profiler.Profile(otlpArrowLogs, maxIter); err != nil {
+				panic(fmt.Errorf("expected no error, got %v", err))
+			}
 		}
 
 		profiler.CheckProcessingResults()

@@ -30,6 +30,10 @@ import (
 var help = flag.Bool("help", false, "Show help")
 
 func main() {
+	// By default, the benchmark runs in streaming mode (standard OTLP Arrow mode).
+	// To run in unary RPC mode, use the flag -unaryrpc.
+	unaryRpcPtr := flag.Bool("unaryrpc", false, "unary rpc mode")
+
 	// Parse the flag
 	flag.Parse()
 
@@ -57,7 +61,7 @@ func main() {
 		otlpTraces := otlp.NewTraceProfileable(ds, compressionAlgo)
 
 		conf := &benchmark.Config{}
-		otlpArrowTraces := arrow.NewTraceProfileable([]string{}, ds, conf)
+		otlpArrowTraces := arrow.NewTraceProfileable([]string{"stream mode"}, ds, conf)
 
 		if err := profiler.Profile(otlpTraces, maxIter); err != nil {
 			panic(fmt.Errorf("expected no error, got %v", err))
@@ -65,6 +69,16 @@ func main() {
 
 		if err := profiler.Profile(otlpArrowTraces, maxIter); err != nil {
 			panic(fmt.Errorf("expected no error, got %v", err))
+		}
+
+		// If the unary RPC mode is enabled,
+		// run the OTLP Arrow benchmark in unary RPC mode.
+		if *unaryRpcPtr {
+			otlpArrowTraces := arrow.NewTraceProfileable([]string{"unary rpc mode"}, ds, conf)
+			otlpArrowTraces.EnableUnaryRpcMode()
+			if err := profiler.Profile(otlpArrowTraces, maxIter); err != nil {
+				panic(fmt.Errorf("expected no error, got %v", err))
+			}
 		}
 
 		profiler.CheckProcessingResults()

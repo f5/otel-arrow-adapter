@@ -38,6 +38,7 @@ type TracesProfileable struct {
 	batchArrowRecords []*v1.BatchArrowRecords
 	config            *benchmark.Config
 	pool              *memory.GoAllocator
+	unaryRpcMode      bool
 }
 
 func NewTraceProfileable(tags []string, dataset dataset.TraceDataset, config *benchmark.Config) *TracesProfileable {
@@ -50,11 +51,16 @@ func NewTraceProfileable(tags []string, dataset dataset.TraceDataset, config *be
 		batchArrowRecords: make([]*v1.BatchArrowRecords, 0, 10),
 		config:            config,
 		pool:              memory.NewGoAllocator(),
+		unaryRpcMode:      false,
 	}
 }
 
 func (s *TracesProfileable) Name() string {
 	return "OTLP_ARROW"
+}
+
+func (s *TracesProfileable) EnableUnaryRpcMode() {
+	s.unaryRpcMode = true
 }
 
 func (s *TracesProfileable) Tags() []string {
@@ -71,19 +77,28 @@ func (s *TracesProfileable) CompressionAlgorithm() benchmark.CompressionAlgorith
 	return s.compression
 }
 func (s *TracesProfileable) StartProfiling(_ io.Writer) {
-	s.producer = arrow_record.NewProducerWithOptions(arrow_record.WithNoZstd())
-	s.consumer = arrow_record.NewConsumer()
+	if !s.unaryRpcMode {
+		s.producer = arrow_record.NewProducerWithOptions(arrow_record.WithNoZstd())
+		s.consumer = arrow_record.NewConsumer()
+	}
 }
 func (s *TracesProfileable) EndProfiling(_ io.Writer) {
-	if err := s.producer.Close(); err != nil {
-		panic(err)
-	}
-	if err := s.consumer.Close(); err != nil {
-		panic(err)
+	if !s.unaryRpcMode {
+		if err := s.producer.Close(); err != nil {
+			panic(err)
+		}
+		if err := s.consumer.Close(); err != nil {
+			panic(err)
+		}
 	}
 }
 func (s *TracesProfileable) InitBatchSize(_ io.Writer, _ int) {}
 func (s *TracesProfileable) PrepareBatch(_ io.Writer, startAt, size int) {
+	if s.unaryRpcMode {
+		s.producer = arrow_record.NewProducerWithOptions(arrow_record.WithNoZstd())
+		s.consumer = arrow_record.NewConsumer()
+	}
+
 	s.traces = s.dataset.Traces(startAt, size)
 }
 func (s *TracesProfileable) ConvertOtlpToOtlpArrow(_ io.Writer, _, _ int) {
@@ -146,5 +161,14 @@ func (s *TracesProfileable) ConvertOtlpArrowToOtlp(_ io.Writer) {
 func (s *TracesProfileable) Clear() {
 	s.traces = nil
 	s.batchArrowRecords = s.batchArrowRecords[:0]
+
+	if s.unaryRpcMode {
+		if err := s.producer.Close(); err != nil {
+			panic(err)
+		}
+		if err := s.consumer.Close(); err != nil {
+			panic(err)
+		}
+	}
 }
 func (s *TracesProfileable) ShowStats() {}

@@ -80,6 +80,10 @@ type ColumnConfig struct {
 	metricApplicable bool
 }
 
+type ProfileOptions struct {
+	UnaryRpcMode bool
+}
+
 func NewProfiler(batchSizes []int, logfile string, warmUpIter uint64) *Profiler {
 	if _, err := os.Stat(logfile); os.IsNotExist(err) {
 		err = os.MkdirAll(path.Dir(logfile), 0700)
