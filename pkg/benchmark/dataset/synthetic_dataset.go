@@ -33,6 +33,7 @@ type MetricsDataset interface {
 
 type LogsDataset interface {
 	Len() int
+	ShowStats()
 	Logs(start, size int) []plog.Logs
 	SizeInBytes() int
 }

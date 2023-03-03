@@ -34,6 +34,7 @@ import (
 	"github.com/f5/otel-arrow-adapter/pkg/benchmark/dataset"
 	"github.com/f5/otel-arrow-adapter/pkg/benchmark/profileable/arrow"
 	"github.com/f5/otel-arrow-adapter/pkg/benchmark/profileable/otlp"
+	"github.com/f5/otel-arrow-adapter/pkg/benchmark/stats"
 )
 
 var help = flag.Bool("help", false, "Show help")
@@ -123,6 +124,8 @@ func main() {
 
 		profiler.ExportMetricsTimesCSV(fmt.Sprintf("%d_logs_benchmark_results", i))
 		profiler.ExportMetricsBytesCSV(fmt.Sprintf("%d_logs_benchmark_results", i))
+
+		ds.ShowStats()
 	}
 }
 
@@ -148,6 +151,7 @@ type LogsPerSource struct {
 type CsvLogsDataset struct {
 	logs        []plog.Logs
 	sizeInBytes int
+	logsStats   *stats.LogsStats
 }
 
 func (ds *CsvLogsDataset) Len() int {
@@ -224,12 +228,22 @@ func CsvToLogsDataset(file string) dataset.LogsDataset {
 		}
 	}
 
+	logsStats := stats.NewLogsStats()
+	logsStats.Analyze(logs)
+
 	ds := CsvLogsDataset{
 		logs:        []plog.Logs{logs},
 		sizeInBytes: 0,
+		logsStats:   logsStats,
 	}
 
 	return &ds
+}
+
+func (d *CsvLogsDataset) ShowStats() {
+	println()
+	println("Logs stats:")
+	d.logsStats.ShowStats()
 }
 
 func (d *CsvLogsDataset) SizeInBytes() int {
