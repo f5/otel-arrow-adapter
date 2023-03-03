@@ -91,6 +91,10 @@ func (d *FakeLogsDataset) Len() int {
 	return d.len
 }
 
+func (d *FakeLogsDataset) ShowStats() {
+	// Not implemented
+}
+
 func (d *FakeLogsDataset) Logs(_, size int) []plog.Logs {
 	return []plog.Logs{d.generator.Generate(size, 100)}
 }
