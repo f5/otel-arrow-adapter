@@ -38,8 +38,6 @@ var DefaultDictConfig = &cfg.Dictionary{
 	MaxCard: math.MaxUint16,
 }
 
-// ToDo faire un test unitaire avec les attributs, Plusieurs lignes et plusieurs entrees dans les attributs.
-
 func TestEmptyAnyValue(t *testing.T) {
 	t.Parallel()
 
@@ -58,7 +56,8 @@ func TestEmptyAnyValue(t *testing.T) {
 
 	for {
 		b := carrow.AnyValueBuilderFrom(rBuilder.SparseUnionBuilder("any_value"))
-		b.Append(pcommon.NewValueEmpty())
+		err = b.Append(pcommon.NewValueEmpty())
+		require.NoError(t, err)
 
 		record, err = rBuilder.NewRecord()
 		if err == nil {
