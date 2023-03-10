@@ -49,10 +49,12 @@ func TestAttributes(t *testing.T) {
 	var record arrow.Record
 	var err error
 
+	maxIter := 10
+
 	// Create Arrow record from OTLP attributes
 	for {
 		b := carrow.AttributesBuilderFrom(rBuilder.MapBuilder("attributes"))
-		for i := 0; i < 4; i++ {
+		for i := 0; i < maxIter; i++ {
 			err = b.Append(internal.Attrs1())
 			require.NoError(t, err)
 			err = b.Append(internal.Attrs2())
@@ -60,6 +62,8 @@ func TestAttributes(t *testing.T) {
 			err = b.Append(internal.Attrs3())
 			require.NoError(t, err)
 			err = b.Append(internal.Attrs4())
+			require.NoError(t, err)
+			err = b.Append(internal.Attrs5())
 			require.NoError(t, err)
 		}
 
@@ -71,28 +75,42 @@ func TestAttributes(t *testing.T) {
 	}
 	defer record.Release()
 
-	// Update OTLP attributes from Arrow record
+	// Retrieve the Arrow Map representing the attributes
 	arr := record.Columns()[0].(*array.Map)
 
-	for i := 0; i < 4; i++ {
+	// Check the OTLP Arrow encoding and OTLP decoding by
+	// comparing the original and decoded attributes.
+	row := 0
+	for i := 0; i < maxIter; i++ {
+
 		value := pcommon.NewMap()
-		err = UpdateAttributesFrom(value, arr, i*4+0)
+		err = UpdateAttributesFrom(value, arr, row)
 		require.NoError(t, err)
 		assert.Equal(t, internal.Attrs1(), value)
+		row++
 
 		value = pcommon.NewMap()
-		err = UpdateAttributesFrom(value, arr, i*4+1)
+		err = UpdateAttributesFrom(value, arr, row)
 		require.NoError(t, err)
 		assert.Equal(t, internal.Attrs2(), value)
+		row++
 
 		value = pcommon.NewMap()
-		err = UpdateAttributesFrom(value, arr, i*4+2)
+		err = UpdateAttributesFrom(value, arr, row)
 		require.NoError(t, err)
 		assert.Equal(t, internal.Attrs3(), value)
+		row++
 
 		value = pcommon.NewMap()
-		err = UpdateAttributesFrom(value, arr, i*4+3)
+		err = UpdateAttributesFrom(value, arr, row)
 		require.NoError(t, err)
 		assert.Equal(t, internal.Attrs4(), value)
+		row++
+
+		value = pcommon.NewMap()
+		err = UpdateAttributesFrom(value, arr, row)
+		require.NoError(t, err)
+		assert.Equal(t, internal.Attrs5(), value)
+		row++
 	}
 }

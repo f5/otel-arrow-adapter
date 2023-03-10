@@ -55,6 +55,27 @@ func Attrs4() pcommon.Map {
 	return attrs
 }
 
+func Attrs5() pcommon.Map {
+	attrs := pcommon.NewMap()
+	attrs.PutBool("attr1", true)
+	bytes := attrs.PutEmptyBytes("attr2")
+	bytes.Append([]byte("bytes4")...)
+	attrs.PutStr("attr3", "string5")
+	attrs.PutInt("attr4", 5)
+	attrs.PutDouble("attr5", 5.0)
+	attrs.PutBool("attr6", false)
+	bytes = attrs.PutEmptyBytes("attr7")
+	bytes.Append([]byte("bytes5")...)
+	attrs.PutStr("attr8", "string6")
+	attrs.PutInt("attr9", 6)
+	attrs.PutDouble("attr10", 6.0)
+	attrs.PutBool("attr11", true)
+	bytes = attrs.PutEmptyBytes("attr12")
+	bytes.Append([]byte("bytes6")...)
+	attrs.PutStr("attr13", "string7")
+	return attrs
+}
+
 func Scope1() pcommon.InstrumentationScope {
 	scope := pcommon.NewInstrumentationScope()
 	scope.SetName("scope1")
