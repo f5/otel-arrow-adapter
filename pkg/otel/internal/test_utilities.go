@@ -209,3 +209,59 @@ func Sum2() pmetric.Sum {
 	g.SetIsMonotonic(false)
 	return g
 }
+
+func Summary1() pmetric.Summary {
+	s := pmetric.NewSummary()
+	SummaryDataPoint1().CopyTo(s.DataPoints().AppendEmpty())
+	SummaryDataPoint2().CopyTo(s.DataPoints().AppendEmpty())
+	return s
+}
+
+func Summary2() pmetric.Summary {
+	s := pmetric.NewSummary()
+	SummaryDataPoint2().CopyTo(s.DataPoints().AppendEmpty())
+	return s
+}
+
+func SummaryDataPoint1() pmetric.SummaryDataPoint {
+	dp := pmetric.NewSummaryDataPoint()
+	Attrs1().CopyTo(dp.Attributes())
+	dp.SetStartTimestamp(1)
+	dp.SetTimestamp(2)
+	dp.SetCount(1)
+	dp.SetSum(1.5)
+	qvs := dp.QuantileValues()
+	qvs.EnsureCapacity(2)
+	QuantileValue1().CopyTo(qvs.AppendEmpty())
+	QuantileValue2().CopyTo(qvs.AppendEmpty())
+	dp.SetFlags(1)
+	return dp
+}
+
+func SummaryDataPoint2() pmetric.SummaryDataPoint {
+	dp := pmetric.NewSummaryDataPoint()
+	Attrs2().CopyTo(dp.Attributes())
+	dp.SetStartTimestamp(3)
+	dp.SetTimestamp(4)
+	dp.SetCount(2)
+	dp.SetSum(2.5)
+	qvs := dp.QuantileValues()
+	qvs.EnsureCapacity(1)
+	QuantileValue2().CopyTo(qvs.AppendEmpty())
+	dp.SetFlags(2)
+	return dp
+}
+
+func QuantileValue1() pmetric.SummaryDataPointValueAtQuantile {
+	qv := pmetric.NewSummaryDataPointValueAtQuantile()
+	qv.SetQuantile(0.1)
+	qv.SetValue(1.5)
+	return qv
+}
+
+func QuantileValue2() pmetric.SummaryDataPointValueAtQuantile {
+	qv := pmetric.NewSummaryDataPointValueAtQuantile()
+	qv.SetQuantile(0.2)
+	qv.SetValue(2.5)
+	return qv
+}

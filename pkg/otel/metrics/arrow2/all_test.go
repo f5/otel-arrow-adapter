@@ -285,9 +285,9 @@ func TestQuantileValue(t *testing.T) {
 	for {
 		sb := QuantileValueBuilderFrom(rBuilder.StructBuilder(constants.SummaryQuantileValues))
 
-		err := sb.Append(QuantileValue1())
+		err := sb.Append(internal.QuantileValue1())
 		require.NoError(t, err)
-		err = sb.Append(QuantileValue2())
+		err = sb.Append(internal.QuantileValue2())
 		require.NoError(t, err)
 
 		record, err = rBuilder.NewRecord()
@@ -331,9 +331,9 @@ func TestUnivariateSummaryDataPoint(t *testing.T) {
 		smdata := &ScopeMetricsSharedData{Attributes: &common.SharedAttributes{}}
 		mdata := &MetricSharedData{Attributes: &common.SharedAttributes{}}
 
-		err := sb.Append(SummaryDataPoint1(), smdata, mdata)
+		err := sb.Append(internal.SummaryDataPoint1(), smdata, mdata)
 		require.NoError(t, err)
-		err = sb.Append(SummaryDataPoint2(), smdata, mdata)
+		err = sb.Append(internal.SummaryDataPoint2(), smdata, mdata)
 		require.NoError(t, err)
 
 		record, err = rBuilder.NewRecord()
@@ -377,9 +377,9 @@ func TestUnivariateSummary(t *testing.T) {
 		smdata := &ScopeMetricsSharedData{Attributes: &common.SharedAttributes{}}
 		mdata := &MetricSharedData{Attributes: &common.SharedAttributes{}}
 
-		err := sb.Append(Summary1(), smdata, mdata)
+		err := sb.Append(internal.Summary1(), smdata, mdata)
 		require.NoError(t, err)
-		err = sb.Append(Summary2(), smdata, mdata)
+		err = sb.Append(internal.Summary2(), smdata, mdata)
 		require.NoError(t, err)
 
 		record, err = rBuilder.NewRecord()
@@ -855,62 +855,6 @@ func TestExponentialHistogram(t *testing.T) {
 	require.JSONEq(t, expected, string(json))
 }
 
-func QuantileValue1() pmetric.SummaryDataPointValueAtQuantile {
-	qv := pmetric.NewSummaryDataPointValueAtQuantile()
-	qv.SetQuantile(0.1)
-	qv.SetValue(1.5)
-	return qv
-}
-
-func QuantileValue2() pmetric.SummaryDataPointValueAtQuantile {
-	qv := pmetric.NewSummaryDataPointValueAtQuantile()
-	qv.SetQuantile(0.2)
-	qv.SetValue(2.5)
-	return qv
-}
-
-func SummaryDataPoint1() pmetric.SummaryDataPoint {
-	dp := pmetric.NewSummaryDataPoint()
-	internal.Attrs1().CopyTo(dp.Attributes())
-	dp.SetStartTimestamp(1)
-	dp.SetTimestamp(2)
-	dp.SetCount(1)
-	dp.SetSum(1.5)
-	qvs := dp.QuantileValues()
-	qvs.EnsureCapacity(2)
-	QuantileValue1().CopyTo(qvs.AppendEmpty())
-	QuantileValue2().CopyTo(qvs.AppendEmpty())
-	dp.SetFlags(1)
-	return dp
-}
-
-func SummaryDataPoint2() pmetric.SummaryDataPoint {
-	dp := pmetric.NewSummaryDataPoint()
-	internal.Attrs2().CopyTo(dp.Attributes())
-	dp.SetStartTimestamp(3)
-	dp.SetTimestamp(4)
-	dp.SetCount(2)
-	dp.SetSum(2.5)
-	qvs := dp.QuantileValues()
-	qvs.EnsureCapacity(1)
-	QuantileValue2().CopyTo(qvs.AppendEmpty())
-	dp.SetFlags(2)
-	return dp
-}
-
-func Summary1() pmetric.Summary {
-	s := pmetric.NewSummary()
-	SummaryDataPoint1().CopyTo(s.DataPoints().AppendEmpty())
-	SummaryDataPoint2().CopyTo(s.DataPoints().AppendEmpty())
-	return s
-}
-
-func Summary2() pmetric.Summary {
-	s := pmetric.NewSummary()
-	SummaryDataPoint2().CopyTo(s.DataPoints().AppendEmpty())
-	return s
-}
-
 func Metric1() pmetric.Metric {
 	m := pmetric.NewMetric()
 	m.SetName("gauge-1")
@@ -934,7 +878,7 @@ func Metric3() pmetric.Metric {
 	m.SetName("summary-3")
 	m.SetDescription("summary-3-desc")
 	m.SetUnit("summary-3-unit")
-	Summary1().CopyTo(m.SetEmptySummary())
+	internal.Summary1().CopyTo(m.SetEmptySummary())
 	return m
 }
 

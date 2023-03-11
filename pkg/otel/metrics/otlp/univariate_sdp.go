@@ -134,11 +134,7 @@ func AppendUnivariateSdpInto(ndpSlice pmetric.SummaryDataPointSlice, ndp *arrowu
 		}
 		sdpValue.SetSum(sum)
 
-		qValues, err := ndp.ListOfStructsById(idx, ids.QuantileValues.Id)
-		if err != nil {
-			return err
-		}
-		err = AppendQuantileValuesInto(sdpValue.QuantileValues(), qValues, idx, ids.QuantileValues)
+		err = AppendQuantileValuesInto(sdpValue.QuantileValues(), ndp, idx, ids.QuantileValues)
 		if err != nil {
 			return err
 		}

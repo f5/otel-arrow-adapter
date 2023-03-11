@@ -137,12 +137,7 @@ func AppendUnivariateNdpInto(ndpSlice pmetric.NumberDataPointSlice, ndp *arrowut
 		}
 		ndpValue.SetFlags(pmetric.DataPointFlags(flags))
 
-		exemplars, err := ndp.ListOfStructsById(ndpIdx, ids.Exemplars.Id)
-		if exemplars != nil && err == nil {
-			if err := AppendExemplarsInto(ndpValue.Exemplars(), ndp, ndpIdx, ids.Exemplars); err != nil {
-				return err
-			}
-		} else if err != nil {
+		if err := AppendExemplarsInto(ndpValue.Exemplars(), ndp, ndpIdx, ids.Exemplars); err != nil {
 			return err
 		}
 	}
