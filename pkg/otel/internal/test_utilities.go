@@ -265,3 +265,131 @@ func QuantileValue2() pmetric.SummaryDataPointValueAtQuantile {
 	qv.SetValue(2.5)
 	return qv
 }
+
+func ExponentialHistogramDataPointBuckets1() pmetric.ExponentialHistogramDataPointBuckets {
+	b := pmetric.NewExponentialHistogramDataPointBuckets()
+	b.SetOffset(1)
+	bcs := b.BucketCounts()
+	bcs.EnsureCapacity(2)
+	bcs.Append(1, 2)
+	return b
+}
+
+func ExponentialHistogramDataPointBuckets2() pmetric.ExponentialHistogramDataPointBuckets {
+	b := pmetric.NewExponentialHistogramDataPointBuckets()
+	b.SetOffset(2)
+	bcs := b.BucketCounts()
+	bcs.EnsureCapacity(2)
+	bcs.Append(3, 4)
+	return b
+}
+
+func ExponentialHistogramDataPoint1() pmetric.ExponentialHistogramDataPoint {
+	dp := pmetric.NewExponentialHistogramDataPoint()
+	Attrs1().CopyTo(dp.Attributes())
+	dp.SetStartTimestamp(1)
+	dp.SetTimestamp(2)
+	dp.SetCount(1)
+	dp.SetSum(1.5)
+	ExponentialHistogramDataPointBuckets1().CopyTo(dp.Positive())
+	ExponentialHistogramDataPointBuckets2().CopyTo(dp.Negative())
+	dp.SetFlags(1)
+	dp.SetScale(1)
+	dp.SetZeroCount(1)
+	dp.SetMin(1.5)
+	dp.SetMax(2.5)
+	return dp
+}
+
+func ExponentialHistogramDataPoint2() pmetric.ExponentialHistogramDataPoint {
+	dp := pmetric.NewExponentialHistogramDataPoint()
+	Attrs2().CopyTo(dp.Attributes())
+	dp.SetStartTimestamp(2)
+	dp.SetTimestamp(3)
+	dp.SetCount(2)
+	dp.SetSum(2.5)
+	ExponentialHistogramDataPointBuckets1().CopyTo(dp.Positive())
+	ExponentialHistogramDataPointBuckets2().CopyTo(dp.Negative())
+	dp.SetFlags(2)
+	dp.SetScale(2)
+	dp.SetZeroCount(2)
+	dp.SetMin(2.5)
+	dp.SetMax(3.5)
+	return dp
+}
+
+func HistogramDataPoint1() pmetric.HistogramDataPoint {
+	dp := pmetric.NewHistogramDataPoint()
+	Attrs1().CopyTo(dp.Attributes())
+	dp.SetStartTimestamp(1)
+	dp.SetTimestamp(2)
+	dp.SetCount(1)
+	dp.SetSum(1.5)
+	bcs := dp.BucketCounts()
+	bcs.EnsureCapacity(2)
+	bcs.Append(1, 2)
+	ebs := dp.ExplicitBounds()
+	ebs.EnsureCapacity(2)
+	ebs.Append(1.5, 2.5)
+	dp.SetFlags(1)
+	dp.SetMin(1.5)
+	dp.SetMax(2.5)
+	return dp
+}
+
+func HistogramDataPoint2() pmetric.HistogramDataPoint {
+	dp := pmetric.NewHistogramDataPoint()
+	Attrs2().CopyTo(dp.Attributes())
+	dp.SetStartTimestamp(2)
+	dp.SetTimestamp(3)
+	dp.SetCount(2)
+	dp.SetSum(2.5)
+	bcs := dp.BucketCounts()
+	bcs.EnsureCapacity(2)
+	bcs.Append(3, 4)
+	ebs := dp.ExplicitBounds()
+	ebs.EnsureCapacity(2)
+	ebs.Append(2.5, 3.5)
+	dp.SetFlags(2)
+	dp.SetMin(2.5)
+	dp.SetMax(3.5)
+	return dp
+}
+
+func Histogram1() pmetric.Histogram {
+	h := pmetric.NewHistogram()
+	h.SetAggregationTemporality(1)
+	dps := h.DataPoints()
+	dps.EnsureCapacity(2)
+	HistogramDataPoint1().CopyTo(dps.AppendEmpty())
+	HistogramDataPoint2().CopyTo(dps.AppendEmpty())
+	return h
+}
+
+func Histogram2() pmetric.Histogram {
+	h := pmetric.NewHistogram()
+	h.SetAggregationTemporality(2)
+	dps := h.DataPoints()
+	dps.EnsureCapacity(1)
+	HistogramDataPoint2().CopyTo(dps.AppendEmpty())
+	return h
+}
+
+func ExpHistogram1() pmetric.ExponentialHistogram {
+	h := pmetric.NewExponentialHistogram()
+	h.SetAggregationTemporality(1)
+	dps := h.DataPoints()
+	dps.EnsureCapacity(2)
+	ExponentialHistogramDataPoint1().CopyTo(dps.AppendEmpty())
+	ExponentialHistogramDataPoint2().CopyTo(dps.AppendEmpty())
+	return h
+}
+
+func ExpHistogram2() pmetric.ExponentialHistogram {
+	h := pmetric.NewExponentialHistogram()
+	h.SetAggregationTemporality(2)
+	dps := h.DataPoints()
+	dps.EnsureCapacity(1)
+	ExponentialHistogramDataPoint1().CopyTo(dps.AppendEmpty())
+	return h
+}

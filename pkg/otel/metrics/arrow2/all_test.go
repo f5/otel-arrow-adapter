@@ -645,9 +645,9 @@ func TestExponentialHistogramDataPointBuckets(t *testing.T) {
 	for {
 		b := EHistogramDataPointBucketsBuilderFrom(rBuilder.StructBuilder(constants.ExpHistogramPositive))
 
-		err := b.Append(ExponentialHistogramDataPointBuckets1())
+		err := b.Append(internal.ExponentialHistogramDataPointBuckets1())
 		require.NoError(t, err)
-		err = b.Append(ExponentialHistogramDataPointBuckets2())
+		err = b.Append(internal.ExponentialHistogramDataPointBuckets2())
 		require.NoError(t, err)
 
 		record, err = rBuilder.NewRecord()
@@ -691,9 +691,9 @@ func TestExponentialHistogramDataPoint(t *testing.T) {
 		smdata := &ScopeMetricsSharedData{Attributes: &common.SharedAttributes{}}
 		mdata := &MetricSharedData{Attributes: &common.SharedAttributes{}}
 
-		err := b.Append(ExponentialHistogramDataPoint1(), smdata, mdata)
+		err := b.Append(internal.ExponentialHistogramDataPoint1(), smdata, mdata)
 		require.NoError(t, err)
-		err = b.Append(ExponentialHistogramDataPoint2(), smdata, mdata)
+		err = b.Append(internal.ExponentialHistogramDataPoint2(), smdata, mdata)
 		require.NoError(t, err)
 
 		record, err = rBuilder.NewRecord()
@@ -737,9 +737,9 @@ func TestHistogramDataPoint(t *testing.T) {
 		smdata := &ScopeMetricsSharedData{Attributes: &common.SharedAttributes{}}
 		mdata := &MetricSharedData{Attributes: &common.SharedAttributes{}}
 
-		err := b.Append(HistogramDataPoint1(), smdata, mdata)
+		err := b.Append(internal.HistogramDataPoint1(), smdata, mdata)
 		require.NoError(t, err)
-		err = b.Append(HistogramDataPoint2(), smdata, mdata)
+		err = b.Append(internal.HistogramDataPoint2(), smdata, mdata)
 		require.NoError(t, err)
 
 		record, err = rBuilder.NewRecord()
@@ -783,9 +783,9 @@ func TestHistogram(t *testing.T) {
 		smdata := &ScopeMetricsSharedData{Attributes: &common.SharedAttributes{}}
 		mdata := &MetricSharedData{Attributes: &common.SharedAttributes{}}
 
-		err := b.Append(Histogram1(), smdata, mdata)
+		err := b.Append(internal.Histogram1(), smdata, mdata)
 		require.NoError(t, err)
-		err = b.Append(Histogram2(), smdata, mdata)
+		err = b.Append(internal.Histogram2(), smdata, mdata)
 		require.NoError(t, err)
 
 		record, err = rBuilder.NewRecord()
@@ -829,9 +829,9 @@ func TestExponentialHistogram(t *testing.T) {
 		smdata := &ScopeMetricsSharedData{Attributes: &common.SharedAttributes{}}
 		mdata := &MetricSharedData{Attributes: &common.SharedAttributes{}}
 
-		err := b.Append(ExpHistogram1(), smdata, mdata)
+		err := b.Append(internal.ExpHistogram1(), smdata, mdata)
 		require.NoError(t, err)
-		err = b.Append(ExpHistogram2(), smdata, mdata)
+		err = b.Append(internal.ExpHistogram2(), smdata, mdata)
 		require.NoError(t, err)
 
 		record, err = rBuilder.NewRecord()
@@ -941,132 +941,4 @@ func Metrics2() pmetric.Metrics {
 	rms.EnsureCapacity(1)
 	ResourceMetrics2().CopyTo(rms.AppendEmpty())
 	return m
-}
-
-func ExponentialHistogramDataPointBuckets1() pmetric.ExponentialHistogramDataPointBuckets {
-	b := pmetric.NewExponentialHistogramDataPointBuckets()
-	b.SetOffset(1)
-	bcs := b.BucketCounts()
-	bcs.EnsureCapacity(2)
-	bcs.Append(1, 2)
-	return b
-}
-
-func ExponentialHistogramDataPointBuckets2() pmetric.ExponentialHistogramDataPointBuckets {
-	b := pmetric.NewExponentialHistogramDataPointBuckets()
-	b.SetOffset(2)
-	bcs := b.BucketCounts()
-	bcs.EnsureCapacity(2)
-	bcs.Append(3, 4)
-	return b
-}
-
-func ExponentialHistogramDataPoint1() pmetric.ExponentialHistogramDataPoint {
-	dp := pmetric.NewExponentialHistogramDataPoint()
-	internal.Attrs1().CopyTo(dp.Attributes())
-	dp.SetStartTimestamp(1)
-	dp.SetTimestamp(2)
-	dp.SetCount(1)
-	dp.SetSum(1.5)
-	ExponentialHistogramDataPointBuckets1().CopyTo(dp.Positive())
-	ExponentialHistogramDataPointBuckets2().CopyTo(dp.Negative())
-	dp.SetFlags(1)
-	dp.SetScale(1)
-	dp.SetZeroCount(1)
-	dp.SetMin(1.5)
-	dp.SetMax(2.5)
-	return dp
-}
-
-func ExponentialHistogramDataPoint2() pmetric.ExponentialHistogramDataPoint {
-	dp := pmetric.NewExponentialHistogramDataPoint()
-	internal.Attrs2().CopyTo(dp.Attributes())
-	dp.SetStartTimestamp(2)
-	dp.SetTimestamp(3)
-	dp.SetCount(2)
-	dp.SetSum(2.5)
-	ExponentialHistogramDataPointBuckets1().CopyTo(dp.Positive())
-	ExponentialHistogramDataPointBuckets2().CopyTo(dp.Negative())
-	dp.SetFlags(2)
-	dp.SetScale(2)
-	dp.SetZeroCount(2)
-	dp.SetMin(2.5)
-	dp.SetMax(3.5)
-	return dp
-}
-
-func HistogramDataPoint1() pmetric.HistogramDataPoint {
-	dp := pmetric.NewHistogramDataPoint()
-	internal.Attrs1().CopyTo(dp.Attributes())
-	dp.SetStartTimestamp(1)
-	dp.SetTimestamp(2)
-	dp.SetCount(1)
-	dp.SetSum(1.5)
-	bcs := dp.BucketCounts()
-	bcs.EnsureCapacity(2)
-	bcs.Append(1, 2)
-	ebs := dp.ExplicitBounds()
-	ebs.EnsureCapacity(2)
-	ebs.Append(1.5, 2.5)
-	dp.SetFlags(1)
-	dp.SetMin(1.5)
-	dp.SetMax(2.5)
-	return dp
-}
-
-func HistogramDataPoint2() pmetric.HistogramDataPoint {
-	dp := pmetric.NewHistogramDataPoint()
-	internal.Attrs2().CopyTo(dp.Attributes())
-	dp.SetStartTimestamp(2)
-	dp.SetTimestamp(3)
-	dp.SetCount(2)
-	dp.SetSum(2.5)
-	bcs := dp.BucketCounts()
-	bcs.EnsureCapacity(2)
-	bcs.Append(3, 4)
-	ebs := dp.ExplicitBounds()
-	ebs.EnsureCapacity(2)
-	ebs.Append(2.5, 3.5)
-	dp.SetFlags(2)
-	dp.SetMin(2.5)
-	dp.SetMax(3.5)
-	return dp
-}
-
-func Histogram1() pmetric.Histogram {
-	h := pmetric.NewHistogram()
-	h.SetAggregationTemporality(1)
-	dps := h.DataPoints()
-	dps.EnsureCapacity(2)
-	HistogramDataPoint1().CopyTo(dps.AppendEmpty())
-	HistogramDataPoint2().CopyTo(dps.AppendEmpty())
-	return h
-}
-
-func Histogram2() pmetric.Histogram {
-	h := pmetric.NewHistogram()
-	h.SetAggregationTemporality(2)
-	dps := h.DataPoints()
-	dps.EnsureCapacity(1)
-	HistogramDataPoint2().CopyTo(dps.AppendEmpty())
-	return h
-}
-
-func ExpHistogram1() pmetric.ExponentialHistogram {
-	h := pmetric.NewExponentialHistogram()
-	h.SetAggregationTemporality(1)
-	dps := h.DataPoints()
-	dps.EnsureCapacity(2)
-	ExponentialHistogramDataPoint1().CopyTo(dps.AppendEmpty())
-	ExponentialHistogramDataPoint2().CopyTo(dps.AppendEmpty())
-	return h
-}
-
-func ExpHistogram2() pmetric.ExponentialHistogram {
-	h := pmetric.NewExponentialHistogram()
-	h.SetAggregationTemporality(2)
-	dps := h.DataPoints()
-	dps.EnsureCapacity(1)
-	ExponentialHistogramDataPoint1().CopyTo(dps.AppendEmpty())
-	return h
 }
