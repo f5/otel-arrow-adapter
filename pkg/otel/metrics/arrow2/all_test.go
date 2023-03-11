@@ -53,11 +53,11 @@ func TestValue(t *testing.T) {
 	for {
 		mvb := MetricValueBuilderFrom(rBuilder.SparseUnionBuilder(constants.MetricValue))
 
-		err := mvb.AppendNumberDataPointValue(NDP1())
+		err := mvb.AppendNumberDataPointValue(internal.NDP1())
 		require.NoError(t, err)
-		err = mvb.AppendNumberDataPointValue(NDP2())
+		err = mvb.AppendNumberDataPointValue(internal.NDP2())
 		require.NoError(t, err)
-		err = mvb.AppendNumberDataPointValue(NDP3())
+		err = mvb.AppendNumberDataPointValue(internal.NDP3())
 		require.NoError(t, err)
 
 		record, err = rBuilder.NewRecord()
@@ -99,9 +99,9 @@ func TestExemplar(t *testing.T) {
 	for {
 		exb := ExemplarBuilderFrom(rBuilder.StructBuilder(constants.Exemplars))
 
-		err := exb.Append(Exemplar1())
+		err := exb.Append(internal.Exemplar1())
 		require.NoError(t, err)
-		err = exb.Append(Exemplar2())
+		err = exb.Append(internal.Exemplar2())
 		require.NoError(t, err)
 
 		record, err = rBuilder.NewRecord()
@@ -145,13 +145,13 @@ func TestUnivariateNDP(t *testing.T) {
 		smdata := &ScopeMetricsSharedData{Attributes: &common.SharedAttributes{}}
 		mdata := &MetricSharedData{Attributes: &common.SharedAttributes{}}
 
-		err := exb.Append(NDP1(), smdata, mdata)
+		err := exb.Append(internal.NDP1(), smdata, mdata)
 		require.NoError(t, err)
 
-		err = exb.Append(NDP2(), smdata, mdata)
+		err = exb.Append(internal.NDP2(), smdata, mdata)
 		require.NoError(t, err)
 
-		err = exb.Append(NDP3(), smdata, mdata)
+		err = exb.Append(internal.NDP3(), smdata, mdata)
 		require.NoError(t, err)
 
 		record, err = rBuilder.NewRecord()
@@ -196,9 +196,9 @@ func TestUnivariateGauge(t *testing.T) {
 		smdata := &ScopeMetricsSharedData{Attributes: &common.SharedAttributes{}}
 		mdata := &MetricSharedData{Attributes: &common.SharedAttributes{}}
 
-		err := gb.Append(Gauge1(), smdata, mdata)
+		err := gb.Append(internal.Gauge1(), smdata, mdata)
 		require.NoError(t, err)
-		err = gb.Append(Gauge2(), smdata, mdata)
+		err = gb.Append(internal.Gauge2(), smdata, mdata)
 		require.NoError(t, err)
 
 		record, err = rBuilder.NewRecord()
@@ -242,9 +242,9 @@ func TestUnivariateSum(t *testing.T) {
 		smdata := &ScopeMetricsSharedData{Attributes: &common.SharedAttributes{}}
 		mdata := &MetricSharedData{Attributes: &common.SharedAttributes{}}
 
-		err := sb.Append(Sum1(), smdata, mdata)
+		err := sb.Append(internal.Sum1(), smdata, mdata)
 		require.NoError(t, err)
-		err = sb.Append(Sum2(), smdata, mdata)
+		err = sb.Append(internal.Sum2(), smdata, mdata)
 		require.NoError(t, err)
 
 		record, err = rBuilder.NewRecord()
@@ -855,100 +855,6 @@ func TestExponentialHistogram(t *testing.T) {
 	require.JSONEq(t, expected, string(json))
 }
 
-// NDP1 returns a pmetric.NumberDataPoint (sample 1).
-func NDP1() pmetric.NumberDataPoint {
-	dp := pmetric.NewNumberDataPoint()
-	internal.Attrs1().CopyTo(dp.Attributes())
-	dp.SetStartTimestamp(1)
-	dp.SetTimestamp(2)
-	dp.SetDoubleValue(1.5)
-	exs := dp.Exemplars()
-	exs.EnsureCapacity(2)
-	Exemplar1().CopyTo(exs.AppendEmpty())
-	Exemplar2().CopyTo(exs.AppendEmpty())
-	dp.SetFlags(1)
-	return dp
-}
-
-// NDP2 returns a pmetric.NumberDataPoint (sample 1).
-func NDP2() pmetric.NumberDataPoint {
-	dp := pmetric.NewNumberDataPoint()
-	internal.Attrs2().CopyTo(dp.Attributes())
-	dp.SetStartTimestamp(2)
-	dp.SetTimestamp(3)
-	dp.SetIntValue(2)
-	exs := dp.Exemplars()
-	exs.EnsureCapacity(1)
-	Exemplar2().CopyTo(exs.AppendEmpty())
-	dp.SetFlags(2)
-	return dp
-}
-
-// NDP3 returns a pmetric.NumberDataPoint (sample 1).
-func NDP3() pmetric.NumberDataPoint {
-	dp := pmetric.NewNumberDataPoint()
-	internal.Attrs3().CopyTo(dp.Attributes())
-	dp.SetStartTimestamp(3)
-	dp.SetTimestamp(4)
-	dp.SetIntValue(3)
-	exs := dp.Exemplars()
-	exs.EnsureCapacity(1)
-	Exemplar1().CopyTo(exs.AppendEmpty())
-	dp.SetFlags(3)
-	return dp
-}
-func Exemplar1() pmetric.Exemplar {
-	ex := pmetric.NewExemplar()
-	internal.Attrs1().CopyTo(ex.FilteredAttributes())
-	ex.SetTimestamp(1)
-	ex.SetDoubleValue(1.5)
-	ex.SetSpanID([8]byte{0xAA})
-	ex.SetTraceID([16]byte{0xAA})
-	return ex
-}
-
-func Exemplar2() pmetric.Exemplar {
-	ex := pmetric.NewExemplar()
-	internal.Attrs2().CopyTo(ex.FilteredAttributes())
-	ex.SetTimestamp(2)
-	ex.SetIntValue(2)
-	ex.SetSpanID([8]byte{0xAA})
-	ex.SetTraceID([16]byte{0xAA})
-	return ex
-}
-
-func Gauge1() pmetric.Gauge {
-	g := pmetric.NewGauge()
-	NDP1().CopyTo(g.DataPoints().AppendEmpty())
-	NDP2().CopyTo(g.DataPoints().AppendEmpty())
-	NDP3().CopyTo(g.DataPoints().AppendEmpty())
-	return g
-}
-
-func Gauge2() pmetric.Gauge {
-	g := pmetric.NewGauge()
-	NDP3().CopyTo(g.DataPoints().AppendEmpty())
-	return g
-}
-
-func Sum1() pmetric.Sum {
-	g := pmetric.NewSum()
-	NDP1().CopyTo(g.DataPoints().AppendEmpty())
-	NDP2().CopyTo(g.DataPoints().AppendEmpty())
-	NDP3().CopyTo(g.DataPoints().AppendEmpty())
-	g.SetAggregationTemporality(pmetric.AggregationTemporalityDelta)
-	g.SetIsMonotonic(true)
-	return g
-}
-
-func Sum2() pmetric.Sum {
-	g := pmetric.NewSum()
-	NDP3().CopyTo(g.DataPoints().AppendEmpty())
-	g.SetAggregationTemporality(pmetric.AggregationTemporalityCumulative)
-	g.SetIsMonotonic(false)
-	return g
-}
-
 func QuantileValue1() pmetric.SummaryDataPointValueAtQuantile {
 	qv := pmetric.NewSummaryDataPointValueAtQuantile()
 	qv.SetQuantile(0.1)
@@ -1010,7 +916,7 @@ func Metric1() pmetric.Metric {
 	m.SetName("gauge-1")
 	m.SetDescription("gauge-1-desc")
 	m.SetUnit("gauge-1-unit")
-	Gauge1().CopyTo(m.SetEmptyGauge())
+	internal.Gauge1().CopyTo(m.SetEmptyGauge())
 	return m
 }
 
@@ -1019,7 +925,7 @@ func Metric2() pmetric.Metric {
 	m.SetName("sum-2")
 	m.SetDescription("sum-2-desc")
 	m.SetUnit("sum-2-unit")
-	Sum1().CopyTo(m.SetEmptySum())
+	internal.Sum1().CopyTo(m.SetEmptySum())
 	return m
 }
 

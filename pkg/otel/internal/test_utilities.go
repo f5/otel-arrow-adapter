@@ -191,3 +191,21 @@ func Gauge2() pmetric.Gauge {
 	NDP3().CopyTo(g.DataPoints().AppendEmpty())
 	return g
 }
+
+func Sum1() pmetric.Sum {
+	g := pmetric.NewSum()
+	NDP1().CopyTo(g.DataPoints().AppendEmpty())
+	NDP2().CopyTo(g.DataPoints().AppendEmpty())
+	NDP3().CopyTo(g.DataPoints().AppendEmpty())
+	g.SetAggregationTemporality(pmetric.AggregationTemporalityDelta)
+	g.SetIsMonotonic(true)
+	return g
+}
+
+func Sum2() pmetric.Sum {
+	g := pmetric.NewSum()
+	NDP3().CopyTo(g.DataPoints().AppendEmpty())
+	g.SetAggregationTemporality(pmetric.AggregationTemporalityCumulative)
+	g.SetIsMonotonic(false)
+	return g
+}
