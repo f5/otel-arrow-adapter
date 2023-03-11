@@ -14,7 +14,10 @@
 
 package internal
 
-import "go.opentelemetry.io/collector/pdata/pcommon"
+import (
+	"go.opentelemetry.io/collector/pdata/pcommon"
+	"go.opentelemetry.io/collector/pdata/pmetric"
+)
 
 func Attrs1() pcommon.Map {
 	attrs := pcommon.NewMap()
@@ -110,4 +113,81 @@ func Resource2() pcommon.Resource {
 	Attrs2().CopyTo(resourceAttrs)
 	resource.SetDroppedAttributesCount(1)
 	return resource
+}
+
+// NDP1 returns a pmetric.NumberDataPoint (sample 1).
+func NDP1() pmetric.NumberDataPoint {
+	dp := pmetric.NewNumberDataPoint()
+	Attrs1().CopyTo(dp.Attributes())
+	dp.SetStartTimestamp(1)
+	dp.SetTimestamp(2)
+	dp.SetDoubleValue(1.5)
+	exs := dp.Exemplars()
+	exs.EnsureCapacity(2)
+	Exemplar1().CopyTo(exs.AppendEmpty())
+	Exemplar2().CopyTo(exs.AppendEmpty())
+	dp.SetFlags(1)
+	return dp
+}
+
+// NDP2 returns a pmetric.NumberDataPoint (sample 1).
+func NDP2() pmetric.NumberDataPoint {
+	dp := pmetric.NewNumberDataPoint()
+	Attrs2().CopyTo(dp.Attributes())
+	dp.SetStartTimestamp(2)
+	dp.SetTimestamp(3)
+	dp.SetIntValue(2)
+	exs := dp.Exemplars()
+	exs.EnsureCapacity(1)
+	Exemplar2().CopyTo(exs.AppendEmpty())
+	dp.SetFlags(2)
+	return dp
+}
+
+// NDP3 returns a pmetric.NumberDataPoint (sample 1).
+func NDP3() pmetric.NumberDataPoint {
+	dp := pmetric.NewNumberDataPoint()
+	Attrs3().CopyTo(dp.Attributes())
+	dp.SetStartTimestamp(3)
+	dp.SetTimestamp(4)
+	dp.SetIntValue(3)
+	exs := dp.Exemplars()
+	exs.EnsureCapacity(1)
+	Exemplar1().CopyTo(exs.AppendEmpty())
+	dp.SetFlags(3)
+	return dp
+}
+
+func Exemplar1() pmetric.Exemplar {
+	ex := pmetric.NewExemplar()
+	Attrs1().CopyTo(ex.FilteredAttributes())
+	ex.SetTimestamp(1)
+	ex.SetDoubleValue(1.5)
+	ex.SetSpanID([8]byte{0xAA})
+	ex.SetTraceID([16]byte{0xAA})
+	return ex
+}
+
+func Exemplar2() pmetric.Exemplar {
+	ex := pmetric.NewExemplar()
+	Attrs2().CopyTo(ex.FilteredAttributes())
+	ex.SetTimestamp(2)
+	ex.SetIntValue(2)
+	ex.SetSpanID([8]byte{0xAA})
+	ex.SetTraceID([16]byte{0xAA})
+	return ex
+}
+
+func Gauge1() pmetric.Gauge {
+	g := pmetric.NewGauge()
+	NDP1().CopyTo(g.DataPoints().AppendEmpty())
+	NDP2().CopyTo(g.DataPoints().AppendEmpty())
+	NDP3().CopyTo(g.DataPoints().AppendEmpty())
+	return g
+}
+
+func Gauge2() pmetric.Gauge {
+	g := pmetric.NewGauge()
+	NDP3().CopyTo(g.DataPoints().AppendEmpty())
+	return g
 }
