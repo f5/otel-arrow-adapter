@@ -43,11 +43,13 @@ func NewUnivariateHistogramIds(parentDT *arrow.StructType) (*UnivariateHistogram
 }
 
 func UpdateUnivariateHistogramFrom(histogram pmetric.Histogram, arr *array.Struct, row int, ids *UnivariateHistogramIds, smdata *SharedData, mdata *SharedData) error {
-	value, err := arrowutils.I32FromArray(arr.Field(ids.AggregationTemporality), row)
-	if err != nil {
-		return err
+	if ids.AggregationTemporality >= 0 {
+		value, err := arrowutils.I32FromArray(arr.Field(ids.AggregationTemporality), row)
+		if err != nil {
+			return err
+		}
+		histogram.SetAggregationTemporality(pmetric.AggregationTemporality(value))
 	}
-	histogram.SetAggregationTemporality(pmetric.AggregationTemporality(value))
 
 	los, err := arrowutils.ListOfStructsFromStruct(arr, ids.DataPoints.Id, row)
 	if err != nil {

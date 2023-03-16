@@ -15,6 +15,8 @@
 package otlp
 
 import (
+	"fmt"
+
 	"github.com/apache/arrow/go/v11/arrow"
 	"go.opentelemetry.io/collector/pdata/ptrace"
 
@@ -63,7 +65,7 @@ func AppendScopeSpansInto(resSpans ptrace.ResourceSpans, arrowResSpans *arrowuti
 
 	arrowScopeSpans, err := arrowResSpans.ListOfStructsById(resSpansIdx, ids.Id)
 	if err != nil {
-		return err
+		return fmt.Errorf("AppendScopeSpansInto(field='scope_spans')->%w", err)
 	}
 
 	if arrowScopeSpans == nil {
@@ -89,7 +91,7 @@ func AppendScopeSpansInto(resSpans ptrace.ResourceSpans, arrowResSpans *arrowuti
 
 		arrowSpans, err := arrowScopeSpans.ListOfStructsById(scopeSpansIdx, ids.SpansIds.Id)
 		if err != nil {
-			return err
+			return fmt.Errorf("AppendScopeSpansInto(field='spans')->%w", err)
 		}
 		spansSlice := scopeSpans.Spans()
 		spansSlice.EnsureCapacity(arrowSpans.End() - arrowSpans.Start())

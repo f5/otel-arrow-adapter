@@ -20,11 +20,18 @@ package arrow2
 // Wrapper around an Arrow list of structs used to expose utility functions.
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/apache/arrow/go/v11/arrow"
 	"github.com/apache/arrow/go/v11/arrow/array"
 	"go.opentelemetry.io/collector/pdata/pcommon"
+)
+
+var (
+	errNotArrayStruct        = errors.New("Not an Arrow array.Struct")
+	errNotArrayList          = errors.New("Not an Arrow array.List")
+	errNotArrayListOfStructs = errors.New("Not an Arrow array.List of array.Struct")
 )
 
 // ListOfStructs is a wrapper around an Arrow list of structs used to expose utility functions.
@@ -60,10 +67,40 @@ func ListOfStructsFromRecord(record arrow.Record, fieldID int, row int) (*ListOf
 				end:   end,
 			}, nil
 		default:
-			return nil, fmt.Errorf("field id %d is not a list of structs", fieldID)
+			return nil, fmt.Errorf("ListOfStructsFromRecord(fieldID=%d)->%w", fieldID, errNotArrayListOfStructs)
 		}
 	default:
-		return nil, fmt.Errorf("field id %d is not a list", fieldID)
+		return nil, fmt.Errorf("ListOfStructsFromRecord(fieldID=%d)->%w", fieldID, errNotArrayList)
+	}
+}
+
+func ListOfStructsFromArray(arr arrow.Array, row int) (*ListOfStructs, error) {
+	switch listArr := arr.(type) {
+	case *array.List:
+		if listArr.IsNull(row) {
+			return nil, nil
+		}
+
+		switch structArr := listArr.ListValues().(type) {
+		case *array.Struct:
+			dt, ok := structArr.DataType().(*arrow.StructType)
+			if !ok {
+				return nil, fmt.Errorf("ListOfStructsFromArray->%w", errNotArrayListOfStructs)
+			}
+			start := int(listArr.Offsets()[row])
+			end := int(listArr.Offsets()[row+1])
+
+			return &ListOfStructs{
+				dt:    dt,
+				arr:   structArr,
+				start: start,
+				end:   end,
+			}, nil
+		default:
+			return nil, fmt.Errorf("ListOfStructsFromArray->%w", errNotArrayListOfStructs)
+		}
+	default:
+		return nil, fmt.Errorf("ListOfStructsFromArray->%w", errNotArrayList)
 	}
 }
 
@@ -322,7 +359,7 @@ func (los *ListOfStructs) StructArray(name string, row int) (*arrow.StructType, 
 		}
 		return structArr.DataType().(*arrow.StructType), structArr, nil
 	default:
-		return nil, nil, fmt.Errorf("field %q is not a struct", name)
+		return nil, nil, fmt.Errorf("StructArray(name=%q)->%w", name, errNotArrayStruct)
 	}
 }
 
@@ -339,7 +376,7 @@ func (los *ListOfStructs) StructByID(fieldID int, row int) (*arrow.StructType, *
 		}
 		return structArr.DataType().(*arrow.StructType), structArr, nil
 	default:
-		return nil, nil, fmt.Errorf("field id %d is not a struct", fieldID)
+		return nil, nil, fmt.Errorf("StructByID(fieldID=%d)->%w", fieldID, errNotArrayStruct)
 	}
 }
 
@@ -363,7 +400,7 @@ func (los *ListOfStructs) ListValuesById(row int, fieldID int) (arr arrow.Array,
 		end = int(listArr.Offsets()[row+1])
 		arr = listArr.ListValues()
 	default:
-		err = fmt.Errorf("field id %d is not a list", fieldID)
+		err = fmt.Errorf("ListValuesById(fieldID=%d)->%w", fieldID, errNotArrayList)
 	}
 	return
 }
@@ -384,7 +421,7 @@ func (los *ListOfStructs) ListOfStructsById(row int, fieldID int) (*ListOfStruct
 		case *array.Struct:
 			dt, ok := structArr.DataType().(*arrow.StructType)
 			if !ok {
-				return nil, fmt.Errorf("field id %d is not a list of struct", fieldID)
+				return nil, fmt.Errorf("ListOfStructsById(fieldID=%d)->%w", fieldID, errNotArrayStruct)
 			}
 			start := int(listArr.Offsets()[row])
 			end := int(listArr.Offsets()[row+1])
@@ -396,10 +433,10 @@ func (los *ListOfStructs) ListOfStructsById(row int, fieldID int) (*ListOfStruct
 				end:   end,
 			}, nil
 		default:
-			return nil, fmt.Errorf("field id %d is not a list of structs", fieldID)
+			return nil, fmt.Errorf("ListOfStructsById(fieldID=%d)->%w", fieldID, errNotArrayListOfStructs)
 		}
 	default:
-		return nil, fmt.Errorf("field id %d is not a list", fieldID)
+		return nil, fmt.Errorf("ListOfStructsById(fieldID=%d)->%w", fieldID, errNotArrayList)
 	}
 }
 

@@ -154,7 +154,7 @@ func AppendUnivariateHistogramDataPointInto(hdpSlice pmetric.HistogramDataPointS
 
 		bucketCounts, start, end, err := hdp.ListValuesById(hdpIdx, ids.BucketCounts)
 		if err != nil {
-			return err
+			return fmt.Errorf("AppendUnivariateHistogramDataPointInto(field=`bucket_counts`)->%w", err)
 		}
 		if values, ok := bucketCounts.(*array.Uint64); ok {
 			bucketCountsSlice := hdpVal.BucketCounts()
@@ -186,7 +186,7 @@ func AppendUnivariateHistogramDataPointInto(hdpSlice pmetric.HistogramDataPointS
 				return err
 			}
 		} else if err != nil {
-			return err
+			return fmt.Errorf("AppendUnivariateHistogramDataPointInto(field=`exemplars`)->%w", err)
 		}
 
 		flags, err := hdp.U32FieldByID(ids.Flags, hdpIdx)

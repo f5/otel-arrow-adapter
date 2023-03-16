@@ -15,6 +15,8 @@
 package otlp
 
 import (
+	"fmt"
+
 	"github.com/apache/arrow/go/v11/arrow"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 
@@ -47,7 +49,7 @@ func NewQuantileValueIds(parentDT *arrow.StructType) (*QuantileValueIds, error) 
 func AppendQuantileValuesInto(quantileSlice pmetric.SummaryDataPointValueAtQuantileSlice, ndp *arrowutils.ListOfStructs, ndpIdx int, ids *QuantileValueIds) error {
 	quantileValues, err := ndp.ListOfStructsById(ndpIdx, ids.Id)
 	if err != nil {
-		return err
+		return fmt.Errorf("AppendQuantileValuesInto(field='quantile_values')->%w", err)
 	}
 	if quantileValues == nil {
 		return nil

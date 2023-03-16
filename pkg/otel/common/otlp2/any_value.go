@@ -28,6 +28,7 @@ import (
 func UpdateValueFrom(v pcommon.Value, vArr *array.SparseUnion, row int) error {
 	tcode := vArr.TypeCode(row)
 	fieldId := vArr.ChildID(row)
+
 	switch tcode {
 	case commonarrow.StrCode:
 		val, err := arrowutils.StringFromArray(vArr.Field(fieldId), row)

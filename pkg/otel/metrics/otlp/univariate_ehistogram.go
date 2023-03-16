@@ -43,11 +43,13 @@ func NewUnivariateEHistogramIds(parentDT *arrow.StructType) (*UnivariateEHistogr
 }
 
 func UpdateUnivariateEHistogramFrom(ehistogram pmetric.ExponentialHistogram, arr *array.Struct, row int, ids *UnivariateEHistogramIds, smdata *SharedData, mdata *SharedData) error {
-	value, err := arrowutils.I32FromArray(arr.Field(ids.AggregationTemporality), row)
-	if err != nil {
-		return err
+	if ids.AggregationTemporality >= 0 {
+		value, err := arrowutils.I32FromArray(arr.Field(ids.AggregationTemporality), row)
+		if err != nil {
+			return err
+		}
+		ehistogram.SetAggregationTemporality(pmetric.AggregationTemporality(value))
 	}
-	ehistogram.SetAggregationTemporality(pmetric.AggregationTemporality(value))
 
 	los, err := arrowutils.ListOfStructsFromStruct(arr, ids.DataPoints.Id, row)
 	if err != nil {

@@ -38,6 +38,7 @@ type MetricsProfileable struct {
 	batchArrowRecords []*colarspb.BatchArrowRecords
 	config            *benchmark.Config
 	pool              *memory.GoAllocator
+	unaryRpcMode      bool
 }
 
 func NewMetricsProfileable(tags []string, dataset dataset.MetricsDataset, config *benchmark.Config) *MetricsProfileable {
@@ -50,11 +51,16 @@ func NewMetricsProfileable(tags []string, dataset dataset.MetricsDataset, config
 		batchArrowRecords: make([]*colarspb.BatchArrowRecords, 0, 10),
 		config:            config,
 		pool:              memory.NewGoAllocator(),
+		unaryRpcMode:      false,
 	}
 }
 
 func (s *MetricsProfileable) Name() string {
 	return "OTLP_ARROW"
+}
+
+func (s *MetricsProfileable) EnableUnaryRpcMode() {
+	s.unaryRpcMode = true
 }
 
 func (s *MetricsProfileable) Tags() []string {
@@ -71,19 +77,28 @@ func (s *MetricsProfileable) CompressionAlgorithm() benchmark.CompressionAlgorit
 	return s.compression
 }
 func (s *MetricsProfileable) StartProfiling(_ io.Writer) {
-	s.producer = arrow_record.NewProducerWithOptions(arrow_record.WithNoZstd())
-	s.consumer = arrow_record.NewConsumer()
+	if !s.unaryRpcMode {
+		s.producer = arrow_record.NewProducerWithOptions(arrow_record.WithNoZstd())
+		s.consumer = arrow_record.NewConsumer()
+	}
 }
 func (s *MetricsProfileable) EndProfiling(_ io.Writer) {
-	if err := s.producer.Close(); err != nil {
-		panic(err)
-	}
-	if err := s.consumer.Close(); err != nil {
-		panic(err)
+	if !s.unaryRpcMode {
+		if err := s.producer.Close(); err != nil {
+			panic(err)
+		}
+		if err := s.consumer.Close(); err != nil {
+			panic(err)
+		}
 	}
 }
 func (s *MetricsProfileable) InitBatchSize(_ io.Writer, _ int) {}
 func (s *MetricsProfileable) PrepareBatch(_ io.Writer, startAt, size int) {
+	if s.unaryRpcMode {
+		s.producer = arrow_record.NewProducerWithOptions(arrow_record.WithNoZstd())
+		s.consumer = arrow_record.NewConsumer()
+	}
+
 	s.metrics = s.dataset.Metrics(startAt, size)
 }
 func (s *MetricsProfileable) ConvertOtlpToOtlpArrow(_ io.Writer, _, _ int) {
@@ -143,5 +158,14 @@ func (s *MetricsProfileable) ConvertOtlpArrowToOtlp(_ io.Writer) {
 func (s *MetricsProfileable) Clear() {
 	s.metrics = nil
 	s.batchArrowRecords = s.batchArrowRecords[:0]
+
+	if s.unaryRpcMode {
+		if err := s.producer.Close(); err != nil {
+			panic(err)
+		}
+		if err := s.consumer.Close(); err != nil {
+			panic(err)
+		}
+	}
 }
 func (s *MetricsProfileable) ShowStats() {}

@@ -108,6 +108,16 @@ func TestMultipleAnyValues(t *testing.T) {
 		require.NoError(t, err)
 		err = b.Append(pcommon.NewValueStr("string"))
 		require.NoError(t, err)
+		err = b.Append(pcommon.NewValueInt(0))
+		require.NoError(t, err)
+		err = b.Append(pcommon.NewValueDouble(0.0))
+		require.NoError(t, err)
+		err = b.Append(pcommon.NewValueBool(false))
+		require.NoError(t, err)
+		err = b.Append(pcommon.NewValueStr(""))
+		require.NoError(t, err)
+		err = b.Append(pcommon.NewValueBytes())
+		require.NoError(t, err)
 
 		record, err = rBuilder.NewRecord()
 		if err == nil {
@@ -142,4 +152,24 @@ func TestMultipleAnyValues(t *testing.T) {
 	err = UpdateValueFrom(value, arr, 5)
 	require.NoError(t, err)
 	assert.Equal(t, "string", value.Str())
+
+	err = UpdateValueFrom(value, arr, 6)
+	require.NoError(t, err)
+	assert.Equal(t, int64(0), value.Int())
+
+	err = UpdateValueFrom(value, arr, 7)
+	require.NoError(t, err)
+	assert.Equal(t, float64(0.0), value.Double())
+
+	err = UpdateValueFrom(value, arr, 8)
+	require.NoError(t, err)
+	assert.Equal(t, false, value.Bool())
+
+	err = UpdateValueFrom(value, arr, 9)
+	require.NoError(t, err)
+	assert.Equal(t, "", value.Str())
+
+	err = UpdateValueFrom(value, arr, 10)
+	require.NoError(t, err)
+	assert.Equal(t, pcommon.NewByteSlice(), value.Bytes())
 }

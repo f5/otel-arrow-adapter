@@ -15,6 +15,8 @@
 package otlp
 
 import (
+	"fmt"
+
 	"github.com/apache/arrow/go/v11/arrow"
 	"go.opentelemetry.io/collector/pdata/plog"
 
@@ -63,7 +65,7 @@ func NewScopeLogsIds(dt *arrow.StructType) (*ScopeLogsIds, error) {
 func AppendScopeLogsInto(resLogs plog.ResourceLogs, arrowResLogs *arrowutils.ListOfStructs, resLogsIdx int, ids *ScopeLogsIds) error {
 	arrowScopeLogs, err := arrowResLogs.ListOfStructsById(resLogsIdx, ids.Id)
 	if err != nil {
-		return err
+		return fmt.Errorf("AppendScopeLogsInto(field='scope')->%w")
 	}
 	scopeLogsSlice := resLogs.ScopeLogs()
 	scopeLogsSlice.EnsureCapacity(arrowScopeLogs.End() - arrowResLogs.Start())
@@ -83,7 +85,7 @@ func AppendScopeLogsInto(resLogs plog.ResourceLogs, arrowResLogs *arrowutils.Lis
 
 		arrowLogs, err := arrowScopeLogs.ListOfStructsById(scopeLogsIdx, ids.LogRecordIds.Id)
 		if err != nil {
-			return err
+			return fmt.Errorf("AppendScopeLogsInto(field='logs')->%w", err)
 		}
 		logsSlice := scopeLogs.LogRecords()
 		logsSlice.EnsureCapacity(arrowLogs.End() - arrowLogs.Start())

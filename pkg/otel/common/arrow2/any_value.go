@@ -163,7 +163,6 @@ func (b *AnyValueBuilder) appendStr(v string) error {
 func (b *AnyValueBuilder) appendI64(v int64) {
 	b.builder.Append(I64Code)
 	b.i64Builder.Append(v)
-
 	b.strBuilder.AppendNull()
 	b.f64Builder.AppendNull()
 	b.boolBuilder.AppendNull()
@@ -175,7 +174,6 @@ func (b *AnyValueBuilder) appendI64(v int64) {
 func (b *AnyValueBuilder) appendF64(v float64) {
 	b.builder.Append(F64Code)
 	b.f64Builder.Append(v)
-
 	b.strBuilder.AppendNull()
 	b.i64Builder.AppendNull()
 	b.boolBuilder.AppendNull()
@@ -187,7 +185,6 @@ func (b *AnyValueBuilder) appendF64(v float64) {
 func (b *AnyValueBuilder) appendBool(v bool) {
 	b.builder.Append(BoolCode)
 	b.boolBuilder.Append(v)
-
 	b.strBuilder.AppendNull()
 	b.i64Builder.AppendNull()
 	b.f64Builder.AppendNull()
@@ -212,6 +209,7 @@ func (b *AnyValueBuilder) appendBinary(v []byte) error {
 func (b *AnyValueBuilder) appendCbor(v []byte) error {
 	b.builder.Append(CborCode)
 	b.cborBuilder.Append(v)
+	b.builder.Append(CborCode)
 	b.strBuilder.AppendNull()
 	b.i64Builder.AppendNull()
 	b.f64Builder.AppendNull()

@@ -73,7 +73,7 @@ func TestExponentialHistograms(t *testing.T) {
 	}
 	defer record.Release()
 
-	// Retrieve the Arrow Map representing the exponential histograms.
+	// Retrieve the Arrow struct representing the exponential histograms.
 	arr := record.Columns()[0].(*array.Struct)
 
 	// Check the OTLP Arrow encoding and OTLP decoding by

@@ -65,7 +65,7 @@ func NewExemplarIds(ndp *arrow.StructType) (*ExemplarIds, error) {
 func AppendExemplarsInto(exemplarSlice pmetric.ExemplarSlice, ndp *arrowutils.ListOfStructs, ndpIdx int, ids *ExemplarIds) error {
 	exemplars, err := ndp.ListOfStructsById(ndpIdx, ids.Id)
 	if err != nil {
-		return err
+		return fmt.Errorf("AppendExemplarsInto(field='examplars')->%w", err)
 	}
 
 	if exemplars == nil {

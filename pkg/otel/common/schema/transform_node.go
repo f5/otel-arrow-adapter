@@ -235,5 +235,9 @@ func (t *TransformNode) RemoveOptional() {
 		}
 	}
 
-	t.transforms = t.transforms[:n]
+	if n == 0 {
+		t.transforms = []FieldTransform{&transform2.IdentityField{}}
+	} else {
+		t.transforms = t.transforms[:n]
+	}
 }

@@ -192,11 +192,27 @@ func Gauge2() pmetric.Gauge {
 	return g
 }
 
+func Gauge3() pmetric.Gauge {
+	g := pmetric.NewGauge()
+	NDP1().CopyTo(g.DataPoints().AppendEmpty())
+	return g
+}
+
 func Sum1() pmetric.Sum {
 	g := pmetric.NewSum()
 	NDP1().CopyTo(g.DataPoints().AppendEmpty())
 	NDP2().CopyTo(g.DataPoints().AppendEmpty())
 	NDP3().CopyTo(g.DataPoints().AppendEmpty())
+	g.SetAggregationTemporality(pmetric.AggregationTemporalityDelta)
+	g.SetIsMonotonic(true)
+	return g
+}
+
+func Sum3() pmetric.Sum {
+	g := pmetric.NewSum()
+	NDP1().CopyTo(g.DataPoints().AppendEmpty())
+	NDP1().CopyTo(g.DataPoints().AppendEmpty())
+	NDP1().CopyTo(g.DataPoints().AppendEmpty())
 	g.SetAggregationTemporality(pmetric.AggregationTemporalityDelta)
 	g.SetIsMonotonic(true)
 	return g
@@ -392,4 +408,152 @@ func ExpHistogram2() pmetric.ExponentialHistogram {
 	dps.EnsureCapacity(1)
 	ExponentialHistogramDataPoint1().CopyTo(dps.AppendEmpty())
 	return h
+}
+
+func Metric1() pmetric.Metric {
+	m := pmetric.NewMetric()
+	m.SetName("gauge-1")
+	m.SetDescription("gauge-1-desc")
+	m.SetUnit("gauge-1-unit")
+	Gauge1().CopyTo(m.SetEmptyGauge())
+	return m
+}
+
+func Metric2() pmetric.Metric {
+	m := pmetric.NewMetric()
+	m.SetName("sum-2")
+	m.SetDescription("sum-2-desc")
+	m.SetUnit("sum-2-unit")
+	Sum1().CopyTo(m.SetEmptySum())
+	return m
+}
+
+func Metric3() pmetric.Metric {
+	m := pmetric.NewMetric()
+	m.SetName("summary-3")
+	m.SetDescription("summary-3-desc")
+	m.SetUnit("summary-3-unit")
+	Summary1().CopyTo(m.SetEmptySummary())
+	return m
+}
+
+func Metric4() pmetric.Metric {
+	m := pmetric.NewMetric()
+	m.SetName("sum-4")
+	m.SetDescription("sum-4-desc")
+	m.SetUnit("sum-4-unit")
+	Sum3().CopyTo(m.SetEmptySum())
+	return m
+}
+
+func Metric5() pmetric.Metric {
+	m := pmetric.NewMetric()
+	m.SetName("gauge-1")
+	m.SetDescription("gauge-1-desc")
+	m.SetUnit("gauge-1-unit")
+	Gauge3().CopyTo(m.SetEmptyGauge())
+	return m
+}
+
+func ScopeMetrics1() pmetric.ScopeMetrics {
+	sm := pmetric.NewScopeMetrics()
+	sm.SetSchemaUrl("schema-1")
+	Scope1().CopyTo(sm.Scope())
+	ms := sm.Metrics()
+	ms.EnsureCapacity(3)
+	Metric1().CopyTo(ms.AppendEmpty())
+	Metric2().CopyTo(ms.AppendEmpty())
+	Metric3().CopyTo(ms.AppendEmpty())
+	return sm
+}
+
+func ScopeMetrics2() pmetric.ScopeMetrics {
+	sm := pmetric.NewScopeMetrics()
+	sm.SetSchemaUrl("schema-2")
+	Scope2().CopyTo(sm.Scope())
+	ms := sm.Metrics()
+	ms.EnsureCapacity(2)
+	Metric2().CopyTo(ms.AppendEmpty())
+	Metric3().CopyTo(ms.AppendEmpty())
+	return sm
+}
+
+func ScopeMetrics3() pmetric.ScopeMetrics {
+	sm := pmetric.NewScopeMetrics()
+	sm.SetSchemaUrl("schema-3")
+	Scope2().CopyTo(sm.Scope())
+	ms := sm.Metrics()
+	ms.EnsureCapacity(1)
+	Metric4().CopyTo(ms.AppendEmpty())
+	return sm
+}
+
+func ScopeMetrics4() pmetric.ScopeMetrics {
+	sm := pmetric.NewScopeMetrics()
+	sm.SetSchemaUrl("schema-3")
+	Scope2().CopyTo(sm.Scope())
+	ms := sm.Metrics()
+	ms.EnsureCapacity(1)
+	Metric5().CopyTo(ms.AppendEmpty())
+	Metric4().CopyTo(ms.AppendEmpty())
+	return sm
+}
+
+func ResourceMetrics1() pmetric.ResourceMetrics {
+	rm := pmetric.NewResourceMetrics()
+	Resource1().CopyTo(rm.Resource())
+	rm.SetSchemaUrl("schema-1")
+	sms := rm.ScopeMetrics()
+	sms.EnsureCapacity(2)
+	ScopeMetrics1().CopyTo(sms.AppendEmpty())
+	ScopeMetrics2().CopyTo(sms.AppendEmpty())
+	return rm
+}
+
+func ResourceMetrics2() pmetric.ResourceMetrics {
+	rm := pmetric.NewResourceMetrics()
+	Resource2().CopyTo(rm.Resource())
+	rm.SetSchemaUrl("schema-2")
+	sms := rm.ScopeMetrics()
+	sms.EnsureCapacity(1)
+	ScopeMetrics1().CopyTo(sms.AppendEmpty())
+	return rm
+}
+
+func ResourceMetrics3() pmetric.ResourceMetrics {
+	rm := pmetric.NewResourceMetrics()
+	Resource2().CopyTo(rm.Resource())
+	rm.SetSchemaUrl("schema-3")
+	sms := rm.ScopeMetrics()
+	sms.EnsureCapacity(1)
+	ScopeMetrics3().CopyTo(sms.AppendEmpty())
+	return rm
+}
+
+func Metrics1() pmetric.Metrics {
+	m := pmetric.NewMetrics()
+	rms := m.ResourceMetrics()
+	rms.EnsureCapacity(2)
+	ResourceMetrics1().CopyTo(rms.AppendEmpty())
+	ResourceMetrics2().CopyTo(rms.AppendEmpty())
+	return m
+}
+
+func Metrics2() pmetric.Metrics {
+	m := pmetric.NewMetrics()
+	rms := m.ResourceMetrics()
+	rms.EnsureCapacity(1)
+	ResourceMetrics2().CopyTo(rms.AppendEmpty())
+	return m
+}
+
+func Metrics(iter int) pmetric.Metrics {
+	m := pmetric.NewMetrics()
+	rms := m.ResourceMetrics()
+	rms.EnsureCapacity(iter * 2)
+	for i := 0; i < iter; i++ {
+		ResourceMetrics1().CopyTo(rms.AppendEmpty())
+		ResourceMetrics2().CopyTo(rms.AppendEmpty())
+	}
+	return m
 }

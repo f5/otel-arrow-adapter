@@ -15,7 +15,10 @@
 package otlp
 
 import (
+	"fmt"
+
 	"github.com/apache/arrow/go/v11/arrow"
+	"github.com/apache/arrow/go/v11/arrow/array"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 
@@ -102,5 +105,9 @@ func AppendMetricSetInto(metrics pmetric.MetricSlice, los *arrowutils.ListOfStru
 		mdata.Time = los.OptionalTimestampFieldByID(ids.SharedTimeID, row)
 	}
 
-	return UpdateUnivariateMetricFrom(metric, los, row, ids.Data, smdata, mdata)
+	arr, ok := los.FieldByID(ids.Data.Id).(*array.SparseUnion)
+	if !ok {
+		return fmt.Errorf("field %q is not a sparse union", constants.Data)
+	}
+	return UpdateUnivariateMetricFrom(metric, arr, row, ids.Data, smdata, mdata)
 }

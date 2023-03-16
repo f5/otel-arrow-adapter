@@ -65,10 +65,10 @@ func NewLinkIds(spanDT *arrow.StructType) (*LinkIds, error) {
 // AppendLinksInto initializes a Span's Links from an Arrow representation.
 func AppendLinksInto(result ptrace.SpanLinkSlice, los *arrowutils.ListOfStructs, row int, ids *LinkIds) error {
 	linkLos, err := los.ListOfStructsById(row, ids.Id)
-
 	if err != nil {
-		return err
+		return fmt.Errorf("AppendLinksInto(field='links')->%w", err)
 	}
+
 	if linkLos == nil {
 		// No links found
 		return nil

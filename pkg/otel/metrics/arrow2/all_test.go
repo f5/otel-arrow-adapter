@@ -22,7 +22,6 @@ import (
 	"github.com/apache/arrow/go/v11/arrow/memory"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.opentelemetry.io/collector/pdata/pmetric"
 
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common"
 	acommon "github.com/f5/otel-arrow-adapter/pkg/otel/common/schema"
@@ -423,11 +422,11 @@ func TestUnivariateMetric(t *testing.T) {
 		smdata := &ScopeMetricsSharedData{Attributes: &common.SharedAttributes{}}
 		mdata := &MetricSharedData{Attributes: &common.SharedAttributes{}}
 
-		err := sb.Append(Metric1(), smdata, mdata)
+		err := sb.Append(internal.Metric1(), smdata, mdata)
 		require.NoError(t, err)
-		err = sb.Append(Metric2(), smdata, mdata)
+		err = sb.Append(internal.Metric2(), smdata, mdata)
 		require.NoError(t, err)
-		err = sb.Append(Metric3(), smdata, mdata)
+		err = sb.Append(internal.Metric3(), smdata, mdata)
 		require.NoError(t, err)
 
 		record, err = rBuilder.NewRecord()
@@ -472,11 +471,11 @@ func TestMetricSet(t *testing.T) {
 		smdata := &ScopeMetricsSharedData{Attributes: &common.SharedAttributes{}}
 		mdata := &MetricSharedData{Attributes: &common.SharedAttributes{}}
 
-		err := sb.Append(Metric1(), smdata, mdata)
+		err := sb.Append(internal.Metric1(), smdata, mdata)
 		require.NoError(t, err)
-		err = sb.Append(Metric2(), smdata, mdata)
+		err = sb.Append(internal.Metric2(), smdata, mdata)
 		require.NoError(t, err)
-		err = sb.Append(Metric3(), smdata, mdata)
+		err = sb.Append(internal.Metric3(), smdata, mdata)
 		require.NoError(t, err)
 
 		record, err = rBuilder.NewRecord()
@@ -518,9 +517,9 @@ func TestScopeMetrics(t *testing.T) {
 	for {
 		sb := ScopeMetricsBuilderFrom(rBuilder.StructBuilder(constants.ScopeMetrics))
 
-		err := sb.Append(ScopeMetrics1())
+		err := sb.Append(internal.ScopeMetrics1())
 		require.NoError(t, err)
-		err = sb.Append(ScopeMetrics2())
+		err = sb.Append(internal.ScopeMetrics2())
 		require.NoError(t, err)
 
 		record, err = rBuilder.NewRecord()
@@ -561,9 +560,9 @@ func TestResourceMetrics(t *testing.T) {
 	for {
 		sb := ResourceMetricsBuilderFrom(rBuilder.StructBuilder(constants.ResourceMetrics))
 
-		err := sb.Append(ResourceMetrics1())
+		err := sb.Append(internal.ResourceMetrics1())
 		require.NoError(t, err)
-		err = sb.Append(ResourceMetrics2())
+		err = sb.Append(internal.ResourceMetrics2())
 		require.NoError(t, err)
 
 		record, err = rBuilder.NewRecord()
@@ -603,10 +602,10 @@ func TestMetrics(t *testing.T) {
 		require.NoError(t, err)
 		defer sb.Release()
 
-		err = sb.Append(Metrics1())
+		err = sb.Append(internal.Metrics1())
 		require.NoError(t, err)
 
-		err = sb.Append(Metrics2())
+		err = sb.Append(internal.Metrics2())
 		require.NoError(t, err)
 
 		record, err = sb.Build()
@@ -853,92 +852,4 @@ func TestExponentialHistogram(t *testing.T) {
 ]`
 
 	require.JSONEq(t, expected, string(json))
-}
-
-func Metric1() pmetric.Metric {
-	m := pmetric.NewMetric()
-	m.SetName("gauge-1")
-	m.SetDescription("gauge-1-desc")
-	m.SetUnit("gauge-1-unit")
-	internal.Gauge1().CopyTo(m.SetEmptyGauge())
-	return m
-}
-
-func Metric2() pmetric.Metric {
-	m := pmetric.NewMetric()
-	m.SetName("sum-2")
-	m.SetDescription("sum-2-desc")
-	m.SetUnit("sum-2-unit")
-	internal.Sum1().CopyTo(m.SetEmptySum())
-	return m
-}
-
-func Metric3() pmetric.Metric {
-	m := pmetric.NewMetric()
-	m.SetName("summary-3")
-	m.SetDescription("summary-3-desc")
-	m.SetUnit("summary-3-unit")
-	internal.Summary1().CopyTo(m.SetEmptySummary())
-	return m
-}
-
-func ScopeMetrics1() pmetric.ScopeMetrics {
-	sm := pmetric.NewScopeMetrics()
-	sm.SetSchemaUrl("schema-1")
-	internal.Scope1().CopyTo(sm.Scope())
-	ms := sm.Metrics()
-	ms.EnsureCapacity(3)
-	Metric1().CopyTo(ms.AppendEmpty())
-	Metric2().CopyTo(ms.AppendEmpty())
-	Metric3().CopyTo(ms.AppendEmpty())
-	return sm
-}
-
-func ScopeMetrics2() pmetric.ScopeMetrics {
-	sm := pmetric.NewScopeMetrics()
-	sm.SetSchemaUrl("schema-2")
-	internal.Scope2().CopyTo(sm.Scope())
-	ms := sm.Metrics()
-	ms.EnsureCapacity(2)
-	Metric2().CopyTo(ms.AppendEmpty())
-	Metric3().CopyTo(ms.AppendEmpty())
-	return sm
-}
-
-func ResourceMetrics1() pmetric.ResourceMetrics {
-	rm := pmetric.NewResourceMetrics()
-	internal.Resource1().CopyTo(rm.Resource())
-	rm.SetSchemaUrl("schema-1")
-	sms := rm.ScopeMetrics()
-	sms.EnsureCapacity(2)
-	ScopeMetrics1().CopyTo(sms.AppendEmpty())
-	ScopeMetrics2().CopyTo(sms.AppendEmpty())
-	return rm
-}
-
-func ResourceMetrics2() pmetric.ResourceMetrics {
-	rm := pmetric.NewResourceMetrics()
-	internal.Resource2().CopyTo(rm.Resource())
-	rm.SetSchemaUrl("schema-2")
-	sms := rm.ScopeMetrics()
-	sms.EnsureCapacity(1)
-	ScopeMetrics1().CopyTo(sms.AppendEmpty())
-	return rm
-}
-
-func Metrics1() pmetric.Metrics {
-	m := pmetric.NewMetrics()
-	rms := m.ResourceMetrics()
-	rms.EnsureCapacity(2)
-	ResourceMetrics1().CopyTo(rms.AppendEmpty())
-	ResourceMetrics2().CopyTo(rms.AppendEmpty())
-	return m
-}
-
-func Metrics2() pmetric.Metrics {
-	m := pmetric.NewMetrics()
-	rms := m.ResourceMetrics()
-	rms.EnsureCapacity(1)
-	ResourceMetrics2().CopyTo(rms.AppendEmpty())
-	return m
 }

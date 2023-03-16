@@ -15,6 +15,8 @@
 package otlp
 
 import (
+	"fmt"
+
 	"github.com/apache/arrow/go/v11/arrow"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/pmetric"
@@ -205,7 +207,7 @@ func AppendUnivariateEHistogramDataPointInto(ehdpSlice pmetric.ExponentialHistog
 				return err
 			}
 		} else if err != nil {
-			return err
+			return fmt.Errorf("AppendUnivariateEHistogramDataPointInto(field='exemplars')->%w", err)
 		}
 
 		flags, err := ehdp.U32FieldByID(ids.Flags, ehdpIdx)

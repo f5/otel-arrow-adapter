@@ -119,13 +119,13 @@ func (b *ScopeMetricsBuilder) Append(sm pmetric.ScopeMetrics) error {
 			return err
 		}
 
-		attrs := pcommon.NewMap()
 		if sharedData.Attributes != nil && sharedData.Attributes.Len() > 0 {
+			attrs := pcommon.NewMap()
 			sharedData.Attributes.CopyTo(attrs)
-		}
-		err = b.sab.Append(attrs)
-		if err != nil {
-			return err
+			err = b.sab.Append(attrs)
+			if err != nil {
+				return err
+			}
 		}
 
 		if sharedData.StartTime != nil {

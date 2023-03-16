@@ -16,4 +16,4 @@
  */
 
 // Package arrow contains types and functions used to convert OTLP metrics into their Arrow representation.
-package arrow
+package arrow2

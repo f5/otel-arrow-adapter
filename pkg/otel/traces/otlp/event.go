@@ -15,6 +15,8 @@
 package otlp
 
 import (
+	"fmt"
+
 	"github.com/apache/arrow/go/v11/arrow"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/ptrace"
@@ -59,7 +61,7 @@ func NewEventIds(spansDT *arrow.StructType) (*EventIds, error) {
 func AppendEventsInto(spans ptrace.SpanEventSlice, arrowSpans *arrowutils.ListOfStructs, spanIdx int, ids *EventIds) error {
 	events, err := arrowSpans.ListOfStructsById(spanIdx, ids.Id)
 	if err != nil {
-		return err
+		return fmt.Errorf("AppendEventsInto(field='events')->%w", err)
 	}
 	if events == nil {
 		// No event found

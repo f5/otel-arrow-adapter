@@ -73,7 +73,7 @@ func TestSummaries(t *testing.T) {
 	}
 	defer record.Release()
 
-	// Retrieve the Arrow Map representing the summaries
+	// Retrieve the Arrow struct representing the summaries
 	arr := record.Columns()[0].(*array.Struct)
 
 	// Check the OTLP Arrow encoding and OTLP decoding by

@@ -95,11 +95,9 @@ func (b *Int64Builder) Append(value int64) {
 		return
 	}
 
-	if value != 0 {
-		// If the builder is nil, then the transform node is not optional.
-		b.transformNode.RemoveOptional()
-		b.updateRequest.Inc()
-	}
+	// If the builder is nil, then the transform node is not optional.
+	b.transformNode.RemoveOptional()
+	b.updateRequest.Inc()
 }
 
 // AppendNull appends a null value to the underlying builder. If the builder is

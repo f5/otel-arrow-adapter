@@ -48,18 +48,22 @@ func NewUnivariateSumIds(parentDT *arrow.StructType) (*UnivariateSumIds, error) 
 }
 
 func UpdateUnivariateSumFrom(sum pmetric.Sum, arr *array.Struct, row int, ids *UnivariateSumIds, smdata *SharedData, mdata *SharedData) error {
-	value, err := arrowutils.I32FromArray(arr.Field(ids.AggregationTemporality), row)
-	if err != nil {
-		return err
+	if ids.AggregationTemporality >= 0 {
+		value, err := arrowutils.I32FromArray(arr.Field(ids.AggregationTemporality), row)
+		if err != nil {
+			return err
+		}
+
+		sum.SetAggregationTemporality(pmetric.AggregationTemporality(value))
 	}
 
-	sum.SetAggregationTemporality(pmetric.AggregationTemporality(value))
-
-	imArr, ok := arr.Field(ids.IsMonotonic).(*array.Boolean)
-	if !ok {
-		return fmt.Errorf("field %q is not a boolean", constants.IsMonotonic)
+	if ids.IsMonotonic >= 0 {
+		imArr, ok := arr.Field(ids.IsMonotonic).(*array.Boolean)
+		if !ok {
+			return fmt.Errorf("field %q is not a boolean", constants.IsMonotonic)
+		}
+		sum.SetIsMonotonic(imArr.Value(row))
 	}
-	sum.SetIsMonotonic(imArr.Value(row))
 
 	los, err := arrowutils.ListOfStructsFromStruct(arr, ids.DataPoints.Id, row)
 	if err != nil {
