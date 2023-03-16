@@ -239,6 +239,7 @@ func (r *Receiver) ArrowStream(serverStream arrowpb.ArrowStreamService_ArrowStre
 		// or plog.Logs item.
 		req, err := serverStream.Recv()
 		if err != nil {
+			r.telemetry.Logger.Error("arrow recv error", zap.Error(err))
 			return err
 		}
 
@@ -246,6 +247,7 @@ func (r *Receiver) ArrowStream(serverStream arrowpb.ArrowStreamService_ArrowStre
 		thisCtx, authHdrs, err := hrcv.combineHeaders(streamCtx, req.GetHeaders())
 		if err != nil {
 			// Failing to parse the incoming headers breaks the stream.
+			r.telemetry.Logger.Error("arrow metadata error", zap.Error(err))
 			return err
 		}
 
@@ -288,6 +290,7 @@ func (r *Receiver) ArrowStream(serverStream arrowpb.ArrowStreamService_ArrowStre
 
 		err = serverStream.Send(resp)
 		if err != nil {
+			r.telemetry.Logger.Error("arrow send error", zap.Error(err))
 			return err
 		}
 	}
