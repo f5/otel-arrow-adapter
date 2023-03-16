@@ -235,13 +235,6 @@ func (r *Receiver) ArrowStream(serverStream arrowpb.ArrowStreamService_ArrowStre
 	}()
 
 	for {
-		// See if the context has been canceled.
-		select {
-		case <-streamCtx.Done():
-			return streamCtx.Err()
-		default:
-		}
-
 		// Receive a batch corresponding with one ptrace.Traces, pmetric.Metrics,
 		// or plog.Logs item.
 		req, err := serverStream.Recv()
