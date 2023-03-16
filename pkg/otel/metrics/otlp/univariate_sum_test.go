@@ -32,7 +32,7 @@ import (
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/builder"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/internal"
-	"github.com/f5/otel-arrow-adapter/pkg/otel/metrics/arrow2"
+	marrow "github.com/f5/otel-arrow-adapter/pkg/otel/metrics/arrow"
 )
 
 func TestSums(t *testing.T) {
@@ -42,7 +42,7 @@ func TestSums(t *testing.T) {
 	defer pool.AssertSize(t, 0)
 
 	s := arrow.NewSchema([]arrow.Field{
-		{Name: "sums", Type: arrow2.UnivariateSumDT, Metadata: schema.Metadata(schema.Optional)},
+		{Name: "sums", Type: marrow.UnivariateSumDT, Metadata: schema.Metadata(schema.Optional)},
 	}, nil)
 
 	rBuilder := builder.NewRecordBuilderExt(pool, s, DefaultDictConfig)
@@ -55,9 +55,9 @@ func TestSums(t *testing.T) {
 
 	// Create Arrow record from OTLP univariate sums
 	for {
-		smdata := &arrow2.ScopeMetricsSharedData{Attributes: &common.SharedAttributes{}}
-		mdata := &arrow2.MetricSharedData{Attributes: &common.SharedAttributes{}}
-		b := arrow2.UnivariateSumBuilderFrom(rBuilder.StructBuilder("sums"))
+		smdata := &marrow.ScopeMetricsSharedData{Attributes: &common.SharedAttributes{}}
+		mdata := &marrow.MetricSharedData{Attributes: &common.SharedAttributes{}}
+		b := marrow.UnivariateSumBuilderFrom(rBuilder.StructBuilder("sums"))
 		for i := 0; i < maxIter; i++ {
 			err = b.Append(internal.Sum1(), smdata, mdata)
 			require.NoError(t, err)

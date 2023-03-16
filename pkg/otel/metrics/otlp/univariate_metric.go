@@ -23,7 +23,7 @@ import (
 
 	arrowutils "github.com/f5/otel-arrow-adapter/pkg/arrow2"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/constants"
-	ametric "github.com/f5/otel-arrow-adapter/pkg/otel/metrics/arrow2"
+	ametric "github.com/f5/otel-arrow-adapter/pkg/otel/metrics/arrow"
 )
 
 type UnivariateMetricIds struct {

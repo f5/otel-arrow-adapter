@@ -33,7 +33,7 @@ import (
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/builder"
 	config "github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/config"
 	logsarrow "github.com/f5/otel-arrow-adapter/pkg/otel/logs/arrow"
-	metricsarrow "github.com/f5/otel-arrow-adapter/pkg/otel/metrics/arrow2"
+	metricsarrow "github.com/f5/otel-arrow-adapter/pkg/otel/metrics/arrow"
 	tracesarrow "github.com/f5/otel-arrow-adapter/pkg/otel/traces/arrow"
 )
 

@@ -34,7 +34,7 @@ import (
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/builder"
 	cfg "github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/config"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/internal"
-	"github.com/f5/otel-arrow-adapter/pkg/otel/metrics/arrow2"
+	marrow "github.com/f5/otel-arrow-adapter/pkg/otel/metrics/arrow"
 )
 
 var DefaultDictConfig = &cfg.Dictionary{
@@ -48,7 +48,7 @@ func TestGauges(t *testing.T) {
 	defer pool.AssertSize(t, 0)
 
 	s := arrow.NewSchema([]arrow.Field{
-		{Name: "gauges", Type: arrow2.UnivariateGaugeDT, Metadata: schema.Metadata(schema.Optional)},
+		{Name: "gauges", Type: marrow.UnivariateGaugeDT, Metadata: schema.Metadata(schema.Optional)},
 	}, nil)
 
 	rBuilder := builder.NewRecordBuilderExt(pool, s, DefaultDictConfig)
@@ -61,9 +61,9 @@ func TestGauges(t *testing.T) {
 
 	// Create Arrow record from OTLP univariate gauges
 	for {
-		smdata := &arrow2.ScopeMetricsSharedData{Attributes: &common.SharedAttributes{}}
-		mdata := &arrow2.MetricSharedData{Attributes: &common.SharedAttributes{}}
-		b := arrow2.UnivariateGaugeBuilderFrom(rBuilder.StructBuilder("gauges"))
+		smdata := &marrow.ScopeMetricsSharedData{Attributes: &common.SharedAttributes{}}
+		mdata := &marrow.MetricSharedData{Attributes: &common.SharedAttributes{}}
+		b := marrow.UnivariateGaugeBuilderFrom(rBuilder.StructBuilder("gauges"))
 		for i := 0; i < maxIter; i++ {
 			err = b.Append(internal.Gauge1(), smdata, mdata)
 			require.NoError(t, err)

@@ -36,7 +36,7 @@ import (
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/builder"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/constants"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/internal"
-	"github.com/f5/otel-arrow-adapter/pkg/otel/metrics/arrow2"
+	marrow "github.com/f5/otel-arrow-adapter/pkg/otel/metrics/arrow"
 )
 
 func TestScopeMetrics(t *testing.T) {
@@ -46,7 +46,7 @@ func TestScopeMetrics(t *testing.T) {
 	defer pool.AssertSize(t, 0)
 
 	s := arrow.NewSchema([]arrow.Field{
-		{Name: constants.ScopeMetrics, Type: arrow.ListOf(arrow2.ScopeMetricsDT), Metadata: schema.Metadata(schema.Optional)},
+		{Name: constants.ScopeMetrics, Type: arrow.ListOf(marrow.ScopeMetricsDT), Metadata: schema.Metadata(schema.Optional)},
 	}, nil)
 
 	rBuilder := builder.NewRecordBuilderExt(pool, s, DefaultDictConfig)
@@ -60,7 +60,7 @@ func TestScopeMetrics(t *testing.T) {
 	// Create Arrow record from OTLP scope metrics.
 	for {
 		lb := rBuilder.ListBuilder(constants.ScopeMetrics)
-		b := arrow2.ScopeMetricsBuilderFrom(lb.StructBuilder())
+		b := marrow.ScopeMetricsBuilderFrom(lb.StructBuilder())
 		for i := 0; i < maxIter; i++ {
 			err := lb.Append(2, func() error {
 				err = b.Append(internal.ScopeMetrics3())
@@ -140,7 +140,7 @@ func TestScopeMetricsWithGenerator(t *testing.T) {
 	defer pool.AssertSize(t, 0)
 
 	s := arrow.NewSchema([]arrow.Field{
-		{Name: constants.ScopeMetrics, Type: arrow.ListOf(arrow2.ScopeMetricsDT), Metadata: schema.Metadata(schema.Optional)},
+		{Name: constants.ScopeMetrics, Type: arrow.ListOf(marrow.ScopeMetricsDT), Metadata: schema.Metadata(schema.Optional)},
 	}, nil)
 
 	rBuilder := builder.NewRecordBuilderExt(pool, s, DefaultDictConfig)
@@ -154,7 +154,7 @@ func TestScopeMetricsWithGenerator(t *testing.T) {
 	// Create Arrow record from OTLP scope metrics.
 	for {
 		lb := rBuilder.ListBuilder(constants.ScopeMetrics)
-		b := arrow2.ScopeMetricsBuilderFrom(lb.StructBuilder())
+		b := marrow.ScopeMetricsBuilderFrom(lb.StructBuilder())
 		for i := 0; i < maxIter; i++ {
 			err := lb.Append(len(expectedScopeMetrics), func() error {
 				for _, scopeMetrics := range expectedScopeMetrics {

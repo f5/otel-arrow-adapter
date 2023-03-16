@@ -30,7 +30,7 @@ import (
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/builder"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/internal"
-	ametrics "github.com/f5/otel-arrow-adapter/pkg/otel/metrics/arrow2"
+	ametrics "github.com/f5/otel-arrow-adapter/pkg/otel/metrics/arrow"
 )
 
 func TestMetrics(t *testing.T) {

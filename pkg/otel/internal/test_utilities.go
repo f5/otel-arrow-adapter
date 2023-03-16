@@ -520,16 +520,6 @@ func ResourceMetrics2() pmetric.ResourceMetrics {
 	return rm
 }
 
-func ResourceMetrics3() pmetric.ResourceMetrics {
-	rm := pmetric.NewResourceMetrics()
-	Resource2().CopyTo(rm.Resource())
-	rm.SetSchemaUrl("schema-3")
-	sms := rm.ScopeMetrics()
-	sms.EnsureCapacity(1)
-	ScopeMetrics3().CopyTo(sms.AppendEmpty())
-	return rm
-}
-
 func Metrics1() pmetric.Metrics {
 	m := pmetric.NewMetrics()
 	rms := m.ResourceMetrics()

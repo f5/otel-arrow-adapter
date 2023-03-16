@@ -32,7 +32,7 @@ import (
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/builder"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/internal"
-	"github.com/f5/otel-arrow-adapter/pkg/otel/metrics/arrow2"
+	marrow "github.com/f5/otel-arrow-adapter/pkg/otel/metrics/arrow"
 )
 
 func TestExponentialHistograms(t *testing.T) {
@@ -42,7 +42,7 @@ func TestExponentialHistograms(t *testing.T) {
 	defer pool.AssertSize(t, 0)
 
 	s := arrow.NewSchema([]arrow.Field{
-		{Name: "ehistograms", Type: arrow2.UnivariateEHistogramDT, Metadata: schema.Metadata(schema.Optional)},
+		{Name: "ehistograms", Type: marrow.UnivariateEHistogramDT, Metadata: schema.Metadata(schema.Optional)},
 	}, nil)
 
 	rBuilder := builder.NewRecordBuilderExt(pool, s, DefaultDictConfig)
@@ -55,9 +55,9 @@ func TestExponentialHistograms(t *testing.T) {
 
 	// Create Arrow record from OTLP univariate exponential histograms.
 	for {
-		smdata := &arrow2.ScopeMetricsSharedData{Attributes: &common.SharedAttributes{}}
-		mdata := &arrow2.MetricSharedData{Attributes: &common.SharedAttributes{}}
-		b := arrow2.UnivariateEHistogramBuilderFrom(rBuilder.StructBuilder("ehistograms"))
+		smdata := &marrow.ScopeMetricsSharedData{Attributes: &common.SharedAttributes{}}
+		mdata := &marrow.MetricSharedData{Attributes: &common.SharedAttributes{}}
+		b := marrow.UnivariateEHistogramBuilderFrom(rBuilder.StructBuilder("ehistograms"))
 		for i := 0; i < maxIter; i++ {
 			err = b.Append(internal.ExpHistogram1(), smdata, mdata)
 			require.NoError(t, err)

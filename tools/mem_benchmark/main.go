@@ -28,7 +28,7 @@ import (
 
 	carrow "github.com/f5/otel-arrow-adapter/pkg/otel/common/schema"
 	logs "github.com/f5/otel-arrow-adapter/pkg/otel/logs/arrow"
-	metrics "github.com/f5/otel-arrow-adapter/pkg/otel/metrics/arrow2"
+	metrics "github.com/f5/otel-arrow-adapter/pkg/otel/metrics/arrow"
 	traces "github.com/f5/otel-arrow-adapter/pkg/otel/traces/arrow"
 )
 

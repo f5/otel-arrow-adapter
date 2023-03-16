@@ -24,7 +24,7 @@ import (
 	"github.com/apache/arrow/go/v11/arrow"
 
 	logsarrow "github.com/f5/otel-arrow-adapter/pkg/otel/logs/arrow"
-	metricsarrow "github.com/f5/otel-arrow-adapter/pkg/otel/metrics/arrow2"
+	metricsarrow "github.com/f5/otel-arrow-adapter/pkg/otel/metrics/arrow"
 	tracesarrow "github.com/f5/otel-arrow-adapter/pkg/otel/traces/arrow"
 )
 
