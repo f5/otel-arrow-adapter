@@ -646,6 +646,16 @@ func testReceiverHeaders(t *testing.T, includeMeta bool) {
 		close(ctc.receive)
 	}()
 
+	var wg sync.WaitGroup
+	wg.Add(1)
+
+	go func() {
+		err := ctc.wait()
+		require.Error(t, err)
+		require.True(t, errors.Is(err, io.EOF))
+		wg.Done()
+	}()
+
 	for _, expect := range expectData {
 		info := client.FromContext((<-ctc.consume).Ctx)
 
@@ -664,9 +674,7 @@ func testReceiverHeaders(t *testing.T, includeMeta bool) {
 		}
 	}
 
-	err := ctc.wait()
-	require.Error(t, err)
-	require.True(t, errors.Is(err, io.EOF))
+	wg.Wait()
 }
 
 func TestReceiverCancel(t *testing.T) {
