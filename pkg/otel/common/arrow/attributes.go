@@ -1,36 +1,41 @@
-// Copyright The OpenTelemetry Authors
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//       http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+/*
+ * Copyright The OpenTelemetry Authors
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *        http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ */
 
 package arrow
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/apache/arrow/go/v11/arrow"
 	"github.com/apache/arrow/go/v11/arrow/array"
-	"github.com/apache/arrow/go/v11/arrow/memory"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common"
+	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/builder"
 )
 
 // Arrow data types used to build the attribute map.
 var (
 	// KDT is the Arrow key data type.
-	KDT = DefaultDictString
+	KDT = arrow.BinaryTypes.String
 
 	// AttributesDT is the Arrow attribute data type.
+	// ToDo support dictionary on keys.
 	AttributesDT = arrow.MapOf(KDT, AnyValueDT)
 )
 
@@ -38,28 +43,44 @@ var (
 type AttributesBuilder struct {
 	released bool
 
-	builder *array.MapBuilder          // map builder
-	kb      *AdaptiveDictionaryBuilder // key builder
-	ib      *AnyValueBuilder           // item any value builder
+	builder *builder.MapBuilder    // map builder
+	kb      *builder.StringBuilder // key builder
+	ib      *AnyValueBuilder       // item any value builder
+}
+
+func AttributesId(attrs pcommon.Map) string {
+	var attrsId strings.Builder
+	attrs.Sort()
+	attrsId.WriteString("{")
+	attrs.Range(func(k string, v pcommon.Value) bool {
+		if attrsId.Len() > 1 {
+			attrsId.WriteString(",")
+		}
+		attrsId.WriteString(k)
+		attrsId.WriteString(":")
+		attrsId.WriteString(ValueID(v))
+		return true
+	})
+	attrsId.WriteString("}")
+	return attrsId.String()
 }
 
 // NewAttributesBuilder creates a new AttributesBuilder with a given allocator.
 //
 // Once the builder is no longer needed, Build() or Release() must be called to free the
 // memory allocated by the builder.
-func NewAttributesBuilder(pool memory.Allocator) *AttributesBuilder {
-	mb := array.NewMapBuilder(pool, KDT, AnyValueDT, false)
-	return AttributesBuilderFrom(mb)
+func NewAttributesBuilder(builder *builder.MapBuilder) *AttributesBuilder {
+	return AttributesBuilderFrom(builder)
 }
 
 // AttributesBuilderFrom creates a new AttributesBuilder from an existing MapBuilder.
-func AttributesBuilderFrom(mb *array.MapBuilder) *AttributesBuilder {
-	ib := AnyValueBuilderFrom(mb.ItemBuilder().(*array.SparseUnionBuilder))
+func AttributesBuilderFrom(mb *builder.MapBuilder) *AttributesBuilder {
+	ib := AnyValueBuilderFrom(mb.ItemSparseUnionBuilder())
 
 	return &AttributesBuilder{
 		released: false,
 		builder:  mb,
-		kb:       AdaptiveDictionaryBuilderFrom(mb.KeyBuilder()),
+		kb:       mb.KeyStringBuilder(),
 		ib:       ib,
 	}
 }
@@ -84,25 +105,18 @@ func (b *AttributesBuilder) Append(attrs pcommon.Map) error {
 		return fmt.Errorf("attribute builder already released")
 	}
 
-	if attrs.Len() == 0 {
-		b.append0Attrs()
-		return nil
-	}
-	b.appendNAttrs(attrs.Len())
-
-	var err error
-	attrs.Range(func(key string, v pcommon.Value) bool {
-		// Reserve the key
-		err := b.kb.AppendString(key)
-		if err != nil {
-			return false
-		}
-
-		// Reserve the value
-		err = b.ib.Append(v)
-		return err == nil
+	return b.builder.Append(attrs.Len(), func() error {
+		var err error
+		attrs.Range(func(key string, v pcommon.Value) bool {
+			if key == "" {
+				// Skip entries with empty keys
+				return true
+			}
+			b.kb.Append(key)
+			return b.ib.Append(v) == nil
+		})
+		return err
 	})
-	return err
 }
 
 func (b *AttributesBuilder) AppendUniqueAttributes(attrs pcommon.Map, smattrs *common.SharedAttributes, mattrs *common.SharedAttributes) error {
@@ -117,41 +131,32 @@ func (b *AttributesBuilder) AppendUniqueAttributes(attrs pcommon.Map, smattrs *c
 	if mattrs != nil {
 		uniqueAttrsCount -= mattrs.Len()
 	}
-	if uniqueAttrsCount == 0 {
-		b.append0Attrs()
-		return nil
-	}
-	b.appendNAttrs(uniqueAttrsCount)
 
-	var err error
-	attrs.Range(func(key string, v pcommon.Value) bool {
-		// Skip the current attribute if it is a scope metric shared attribute
-		// or a metric shared attribute
-		smattrsFound := false
-		mattrsFound := false
-		if smattrs != nil {
-			_, smattrsFound = smattrs.Attributes[key]
-		}
-		if mattrs != nil {
-			_, mattrsFound = mattrs.Attributes[key]
-		}
-		if smattrsFound || mattrsFound {
-			return true
-		}
+	return b.builder.Append(uniqueAttrsCount, func() error {
+		var err error
+		attrs.Range(func(key string, v pcommon.Value) bool {
+			// Skip the current attribute if it is a scope metric shared attribute
+			// or a metric shared attribute
+			smattrsFound := false
+			mattrsFound := false
+			if smattrs != nil {
+				_, smattrsFound = smattrs.Attributes[key]
+			}
+			if mattrs != nil {
+				_, mattrsFound = mattrs.Attributes[key]
+			}
+			if smattrsFound || mattrsFound {
+				return true
+			}
 
-		// Reserve the key
-		err := b.kb.AppendString(key)
-		if err != nil {
-			return false
-		}
+			b.kb.Append(key)
+			err = b.ib.Append(v)
 
-		// Reserve the value
-		err = b.ib.Append(v)
-
-		uniqueAttrsCount--
-		return err == nil && uniqueAttrsCount > 0
+			uniqueAttrsCount--
+			return err == nil && uniqueAttrsCount > 0
+		})
+		return err
 	})
-	return err
 }
 
 // Release releases the memory allocated by the builder.
@@ -161,15 +166,4 @@ func (b *AttributesBuilder) Release() {
 
 		b.released = true
 	}
-}
-
-// appendNAttrs appends a new set of key-value pairs to the builder.
-func (b *AttributesBuilder) appendNAttrs(count int) {
-	b.builder.Append(true)
-	b.builder.Reserve(count)
-}
-
-// append0Attrs appends an empty set of key-value pairs to the builder.
-func (b *AttributesBuilder) append0Attrs() {
-	b.builder.AppendNull()
 }

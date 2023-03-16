@@ -20,8 +20,8 @@ import (
 	"github.com/apache/arrow/go/v11/arrow"
 	"go.opentelemetry.io/collector/pdata/plog"
 
-	arrowutils "github.com/f5/otel-arrow-adapter/pkg/arrow2"
-	otlp "github.com/f5/otel-arrow-adapter/pkg/otel/common/otlp2"
+	arrowutils "github.com/f5/otel-arrow-adapter/pkg/arrow"
+	otlp "github.com/f5/otel-arrow-adapter/pkg/otel/common/otlp"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/constants"
 )
 
@@ -65,7 +65,7 @@ func NewScopeLogsIds(dt *arrow.StructType) (*ScopeLogsIds, error) {
 func AppendScopeLogsInto(resLogs plog.ResourceLogs, arrowResLogs *arrowutils.ListOfStructs, resLogsIdx int, ids *ScopeLogsIds) error {
 	arrowScopeLogs, err := arrowResLogs.ListOfStructsById(resLogsIdx, ids.Id)
 	if err != nil {
-		return fmt.Errorf("AppendScopeLogsInto(field='scope')->%w")
+		return fmt.Errorf("AppendScopeLogsInto(field='scope')->%w", err)
 	}
 	scopeLogsSlice := resLogs.ScopeLogs()
 	scopeLogsSlice.EnsureCapacity(arrowScopeLogs.End() - arrowResLogs.Start())

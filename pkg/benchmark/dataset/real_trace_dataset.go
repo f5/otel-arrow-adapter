@@ -24,12 +24,12 @@ import (
 	"sort"
 	"strings"
 
-	stats "github.com/f5/otel-arrow-adapter/pkg/benchmark/stats"
-	"github.com/f5/otel-arrow-adapter/pkg/otel/common/arrow"
-
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/ptrace"
 	"go.opentelemetry.io/collector/pdata/ptrace/ptraceotlp"
+
+	stats "github.com/f5/otel-arrow-adapter/pkg/benchmark/stats"
+	"github.com/f5/otel-arrow-adapter/pkg/otel/common/arrow"
 )
 
 // ===== Real traces dataset =====

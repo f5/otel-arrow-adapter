@@ -29,7 +29,7 @@ import (
 	"go.opentelemetry.io/collector/pdata/pmetric/pmetricotlp"
 	"golang.org/x/exp/rand"
 
-	carrow "github.com/f5/otel-arrow-adapter/pkg/arrow2"
+	carrow "github.com/f5/otel-arrow-adapter/pkg/arrow"
 	"github.com/f5/otel-arrow-adapter/pkg/datagen"
 	jsonassert "github.com/f5/otel-arrow-adapter/pkg/otel/assert"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema"

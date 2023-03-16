@@ -39,10 +39,7 @@ func NewResourceIds(resSpansDT *arrow.StructType) (*ResourceIds, error) {
 		return nil, err
 	}
 
-	droppedAttributesCount, _, err := arrowutils.FieldIDFromStruct(resDT, constants.DroppedAttributesCount)
-	if err != nil {
-		return nil, err
-	}
+	droppedAttributesCount, _ := arrowutils.FieldIDFromStruct(resDT, constants.DroppedAttributesCount)
 
 	return &ResourceIds{
 		Id:                     resId,

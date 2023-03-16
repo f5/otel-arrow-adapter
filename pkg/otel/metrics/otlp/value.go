@@ -20,7 +20,7 @@ import (
 	"github.com/apache/arrow/go/v11/arrow/array"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 
-	arrowutils "github.com/f5/otel-arrow-adapter/pkg/arrow2"
+	arrowutils "github.com/f5/otel-arrow-adapter/pkg/arrow"
 	arrow "github.com/f5/otel-arrow-adapter/pkg/otel/metrics/arrow"
 )
 

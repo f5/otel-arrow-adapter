@@ -15,7 +15,7 @@
  *
  */
 
-package arrow2
+package arrow
 
 // Utility functions to extract values from Arrow arrays.
 

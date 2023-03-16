@@ -26,31 +26,34 @@ import (
 )
 
 func UpdateValueFrom(v pcommon.Value, vArr *array.SparseUnion, row int) error {
-	tcode := int8(vArr.ChildID(row))
+	tcode := vArr.TypeCode(row)
+	fieldId := vArr.ChildID(row)
+
 	switch tcode {
 	case commonarrow.StrCode:
-		val, err := arrowutils.StringFromArray(vArr.Field(int(tcode)), row)
+		val, err := arrowutils.StringFromArray(vArr.Field(fieldId), row)
 		if err != nil {
 			return err
 		}
 		v.SetStr(val)
 	case commonarrow.I64Code:
-		val := vArr.Field(int(tcode)).(*array.Int64).Value(row)
+		val := vArr.Field(fieldId).(*array.Int64).Value(row)
 		v.SetInt(val)
 	case commonarrow.F64Code:
-		val := vArr.Field(int(tcode)).(*array.Float64).Value(row)
+		field := vArr.Field(fieldId)
+		val := field.(*array.Float64).Value(row)
 		v.SetDouble(val)
 	case commonarrow.BoolCode:
-		val := vArr.Field(int(tcode)).(*array.Boolean).Value(row)
+		val := vArr.Field(fieldId).(*array.Boolean).Value(row)
 		v.SetBool(val)
 	case commonarrow.BinaryCode:
-		val, err := arrowutils.BinaryFromArray(vArr.Field(int(tcode)), row)
+		val, err := arrowutils.BinaryFromArray(vArr.Field(fieldId), row)
 		if err != nil {
 			return err
 		}
 		v.SetEmptyBytes().FromRaw(val)
 	case commonarrow.CborCode:
-		val, err := arrowutils.BinaryFromArray(vArr.Field(int(tcode)), row)
+		val, err := arrowutils.BinaryFromArray(vArr.Field(fieldId), row)
 		if err != nil {
 			return err
 		}

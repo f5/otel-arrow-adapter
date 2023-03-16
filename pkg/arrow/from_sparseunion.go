@@ -15,5 +15,18 @@
  *
  */
 
-// Package otlp contains common types and functions used to convert OTLP Arrow entities into their OTLP representation.
-package otlp2
+package arrow
+
+import (
+	"github.com/apache/arrow/go/v11/arrow"
+)
+
+func StructFromSparseUnion(dt *arrow.SparseUnionType, code int8) *arrow.StructType {
+	codes := dt.TypeCodes()
+	for i, c := range codes {
+		if c == code {
+			return dt.Fields()[i].Type.(*arrow.StructType)
+		}
+	}
+	return nil
+}

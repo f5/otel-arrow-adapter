@@ -21,8 +21,8 @@ import (
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 
-	arrowutils "github.com/f5/otel-arrow-adapter/pkg/arrow2"
-	otlp "github.com/f5/otel-arrow-adapter/pkg/otel/common/otlp2"
+	arrowutils "github.com/f5/otel-arrow-adapter/pkg/arrow"
+	otlp "github.com/f5/otel-arrow-adapter/pkg/otel/common/otlp"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/constants"
 )
 

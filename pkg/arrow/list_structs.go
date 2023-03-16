@@ -15,7 +15,7 @@
  *
  */
 
-package arrow2
+package arrow
 
 // Wrapper around an Arrow list of structs used to expose utility functions.
 

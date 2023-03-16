@@ -15,7 +15,7 @@
  *
  */
 
-package arrow2
+package arrow
 
 // Utility functions to extract ids, and values from Struct data type or from
 // Arrow arrays.

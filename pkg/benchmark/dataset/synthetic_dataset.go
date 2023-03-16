@@ -18,7 +18,7 @@ import (
 	"math/rand"
 
 	"github.com/f5/otel-arrow-adapter/pkg/datagen"
-	"github.com/f5/otel-arrow-adapter/pkg/otel/common/arrow"
+	arrow "github.com/f5/otel-arrow-adapter/pkg/otel/common/arrow"
 
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/plog"
