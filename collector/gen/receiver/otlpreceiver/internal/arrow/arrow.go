@@ -17,6 +17,7 @@ package arrow // import "github.com/f5/otel-arrow-adapter/collector/gen/receiver
 import (
 	"context"
 	"fmt"
+	"io"
 	"strings"
 
 	arrowpb "github.com/f5/otel-arrow-adapter/api/collector/arrow/v1"
@@ -238,8 +239,13 @@ func (r *Receiver) ArrowStream(serverStream arrowpb.ArrowStreamService_ArrowStre
 		// Receive a batch corresponding with one ptrace.Traces, pmetric.Metrics,
 		// or plog.Logs item.
 		req, err := serverStream.Recv()
+
 		if err != nil {
-			r.telemetry.Logger.Error("arrow recv error", zap.Error(err))
+			if err == io.EOF {
+				r.telemetry.Logger.Debug("arrow recv eof", zap.Error(err))
+			} else {
+				r.telemetry.Logger.Error("arrow recv error", zap.Error(err))
+			}
 			return err
 		}
 
@@ -281,8 +287,10 @@ func (r *Receiver) ArrowStream(serverStream arrowpb.ArrowStreamService_ArrowStre
 			status.ErrorMessage = err.Error()
 
 			if consumererror.IsPermanent(err) {
+				r.telemetry.Logger.Error("arrow data error", zap.Error(err))
 				status.ErrorCode = arrowpb.ErrorCode_INVALID_ARGUMENT
 			} else {
+				r.telemetry.Logger.Debug("arrow consumer error", zap.Error(err))
 				status.ErrorCode = arrowpb.ErrorCode_UNAVAILABLE
 			}
 		}

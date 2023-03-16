@@ -151,43 +151,31 @@ func (ctc *commonTestCase) doAndReturnGetBatch(ctx context.Context) func() (*arr
 
 func (ctc *commonTestCase) doAndReturnConsumeTraces(tc testChannel) func(ctx context.Context, traces ptrace.Traces) error {
 	return func(ctx context.Context, traces ptrace.Traces) error {
-		select {
-		case ctc.consume <- consumeResult{
+		ctc.consume <- consumeResult{
 			Ctx:  ctx,
 			Data: traces,
-		}:
-			return tc.onConsume()
-		case <-ctx.Done():
-			return ctx.Err()
 		}
+		return tc.onConsume()
 	}
 }
 
 func (ctc *commonTestCase) doAndReturnConsumeMetrics(tc testChannel) func(ctx context.Context, metrics pmetric.Metrics) error {
 	return func(ctx context.Context, metrics pmetric.Metrics) error {
-		select {
-		case ctc.consume <- consumeResult{
+		ctc.consume <- consumeResult{
 			Ctx:  ctx,
 			Data: metrics,
-		}:
-			return tc.onConsume()
-		case <-ctx.Done():
-			return ctx.Err()
 		}
+		return tc.onConsume()
 	}
 }
 
 func (ctc *commonTestCase) doAndReturnConsumeLogs(tc testChannel) func(ctx context.Context, logs plog.Logs) error {
 	return func(ctx context.Context, logs plog.Logs) error {
-		select {
-		case ctc.consume <- consumeResult{
+		ctc.consume <- consumeResult{
 			Ctx:  ctx,
 			Data: logs,
-		}:
-			return tc.onConsume()
-		case <-ctx.Done():
-			return ctx.Err()
 		}
+		return tc.onConsume()
 	}
 }
 
