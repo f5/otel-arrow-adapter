@@ -137,7 +137,7 @@ func (b *HistogramDataPointBuilder) Append(hdp pmetric.HistogramDataPoint, smdat
 		}
 		b.hcb.Append(hdp.Count())
 		if hdp.HasSum() {
-			b.hsb.Append(hdp.Sum())
+			b.hsb.AppendNonZero(hdp.Sum())
 		} else {
 			b.hsb.AppendNull()
 		}
@@ -157,7 +157,7 @@ func (b *HistogramDataPointBuilder) Append(hdp pmetric.HistogramDataPoint, smdat
 		hebc := heb.Len()
 		if err := b.heblb.Append(hebc, func() error {
 			for i := 0; i < hebc; i++ {
-				b.hebb.Append(heb.At(i))
+				b.hebb.AppendNonZero(heb.At(i))
 			}
 			return nil
 		}); err != nil {
@@ -179,12 +179,12 @@ func (b *HistogramDataPointBuilder) Append(hdp pmetric.HistogramDataPoint, smdat
 		b.fb.Append(uint32(hdp.Flags()))
 
 		if hdp.HasMin() {
-			b.hmib.Append(hdp.Min())
+			b.hmib.AppendNonZero(hdp.Min())
 		} else {
 			b.hmib.AppendNull()
 		}
 		if hdp.HasMax() {
-			b.hmab.Append(hdp.Max())
+			b.hmab.AppendNonZero(hdp.Max())
 		} else {
 			b.hmab.AppendNull()
 		}

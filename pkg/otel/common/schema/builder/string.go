@@ -39,6 +39,35 @@ func (b *StringBuilder) AppendNull() {
 
 func (b *StringBuilder) Append(value string) {
 	if b.builder != nil {
+		// This is a workaround for dictionaries that do not support empty
+		// strings.
+		if value == "" {
+			b.builder.AppendNull()
+			return
+		}
+
+		switch builder := b.builder.(type) {
+		case *array.StringBuilder:
+			builder.Append(value)
+		case *array.BinaryDictionaryBuilder:
+			if err := builder.AppendString(value); err != nil {
+				// Should never happen.
+				panic(err)
+			}
+		default:
+			// Should never happen.
+			panic("unknown builder type")
+		}
+
+		return
+	}
+
+	b.transformNode.RemoveOptional()
+	b.updateRequest.Inc()
+}
+
+func (b *StringBuilder) AppendNonEmpty(value string) {
+	if b.builder != nil {
 		if value == "" {
 			b.builder.AppendNull()
 			return

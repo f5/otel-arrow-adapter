@@ -15,6 +15,8 @@
 package otlp
 
 import (
+	"fmt"
+
 	"github.com/apache/arrow/go/v11/arrow"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/pmetric"
@@ -83,7 +85,7 @@ func AppendUnivariateSdpInto(ndpSlice pmetric.SummaryDataPointSlice, ndp *arrowu
 
 		attrs := sdpValue.Attributes()
 		if err := otlp.AppendAttributesInto(attrs, ndp.Array(), idx, ids.Attributes); err != nil {
-			return err
+			return fmt.Errorf("AppendUnivariateSdpInto->%w", err)
 		}
 		smdata.Attributes.Range(func(k string, v pcommon.Value) bool {
 			v.CopyTo(attrs.PutEmpty(k))

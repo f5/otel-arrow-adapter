@@ -76,8 +76,8 @@ func (b *ScopeBuilder) Append(scope pcommon.InstrumentationScope) error {
 	}
 
 	return b.builder.Append(scope, func() error {
-		b.nb.Append(scope.Name())
-		b.vb.Append(scope.Version())
+		b.nb.AppendNonEmpty(scope.Name())
+		b.vb.AppendNonEmpty(scope.Version())
 		if err := b.ab.Append(scope.Attributes()); err != nil {
 			return err
 		}

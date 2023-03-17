@@ -84,7 +84,7 @@ func AppendUnivariateNdpInto(ndpSlice pmetric.NumberDataPointSlice, ndp *arrowut
 
 		attrs := ndpValue.Attributes()
 		if err := otlp.AppendAttributesInto(attrs, ndp.Array(), ndpIdx, ids.Attributes); err != nil {
-			return err
+			return fmt.Errorf("AppendUnivariateNdpInto->%w", err)
 		}
 		smdata.Attributes.Range(func(k string, v pcommon.Value) bool {
 			v.CopyTo(attrs.PutEmpty(k))

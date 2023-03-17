@@ -90,7 +90,7 @@ func AppendEventsInto(spans ptrace.SpanEventSlice, arrowSpans *arrowutils.ListOf
 		event.SetName(name)
 
 		if err = otlp.AppendAttributesInto(event.Attributes(), events.Array(), eventIdx, ids.Attributes); err != nil {
-			return err
+			return fmt.Errorf("AppendEventsInto->%w", err)
 		}
 
 		dac, err := events.U32FieldByID(ids.DroppedAttributesCount, eventIdx)

@@ -136,7 +136,7 @@ func (b *EHistogramDataPointBuilder) Append(hdp pmetric.ExponentialHistogramData
 			b.tunb.AppendNull()
 		}
 		b.AppendCountSum(hdp)
-		b.sb.Append(hdp.Scale())
+		b.sb.AppendNonZero(hdp.Scale())
 		b.zcb.Append(hdp.ZeroCount())
 		if err := b.pb.Append(hdp.Positive()); err != nil {
 			return err
@@ -173,7 +173,7 @@ func (b *EHistogramDataPointBuilder) AppendExemplars(hdp pmetric.ExponentialHist
 func (b *EHistogramDataPointBuilder) AppendCountSum(hdp pmetric.ExponentialHistogramDataPoint) {
 	b.hcb.Append(hdp.Count())
 	if hdp.HasSum() {
-		b.hsb.Append(hdp.Sum())
+		b.hsb.AppendNonZero(hdp.Sum())
 	} else {
 		b.hsb.AppendNull()
 	}
@@ -181,12 +181,12 @@ func (b *EHistogramDataPointBuilder) AppendCountSum(hdp pmetric.ExponentialHisto
 
 func (b *EHistogramDataPointBuilder) AppendMinMax(hdp pmetric.ExponentialHistogramDataPoint) {
 	if hdp.HasMin() {
-		b.hmib.Append(hdp.Min())
+		b.hmib.AppendNonZero(hdp.Min())
 	} else {
 		b.hmib.AppendNull()
 	}
 	if hdp.HasMax() {
-		b.hmab.Append(hdp.Max())
+		b.hmab.AppendNonZero(hdp.Max())
 	} else {
 		b.hmab.AppendNull()
 	}

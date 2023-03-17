@@ -129,11 +129,11 @@ func (b *SpanBuilder) Append(span ptrace.Span) error {
 		b.tib.Append(tib[:])
 		sib := span.SpanID()
 		b.sib.Append(sib[:])
-		b.tsb.Append(span.TraceState().AsRaw())
+		b.tsb.AppendNonEmpty(span.TraceState().AsRaw())
 		psib := span.ParentSpanID()
 		b.psib.Append(psib[:])
-		b.nb.Append(span.Name())
-		b.kb.Append(int32(span.Kind()))
+		b.nb.AppendNonEmpty(span.Name())
+		b.kb.AppendNonZero(int32(span.Kind()))
 		if err := b.ab.Append(span.Attributes()); err != nil {
 			return err
 		}

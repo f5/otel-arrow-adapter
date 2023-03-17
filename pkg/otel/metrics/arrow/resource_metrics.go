@@ -83,7 +83,7 @@ func (b *ResourceMetricsBuilder) Append(sm pmetric.ResourceMetrics) error {
 		if err := b.rb.Append(sm.Resource()); err != nil {
 			return err
 		}
-		b.schb.Append(sm.SchemaUrl())
+		b.schb.AppendNonEmpty(sm.SchemaUrl())
 		smetrics := sm.ScopeMetrics()
 		sc := smetrics.Len()
 		return b.spsb.Append(sc, func() error {

@@ -84,8 +84,8 @@ func (b *QuantileValueBuilder) Append(sdp pmetric.SummaryDataPointValueAtQuantil
 	}
 
 	return b.builder.Append(sdp, func() error {
-		b.sqb.Append(sdp.Quantile())
-		b.svb.Append(sdp.Value())
+		b.sqb.AppendNonZero(sdp.Quantile())
+		b.svb.AppendNonZero(sdp.Value())
 		return nil
 	})
 }

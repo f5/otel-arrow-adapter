@@ -94,22 +94,26 @@ func NewUnivariateMetricIds(parentDT *arrow.StructType) (*UnivariateMetricIds, e
 	}, nil
 }
 
-func UpdateUnivariateMetricFrom(metric pmetric.Metric, arr *array.SparseUnion, row int, ids *UnivariateMetricIds, smdata *SharedData, mdata *SharedData) error {
+func UpdateUnivariateMetricFrom(metric pmetric.Metric, arr *array.SparseUnion, row int, ids *UnivariateMetricIds, smdata *SharedData, mdata *SharedData) (err error) {
 	tcode := arr.TypeCode(row)
 	fieldID := arr.ChildID(row)
 
 	switch tcode {
 	case ametric.GaugeCode:
-		return UpdateUnivariateGaugeFrom(metric.SetEmptyGauge(), arr.Field(fieldID).(*array.Struct), row, ids.UnivariateGaugeIds, smdata, mdata)
+		err = UpdateUnivariateGaugeFrom(metric.SetEmptyGauge(), arr.Field(fieldID).(*array.Struct), row, ids.UnivariateGaugeIds, smdata, mdata)
 	case ametric.SumCode:
-		return UpdateUnivariateSumFrom(metric.SetEmptySum(), arr.Field(fieldID).(*array.Struct), row, ids.UnivariateSumIds, smdata, mdata)
+		err = UpdateUnivariateSumFrom(metric.SetEmptySum(), arr.Field(fieldID).(*array.Struct), row, ids.UnivariateSumIds, smdata, mdata)
 	case ametric.SummaryCode:
-		return UpdateUnivariateSummaryFrom(metric.SetEmptySummary(), arr.Field(fieldID).(*array.Struct), row, ids.UnivariateSummaryIds, smdata, mdata)
+		err = UpdateUnivariateSummaryFrom(metric.SetEmptySummary(), arr.Field(fieldID).(*array.Struct), row, ids.UnivariateSummaryIds, smdata, mdata)
 	case ametric.HistogramCode:
-		return UpdateUnivariateHistogramFrom(metric.SetEmptyHistogram(), arr.Field(fieldID).(*array.Struct), row, ids.UnivariateHistogramIds, smdata, mdata)
+		err = UpdateUnivariateHistogramFrom(metric.SetEmptyHistogram(), arr.Field(fieldID).(*array.Struct), row, ids.UnivariateHistogramIds, smdata, mdata)
 	case ametric.ExpHistogramCode:
-		return UpdateUnivariateEHistogramFrom(metric.SetEmptyExponentialHistogram(), arr.Field(fieldID).(*array.Struct), row, ids.UnivariateEHistogramIds, smdata, mdata)
+		err = UpdateUnivariateEHistogramFrom(metric.SetEmptyExponentialHistogram(), arr.Field(fieldID).(*array.Struct), row, ids.UnivariateEHistogramIds, smdata, mdata)
 	default:
-		return fmt.Errorf("UpdateUnivariateMetricFrom: unknown type code %d", tcode)
+		err = fmt.Errorf("UpdateUnivariateMetricFrom: unknown type code %d", tcode)
 	}
+	if err != nil {
+		err = fmt.Errorf("UpdateUnivariateMetricFrom->%w", err)
+	}
+	return
 }

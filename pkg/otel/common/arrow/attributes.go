@@ -112,7 +112,7 @@ func (b *AttributesBuilder) Append(attrs pcommon.Map) error {
 				// Skip entries with empty keys
 				return true
 			}
-			b.kb.Append(key)
+			b.kb.AppendNonEmpty(key)
 			return b.ib.Append(v) == nil
 		})
 		return err
@@ -149,7 +149,7 @@ func (b *AttributesBuilder) AppendUniqueAttributes(attrs pcommon.Map, smattrs *c
 				return true
 			}
 
-			b.kb.Append(key)
+			b.kb.AppendNonEmpty(key)
 			err = b.ib.Append(v)
 
 			uniqueAttrsCount--

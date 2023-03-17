@@ -76,7 +76,7 @@ func (b *LinkBuilder) Append(link ptrace.SpanLink) error {
 		b.tib.Append(tid[:])
 		sid := link.SpanID()
 		b.sib.Append(sid[:])
-		b.tsb.Append(link.TraceState().AsRaw())
+		b.tsb.AppendNonEmpty(link.TraceState().AsRaw())
 		b.dacb.AppendNonZero(link.DroppedAttributesCount())
 		return b.ab.Append(link.Attributes())
 	})

@@ -120,7 +120,7 @@ func (b *UnivariateSummaryDataPointBuilder) Append(sdp pmetric.SummaryDataPoint,
 		}
 
 		b.scb.Append(sdp.Count())
-		b.ssb.Append(sdp.Sum())
+		b.ssb.AppendNonZero(sdp.Sum())
 
 		b.fb.Append(uint32(sdp.Flags()))
 

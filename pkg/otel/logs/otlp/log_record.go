@@ -125,7 +125,7 @@ func AppendLogRecordInto(logs plog.LogRecordSlice, los *arrowutils.ListOfStructs
 
 	err = otlp.AppendAttributesInto(logRecord.Attributes(), los.Array(), row, ids.Attributes)
 	if err != nil {
-		return err
+		return fmt.Errorf("AppendLogRecordInto->%w", err)
 	}
 	droppedAttributesCount, err := los.U32FieldByID(ids.DropAttributesCount, row)
 	if err != nil {

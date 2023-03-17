@@ -108,8 +108,8 @@ func (b *LogRecordBuilder) Append(log plog.LogRecord) error {
 		b.tib.Append(tib[:])
 		sib := log.SpanID()
 		b.sib.Append(sib[:])
-		b.snb.Append(int32(log.SeverityNumber()))
-		b.stb.Append(log.SeverityText())
+		b.snb.AppendNonZero(int32(log.SeverityNumber()))
+		b.stb.AppendNonEmpty(log.SeverityText())
 		if err := b.bb.Append(log.Body()); err != nil {
 			return err
 		}

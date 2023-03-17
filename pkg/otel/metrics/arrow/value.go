@@ -124,13 +124,13 @@ func (b *MetricValueBuilder) Release() {
 // appendI64 appends a new int64 value to the builder.
 func (b *MetricValueBuilder) appendI64(v int64) {
 	b.builder.Append(I64Code)
-	b.i64Builder.Append(v)
+	b.i64Builder.AppendNonZero(v)
 	b.f64Builder.AppendNull()
 }
 
 // appendF64 appends a new double value to the builder.
 func (b *MetricValueBuilder) appendF64(v float64) {
 	b.builder.Append(F64Code)
-	b.f64Builder.Append(v)
+	b.f64Builder.AppendNonZero(v)
 	b.i64Builder.AppendNull()
 }

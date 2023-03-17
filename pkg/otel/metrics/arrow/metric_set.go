@@ -90,9 +90,9 @@ func (b *MetricSetBuilder) Append(metric pmetric.Metric, smdata *ScopeMetricsSha
 	}
 
 	return b.builder.Append(metric, func() error {
-		b.nb.Append(metric.Name())
-		b.db.Append(metric.Description())
-		b.ub.Append(metric.Unit())
+		b.nb.AppendNonEmpty(metric.Name())
+		b.db.AppendNonEmpty(metric.Description())
+		b.ub.AppendNonEmpty(metric.Unit())
 		if err := b.dtb.Append(metric, smdata, mdata); err != nil {
 			return err
 		}

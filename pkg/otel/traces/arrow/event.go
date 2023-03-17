@@ -70,7 +70,7 @@ func (b *EventBuilder) Append(event ptrace.SpanEvent) error {
 
 	return b.builder.Append(event, func() error {
 		b.tunb.Append(arrow.Timestamp(event.Timestamp()))
-		b.nb.Append(event.Name())
+		b.nb.AppendNonEmpty(event.Name())
 		b.dacb.AppendNonZero(event.DroppedAttributesCount())
 		return b.ab.Append(event.Attributes())
 	})

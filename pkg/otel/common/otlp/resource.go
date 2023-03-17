@@ -15,6 +15,8 @@
 package otlp
 
 import (
+	"fmt"
+
 	"github.com/apache/arrow/go/v11/arrow"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 
@@ -65,7 +67,7 @@ func UpdateResourceWith(r pcommon.Resource, resList *arrowutils.ListOfStructs, r
 	// Read attributes
 	err = AppendAttributesInto(r.Attributes(), resArr, row, resIds.Attributes)
 	if err != nil {
-		return err
+		return fmt.Errorf("UpdateResourceWith->%w", err)
 	}
 
 	return err

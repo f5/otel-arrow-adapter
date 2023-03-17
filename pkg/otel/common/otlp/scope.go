@@ -15,6 +15,8 @@
 package otlp
 
 import (
+	"fmt"
+
 	"github.com/apache/arrow/go/v11/arrow"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 
@@ -73,7 +75,7 @@ func UpdateScopeWith(s pcommon.InstrumentationScope, listOfStructs *arrowutils.L
 
 	err = AppendAttributesInto(s.Attributes(), scopeArray, row, ids.Attributes)
 	if err != nil {
-		return err
+		return fmt.Errorf("UpdateScopeWith->%w", err)
 	}
 	s.SetName(name)
 	s.SetVersion(version)

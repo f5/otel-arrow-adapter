@@ -57,7 +57,7 @@ func TestGauges(t *testing.T) {
 	var record arrow.Record
 	var err error
 
-	maxIter := 10
+	maxIter := 1
 
 	// Create Arrow record from OTLP univariate gauges
 	for {

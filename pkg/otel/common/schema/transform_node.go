@@ -223,7 +223,7 @@ func newTransformNodeFrom(
 // RemoveOptional removes all transformations that are marked as optional.
 // This will take effect on the next cycle of appending data.
 //
-// To avoid data loss, the methods `Append` and `AppendNull` should be called
+// To avoid data loss, the methods `AppendNonZero[XYZ]` should be called
 // again after calling this method.
 func (t *TransformNode) RemoveOptional() {
 	n := 0

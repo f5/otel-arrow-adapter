@@ -125,7 +125,7 @@ func AppendUnivariateEHistogramDataPointInto(ehdpSlice pmetric.ExponentialHistog
 
 		attrs := ehdpVal.Attributes()
 		if err := otlp.AppendAttributesInto(attrs, ehdp.Array(), ehdpIdx, ids.Attributes); err != nil {
-			return err
+			return fmt.Errorf("AppendUnivariateEHistogramDataPointInto->%w", err)
 		}
 		smdata.Attributes.Range(func(k string, v pcommon.Value) bool {
 			v.CopyTo(attrs.PutEmpty(k))
@@ -228,7 +228,7 @@ func AppendUnivariateEHistogramDataPointInto(ehdpSlice pmetric.ExponentialHistog
 func AppendMinMaxInto(ehdp *arrowutils.ListOfStructs, ids *UnivariateEHistogramDataPointIds, ehdpIdx int, ehdpVal pmetric.ExponentialHistogramDataPoint) error {
 	min, err := ehdp.F64OrNilFieldByID(ids.Min, ehdpIdx)
 	if err != nil {
-		return err
+		return fmt.Errorf("AppendMinMaxInto(field='min')->%w", err)
 	}
 	if min != nil {
 		ehdpVal.SetMin(*min)
@@ -236,7 +236,7 @@ func AppendMinMaxInto(ehdp *arrowutils.ListOfStructs, ids *UnivariateEHistogramD
 
 	max, err := ehdp.F64OrNilFieldByID(ids.Max, ehdpIdx)
 	if err != nil {
-		return err
+		return fmt.Errorf("AppendMinMaxInto(field='max')->%w", err)
 	}
 	if max != nil {
 		ehdpVal.SetMax(*max)
@@ -253,7 +253,7 @@ func AppendCountSumInto(ehdp *arrowutils.ListOfStructs, ids *UnivariateEHistogra
 
 	sum, err := ehdp.F64OrNilFieldByID(ids.Sum, ehdpIdx)
 	if err != nil {
-		return err
+		return fmt.Errorf("AppendCountSumInto(field='sum')->%w", err)
 	}
 	if sum != nil {
 		ehdpVal.SetSum(*sum)

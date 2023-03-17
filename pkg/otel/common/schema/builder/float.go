@@ -44,6 +44,27 @@ func (b *Float64Builder) Append(value float64) {
 	b.updateRequest.Inc()
 }
 
+// AppendNonZero adds a value to the underlying builder or updates the transform node
+// if the builder is nil.
+// Note: 0 values are not appended to the builder.
+func (b *Float64Builder) AppendNonZero(value float64) {
+	if b.builder != nil {
+		if value == 0 {
+			b.builder.AppendNull()
+			return
+		}
+
+		b.builder.Append(value)
+		return
+	}
+
+	if value != 0 {
+		// If the builder is nil, then the transform node is not optional.
+		b.transformNode.RemoveOptional()
+		b.updateRequest.Inc()
+	}
+}
+
 // AppendNull adds a null value to the underlying builder. If the builder is
 // nil we do nothing as we have no information about the presence of this field
 // in the data.

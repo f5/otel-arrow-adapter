@@ -223,6 +223,9 @@ func (los *ListOfStructs) F64FieldByID(fieldID int, row int) (float64, error) {
 
 // F64OrNilFieldByID returns the float64 value of a field id for a specific row or nil if the field is null.
 func (los *ListOfStructs) F64OrNilFieldByID(fieldID int, row int) (*float64, error) {
+	if fieldID == -1 {
+		return nil, nil
+	}
 	column := los.arr.Field(fieldID)
 	return F64OrNilFromArray(column, row)
 }

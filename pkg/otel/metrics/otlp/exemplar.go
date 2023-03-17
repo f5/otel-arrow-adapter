@@ -80,7 +80,7 @@ func AppendExemplarsInto(exemplarSlice pmetric.ExemplarSlice, ndp *arrowutils.Li
 		}
 
 		if err := otlp.AppendAttributesInto(exemplar.FilteredAttributes(), exemplars.Array(), exemplarIdx, ids.Attributes); err != nil {
-			return err
+			return fmt.Errorf("AppendExemplarsInto->%w", err)
 		}
 
 		timeUnixNano, err := exemplars.TimestampFieldByID(ids.TimeUnixNano, exemplarIdx)

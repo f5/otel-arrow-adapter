@@ -95,7 +95,7 @@ func AppendMetricSetInto(metrics pmetric.MetricSlice, los *arrowutils.ListOfStru
 	if ids.SharedAttributeIds != nil {
 		err = otlp.AppendAttributesInto(mdata.Attributes, los.Array(), row, ids.SharedAttributeIds)
 		if err != nil {
-			return err
+			return fmt.Errorf("AppendMetricSetInto(field='shared_attributes')->%w", err)
 		}
 	}
 	if ids.SharedStartTimeID != -1 {

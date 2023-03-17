@@ -15,6 +15,8 @@
 package otlp
 
 import (
+	"fmt"
+
 	"github.com/apache/arrow/go/v11/arrow"
 	"github.com/apache/arrow/go/v11/arrow/array"
 	"go.opentelemetry.io/collector/pdata/pmetric"
@@ -46,14 +48,18 @@ func UpdateUnivariateEHistogramFrom(ehistogram pmetric.ExponentialHistogram, arr
 	if ids.AggregationTemporality >= 0 {
 		value, err := arrowutils.I32FromArray(arr.Field(ids.AggregationTemporality), row)
 		if err != nil {
-			return err
+			return fmt.Errorf("UpdateUnivariateEHistogramFrom->%w", err)
 		}
 		ehistogram.SetAggregationTemporality(pmetric.AggregationTemporality(value))
 	}
 
 	los, err := arrowutils.ListOfStructsFromStruct(arr, ids.DataPoints.Id, row)
 	if err != nil {
-		return err
+		return fmt.Errorf("UpdateUnivariateEHistogramFrom->%w", err)
 	}
-	return AppendUnivariateEHistogramDataPointInto(ehistogram.DataPoints(), los, ids.DataPoints, smdata, mdata)
+	err = AppendUnivariateEHistogramDataPointInto(ehistogram.DataPoints(), los, ids.DataPoints, smdata, mdata)
+	if err != nil {
+		err = fmt.Errorf("UpdateUnivariateEHistogramFrom->%w", err)
+	}
+	return err
 }

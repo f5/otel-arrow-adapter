@@ -62,8 +62,8 @@ func (b *StatusBuilder) Append(status ptrace.Status) error {
 	}
 
 	return b.builder.Append(status, func() error {
-		b.scb.Append(int32(status.Code()))
-		b.smb.Append(status.Message())
+		b.scb.AppendNonZero(int32(status.Code()))
+		b.smb.AppendNonEmpty(status.Message())
 		return nil
 	})
 }

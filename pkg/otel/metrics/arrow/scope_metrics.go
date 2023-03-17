@@ -100,7 +100,7 @@ func (b *ScopeMetricsBuilder) Append(sm pmetric.ScopeMetrics) error {
 		if err := b.scb.Append(sm.Scope()); err != nil {
 			return err
 		}
-		b.schb.Append(sm.SchemaUrl())
+		b.schb.AppendNonEmpty(sm.SchemaUrl())
 
 		metrics := sm.Metrics()
 		sharedData, err := NewMetricsSharedData(metrics)

@@ -103,7 +103,7 @@ func (b *UnivariateHistogramBuilder) Append(histogram pmetric.Histogram, smdata 
 		if histogram.AggregationTemporality() == pmetric.AggregationTemporalityUnspecified {
 			b.atb.AppendNull()
 		} else {
-			b.atb.Append(int32(histogram.AggregationTemporality()))
+			b.atb.AppendNonZero(int32(histogram.AggregationTemporality()))
 		}
 
 		return nil

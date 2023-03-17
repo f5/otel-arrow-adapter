@@ -584,7 +584,7 @@ func TestSchemaEvolution(t *testing.T) {
 			"key1": StringValueData{"string"},
 		},
 	}
-	AppendAndJsonAssert(t, &rootData, rootBuilder, "[{\"root\":{\"binary\":\"YmluYXJ5\",\"bool\":false,\"fixed_size_16_binary\":null,\"fixed_size_8_binary\":null,\"i32\":6,\"i64\":0,\"map\":[{\"key\":\"key1\",\"value\":[4,\"string\"]}],\"string\":null,\"timestamp\":\"1970-01-01 00:00:00.00000001\",\"u32\":null,\"u64\":3,\"u8\":2,\"values\":[[1,2],[4,\"string\"]]}}\n]")
+	AppendAndJsonAssert(t, &rootData, rootBuilder, "[{\"root\":{\"binary\":\"YmluYXJ5\",\"bool\":null,\"fixed_size_16_binary\":null,\"fixed_size_8_binary\":null,\"i32\":6,\"i64\":null,\"map\":[{\"key\":\"key1\",\"value\":[4,\"string\"]}],\"string\":null,\"timestamp\":\"1970-01-01 00:00:00.00000001\",\"u32\":null,\"u64\":3,\"u8\":2,\"values\":[[1,2],[4,\"string\"]]}}\n]")
 }
 
 func TestDictionaryOverflow(t *testing.T) {
@@ -901,12 +901,12 @@ func (b *RootBuilder) Append(data *RootData) error {
 		b.timestamp.Append(data.timestamp)
 		b.u8.AppendNonZero(data.u8)
 		b.u64.AppendNonZero(data.u64)
-		b.i64.Append(data.i64)
-		b.bool.Append(data.bool)
-		b.binary.Append(data.binary)
+		b.i64.AppendNonZero(data.i64)
+		b.bool.AppendNonFalse(data.bool)
+		b.binary.AppendNonNil(data.binary)
 		b.u32.AppendNonZero(data.u32)
-		b.i32.Append(data.i32)
-		b.string.Append(data.string)
+		b.i32.AppendNonZero(data.i32)
+		b.string.AppendNonEmpty(data.string)
 		if err := b.values.Append(data.values); err != nil {
 			return err
 		}
@@ -942,24 +942,24 @@ func NewHMapBuilder(builder *builder.MapBuilder) *HMapBuilder {
 func (b *HMapBuilder) Append(data map[string]ValueData) error {
 	return b.builder.Append(len(data), func() error {
 		for k, v := range data {
-			b.keys.Append(k)
+			b.keys.AppendNonEmpty(k)
 			if v.IsI64() {
 				b.values.Append(I64Code)
-				b.i64.Append(v.I64())
+				b.i64.AppendNonZero(v.I64())
 				b.f64.AppendNull()
 				b.bool.AppendNull()
 				b.binary.AppendNull()
 				b.string.AppendNull()
 			} else if v.IsF64() {
 				b.values.Append(F64Code)
-				b.f64.Append(v.F64())
+				b.f64.AppendNonZero(v.F64())
 				b.i64.AppendNull()
 				b.bool.AppendNull()
 				b.binary.AppendNull()
 				b.string.AppendNull()
 			} else if v.IsString() {
 				b.values.Append(StringCode)
-				b.string.Append(v.String())
+				b.string.AppendNonEmpty(v.String())
 				b.i64.AppendNull()
 				b.f64.AppendNull()
 				b.bool.AppendNull()
@@ -994,21 +994,21 @@ func NewValueBuilder(builder *builder.SparseUnionBuilder) *ValueBuilder {
 func (b *ValueBuilder) Append(data ValueData) {
 	if data.IsI64() {
 		b.builder.Append(I64Code)
-		b.i64.Append(data.I64())
+		b.i64.AppendNonZero(data.I64())
 		b.f64.AppendNull()
 		b.bool.AppendNull()
 		b.binary.AppendNull()
 		b.string.AppendNull()
 	} else if data.IsF64() {
 		b.builder.Append(F64Code)
-		b.f64.Append(data.F64())
+		b.f64.AppendNonZero(data.F64())
 		b.i64.AppendNull()
 		b.bool.AppendNull()
 		b.binary.AppendNull()
 		b.string.AppendNull()
 	} else if data.IsString() {
 		b.builder.Append(StringCode)
-		b.string.Append(data.String())
+		b.string.AppendNonEmpty(data.String())
 		b.i64.AppendNull()
 		b.f64.AppendNull()
 		b.bool.AppendNull()

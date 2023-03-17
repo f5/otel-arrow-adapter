@@ -87,7 +87,7 @@ func (b *ScopeSpansBuilder) Append(ss ptrace.ScopeSpans) error {
 		if err := b.scb.Append(ss.Scope()); err != nil {
 			return err
 		}
-		b.schb.Append(ss.SchemaUrl())
+		b.schb.AppendNonEmpty(ss.SchemaUrl())
 		spans := ss.Spans()
 		sc := spans.Len()
 		return b.ssb.Append(sc, func() error {

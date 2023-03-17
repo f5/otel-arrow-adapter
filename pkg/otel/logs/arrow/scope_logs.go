@@ -86,7 +86,7 @@ func (b *ScopeLogsBuilder) Append(sl plog.ScopeLogs) error {
 		if err := b.scb.Append(sl.Scope()); err != nil {
 			return err
 		}
-		b.schb.Append(sl.SchemaUrl())
+		b.schb.AppendNonEmpty(sl.SchemaUrl())
 		logRecords := sl.LogRecords()
 		lrc := logRecords.Len()
 		return b.lrsb.Append(lrc, func() error {

@@ -87,7 +87,7 @@ func (b *EHistogramDataPointBucketsBuilder) Append(hdpb pmetric.ExponentialHisto
 	}
 
 	return b.builder.Append(hdpb, func() error {
-		b.ob.Append(hdpb.Offset())
+		b.ob.AppendNonZero(hdpb.Offset())
 
 		bc := hdpb.BucketCounts()
 		bcc := bc.Len()

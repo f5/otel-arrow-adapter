@@ -103,7 +103,7 @@ func (b *UnivariateEHistogramBuilder) Append(eh pmetric.ExponentialHistogram, sm
 		if eh.AggregationTemporality() == pmetric.AggregationTemporalityUnspecified {
 			b.atb.AppendNull()
 		} else {
-			b.atb.Append(int32(eh.AggregationTemporality()))
+			b.atb.AppendNonZero(int32(eh.AggregationTemporality()))
 		}
 
 		return nil

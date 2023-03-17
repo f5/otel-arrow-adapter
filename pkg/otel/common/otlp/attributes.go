@@ -77,7 +77,7 @@ func UpdateAttributesFrom(attrs pcommon.Map, marr *array.Map, row int) error {
 		}
 
 		if err = UpdateValueFrom(attrs.PutEmpty(key), values, i); err != nil {
-			return err
+			return fmt.Errorf("UpdateAttributesFrom(key=%q)->%w", key, err)
 		}
 	}
 	return nil

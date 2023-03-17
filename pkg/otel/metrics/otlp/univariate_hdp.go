@@ -99,7 +99,7 @@ func AppendUnivariateHistogramDataPointInto(hdpSlice pmetric.HistogramDataPointS
 
 		attrs := hdpVal.Attributes()
 		if err := otlp.AppendAttributesInto(attrs, hdp.Array(), hdpIdx, ids.Attributes); err != nil {
-			return err
+			return fmt.Errorf("AppendUnivariateHistogramDataPointInto->%w", err)
 		}
 		smdata.Attributes.Range(func(k string, v pcommon.Value) bool {
 			v.CopyTo(attrs.PutEmpty(k))
@@ -146,7 +146,7 @@ func AppendUnivariateHistogramDataPointInto(hdpSlice pmetric.HistogramDataPointS
 
 		sum, err := hdp.F64OrNilFieldByID(ids.Sum, hdpIdx)
 		if err != nil {
-			return err
+			return fmt.Errorf("AppendUnivariateHistogramDataPointInto(field=`sum`)->%w", err)
 		}
 		if sum != nil {
 			hdpVal.SetSum(*sum)
@@ -197,7 +197,7 @@ func AppendUnivariateHistogramDataPointInto(hdpSlice pmetric.HistogramDataPointS
 
 		min, err := hdp.F64OrNilFieldByID(ids.Min, hdpIdx)
 		if err != nil {
-			return err
+			return fmt.Errorf("AppendUnivariateHistogramDataPointInto(field=`min`)->%w", err)
 		}
 		if min != nil {
 			hdpVal.SetMin(*min)
@@ -205,7 +205,7 @@ func AppendUnivariateHistogramDataPointInto(hdpSlice pmetric.HistogramDataPointS
 
 		max, err := hdp.F64OrNilFieldByID(ids.Max, hdpIdx)
 		if err != nil {
-			return err
+			return fmt.Errorf("AppendUnivariateHistogramDataPointInto(field=`max`)->%w", err)
 		}
 		if max != nil {
 			hdpVal.SetMax(*max)

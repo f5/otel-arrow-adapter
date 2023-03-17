@@ -88,7 +88,7 @@ func (b *ResourceSpansBuilder) Append(ss ptrace.ResourceSpans) error {
 		if err := b.rb.Append(ss.Resource()); err != nil {
 			return err
 		}
-		b.schb.Append(ss.SchemaUrl())
+		b.schb.AppendNonEmpty(ss.SchemaUrl())
 		sspans := ss.ScopeSpans()
 		sc := sspans.Len()
 		return b.spsb.Append(sc, func() error {

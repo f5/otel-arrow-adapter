@@ -51,6 +51,37 @@ func (b *Int32Builder) Append(value int32) {
 		return
 	}
 
+	// If the builder is nil, then the transform node is not optional.
+	b.transformNode.RemoveOptional()
+	b.updateRequest.Inc()
+}
+
+// AppendNonZero appends a value to the underlying builder and updates the
+// transform node if the builder is nil.
+// Note: 0 values are not appended to the builder.
+func (b *Int32Builder) AppendNonZero(value int32) {
+	if b.builder != nil {
+		if value == 0 {
+			b.builder.AppendNull()
+			return
+		}
+
+		switch builder := b.builder.(type) {
+		case *array.Int32Builder:
+			builder.Append(value)
+		case *array.Int32DictionaryBuilder:
+			if err := builder.Append(value); err != nil {
+				// Should never happen.
+				panic(err)
+			}
+		default:
+			// Should never happen.
+			panic("unknown builder type")
+		}
+
+		return
+	}
+
 	if value != 0 {
 		// If the builder is nil, then the transform node is not optional.
 		b.transformNode.RemoveOptional()
@@ -98,6 +129,39 @@ func (b *Int64Builder) Append(value int64) {
 	// If the builder is nil, then the transform node is not optional.
 	b.transformNode.RemoveOptional()
 	b.updateRequest.Inc()
+}
+
+// AppendNonZero appends a value to the underlying builder and updates the
+// transform node if the builder is nil.
+// Note: 0 value are not appended.
+func (b *Int64Builder) AppendNonZero(value int64) {
+	if b.builder != nil {
+		if value == 0 {
+			b.builder.AppendNull()
+			return
+		}
+
+		switch builder := b.builder.(type) {
+		case *array.Int64Builder:
+			builder.Append(value)
+		case *array.Int64DictionaryBuilder:
+			if err := builder.Append(value); err != nil {
+				// Should never happen.
+				panic(err)
+			}
+		default:
+			// Should never happen.
+			panic("unknown builder type")
+		}
+
+		return
+	}
+
+	if value != 0 {
+		// If the builder is nil, then the transform node is not optional.
+		b.transformNode.RemoveOptional()
+		b.updateRequest.Inc()
+	}
 }
 
 // AppendNull appends a null value to the underlying builder. If the builder is

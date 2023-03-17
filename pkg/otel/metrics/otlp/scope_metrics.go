@@ -83,7 +83,7 @@ func UpdateScopeMetricsFrom(scopeMetricsSlice pmetric.ScopeMetricsSlice, arrowSc
 		if ids.SharedAttributeIds != nil {
 			err = otlp.AppendAttributesInto(sdata.Attributes, arrowScopeMetrics.Array(), scopeMetricsIdx, ids.SharedAttributeIds)
 			if err != nil {
-				return err
+				return fmt.Errorf("UpdateScopeMetricsFrom(field='shared_attributes')->%w", err)
 			}
 		}
 		if ids.SharedStartTimeID != -1 {

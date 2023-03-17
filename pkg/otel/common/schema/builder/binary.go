@@ -55,6 +55,36 @@ func (b *BinaryBuilder) Append(value []byte) {
 		return
 	}
 
+	// If the builder is nil, then the transform node is not optional.
+	b.transformNode.RemoveOptional()
+	b.updateRequest.Inc()
+}
+
+// AppendNonNil appends a value to the underlying builder and updates the
+// transform node if the builder is nil.
+// Note: nil values are not appended to the builder.
+func (b *BinaryBuilder) AppendNonNil(value []byte) {
+	if b.builder != nil {
+		if value == nil {
+			b.builder.AppendNull()
+			return
+		}
+
+		switch builder := b.builder.(type) {
+		case *array.BinaryBuilder:
+			builder.Append(value)
+		case *array.BinaryDictionaryBuilder:
+			if err := builder.Append(value); err != nil {
+				// Should never happen.
+				panic(err)
+			}
+		default:
+			// Should never happen.
+			panic("unknown builder type")
+		}
+		return
+	}
+
 	if value != nil {
 		// If the builder is nil, then the transform node is not optional.
 		b.transformNode.RemoveOptional()

@@ -39,6 +39,26 @@ func (b *BooleanBuilder) Append(value bool) {
 		return
 	}
 
+	// If the builder is nil and value is true (default value being false),
+	// then the transform node is not optional.
+	b.transformNode.RemoveOptional()
+	b.updateRequest.Inc()
+}
+
+// AppendNonFalse appends a value to the underlying builder and updates the
+// transform node if the builder is nil.
+// Note: false values are not appended to the builder.
+func (b *BooleanBuilder) AppendNonFalse(value bool) {
+	if b.builder != nil {
+		if !value {
+			b.builder.AppendNull()
+			return
+		}
+
+		b.builder.Append(value)
+		return
+	}
+
 	if value {
 		// If the builder is nil and value is true (default value being false),
 		// then the transform node is not optional.

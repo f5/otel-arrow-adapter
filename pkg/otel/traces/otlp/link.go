@@ -112,7 +112,7 @@ func AppendLinksInto(result ptrace.SpanLinkSlice, los *arrowutils.ListOfStructs,
 		link.TraceState().FromRaw(traceState)
 
 		if err = otlp.AppendAttributesInto(link.Attributes(), linkLos.Array(), linkIdx, ids.Attributes); err != nil {
-			return err
+			return fmt.Errorf("AppendLinksInto->%w", err)
 		}
 		dac, err := linkLos.U32FieldByID(ids.DroppedAttributesCount, linkIdx)
 		if err != nil {

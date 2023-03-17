@@ -199,7 +199,7 @@ func AppendSpanInto(spans ptrace.SpanSlice, los *arrowutils.ListOfStructs, row i
 	}
 	err = otlp.AppendAttributesInto(span.Attributes(), los.Array(), row, ids.Attributes)
 	if err != nil {
-		return err
+		return fmt.Errorf("AppendSpanInto->%w", err)
 	}
 
 	if err := AppendEventsInto(span.Events(), los, row, ids.Events); err != nil {

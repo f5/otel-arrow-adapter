@@ -106,10 +106,10 @@ func (b *UnivariateSumBuilder) Append(sum pmetric.Sum, smdata *ScopeMetricsShare
 		if sum.AggregationTemporality() == pmetric.AggregationTemporalityUnspecified {
 			b.atb.AppendNull()
 		} else {
-			b.atb.Append(int32(sum.AggregationTemporality()))
+			b.atb.AppendNonZero(int32(sum.AggregationTemporality()))
 		}
 		if sum.IsMonotonic() {
-			b.imb.Append(sum.IsMonotonic())
+			b.imb.AppendNonFalse(sum.IsMonotonic())
 		} else {
 			b.imb.AppendNull()
 		}

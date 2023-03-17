@@ -242,7 +242,6 @@ func (b *AnyValueBuilder) appendBinary(v []byte) error {
 func (b *AnyValueBuilder) appendCbor(v []byte) error {
 	b.builder.Append(CborCode)
 	b.cborBuilder.Append(v)
-	b.builder.Append(CborCode)
 	b.strBuilder.AppendNull()
 	b.i64Builder.AppendNull()
 	b.f64Builder.AppendNull()
