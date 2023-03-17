@@ -309,53 +309,56 @@ func (r *Receiver) processRecords(ctx context.Context, arrowConsumer arrowRecord
 	}
 	switch payloads[0].Type {
 	case arrowpb.OtlpArrowPayloadType_METRICS:
-		otlp, err := arrowConsumer.MetricsFrom(records)
-		if err != nil {
-			return consumererror.NewPermanent(err)
-		}
 		var numPts int
 		ctx = r.obsrecv.StartMetricsOp(ctx)
-		for _, metrics := range otlp {
-			numPts += metrics.DataPointCount()
-			err = multierr.Append(err,
-				r.Metrics().ConsumeMetrics(ctx, metrics),
-			)
+
+		otlp, err := arrowConsumer.MetricsFrom(records)
+		if err != nil {
+			err = consumererror.NewPermanent(err)
+		} else {
+			for _, metrics := range otlp {
+				numPts += metrics.DataPointCount()
+				err = multierr.Append(err,
+					r.Metrics().ConsumeMetrics(ctx, metrics),
+				)
+			}
 		}
 		r.obsrecv.EndMetricsOp(ctx, streamFormat, numPts, err)
 		return err
 
 	case arrowpb.OtlpArrowPayloadType_LOGS:
-		otlp, err := arrowConsumer.LogsFrom(records)
-		if err != nil {
-			return consumererror.NewPermanent(err)
-		}
-
 		var numLogs int
 		ctx = r.obsrecv.StartLogsOp(ctx)
-		for _, logs := range otlp {
-			numLogs += logs.LogRecordCount()
-			err = multierr.Append(err,
-				r.Logs().ConsumeLogs(ctx, logs),
-			)
+
+		otlp, err := arrowConsumer.LogsFrom(records)
+		if err != nil {
+			err = consumererror.NewPermanent(err)
+		} else {
+			for _, logs := range otlp {
+				numLogs += logs.LogRecordCount()
+				err = multierr.Append(err,
+					r.Logs().ConsumeLogs(ctx, logs),
+				)
+			}
 		}
 		r.obsrecv.EndLogsOp(ctx, streamFormat, numLogs, err)
 		return err
 
 	case arrowpb.OtlpArrowPayloadType_SPANS:
-		otlp, err := arrowConsumer.TracesFrom(records)
-		if err != nil {
-			return consumererror.NewPermanent(err)
-		}
-
 		var numSpans int
 		ctx = r.obsrecv.StartTracesOp(ctx)
-		for _, traces := range otlp {
-			numSpans += traces.SpanCount()
-			err = multierr.Append(err,
-				r.Traces().ConsumeTraces(ctx, traces),
-			)
-		}
 
+		otlp, err := arrowConsumer.TracesFrom(records)
+		if err != nil {
+			err = consumererror.NewPermanent(err)
+		} else {
+			for _, traces := range otlp {
+				numSpans += traces.SpanCount()
+				err = multierr.Append(err,
+					r.Traces().ConsumeTraces(ctx, traces),
+				)
+			}
+		}
 		r.obsrecv.EndTracesOp(ctx, streamFormat, numSpans, err)
 		return err
 
