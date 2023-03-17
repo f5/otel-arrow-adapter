@@ -73,11 +73,11 @@ func TestTracesWithNoDictionary(t *testing.T) {
 	require.Equal(t, 0, len(builder.Events().DictionariesWithOverflow))
 }
 
-// TestTracesSingleBatchWithDictionaryOverflow
+// TestTracesMultiBatchWithDictionaryIndexChanges
 // Initial dictionary size uint8.
 // First batch of uint8 + 1 spans ==> dictionary overflow on 3 fields.
 // Other consecutive batches should not trigger any other dictionary overflow.
-func TestTracesSingleBatchWithDictionaryOverflow(t *testing.T) {
+func TestTracesMultiBatchWithDictionaryIndexChanges(t *testing.T) {
 	t.Parallel()
 
 	pool := memory.NewCheckedAllocator(memory.NewGoAllocator())
@@ -178,11 +178,11 @@ func TestTracesMultiBatchWithDictionaryOverflow(t *testing.T) {
 	require.Equal(t, "uint16", dictionariesIndexTypeChanged["resource_spans.item.scope_spans.item.spans.item.attributes.value.binary"])
 }
 
-// TestTracesSingleBatchWithDictionaryLimit
+// TestTracesMultiBatchWithDictionaryLimit
 // Initial dictionary size uint8.
 // Limit dictionary index size is uint8.
 // First batch of uint8 + 1 spans ==> dictionary index type limit reached so fallback to utf8 or binary.
-func TestTracesSingleBatchWithDictionaryLimit(t *testing.T) {
+func TestTracesMultiBatchWithDictionaryLimit(t *testing.T) {
 	t.Parallel()
 
 	pool := memory.NewCheckedAllocator(memory.NewGoAllocator())

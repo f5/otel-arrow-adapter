@@ -73,11 +73,11 @@ func TestLogsWithNoDictionary(t *testing.T) {
 	require.Equal(t, 0, len(builder.Events().DictionariesWithOverflow))
 }
 
-// TestLogsSingleBatchWithDictionaryOverflow
+// TestLogsMultiBatchWithDictionaryIndexChanges
 // Initial dictionary size uint8.
 // First batch of uint8 + 1 spans ==> dictionary overflow on 3 fields.
 // Other consecutive batches should not trigger any other dictionary overflow.
-func TestLogsSingleBatchWithDictionaryOverflow(t *testing.T) {
+func TestLogsMultiBatchWithDictionaryIndexChanges(t *testing.T) {
 	t.Parallel()
 
 	pool := memory.NewCheckedAllocator(memory.NewGoAllocator())
@@ -184,7 +184,7 @@ func TestLogsMultiBatchWithDictionaryOverflow(t *testing.T) {
 // Initial dictionary size uint8.
 // Limit dictionary index size is uint8.
 // First batch of uint8 + 1 spans ==> dictionary index type limit reached so fallback to utf8 or binary.
-func TestLogsSingleBatchWithDictionaryLimit(t *testing.T) {
+func TestLogsMultiBatchWithDictionaryLimit(t *testing.T) {
 	t.Parallel()
 
 	pool := memory.NewCheckedAllocator(memory.NewGoAllocator())
