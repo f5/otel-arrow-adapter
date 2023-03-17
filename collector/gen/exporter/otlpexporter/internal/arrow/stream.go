@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strings"
 	"sync"
 
 	arrowpb "github.com/f5/otel-arrow-adapter/api/collector/arrow/v1"
@@ -158,22 +159,48 @@ func (s *Stream) run(bgctx context.Context, client arrowpb.ArrowStreamServiceCli
 	if err != nil {
 		// This branch is reached with an unimplemented status
 		// with or without the WaitForReady flag.
-		if status, ok := status.FromError(err); ok && status.Code() == codes.Unimplemented {
-			// This (client == nil) signals the controller
-			// to downgrade when all streams have returned
-			// in that status.
-			//
-			// TODO: Note there are partial failure modes
-			// that will continue to function in a
-			// degraded mode, such as when half of the
-			// streams are successful and half of streams
-			// take this return path.  Design a graceful
-			// recovery mechanism?
-			s.client = nil
-			s.telemetry.Logger.Info("arrow is not supported", zap.Error(err))
-		} else if !errors.Is(err, io.EOF) && !errors.Is(err, context.Canceled) {
-			// TODO: Should we add debug-level logs for EOF and Canceled?
-			s.telemetry.Logger.Error("arrow recv", zap.Error(err))
+		status, ok := status.FromError(err)
+
+		if ok {
+			switch status.Code() {
+			case codes.Unimplemented:
+				// This (client == nil) signals the controller
+				// to downgrade when all streams have returned
+				// in that status.
+				//
+				// TODO: Note there are partial failure modes
+				// that will continue to function in a
+				// degraded mode, such as when half of the
+				// streams are successful and half of streams
+				// take this return path.  Design a graceful
+				// recovery mechanism?
+				s.client = nil
+				s.telemetry.Logger.Info("arrow is not supported", zap.Error(err))
+
+			case codes.Unavailable:
+				// gRPC returns this when max connection age is reached.
+				// The message string will contain NO_ERROR if it's a
+				// graceful shutdown.
+				if strings.Contains(status.Message(), "NO_ERROR") {
+					s.telemetry.Logger.Debug("arrow stream graceful shutdown")
+				} else {
+					s.telemetry.Logger.Error("arrow stream unavailable", zap.Error(err))
+				}
+			default:
+				s.telemetry.Logger.Error("arrow stream unknown", zap.Error(err), zap.Reflect("details", status.Proto()))
+			}
+		} else {
+			isEOF := errors.Is(err, io.EOF)
+			isCanceled := errors.Is(err, context.Canceled)
+
+			if !isEOF && !isCanceled {
+				// TODO: Should we add debug-level logs for EOF and Canceled?
+				s.telemetry.Logger.Error("arrow recv", zap.Error(err))
+			} else if isEOF {
+				s.telemetry.Logger.Debug("arrow stream eof")
+			} else if isCanceled {
+				s.telemetry.Logger.Debug("arrow stream canceled")
+			}
 		}
 	}
 
