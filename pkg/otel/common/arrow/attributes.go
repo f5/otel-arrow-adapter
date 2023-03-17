@@ -19,6 +19,7 @@ package arrow
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/apache/arrow/go/v11/arrow"
@@ -48,19 +49,50 @@ type AttributesBuilder struct {
 	ib      *AnyValueBuilder       // item any value builder
 }
 
+type (
+	mapEntry struct {
+		key   string
+		value pcommon.Value
+	}
+
+	mapEntries []mapEntry
+)
+
+var _ sort.Interface = mapEntries{}
+
+func (me mapEntries) Len() int {
+	return len(me)
+}
+
+func (me mapEntries) Swap(i, j int) {
+	me[i], me[j] = me[j], me[i]
+}
+
+func (me mapEntries) Less(i, j int) bool {
+	return me[i].key < me[j].key
+}
+
 func AttributesId(attrs pcommon.Map) string {
-	var attrsId strings.Builder
-	attrs.Sort()
-	attrsId.WriteString("{")
+	tmp := make(mapEntries, 0, attrs.Len())
 	attrs.Range(func(k string, v pcommon.Value) bool {
+		tmp = append(tmp, mapEntry{
+			key:   k,
+			value: v,
+		})
+		return true
+	})
+	sort.Stable(tmp)
+
+	var attrsId strings.Builder
+	attrsId.WriteString("{")
+	for _, e := range tmp {
 		if attrsId.Len() > 1 {
 			attrsId.WriteString(",")
 		}
-		attrsId.WriteString(k)
+		attrsId.WriteString(e.key)
 		attrsId.WriteString(":")
-		attrsId.WriteString(ValueID(v))
-		return true
-	})
+		attrsId.WriteString(ValueID(e.value))
+	}
 	attrsId.WriteString("}")
 	return attrsId.String()
 }
