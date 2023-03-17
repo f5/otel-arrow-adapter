@@ -42,18 +42,19 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/durationpb"
 
+	"github.com/f5/otel-arrow-adapter/collector/gen/exporter/otlpexporter/internal/arrow/grpcmock"
+	"github.com/f5/otel-arrow-adapter/collector/gen/internal/testdata"
 	"go.opentelemetry.io/collector/client"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/component/componenttest"
 	"go.opentelemetry.io/collector/config/configauth"
 	"go.opentelemetry.io/collector/config/configgrpc"
+	"go.opentelemetry.io/collector/config/configopaque"
 	"go.opentelemetry.io/collector/config/configtls"
 	"go.opentelemetry.io/collector/exporter"
 	"go.opentelemetry.io/collector/exporter/exportertest"
-	"github.com/f5/otel-arrow-adapter/collector/gen/exporter/otlpexporter/internal/arrow/grpcmock"
 	"go.opentelemetry.io/collector/extension"
 	"go.opentelemetry.io/collector/extension/auth"
-	"github.com/f5/otel-arrow-adapter/collector/gen/internal/testdata"
 	"go.opentelemetry.io/collector/pdata/plog"
 	"go.opentelemetry.io/collector/pdata/plog/plogotlp"
 	"go.opentelemetry.io/collector/pdata/pmetric"
@@ -85,6 +86,7 @@ func (r *mockReceiver) setExportError(err error) {
 }
 
 type mockTracesReceiver struct {
+	ptraceotlp.UnimplementedGRPCServer
 	mockReceiver
 	lastRequest ptrace.Traces
 }
@@ -143,6 +145,7 @@ func (r *mockTracesReceiver) start() {
 }
 
 type mockLogsReceiver struct {
+	plogotlp.UnimplementedGRPCServer
 	mockReceiver
 	lastRequest plog.Logs
 }
@@ -183,6 +186,7 @@ func otlpLogsReceiverOnGRPCServer(ln net.Listener) *mockLogsReceiver {
 }
 
 type mockMetricsReceiver struct {
+	pmetricotlp.UnimplementedGRPCServer
 	mockReceiver
 	lastRequest pmetric.Metrics
 }
@@ -286,8 +290,8 @@ func TestSendTraces(t *testing.T) {
 		TLSSetting: configtls.TLSClientSetting{
 			Insecure: true,
 		},
-		Headers: map[string]string{
-			"header": expectedHeader[0],
+		Headers: map[string]configopaque.String{
+			"header": configopaque.String(expectedHeader[0]),
 		},
 		Auth: &configauth.Authentication{
 			AuthenticatorID: authID,
@@ -465,7 +469,7 @@ func TestSendMetrics(t *testing.T) {
 		TLSSetting: configtls.TLSClientSetting{
 			Insecure: true,
 		},
-		Headers: map[string]string{
+		Headers: map[string]configopaque.String{
 			"header": "header-value",
 		},
 	}
@@ -820,8 +824,8 @@ func testSendArrowTraces(t *testing.T, clientWaitForReady, streamServiceAvailabl
 			Insecure: true,
 		},
 		WaitForReady: clientWaitForReady,
-		Headers: map[string]string{
-			"header": expectedHeader[0],
+		Headers: map[string]configopaque.String{
+			"header": configopaque.String(expectedHeader[0]),
 		},
 		Auth: &configauth.Authentication{
 			AuthenticatorID: authID,
