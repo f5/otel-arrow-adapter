@@ -24,6 +24,7 @@ import (
 	arrowutils "github.com/f5/otel-arrow-adapter/pkg/arrow"
 	otlp "github.com/f5/otel-arrow-adapter/pkg/otel/common/otlp"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/constants"
+	"github.com/f5/otel-arrow-adapter/pkg/werror"
 )
 
 type ScopeMetricsIds struct {
@@ -102,7 +103,7 @@ func UpdateScopeMetricsFrom(scopeMetricsSlice pmetric.ScopeMetricsSlice, arrowSc
 		for entityIdx := arrowMetrics.Start(); entityIdx < arrowMetrics.End(); entityIdx++ {
 			err = AppendMetricSetInto(metricsSlice, arrowMetrics, entityIdx, ids.MetricSetIds, sdata)
 			if err != nil {
-				return fmt.Errorf("UpdateScopeMetricsFrom->%w", err)
+				return werror.Wrap(err)
 			}
 		}
 	}

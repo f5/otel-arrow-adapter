@@ -15,7 +15,7 @@
  *
  */
 
-package error
+package werror
 
 import (
 	"fmt"
@@ -107,4 +107,12 @@ func WrapWithContext(err error, context map[string]interface{}) error {
 		function: fn.Name(),
 		context:  context,
 	}
+}
+
+func WrapWithMsg(err error, msg string) error {
+	if err == nil {
+		return nil
+	}
+
+	return WrapWithContext(err, map[string]interface{}{"msg": msg})
 }

@@ -23,6 +23,7 @@ import (
 	arrowutils "github.com/f5/otel-arrow-adapter/pkg/arrow"
 	otlp "github.com/f5/otel-arrow-adapter/pkg/otel/common/otlp"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/constants"
+	"github.com/f5/otel-arrow-adapter/pkg/werror"
 )
 
 type ResourceMetricsIds struct {
@@ -94,7 +95,7 @@ func AppendResourceMetricsInto(metrics pmetric.Metrics, record arrow.Record, met
 			}
 			err = UpdateScopeMetricsFrom(resMetrics.ScopeMetrics(), arrowScopeMetrics, metricsIds.ResourceMetrics.ScopeMetrics)
 			if err != nil {
-				return err
+				return werror.Wrap(err)
 			}
 		}
 	}

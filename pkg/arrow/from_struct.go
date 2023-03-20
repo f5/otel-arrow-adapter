@@ -21,10 +21,17 @@ package arrow
 // Arrow arrays.
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/apache/arrow/go/v11/arrow"
 	"github.com/apache/arrow/go/v11/arrow/array"
+
+	"github.com/f5/otel-arrow-adapter/pkg/werror"
+)
+
+var (
+	ErrNotArrayStruct = errors.New("not an arrow array of structs")
 )
 
 // U32FromStruct returns the uint32 value for a specific row in an Arrow struct
@@ -126,7 +133,10 @@ func I32FromStruct(arr arrow.Array, row int, id int) (int32, error) {
 	if structArr != nil {
 		return I32FromArray(structArr.Field(id), row)
 	} else {
-		return 0, fmt.Errorf("column array is not of type struct")
+		return 0, werror.WrapWithContext(ErrNotArrayStruct, map[string]interface{}{
+			"row": row,
+			"id":  id,
+		})
 	}
 }
 

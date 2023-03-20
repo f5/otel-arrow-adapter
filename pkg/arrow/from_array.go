@@ -20,10 +20,16 @@ package arrow
 // Utility functions to extract values from Arrow arrays.
 
 import (
-	"fmt"
+	"errors"
 
 	"github.com/apache/arrow/go/v11/arrow"
 	"github.com/apache/arrow/go/v11/arrow/array"
+
+	"github.com/f5/otel-arrow-adapter/pkg/werror"
+)
+
+var (
+	ErrInvalidColumnType = errors.New("invalid column type")
 )
 
 // I32FromArray returns the int32 value for a specific row in an Arrow array.
@@ -46,7 +52,7 @@ func I32FromArray(arr arrow.Array, row int) (int32, error) {
 				return i32Arr.Value(arr.GetValueIndex(row)), nil
 			}
 		default:
-			return 0, fmt.Errorf("column is not of type int32")
+			return 0, werror.WrapWithMsg(ErrInvalidColumnType, "not an int32 array")
 		}
 	}
 }
@@ -64,7 +70,7 @@ func I64FromArray(arr arrow.Array, row int) (int64, error) {
 				return arr.Value(row), nil
 			}
 		default:
-			return 0, fmt.Errorf("column is not of type int64")
+			return 0, werror.WrapWithMsg(ErrInvalidColumnType, "not an int64 array")
 		}
 	}
 }
@@ -84,7 +90,7 @@ func StringFromArray(arr arrow.Array, row int) (string, error) {
 		case *array.Dictionary:
 			return arr.Dictionary().(*array.String).Value(arr.GetValueIndex(row)), nil
 		default:
-			return "", fmt.Errorf("column is not of type string")
+			return "", werror.WrapWithMsg(ErrInvalidColumnType, "not a string array")
 		}
 	}
 }
@@ -104,7 +110,7 @@ func BinaryFromArray(arr arrow.Array, row int) ([]byte, error) {
 		case *array.Dictionary:
 			return arr.Dictionary().(*array.Binary).Value(arr.GetValueIndex(row)), nil
 		default:
-			return nil, fmt.Errorf("column is not of type binary")
+			return nil, werror.WrapWithMsg(ErrInvalidColumnType, "not a binary array")
 		}
 	}
 }
@@ -124,7 +130,7 @@ func FixedSizeBinaryFromArray(arr arrow.Array, row int) ([]byte, error) {
 		case *array.Dictionary:
 			return arr.Dictionary().(*array.FixedSizeBinary).Value(arr.GetValueIndex(row)), nil
 		default:
-			return nil, fmt.Errorf("column is not of type binary")
+			return nil, werror.WrapWithMsg(ErrInvalidColumnType, "not a fixed size binary array")
 		}
 	}
 }
@@ -142,7 +148,7 @@ func BoolFromArray(arr arrow.Array, row int) (bool, error) {
 				return arr.Value(row), nil
 			}
 		default:
-			return false, fmt.Errorf("column is not of type bool")
+			return false, werror.WrapWithMsg(ErrInvalidColumnType, "not a bool array")
 		}
 	}
 }
@@ -160,7 +166,7 @@ func F64FromArray(arr arrow.Array, row int) (float64, error) {
 				return arr.Value(row), nil
 			}
 		default:
-			return 0.0, fmt.Errorf("column is not of type f64")
+			return 0.0, werror.WrapWithMsg(ErrInvalidColumnType, "not a float64 array")
 		}
 	}
 }
@@ -179,7 +185,7 @@ func F64OrNilFromArray(arr arrow.Array, row int) (*float64, error) {
 				return &v, nil
 			}
 		default:
-			return nil, fmt.Errorf("column is not of type f64")
+			return nil, werror.WrapWithMsg(ErrInvalidColumnType, "not a float64 array")
 		}
 	}
 }
@@ -197,7 +203,7 @@ func U64FromArray(arr arrow.Array, row int) (uint64, error) {
 				return arr.Value(row), nil
 			}
 		default:
-			return 0, fmt.Errorf("column is not of type uint64")
+			return 0, werror.WrapWithMsg(ErrInvalidColumnType, "not a uint64 array")
 		}
 	}
 }
@@ -215,7 +221,7 @@ func TimestampFromArray(arr arrow.Array, row int) (arrow.Timestamp, error) {
 				return arr.Value(row), nil
 			}
 		default:
-			return 0, fmt.Errorf("column is not of type timestamp")
+			return 0, werror.WrapWithMsg(ErrInvalidColumnType, "not a timestamp array")
 		}
 	}
 }
@@ -233,7 +239,7 @@ func U32FromArray(arr arrow.Array, row int) (uint32, error) {
 				return arr.Value(row), nil
 			}
 		default:
-			return 0, fmt.Errorf("column is not of type uint32")
+			return 0, werror.WrapWithMsg(ErrInvalidColumnType, "not a uint32 array")
 		}
 	}
 }

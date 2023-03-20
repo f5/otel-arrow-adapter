@@ -17,6 +17,8 @@ package otlp
 import (
 	"github.com/apache/arrow/go/v11/arrow"
 	"go.opentelemetry.io/collector/pdata/pmetric"
+
+	"github.com/f5/otel-arrow-adapter/pkg/werror"
 )
 
 type MetricsIds struct {
@@ -36,9 +38,7 @@ func MetricsFrom(record arrow.Record) (pmetric.Metrics, error) {
 	resSpansCount := int(record.NumRows())
 	resMetricsSlice.EnsureCapacity(resSpansCount)
 
-	// TODO there is probably two nested lists that could be replaced by a single list (metrics, resource spans). This could simplify a future query layer.
-
-	err = AppendResourceMetricsInto(metrics, record, metricsIds)
+	err = werror.Wrap(AppendResourceMetricsInto(metrics, record, metricsIds))
 	return metrics, err
 }
 

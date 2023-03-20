@@ -24,6 +24,7 @@ import (
 	arrowutils "github.com/f5/otel-arrow-adapter/pkg/arrow"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/constants"
 	ametric "github.com/f5/otel-arrow-adapter/pkg/otel/metrics/arrow"
+	"github.com/f5/otel-arrow-adapter/pkg/werror"
 )
 
 type UnivariateMetricIds struct {
@@ -113,7 +114,7 @@ func UpdateUnivariateMetricFrom(metric pmetric.Metric, arr *array.SparseUnion, r
 		err = fmt.Errorf("UpdateUnivariateMetricFrom: unknown type code %d", tcode)
 	}
 	if err != nil {
-		err = fmt.Errorf("UpdateUnivariateMetricFrom->%w", err)
+		err = werror.WrapWithContext(err, map[string]interface{}{"row": row})
 	}
 	return
 }
