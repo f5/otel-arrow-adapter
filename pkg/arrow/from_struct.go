@@ -22,7 +22,6 @@ package arrow
 
 import (
 	"errors"
-	"fmt"
 
 	"github.com/apache/arrow/go/v11/arrow"
 	"github.com/apache/arrow/go/v11/arrow/array"
@@ -31,7 +30,11 @@ import (
 )
 
 var (
-	ErrNotArrayStruct = errors.New("not an arrow array of structs")
+	ErrNotArrayStruct       = errors.New("not an arrow array of structs")
+	ErrNotStructType        = errors.New("not an arrow struct type")
+	ErrNotListOfStructsType = errors.New("not an arrow list of structs type")
+	ErrNotListType          = errors.New("not an arrow list type")
+	ErrNotArrayList         = errors.New("not an arrow array list")
 )
 
 // U32FromStruct returns the uint32 value for a specific row in an Arrow struct
@@ -60,11 +63,11 @@ func ListOfStructsFieldIDFromStruct(dt *arrow.StructType, fieldName string) (int
 	if lt, ok := dt.Field(id).Type.(*arrow.ListType); ok {
 		st, ok := lt.ElemField().Type.(*arrow.StructType)
 		if !ok {
-			return 0, nil, fmt.Errorf("field %q is not a list of structs", fieldName)
+			return 0, nil, werror.WrapWithContext(ErrNotListOfStructsType, map[string]interface{}{"fieldName": fieldName})
 		}
 		return id, st, nil
 	} else {
-		return 0, nil, fmt.Errorf("field %q is not a list", fieldName)
+		return 0, nil, werror.WrapWithContext(ErrNotListType, map[string]interface{}{"fieldName": fieldName})
 	}
 }
 
@@ -99,7 +102,7 @@ func StructFieldIDFromStruct(dt *arrow.StructType, fieldName string) (int, *arro
 	if st, ok := dt.Field(id).Type.(*arrow.StructType); ok {
 		return id, st, nil
 	} else {
-		return 0, nil, fmt.Errorf("field %q is not a struct", fieldName)
+		return 0, nil, werror.WrapWithContext(ErrNotStructType, map[string]interface{}{"fieldName": fieldName})
 	}
 }
 
@@ -111,12 +114,12 @@ func StringFromStruct(arr arrow.Array, row int, id int) (string, error) {
 
 	structArr, ok := arr.(*array.Struct)
 	if !ok {
-		return "", fmt.Errorf("array id %d is not of type struct", id)
+		return "", werror.WrapWithContext(ErrNotArrayStruct, map[string]interface{}{"row": row, "id": id})
 	}
 	if structArr != nil {
 		return StringFromArray(structArr.Field(id), row)
 	} else {
-		return "", fmt.Errorf("column array is not of type struct")
+		return "", werror.WrapWithContext(ErrNotArrayStruct, map[string]interface{}{"row": row, "id": id})
 	}
 }
 
@@ -128,7 +131,7 @@ func I32FromStruct(arr arrow.Array, row int, id int) (int32, error) {
 	}
 	structArr, ok := arr.(*array.Struct)
 	if !ok {
-		return 0, fmt.Errorf("array id %d is not of type struct", id)
+		return 0, werror.WrapWithContext(ErrNotArrayStruct, map[string]interface{}{"row": row, "id": id})
 	}
 	if structArr != nil {
 		return I32FromArray(structArr.Field(id), row)
@@ -170,7 +173,7 @@ func ListOfStructsFromStruct(parent *array.Struct, fieldID int, row int) (*ListO
 		case *array.Struct:
 			dt, ok := structArr.DataType().(*arrow.StructType)
 			if !ok {
-				return nil, fmt.Errorf("field id %d is not a list of structs", fieldID)
+				return nil, werror.WrapWithContext(ErrNotStructType, map[string]interface{}{"fieldID": fieldID, "row": row})
 			}
 			start := int(listArr.Offsets()[row])
 			end := int(listArr.Offsets()[row+1])
@@ -182,9 +185,9 @@ func ListOfStructsFromStruct(parent *array.Struct, fieldID int, row int) (*ListO
 				end:   end,
 			}, nil
 		default:
-			return nil, fmt.Errorf("field id %d is not a list of structs", fieldID)
+			return nil, werror.WrapWithContext(ErrNotArrayStruct, map[string]interface{}{"fieldID": fieldID, "row": row})
 		}
 	} else {
-		return nil, fmt.Errorf("field id %d is not a list", fieldID)
+		return nil, werror.WrapWithContext(ErrNotArrayList, map[string]interface{}{"fieldID": fieldID, "row": row})
 	}
 }
