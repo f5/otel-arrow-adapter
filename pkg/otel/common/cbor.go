@@ -149,7 +149,7 @@ func decode(inVal interface{}, outVal pcommon.Value) error {
 		for k, v := range typedV {
 			if kStr, ok := k.(string); ok {
 				if err := decode(v, mapV.PutEmpty(kStr)); err != nil {
-					return err
+					return werror.Wrap(err)
 				}
 			} else {
 				return werror.WrapWithContext(ErrInvalidKeyMap, map[string]interface{}{"key": k, "value": v})
@@ -160,7 +160,7 @@ func decode(inVal interface{}, outVal pcommon.Value) error {
 		slice.EnsureCapacity(len(typedV))
 		for _, v := range typedV {
 			if err := decode(v, slice.AppendEmpty()); err != nil {
-				return err
+				return werror.Wrap(err)
 			}
 		}
 	case []byte:

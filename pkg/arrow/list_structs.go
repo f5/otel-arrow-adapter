@@ -20,8 +20,6 @@ package arrow
 // Wrapper around an Arrow list of structs used to expose utility functions.
 
 import (
-	"fmt"
-
 	"github.com/apache/arrow/go/v11/arrow"
 	"github.com/apache/arrow/go/v11/arrow/array"
 	"go.opentelemetry.io/collector/pdata/pcommon"
@@ -50,7 +48,7 @@ func ListOfStructsFromRecord(record arrow.Record, fieldID int, row int) (*ListOf
 		case *array.Struct:
 			dt, ok := structArr.DataType().(*arrow.StructType)
 			if !ok {
-				return nil, fmt.Errorf("field id %d is not a list of structs", fieldID)
+				return nil, werror.WrapWithContext(ErrNotArrayListOfStructs, map[string]interface{}{"fieldID": fieldID, "row": row})
 			}
 			start := int(listArr.Offsets()[row])
 			end := int(listArr.Offsets()[row+1])

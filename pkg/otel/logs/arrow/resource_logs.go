@@ -83,7 +83,7 @@ func (b *ResourceLogsBuilder) Append(rs plog.ResourceLogs) error {
 
 	return b.builder.Append(rs, func() error {
 		if err := b.rb.Append(rs.Resource()); err != nil {
-			return err
+			return werror.Wrap(err)
 		}
 		b.schb.AppendNonEmpty(rs.SchemaUrl())
 		slogs := rs.ScopeLogs()
@@ -91,7 +91,7 @@ func (b *ResourceLogsBuilder) Append(rs plog.ResourceLogs) error {
 		return b.slsb.Append(sc, func() error {
 			for i := 0; i < sc; i++ {
 				if err := b.slb.Append(slogs.At(i)); err != nil {
-					return err
+					return werror.Wrap(err)
 				}
 			}
 			return nil

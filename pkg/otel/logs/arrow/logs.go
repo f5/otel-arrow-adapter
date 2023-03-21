@@ -18,8 +18,6 @@
 package arrow
 
 import (
-	"fmt"
-
 	"github.com/apache/arrow/go/v11/arrow"
 	"go.opentelemetry.io/collector/pdata/plog"
 
@@ -71,7 +69,7 @@ func (b *LogsBuilder) init() error {
 // memory allocated by the record.
 func (b *LogsBuilder) Build() (record arrow.Record, err error) {
 	if b.released {
-		return nil, fmt.Errorf("resource logs builder already released")
+		return nil, werror.Wrap(acommon.ErrBuilderAlreadyReleased)
 	}
 
 	record, err = b.builder.NewRecord()
@@ -96,7 +94,7 @@ func (b *LogsBuilder) Append(logs plog.Logs) error {
 	return b.rlb.Append(rc, func() error {
 		for i := 0; i < rc; i++ {
 			if err := b.rlp.Append(rl.At(i)); err != nil {
-				return err
+				return werror.Wrap(err)
 			}
 		}
 		return nil

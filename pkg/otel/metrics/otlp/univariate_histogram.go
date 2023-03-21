@@ -32,7 +32,7 @@ type UnivariateHistogramIds struct {
 func NewUnivariateHistogramIds(parentDT *arrow.StructType) (*UnivariateHistogramIds, error) {
 	dataPoints, err := NewUnivariateHistogramDataPointIds(parentDT)
 	if err != nil {
-		return nil, err
+		return nil, werror.Wrap(err)
 	}
 
 	aggrTempId, _ := arrowutils.FieldIDFromStruct(parentDT, constants.AggregationTemporality)
@@ -60,5 +60,5 @@ func UpdateUnivariateHistogramFrom(histogram pmetric.Histogram, arr *array.Struc
 	if err != nil {
 		err = werror.WrapWithContext(err, map[string]interface{}{"row": row})
 	}
-	return err
+	return werror.Wrap(err)
 }

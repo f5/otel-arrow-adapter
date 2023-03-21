@@ -15,8 +15,6 @@
 package otlp
 
 import (
-	"fmt"
-
 	"github.com/apache/arrow/go/v11/arrow"
 	"github.com/apache/arrow/go/v11/arrow/array"
 	"go.opentelemetry.io/collector/pdata/pmetric"
@@ -52,37 +50,37 @@ func NewUnivariateMetricIds(parentDT *arrow.StructType) (*UnivariateMetricIds, e
 
 	dataDT, ok := parentDT.Field(id).Type.(*arrow.SparseUnionType)
 	if !ok {
-		return nil, fmt.Errorf("field %q is not a sparse union", constants.Data)
+		return nil, werror.Wrap(ErrNotArraySparseUnion)
 	}
 
 	gaugeDT := arrowutils.StructFromSparseUnion(dataDT, ametric.GaugeCode)
 	gaugeIds, err := NewUnivariateGaugeIds(gaugeDT)
 	if err != nil {
-		return nil, err
+		return nil, werror.Wrap(err)
 	}
 
 	sumDT := arrowutils.StructFromSparseUnion(dataDT, ametric.SumCode)
 	sumIds, err := NewUnivariateSumIds(sumDT)
 	if err != nil {
-		return nil, err
+		return nil, werror.Wrap(err)
 	}
 
 	summaryDT := arrowutils.StructFromSparseUnion(dataDT, ametric.SummaryCode)
 	summaryIds, err := NewUnivariateSummaryIds(summaryDT)
 	if err != nil {
-		return nil, err
+		return nil, werror.Wrap(err)
 	}
 
 	histogramDT := arrowutils.StructFromSparseUnion(dataDT, ametric.HistogramCode)
 	histogramIds, err := NewUnivariateHistogramIds(histogramDT)
 	if err != nil {
-		return nil, err
+		return nil, werror.Wrap(err)
 	}
 
 	ehistogramDT := arrowutils.StructFromSparseUnion(dataDT, ametric.ExpHistogramCode)
 	ehistogramIds, err := NewUnivariateEHistogramIds(ehistogramDT)
 	if err != nil {
-		return nil, err
+		return nil, werror.Wrap(err)
 	}
 
 	return &UnivariateMetricIds{
@@ -111,7 +109,7 @@ func UpdateUnivariateMetricFrom(metric pmetric.Metric, arr *array.SparseUnion, r
 	case ametric.ExpHistogramCode:
 		err = UpdateUnivariateEHistogramFrom(metric.SetEmptyExponentialHistogram(), arr.Field(fieldID).(*array.Struct), row, ids.UnivariateEHistogramIds, smdata, mdata)
 	default:
-		err = fmt.Errorf("UpdateUnivariateMetricFrom: unknown type code %d", tcode)
+		err = werror.WrapWithContext(ErrUnknownTypeCode, map[string]interface{}{"type_code": tcode, "row": row})
 	}
 	if err != nil {
 		err = werror.WrapWithContext(err, map[string]interface{}{"row": row})

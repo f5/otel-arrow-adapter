@@ -15,17 +15,10 @@
  *
  */
 
-package common
+package arrow
 
-import (
-	"errors"
-)
+import "errors"
 
 var (
-	ErrInvalidKeyMap         = errors.New("invalid key map")
-	ErrUnsupportedCborType   = errors.New("unsupported cbor type")
-	ErrInvalidTypeConversion = errors.New("invalid type conversion")
-
-	ErrInvalidSpanIDLength  = errors.New("invalid span id length")
-	ErrInvalidTraceIDLength = errors.New("invalid trace id length")
+	ErrUnknownMetricType = errors.New("unknown metric type")
 )

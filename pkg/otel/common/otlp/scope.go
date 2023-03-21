@@ -34,7 +34,7 @@ type ScopeIds struct {
 func NewScopeIds(resSpansDT *arrow.StructType) (*ScopeIds, error) {
 	scopeID, scopeDT, err := arrowutils.StructFieldIDFromStruct(resSpansDT, constants.Scope)
 	if err != nil {
-		return nil, err
+		return nil, werror.Wrap(err)
 	}
 
 	nameID, _ := arrowutils.FieldIDFromStruct(scopeDT, constants.Name)
@@ -42,7 +42,7 @@ func NewScopeIds(resSpansDT *arrow.StructType) (*ScopeIds, error) {
 	droppedAttributesCountID, _ := arrowutils.FieldIDFromStruct(scopeDT, constants.DroppedAttributesCount)
 	attributeIds, err := NewAttributeIds(scopeDT)
 	if err != nil {
-		return nil, err
+		return nil, werror.Wrap(err)
 	}
 	return &ScopeIds{
 		Id:                     scopeID,

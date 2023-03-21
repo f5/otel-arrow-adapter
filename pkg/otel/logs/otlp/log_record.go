@@ -15,14 +15,13 @@
 package otlp
 
 import (
-	"fmt"
-
 	"github.com/apache/arrow/go/v11/arrow"
 	"github.com/apache/arrow/go/v11/arrow/array"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/plog"
 
 	arrowutils "github.com/f5/otel-arrow-adapter/pkg/arrow"
+	"github.com/f5/otel-arrow-adapter/pkg/otel/common"
 	otlp "github.com/f5/otel-arrow-adapter/pkg/otel/common/otlp"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/constants"
 	"github.com/f5/otel-arrow-adapter/pkg/werror"
@@ -96,14 +95,14 @@ func AppendLogRecordInto(logs plog.LogRecordSlice, los *arrowutils.ListOfStructs
 		return werror.WrapWithContext(err, map[string]interface{}{"row": row})
 	}
 	if len(traceID) != 16 {
-		return fmt.Errorf("trace_id field should be 16 bytes")
+		return werror.WrapWithContext(common.ErrInvalidTraceIDLength, map[string]interface{}{"row": row, "traceID": traceID})
 	}
 	spanID, err := los.FixedSizeBinaryFieldByID(ids.SpanID, row)
 	if err != nil {
 		return werror.WrapWithContext(err, map[string]interface{}{"row": row})
 	}
 	if len(spanID) != 8 {
-		return fmt.Errorf("span_id field should be 8 bytes")
+		return werror.WrapWithContext(common.ErrInvalidSpanIDLength, map[string]interface{}{"row": row, "spanID": spanID})
 	}
 
 	severityNumber, err := los.I32FieldByID(ids.SeverityNumber, row)
@@ -118,7 +117,7 @@ func AppendLogRecordInto(logs plog.LogRecordSlice, los *arrowutils.ListOfStructs
 	body := los.FieldByID(ids.Body)
 	if anyValueArr, ok := body.(*array.SparseUnion); ok {
 		if err := otlp.UpdateValueFrom(logRecord.Body(), anyValueArr, row); err != nil {
-			return err
+			return werror.Wrap(err)
 		}
 	} else {
 		return werror.WrapWithContext(ErrBodyNotSparseUnion, map[string]interface{}{"row": row})

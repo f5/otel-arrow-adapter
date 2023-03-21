@@ -110,10 +110,10 @@ func (b *LogRecordBuilder) Append(log plog.LogRecord) error {
 		b.snb.AppendNonZero(int32(log.SeverityNumber()))
 		b.stb.AppendNonEmpty(log.SeverityText())
 		if err := b.bb.Append(log.Body()); err != nil {
-			return err
+			return werror.Wrap(err)
 		}
 		if err := b.ab.Append(log.Attributes()); err != nil {
-			return err
+			return werror.Wrap(err)
 		}
 		b.dacb.AppendNonZero(log.DroppedAttributesCount())
 		b.fb.Append(uint32(log.Flags()))

@@ -32,7 +32,7 @@ type UnivariateEHistogramIds struct {
 func NewUnivariateEHistogramIds(parentDT *arrow.StructType) (*UnivariateEHistogramIds, error) {
 	dataPoints, err := NewUnivariateEHistogramDataPointIds(parentDT)
 	if err != nil {
-		return nil, err
+		return nil, werror.Wrap(err)
 	}
 
 	aggrTempId, _ := arrowutils.FieldIDFromStruct(parentDT, constants.AggregationTemporality)
@@ -60,5 +60,5 @@ func UpdateUnivariateEHistogramFrom(ehistogram pmetric.ExponentialHistogram, arr
 	if err != nil {
 		err = werror.WrapWithContext(err, map[string]interface{}{"row": row})
 	}
-	return err
+	return werror.Wrap(err)
 }

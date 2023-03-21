@@ -15,17 +15,18 @@
  *
  */
 
-package common
+package otlp
 
 import (
 	"errors"
 )
 
 var (
-	ErrInvalidKeyMap         = errors.New("invalid key map")
-	ErrUnsupportedCborType   = errors.New("unsupported cbor type")
-	ErrInvalidTypeConversion = errors.New("invalid type conversion")
-
-	ErrInvalidSpanIDLength  = errors.New("invalid span id length")
-	ErrInvalidTraceIDLength = errors.New("invalid trace id length")
+	ErrNotArraySparseUnion = errors.New("not an arrow array.SparseUnion")
+	ErrNotArrayInt32       = errors.New("not an arrow array.Int32")
+	ErrNotArrayUint64      = errors.New("not an arrow array.Uint64")
+	ErrNotArrayFloat64     = errors.New("not an arrow array.Float64")
+	ErrNotArrayList        = errors.New("not an arrow array.List")
+	ErrNotArrayBoolean     = errors.New("not an arrow array.Boolean")
+	ErrUnknownTypeCode     = errors.New("unknown type code")
 )

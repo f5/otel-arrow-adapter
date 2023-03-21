@@ -73,7 +73,7 @@ func AppendScopeLogsInto(resLogs plog.ResourceLogs, arrowResLogs *arrowutils.Lis
 		scopeLogs := scopeLogsSlice.AppendEmpty()
 
 		if err = otlp.UpdateScopeWith(scopeLogs.Scope(), arrowScopeLogs, scopeLogsIdx, ids.ScopeIds); err != nil {
-			return err
+			return werror.Wrap(err)
 		}
 
 		schemaUrl, err := arrowScopeLogs.StringFieldByID(ids.SchemaUrl, scopeLogsIdx)

@@ -72,7 +72,7 @@ func AppendResourceLogsInto(logs plog.Logs, record arrow.Record, ids *LogsIds) e
 			resLogs := resLogsSlice.AppendEmpty()
 
 			if err = otlp.UpdateResourceWith(resLogs.Resource(), arrowResLogs, resLogsIdx, ids.ResourceLogs.Resource); err != nil {
-				return err
+				return werror.Wrap(err)
 			}
 
 			schemaUrl, err := arrowResLogs.StringFieldByID(ids.ResourceLogs.SchemaUrl, resLogsIdx)
