@@ -15,13 +15,12 @@
 package otlp
 
 import (
-	"fmt"
-
 	"github.com/apache/arrow/go/v11/arrow"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 
 	arrowutils "github.com/f5/otel-arrow-adapter/pkg/arrow"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/constants"
+	"github.com/f5/otel-arrow-adapter/pkg/werror"
 )
 
 type ScopeIds struct {
@@ -58,24 +57,24 @@ func NewScopeIds(resSpansDT *arrow.StructType) (*ScopeIds, error) {
 func UpdateScopeWith(s pcommon.InstrumentationScope, listOfStructs *arrowutils.ListOfStructs, row int, ids *ScopeIds) error {
 	_, scopeArray, err := listOfStructs.StructByID(ids.Id, row)
 	if err != nil {
-		return err
+		return werror.WrapWithContext(err, map[string]interface{}{"row": row})
 	}
 	name, err := arrowutils.StringFromStruct(scopeArray, row, ids.Name)
 	if err != nil {
-		return err
+		return werror.WrapWithContext(err, map[string]interface{}{"row": row})
 	}
 	version, err := arrowutils.StringFromStruct(scopeArray, row, ids.Version)
 	if err != nil {
-		return err
+		return werror.WrapWithContext(err, map[string]interface{}{"row": row})
 	}
 	droppedAttributesCount, err := arrowutils.U32FromStruct(scopeArray, row, ids.DroppedAttributesCount)
 	if err != nil {
-		return err
+		return werror.WrapWithContext(err, map[string]interface{}{"row": row})
 	}
 
 	err = AppendAttributesInto(s.Attributes(), scopeArray, row, ids.Attributes)
 	if err != nil {
-		return fmt.Errorf("UpdateScopeWith->%w", err)
+		return werror.WrapWithContext(err, map[string]interface{}{"row": row})
 	}
 	s.SetName(name)
 	s.SetVersion(version)
