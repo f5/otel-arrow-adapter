@@ -25,6 +25,7 @@ import (
 	arrowutils "github.com/f5/otel-arrow-adapter/pkg/arrow"
 	otlp "github.com/f5/otel-arrow-adapter/pkg/otel/common/otlp"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/constants"
+	"github.com/f5/otel-arrow-adapter/pkg/werror"
 )
 
 type LogRecordIds struct {
@@ -44,7 +45,7 @@ type LogRecordIds struct {
 func NewLogRecordIds(scopeLogsDT *arrow.StructType) (*LogRecordIds, error) {
 	id, logDT, err := arrowutils.ListOfStructsFieldIDFromStruct(scopeLogsDT, constants.Logs)
 	if err != nil {
-		return nil, err
+		return nil, werror.Wrap(err)
 	}
 
 	timeUnixNano, _ := arrowutils.FieldIDFromStruct(logDT, constants.TimeUnixNano)
@@ -57,7 +58,7 @@ func NewLogRecordIds(scopeLogsDT *arrow.StructType) (*LogRecordIds, error) {
 
 	attributes, err := otlp.NewAttributeIds(logDT)
 	if err != nil {
-		return nil, err
+		return nil, werror.Wrap(err)
 	}
 
 	droppedAttributesCount, _ := arrowutils.FieldIDFromStruct(logDT, constants.DroppedAttributesCount)
@@ -83,23 +84,23 @@ func AppendLogRecordInto(logs plog.LogRecordSlice, los *arrowutils.ListOfStructs
 
 	timeUnixNano, err := los.TimestampFieldByID(ids.TimeUnixNano, row)
 	if err != nil {
-		return err
+		return werror.WrapWithContext(err, map[string]interface{}{"row": row})
 	}
 	observedTimeUnixNano, err := los.TimestampFieldByID(ids.ObservedTimeUnixNano, row)
 	if err != nil {
-		return err
+		return werror.WrapWithContext(err, map[string]interface{}{"row": row})
 	}
 
 	traceID, err := los.FixedSizeBinaryFieldByID(ids.TraceID, row)
 	if err != nil {
-		return err
+		return werror.WrapWithContext(err, map[string]interface{}{"row": row})
 	}
 	if len(traceID) != 16 {
 		return fmt.Errorf("trace_id field should be 16 bytes")
 	}
 	spanID, err := los.FixedSizeBinaryFieldByID(ids.SpanID, row)
 	if err != nil {
-		return err
+		return werror.WrapWithContext(err, map[string]interface{}{"row": row})
 	}
 	if len(spanID) != 8 {
 		return fmt.Errorf("span_id field should be 8 bytes")
@@ -107,11 +108,11 @@ func AppendLogRecordInto(logs plog.LogRecordSlice, los *arrowutils.ListOfStructs
 
 	severityNumber, err := los.I32FieldByID(ids.SeverityNumber, row)
 	if err != nil {
-		return err
+		return werror.WrapWithContext(err, map[string]interface{}{"row": row})
 	}
 	severityText, err := los.StringFieldByID(ids.SeverityText, row)
 	if err != nil {
-		return err
+		return werror.WrapWithContext(err, map[string]interface{}{"row": row})
 	}
 
 	body := los.FieldByID(ids.Body)
@@ -120,21 +121,21 @@ func AppendLogRecordInto(logs plog.LogRecordSlice, los *arrowutils.ListOfStructs
 			return err
 		}
 	} else {
-		return fmt.Errorf("body field should be a sparse union")
+		return werror.WrapWithContext(ErrBodyNotSparseUnion, map[string]interface{}{"row": row})
 	}
 
 	err = otlp.AppendAttributesInto(logRecord.Attributes(), los.Array(), row, ids.Attributes)
 	if err != nil {
-		return fmt.Errorf("AppendLogRecordInto->%w", err)
+		return werror.WrapWithContext(err, map[string]interface{}{"row": row})
 	}
 	droppedAttributesCount, err := los.U32FieldByID(ids.DropAttributesCount, row)
 	if err != nil {
-		return err
+		return werror.WrapWithContext(err, map[string]interface{}{"row": row})
 	}
 
 	flags, err := los.U32FieldByID(ids.Flags, row)
 	if err != nil {
-		return err
+		return werror.WrapWithContext(err, map[string]interface{}{"row": row})
 	}
 
 	var tid pcommon.TraceID

@@ -18,8 +18,6 @@
 package arrow
 
 import (
-	"fmt"
-
 	"github.com/apache/arrow/go/v11/arrow"
 	"github.com/apache/arrow/go/v11/arrow/array"
 	"go.opentelemetry.io/collector/pdata/plog"
@@ -28,6 +26,7 @@ import (
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/builder"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/constants"
+	"github.com/f5/otel-arrow-adapter/pkg/werror"
 )
 
 var (
@@ -69,7 +68,7 @@ func ResourceLogsBuilderFrom(builder *builder.StructBuilder) *ResourceLogsBuilde
 // memory allocated by the array.
 func (b *ResourceLogsBuilder) Build() (*array.Struct, error) {
 	if b.released {
-		return nil, fmt.Errorf("resource logs builder already released")
+		return nil, werror.Wrap(acommon.ErrBuilderAlreadyReleased)
 	}
 
 	defer b.Release()
@@ -79,7 +78,7 @@ func (b *ResourceLogsBuilder) Build() (*array.Struct, error) {
 // Append appends a new resource logs to the builder.
 func (b *ResourceLogsBuilder) Append(rs plog.ResourceLogs) error {
 	if b.released {
-		return fmt.Errorf("resource logs builder already released")
+		return werror.Wrap(acommon.ErrBuilderAlreadyReleased)
 	}
 
 	return b.builder.Append(rs, func() error {

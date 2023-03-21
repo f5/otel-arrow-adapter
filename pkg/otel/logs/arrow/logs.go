@@ -23,9 +23,11 @@ import (
 	"github.com/apache/arrow/go/v11/arrow"
 	"go.opentelemetry.io/collector/pdata/plog"
 
+	acommon "github.com/f5/otel-arrow-adapter/pkg/otel/common/arrow"
 	schema "github.com/f5/otel-arrow-adapter/pkg/otel/common/schema"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/builder"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/constants"
+	"github.com/f5/otel-arrow-adapter/pkg/werror"
 )
 
 // Schema is the Arrow schema for the OTLP Arrow Logs record.
@@ -51,7 +53,7 @@ func NewLogsBuilder(recordBuilder *builder.RecordBuilderExt) (*LogsBuilder, erro
 		builder:  recordBuilder,
 	}
 	if err := b.init(); err != nil {
-		return nil, err
+		return nil, werror.Wrap(err)
 	}
 	return b, nil
 }
@@ -76,7 +78,7 @@ func (b *LogsBuilder) Build() (record arrow.Record, err error) {
 	if err != nil {
 		initErr := b.init()
 		if initErr != nil {
-			err = initErr
+			err = werror.Wrap(initErr)
 		}
 	}
 
@@ -86,7 +88,7 @@ func (b *LogsBuilder) Build() (record arrow.Record, err error) {
 // Append appends a new set of resource logs to the builder.
 func (b *LogsBuilder) Append(logs plog.Logs) error {
 	if b.released {
-		return fmt.Errorf("traces builder already released")
+		return werror.Wrap(acommon.ErrBuilderAlreadyReleased)
 	}
 
 	rl := logs.ResourceLogs()
