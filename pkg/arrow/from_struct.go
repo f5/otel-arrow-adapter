@@ -21,20 +21,10 @@ package arrow
 // Arrow arrays.
 
 import (
-	"errors"
-
 	"github.com/apache/arrow/go/v11/arrow"
 	"github.com/apache/arrow/go/v11/arrow/array"
 
 	"github.com/f5/otel-arrow-adapter/pkg/werror"
-)
-
-var (
-	ErrNotArrayStruct       = errors.New("not an arrow array of structs")
-	ErrNotStructType        = errors.New("not an arrow struct type")
-	ErrNotListOfStructsType = errors.New("not an arrow list of structs type")
-	ErrNotListType          = errors.New("not an arrow list type")
-	ErrNotArrayList         = errors.New("not an arrow array list")
 )
 
 // U32FromStruct returns the uint32 value for a specific row in an Arrow struct
