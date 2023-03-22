@@ -45,6 +45,7 @@ import (
 	"go.opentelemetry.io/collector/config/configgrpc"
 	"go.opentelemetry.io/collector/consumer"
 	"go.opentelemetry.io/collector/extension/auth"
+	"go.opentelemetry.io/collector/obsreport"
 	"go.opentelemetry.io/collector/pdata/plog"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 	"go.opentelemetry.io/collector/pdata/ptrace"
@@ -76,6 +77,8 @@ type consumeResult struct {
 }
 
 type commonTestCase struct {
+	*testing.T
+
 	ctrl      *gomock.Controller
 	cancel    context.CancelFunc
 	telset    component.TelemetrySettings
@@ -85,6 +88,7 @@ type commonTestCase struct {
 	consume   chan consumeResult
 	streamErr chan error
 
+	// testProducer is for convenience -- not thread safe, see copyBatch().
 	testProducer *arrowRecord.Producer
 
 	ctxCall  *gomock.Call
@@ -226,6 +230,7 @@ func newCommonTestCase(t *testing.T, tc testChannel) *commonTestCase {
 	})
 
 	ctc := &commonTestCase{
+		T:            t,
 		ctrl:         ctrl,
 		cancel:       cancel,
 		telset:       newTestTelemetry(t),
@@ -322,22 +327,25 @@ func (ctc *commonTestCase) start(newConsumer func() arrowRecord.ConsumerAPI, opt
 	for _, gf := range opts {
 		gf(gsettings, &authServer)
 	}
-	rcvr, err := New(
-		component.NewID("arrowtest"),
+	rc := receiver.CreateSettings{
+		TelemetrySettings: ctc.telset,
+		BuildInfo:         component.NewDefaultBuildInfo(),
+	}
+	obsrecv, err := obsreport.NewReceiver(obsreport.ReceiverSettings{
+		ReceiverID:             component.NewID("arrowtest"),
+		Transport:              "grpc",
+		ReceiverCreateSettings: rc,
+	})
+	require.NoError(ctc.T, err)
+
+	rcvr := New(
 		ctc.consumers,
-		receiver.CreateSettings{
-			TelemetrySettings: ctc.telset,
-			BuildInfo:         component.NewDefaultBuildInfo(),
-		},
+		rc,
+		obsrecv,
 		gsettings,
 		authServer,
 		newConsumer,
 	)
-	if err != nil {
-		// it would be because obsreport.NewReceiver failed, this is
-		// not tested here.
-		panic("new failure not tested")
-	}
 	go func() {
 		ctc.streamErr <- rcvr.ArrowStream(ctc.stream)
 	}()
@@ -465,6 +473,8 @@ func TestReceiverConsumeError(t *testing.T) {
 		}
 		require.NoError(t, err)
 
+		batch = copyBatch(batch)
+
 		ctc.stream.EXPECT().Send(statusUnavailableFor(batch.BatchId, "consumer unhealthy")).Times(1).Return(nil)
 
 		ctc.start(ctc.newRealConsumer)
@@ -523,6 +533,8 @@ func TestReceiverInvalidData(t *testing.T) {
 		}
 		require.NoError(t, err)
 
+		batch = copyBatch(batch)
+
 		ctc.stream.EXPECT().Send(statusInvalidFor(batch.BatchId, "Permanent error: test invalid error")).Times(1).Return(nil)
 
 		ctc.start(ctc.newErrorConsumer)
@@ -531,6 +543,32 @@ func TestReceiverInvalidData(t *testing.T) {
 		err = ctc.cancelAndWait()
 		require.Error(t, err)
 		require.True(t, errors.Is(err, context.Canceled), "for %v", err)
+	}
+}
+
+func copyBatch(in *arrowpb.BatchArrowRecords) *arrowpb.BatchArrowRecords {
+	// Because Arrow-IPC uses zero copy, we have to copy inside the test
+	// instead of sharing pointers to BatchArrowRecords.
+
+	hcpy := make([]byte, len(in.Headers))
+	copy(hcpy, in.Headers)
+
+	pays := make([]*arrowpb.OtlpArrowPayload, len(in.OtlpArrowPayloads))
+
+	for i, inp := range in.OtlpArrowPayloads {
+		rcpy := make([]byte, len(inp.Record))
+		copy(rcpy, inp.Record)
+		pays[i] = &arrowpb.OtlpArrowPayload{
+			SubStreamId: inp.SubStreamId,
+			Type:        inp.Type,
+			Record:      rcpy,
+		}
+	}
+
+	return &arrowpb.BatchArrowRecords{
+		BatchId:           in.BatchId,
+		Headers:           hcpy,
+		OtlpArrowPayloads: pays,
 	}
 }
 
@@ -555,6 +593,8 @@ func TestReceiverEOF(t *testing.T) {
 
 			batch, err := ctc.testProducer.BatchArrowRecordsFromTraces(td)
 			require.NoError(t, err)
+
+			batch = copyBatch(batch)
 
 			ctc.putBatch(batch, nil)
 		}
@@ -611,8 +651,11 @@ func testReceiverHeaders(t *testing.T, includeMeta bool) {
 
 		for _, md := range expectData {
 			td := testdata.GenerateTraces(2)
+
 			batch, err := ctc.testProducer.BatchArrowRecordsFromTraces(td)
 			require.NoError(t, err)
+
+			batch = copyBatch(batch)
 
 			if len(md) != 0 {
 				hpb.Reset()
@@ -1002,8 +1045,11 @@ func testReceiverAuthHeaders(t *testing.T, includeMeta bool, dataAuth bool) {
 
 		for _, md := range expectData {
 			td := testdata.GenerateTraces(2)
+
 			batch, err := ctc.testProducer.BatchArrowRecordsFromTraces(td)
 			require.NoError(t, err)
+
+			batch = copyBatch(batch)
 
 			if len(md) != 0 {
 

@@ -15,20 +15,21 @@
 package arrow
 
 import (
-	"fmt"
-
 	"github.com/apache/arrow/go/v11/arrow"
 	"github.com/apache/arrow/go/v11/arrow/array"
-	"github.com/apache/arrow/go/v11/arrow/memory"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 
+	acommon "github.com/f5/otel-arrow-adapter/pkg/otel/common/arrow"
+	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema"
+	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/builder"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/constants"
+	"github.com/f5/otel-arrow-adapter/pkg/werror"
 )
 
 // UnivariateSummaryDT is the Arrow Data Type describing a univariate summary.
 var (
 	UnivariateSummaryDT = arrow.StructOf(
-		arrow.Field{Name: constants.DataPoints, Type: arrow.ListOf(UnivariateSummaryDataPointDT)},
+		arrow.Field{Name: constants.DataPoints, Type: arrow.ListOf(UnivariateSummaryDataPointDT), Metadata: schema.Metadata(schema.Optional)},
 	)
 )
 
@@ -36,25 +37,22 @@ var (
 type UnivariateSummaryBuilder struct {
 	released bool
 
-	builder *array.StructBuilder
+	builder *builder.StructBuilder
 
-	dplb *array.ListBuilder                 // data points builder
+	dplb *builder.ListBuilder               // data points builder
 	dpb  *UnivariateSummaryDataPointBuilder // summary data point builder
 }
 
-// NewUnivariateSummaryBuilder creates a new UnivariateSummaryBuilder with a given memory allocator.
-func NewUnivariateSummaryBuilder(pool memory.Allocator) *UnivariateSummaryBuilder {
-	return UnivariateSummaryBuilderFrom(array.NewStructBuilder(pool, UnivariateSummaryDT))
-}
-
 // UnivariateSummaryBuilderFrom creates a new UnivariateSummaryBuilder from an existing StructBuilder.
-func UnivariateSummaryBuilderFrom(ndpb *array.StructBuilder) *UnivariateSummaryBuilder {
+func UnivariateSummaryBuilderFrom(ndpb *builder.StructBuilder) *UnivariateSummaryBuilder {
+	dplb := ndpb.ListBuilder(constants.DataPoints)
+
 	return &UnivariateSummaryBuilder{
 		released: false,
 		builder:  ndpb,
 
-		dplb: ndpb.FieldBuilder(0).(*array.ListBuilder),
-		dpb:  UnivariateSummaryDataPointBuilderFrom(ndpb.FieldBuilder(0).(*array.ListBuilder).ValueBuilder().(*array.StructBuilder)),
+		dplb: dplb,
+		dpb:  UnivariateSummaryDataPointBuilderFrom(dplb.StructBuilder()),
 	}
 }
 
@@ -63,7 +61,7 @@ func UnivariateSummaryBuilderFrom(ndpb *array.StructBuilder) *UnivariateSummaryB
 // Once the array is no longer needed, Release() should be called to free the memory.
 func (b *UnivariateSummaryBuilder) Build() (*array.Struct, error) {
 	if b.released {
-		return nil, fmt.Errorf("UnivariateSummaryBuilder: Build() called after Release()")
+		return nil, werror.Wrap(acommon.ErrBuilderAlreadyReleased)
 	}
 
 	defer b.Release()
@@ -83,24 +81,21 @@ func (b *UnivariateSummaryBuilder) Release() {
 // Append appends a new univariate summary to the builder.
 func (b *UnivariateSummaryBuilder) Append(summary pmetric.Summary, smdata *ScopeMetricsSharedData, mdata *MetricSharedData) error {
 	if b.released {
-		return fmt.Errorf("UnivariateSummaryBuilder: Append() called after Release()")
+		return werror.Wrap(acommon.ErrBuilderAlreadyReleased)
 	}
 
-	b.builder.Append(true)
-	dps := summary.DataPoints()
-	dpc := dps.Len()
-	if dpc > 0 {
-		b.dplb.Append(true)
-		for i := 0; i < dpc; i++ {
-			if err := b.dpb.Append(dps.At(i), smdata, mdata); err != nil {
-				return err
+	return b.builder.Append(summary, func() error {
+		dps := summary.DataPoints()
+		dpc := dps.Len()
+		return b.dplb.Append(dpc, func() error {
+			for i := 0; i < dpc; i++ {
+				if err := b.dpb.Append(dps.At(i), smdata, mdata); err != nil {
+					return werror.Wrap(err)
+				}
 			}
-		}
-	} else {
-		b.dplb.Append(false)
-	}
-
-	return nil
+			return nil
+		})
+	})
 }
 
 func (b *UnivariateSummaryBuilder) AppendNull() {
@@ -108,5 +103,5 @@ func (b *UnivariateSummaryBuilder) AppendNull() {
 		return
 	}
 
-	b.builder.Append(false)
+	b.builder.AppendNull()
 }

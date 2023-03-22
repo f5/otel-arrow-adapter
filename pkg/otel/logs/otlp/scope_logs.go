@@ -19,8 +19,9 @@ import (
 	"go.opentelemetry.io/collector/pdata/plog"
 
 	arrowutils "github.com/f5/otel-arrow-adapter/pkg/arrow"
-	"github.com/f5/otel-arrow-adapter/pkg/otel/common/otlp"
+	otlp "github.com/f5/otel-arrow-adapter/pkg/otel/common/otlp"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/constants"
+	"github.com/f5/otel-arrow-adapter/pkg/werror"
 )
 
 type ScopeLogsIds struct {
@@ -31,24 +32,25 @@ type ScopeLogsIds struct {
 }
 
 func NewScopeLogsIds(dt *arrow.StructType) (*ScopeLogsIds, error) {
-	id, scopeSpansDT, err := arrowutils.ListOfStructsFieldIDFromStruct(dt, constants.ScopeLogs)
-	if err != nil {
-		return nil, err
+	if dt == nil {
+		return nil, nil
 	}
 
-	schemaId, _, err := arrowutils.FieldIDFromStruct(scopeSpansDT, constants.SchemaUrl)
+	id, scopeSpansDT, err := arrowutils.ListOfStructsFieldIDFromStruct(dt, constants.ScopeLogs)
 	if err != nil {
-		return nil, err
+		return nil, werror.Wrap(err)
 	}
+
+	schemaId, _ := arrowutils.FieldIDFromStruct(scopeSpansDT, constants.SchemaUrl)
 
 	scopeIds, err := otlp.NewScopeIds(scopeSpansDT)
 	if err != nil {
-		return nil, err
+		return nil, werror.Wrap(err)
 	}
 
 	spansIds, err := NewLogRecordIds(scopeSpansDT)
 	if err != nil {
-		return nil, err
+		return nil, werror.Wrap(err)
 	}
 
 	return &ScopeLogsIds{
@@ -62,7 +64,7 @@ func NewScopeLogsIds(dt *arrow.StructType) (*ScopeLogsIds, error) {
 func AppendScopeLogsInto(resLogs plog.ResourceLogs, arrowResLogs *arrowutils.ListOfStructs, resLogsIdx int, ids *ScopeLogsIds) error {
 	arrowScopeLogs, err := arrowResLogs.ListOfStructsById(resLogsIdx, ids.Id)
 	if err != nil {
-		return err
+		return werror.Wrap(err)
 	}
 	scopeLogsSlice := resLogs.ScopeLogs()
 	scopeLogsSlice.EnsureCapacity(arrowScopeLogs.End() - arrowResLogs.Start())
@@ -71,25 +73,25 @@ func AppendScopeLogsInto(resLogs plog.ResourceLogs, arrowResLogs *arrowutils.Lis
 		scopeLogs := scopeLogsSlice.AppendEmpty()
 
 		if err = otlp.UpdateScopeWith(scopeLogs.Scope(), arrowScopeLogs, scopeLogsIdx, ids.ScopeIds); err != nil {
-			return err
+			return werror.Wrap(err)
 		}
 
 		schemaUrl, err := arrowScopeLogs.StringFieldByID(ids.SchemaUrl, scopeLogsIdx)
 		if err != nil {
-			return err
+			return werror.Wrap(err)
 		}
 		scopeLogs.SetSchemaUrl(schemaUrl)
 
 		arrowLogs, err := arrowScopeLogs.ListOfStructsById(scopeLogsIdx, ids.LogRecordIds.Id)
 		if err != nil {
-			return err
+			return werror.Wrap(err)
 		}
 		logsSlice := scopeLogs.LogRecords()
 		logsSlice.EnsureCapacity(arrowLogs.End() - arrowLogs.Start())
 		for logIdx := arrowLogs.Start(); logIdx < arrowLogs.End(); logIdx++ {
 			err = AppendLogRecordInto(logsSlice, arrowLogs, logIdx, ids.LogRecordIds)
 			if err != nil {
-				return err
+				return werror.Wrap(err)
 			}
 		}
 	}

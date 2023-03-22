@@ -15,50 +15,75 @@
 package otlp
 
 import (
-	"fmt"
-
 	"github.com/apache/arrow/go/v11/arrow/array"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 
 	arrowutils "github.com/f5/otel-arrow-adapter/pkg/arrow"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common"
 	commonarrow "github.com/f5/otel-arrow-adapter/pkg/otel/common/arrow"
+	"github.com/f5/otel-arrow-adapter/pkg/werror"
 )
 
 func UpdateValueFrom(v pcommon.Value, vArr *array.SparseUnion, row int) error {
-	tcode := int8(vArr.ChildID(row))
+	tcode := vArr.TypeCode(row)
+	fieldID := vArr.ChildID(row)
+
 	switch tcode {
 	case commonarrow.StrCode:
-		val, err := arrowutils.StringFromArray(vArr.Field(int(tcode)), row)
+		strArr := vArr.Field(fieldID)
+		if strArr == nil {
+			return werror.WrapWithContext(ErrInvalidFieldId, map[string]interface{}{"tcode": tcode, "fieldID": fieldID, "row": row})
+		}
+		val, err := arrowutils.StringFromArray(strArr, row)
 		if err != nil {
-			return err
+			return werror.Wrap(err)
 		}
 		v.SetStr(val)
 	case commonarrow.I64Code:
-		val := vArr.Field(int(tcode)).(*array.Int64).Value(row)
+		i64Arr := vArr.Field(fieldID)
+		if i64Arr == nil {
+			return werror.WrapWithContext(ErrInvalidFieldId, map[string]interface{}{"tcode": tcode, "fieldID": fieldID, "row": row})
+		}
+		val := i64Arr.(*array.Int64).Value(row)
 		v.SetInt(val)
 	case commonarrow.F64Code:
-		val := vArr.Field(int(tcode)).(*array.Float64).Value(row)
+		f64Arr := vArr.Field(fieldID)
+		if f64Arr == nil {
+			return werror.WrapWithContext(ErrInvalidFieldId, map[string]interface{}{"tcode": tcode, "fieldID": fieldID, "row": row})
+		}
+		val := f64Arr.(*array.Float64).Value(row)
 		v.SetDouble(val)
 	case commonarrow.BoolCode:
-		val := vArr.Field(int(tcode)).(*array.Boolean).Value(row)
+		boolArr := vArr.Field(fieldID)
+		if boolArr == nil {
+			return werror.WrapWithContext(ErrInvalidFieldId, map[string]interface{}{"tcode": tcode, "fieldID": fieldID, "row": row})
+		}
+		val := boolArr.(*array.Boolean).Value(row)
 		v.SetBool(val)
 	case commonarrow.BinaryCode:
-		val, err := arrowutils.BinaryFromArray(vArr.Field(int(tcode)), row)
+		binArr := vArr.Field(fieldID)
+		if binArr == nil {
+			return werror.WrapWithContext(ErrInvalidFieldId, map[string]interface{}{"tcode": tcode, "fieldID": fieldID, "row": row})
+		}
+		val, err := arrowutils.BinaryFromArray(binArr, row)
 		if err != nil {
-			return err
+			return werror.Wrap(err)
 		}
 		v.SetEmptyBytes().FromRaw(val)
 	case commonarrow.CborCode:
-		val, err := arrowutils.BinaryFromArray(vArr.Field(int(tcode)), row)
+		cborArr := vArr.Field(fieldID)
+		if cborArr == nil {
+			return werror.WrapWithContext(ErrInvalidFieldId, map[string]interface{}{"tcode": tcode, "fieldID": fieldID, "row": row})
+		}
+		val, err := arrowutils.BinaryFromArray(cborArr, row)
 		if err != nil {
-			return err
+			return werror.Wrap(err)
 		}
 		if err = common.Deserialize(val, v); err != nil {
-			return err
+			return werror.Wrap(err)
 		}
 	default:
-		return fmt.Errorf("UpdateValueFrom: unknow type code `%d` in any value union array", tcode)
+		return werror.WrapWithContext(ErrInvalidTypeCode, map[string]interface{}{"tcode": tcode, "fieldID": fieldID, "row": row})
 	}
 
 	return nil

@@ -15,14 +15,13 @@
 package otlp
 
 import (
-	"fmt"
-
 	"github.com/apache/arrow/go/v11/arrow"
 	"github.com/apache/arrow/go/v11/arrow/array"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 
 	arrowutils "github.com/f5/otel-arrow-adapter/pkg/arrow"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/constants"
+	"github.com/f5/otel-arrow-adapter/pkg/werror"
 )
 
 type UnivariateHistogramIds struct {
@@ -33,13 +32,10 @@ type UnivariateHistogramIds struct {
 func NewUnivariateHistogramIds(parentDT *arrow.StructType) (*UnivariateHistogramIds, error) {
 	dataPoints, err := NewUnivariateHistogramDataPointIds(parentDT)
 	if err != nil {
-		return nil, err
+		return nil, werror.Wrap(err)
 	}
 
-	aggrTempId, found := parentDT.FieldIdx(constants.AggregationTemporality)
-	if !found {
-		return nil, fmt.Errorf("missing field %q", constants.AggregationTemporality)
-	}
+	aggrTempId, _ := arrowutils.FieldIDFromStruct(parentDT, constants.AggregationTemporality)
 
 	return &UnivariateHistogramIds{
 		DataPoints:             dataPoints,
@@ -48,15 +44,21 @@ func NewUnivariateHistogramIds(parentDT *arrow.StructType) (*UnivariateHistogram
 }
 
 func UpdateUnivariateHistogramFrom(histogram pmetric.Histogram, arr *array.Struct, row int, ids *UnivariateHistogramIds, smdata *SharedData, mdata *SharedData) error {
-	value, err := arrowutils.I32FromArray(arr.Field(ids.AggregationTemporality), row)
-	if err != nil {
-		return err
+	if ids.AggregationTemporality >= 0 {
+		value, err := arrowutils.I32FromArray(arr.Field(ids.AggregationTemporality), row)
+		if err != nil {
+			return werror.WrapWithContext(err, map[string]interface{}{"row": row})
+		}
+		histogram.SetAggregationTemporality(pmetric.AggregationTemporality(value))
 	}
-	histogram.SetAggregationTemporality(pmetric.AggregationTemporality(value))
 
 	los, err := arrowutils.ListOfStructsFromStruct(arr, ids.DataPoints.Id, row)
 	if err != nil {
-		return err
+		return werror.WrapWithContext(err, map[string]interface{}{"row": row})
 	}
-	return AppendUnivariateHistogramDataPointInto(histogram.DataPoints(), los, ids.DataPoints, smdata, mdata)
+	err = AppendUnivariateHistogramDataPointInto(histogram.DataPoints(), los, ids.DataPoints, smdata, mdata)
+	if err != nil {
+		err = werror.WrapWithContext(err, map[string]interface{}{"row": row})
+	}
+	return werror.Wrap(err)
 }

@@ -15,13 +15,12 @@
 package otlp
 
 import (
-	"fmt"
-
 	"github.com/apache/arrow/go/v11/arrow"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 
 	arrowutils "github.com/f5/otel-arrow-adapter/pkg/arrow"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/constants"
+	"github.com/f5/otel-arrow-adapter/pkg/werror"
 )
 
 type QuantileValueIds struct {
@@ -33,18 +32,11 @@ type QuantileValueIds struct {
 func NewQuantileValueIds(parentDT *arrow.StructType) (*QuantileValueIds, error) {
 	id, quantileValueDT, err := arrowutils.ListOfStructsFieldIDFromStruct(parentDT, constants.SummaryQuantileValues)
 	if err != nil {
-		return nil, err
+		return nil, werror.Wrap(err)
 	}
 
-	quantile, quantileFound := quantileValueDT.FieldIdx(constants.SummaryQuantile)
-	if !quantileFound {
-		return nil, fmt.Errorf("field %q not found", constants.SummaryQuantile)
-	}
-
-	value, valueFound := quantileValueDT.FieldIdx(constants.SummaryValue)
-	if !valueFound {
-		return nil, fmt.Errorf("field %q not found", constants.SummaryValue)
-	}
+	quantile, _ := arrowutils.FieldIDFromStruct(quantileValueDT, constants.SummaryQuantile)
+	value, _ := arrowutils.FieldIDFromStruct(quantileValueDT, constants.SummaryValue)
 
 	return &QuantileValueIds{
 		Id:       id,
@@ -56,7 +48,7 @@ func NewQuantileValueIds(parentDT *arrow.StructType) (*QuantileValueIds, error) 
 func AppendQuantileValuesInto(quantileSlice pmetric.SummaryDataPointValueAtQuantileSlice, ndp *arrowutils.ListOfStructs, ndpIdx int, ids *QuantileValueIds) error {
 	quantileValues, err := ndp.ListOfStructsById(ndpIdx, ids.Id)
 	if err != nil {
-		return err
+		return werror.Wrap(err)
 	}
 	if quantileValues == nil {
 		return nil
@@ -71,13 +63,13 @@ func AppendQuantileValuesInto(quantileSlice pmetric.SummaryDataPointValueAtQuant
 
 		quantile, err := quantileValues.F64FieldByID(ids.Quantile, quantileIdx)
 		if err != nil {
-			return err
+			return werror.Wrap(err)
 		}
 		quantileValue.SetQuantile(quantile)
 
 		value, err := quantileValues.F64FieldByID(ids.Value, quantileIdx)
 		if err != nil {
-			return err
+			return werror.Wrap(err)
 		}
 		quantileValue.SetValue(value)
 	}

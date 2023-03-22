@@ -15,15 +15,15 @@
 package otlp
 
 import (
-	"fmt"
-
 	"github.com/apache/arrow/go/v11/arrow"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/ptrace"
 
 	arrowutils "github.com/f5/otel-arrow-adapter/pkg/arrow"
-	"github.com/f5/otel-arrow-adapter/pkg/otel/common/otlp"
+	"github.com/f5/otel-arrow-adapter/pkg/otel/common"
+	otlp "github.com/f5/otel-arrow-adapter/pkg/otel/common/otlp"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/constants"
+	"github.com/f5/otel-arrow-adapter/pkg/werror"
 )
 
 type SpansIds struct {
@@ -54,82 +54,38 @@ type StatusIds struct {
 func NewSpansIds(scopeSpansDT *arrow.StructType) (*SpansIds, error) {
 	id, spanDT, err := arrowutils.ListOfStructsFieldIDFromStruct(scopeSpansDT, constants.Spans)
 	if err != nil {
-		return nil, err
+		return nil, werror.Wrap(err)
 	}
 
-	traceId, _, err := arrowutils.FieldIDFromStruct(spanDT, constants.TraceId)
-	if err != nil {
-		return nil, err
-	}
-
-	spanId, _, err := arrowutils.FieldIDFromStruct(spanDT, constants.SpanId)
-	if err != nil {
-		return nil, err
-	}
-
-	traceState, _, err := arrowutils.FieldIDFromStruct(spanDT, constants.TraceState)
-	if err != nil {
-		return nil, err
-	}
-
-	parentSpanId, _, err := arrowutils.FieldIDFromStruct(spanDT, constants.ParentSpanId)
-	if err != nil {
-		return nil, err
-	}
-
-	name, _, err := arrowutils.FieldIDFromStruct(spanDT, constants.Name)
-	if err != nil {
-		return nil, err
-	}
-
-	kind, _, err := arrowutils.FieldIDFromStruct(spanDT, constants.KIND)
-	if err != nil {
-		return nil, err
-	}
-
-	startTimeUnixNano, _, err := arrowutils.FieldIDFromStruct(spanDT, constants.StartTimeUnixNano)
-	if err != nil {
-		return nil, err
-	}
-
-	endTimeUnixNano, _, err := arrowutils.FieldIDFromStruct(spanDT, constants.EndTimeUnixNano)
-	if err != nil {
-		return nil, err
-	}
-
+	traceId, _ := arrowutils.FieldIDFromStruct(spanDT, constants.TraceId)
+	spanId, _ := arrowutils.FieldIDFromStruct(spanDT, constants.SpanId)
+	traceState, _ := arrowutils.FieldIDFromStruct(spanDT, constants.TraceState)
+	parentSpanId, _ := arrowutils.FieldIDFromStruct(spanDT, constants.ParentSpanId)
+	name, _ := arrowutils.FieldIDFromStruct(spanDT, constants.Name)
+	kind, _ := arrowutils.FieldIDFromStruct(spanDT, constants.KIND)
+	startTimeUnixNano, _ := arrowutils.FieldIDFromStruct(spanDT, constants.StartTimeUnixNano)
+	endTimeUnixNano, _ := arrowutils.FieldIDFromStruct(spanDT, constants.EndTimeUnixNano)
 	attributes, err := otlp.NewAttributeIds(spanDT)
 	if err != nil {
-		return nil, err
+		return nil, werror.Wrap(err)
 	}
-
-	droppedAttributesCount, _, err := arrowutils.FieldIDFromStruct(spanDT, constants.DroppedAttributesCount)
-	if err != nil {
-		return nil, err
-	}
-
+	droppedAttributesCount, _ := arrowutils.FieldIDFromStruct(spanDT, constants.DroppedAttributesCount)
 	events, err := NewEventIds(spanDT)
 	if err != nil {
-		return nil, err
+		return nil, werror.Wrap(err)
 	}
 
-	droppedEventsCount, _, err := arrowutils.FieldIDFromStruct(spanDT, constants.DroppedEventsCount)
-	if err != nil {
-		return nil, err
-	}
-
+	droppedEventsCount, _ := arrowutils.FieldIDFromStruct(spanDT, constants.DroppedEventsCount)
 	links, err := NewLinkIds(spanDT)
 	if err != nil {
-		return nil, err
+		return nil, werror.Wrap(err)
 	}
 
-	droppedLinksCount, _, err := arrowutils.FieldIDFromStruct(spanDT, constants.DroppedLinksCount)
-	if err != nil {
-		return nil, err
-	}
+	droppedLinksCount, _ := arrowutils.FieldIDFromStruct(spanDT, constants.DroppedLinksCount)
 
 	status, err := NewStatusIds(spanDT)
 	if err != nil {
-		return nil, err
+		return nil, werror.Wrap(err)
 	}
 
 	return &SpansIds{
@@ -155,18 +111,11 @@ func NewSpansIds(scopeSpansDT *arrow.StructType) (*SpansIds, error) {
 func NewStatusIds(spansDT *arrow.StructType) (*StatusIds, error) {
 	statusId, statusDT, err := arrowutils.StructFieldIDFromStruct(spansDT, constants.Status)
 	if err != nil {
-		return nil, err
+		return nil, werror.Wrap(err)
 	}
 
-	code, _, err := arrowutils.FieldIDFromStruct(statusDT, constants.StatusCode)
-	if err != nil {
-		return nil, err
-	}
-
-	message, _, err := arrowutils.FieldIDFromStruct(statusDT, constants.StatusMessage)
-	if err != nil {
-		return nil, err
-	}
+	code, _ := arrowutils.FieldIDFromStruct(statusDT, constants.StatusCode)
+	message, _ := arrowutils.FieldIDFromStruct(statusDT, constants.StatusMessage)
 
 	return &StatusIds{
 		Id:      statusId,
@@ -177,94 +126,94 @@ func NewStatusIds(spansDT *arrow.StructType) (*StatusIds, error) {
 
 func AppendSpanInto(spans ptrace.SpanSlice, los *arrowutils.ListOfStructs, row int, ids *SpansIds) error {
 	span := spans.AppendEmpty()
-	traceId, err := los.FixedSizeBinaryFieldByID(ids.TraceId, row)
+	traceID, err := los.FixedSizeBinaryFieldByID(ids.TraceId, row)
 	if err != nil {
-		return err
+		return werror.Wrap(err)
 	}
-	if len(traceId) != 16 {
-		return fmt.Errorf("trace_id field should be 16 bytes")
+	if len(traceID) != 16 {
+		return werror.WrapWithContext(common.ErrInvalidTraceIDLength, map[string]interface{}{"traceID": traceID})
 	}
-	spanId, err := los.FixedSizeBinaryFieldByID(ids.SpanId, row)
+	spanID, err := los.FixedSizeBinaryFieldByID(ids.SpanId, row)
 	if err != nil {
-		return err
+		return werror.Wrap(err)
 	}
-	if len(spanId) != 8 {
-		return fmt.Errorf("span_id field should be 8 bytes")
+	if len(spanID) != 8 {
+		return werror.WrapWithContext(common.ErrInvalidSpanIDLength, map[string]interface{}{"spanID": spanID})
 	}
 	traceState, err := los.StringFieldByID(ids.TraceState, row)
 	if err != nil {
-		return err
+		return werror.Wrap(err)
 	}
-	parentSpanId, err := los.FixedSizeBinaryFieldByID(ids.ParentSpanId, row)
+	parentSpanID, err := los.FixedSizeBinaryFieldByID(ids.ParentSpanId, row)
 	if err != nil {
-		return err
+		return werror.Wrap(err)
 	}
-	if parentSpanId != nil && len(parentSpanId) != 8 {
-		return fmt.Errorf("parent_span_id field should be 8 bytes")
+	if parentSpanID != nil && len(parentSpanID) != 8 {
+		return werror.WrapWithContext(common.ErrInvalidSpanIDLength, map[string]interface{}{"parentSpanID": parentSpanID})
 	}
 	name, err := los.StringFieldByID(ids.Name, row)
 	if err != nil {
-		return err
+		return werror.Wrap(err)
 	}
 	kind, err := los.I32FieldByID(ids.Kind, row)
 	if err != nil {
-		return err
+		return werror.Wrap(err)
 	}
 	startTimeUnixNano, err := los.TimestampFieldByID(ids.StartTimeUnixNano, row)
 	if err != nil {
-		return err
+		return werror.Wrap(err)
 	}
 	endTimeUnixNano, err := los.TimestampFieldByID(ids.EndTimeUnixNano, row)
 	if err != nil {
-		return err
+		return werror.Wrap(err)
 	}
 	droppedAttributesCount, err := los.U32FieldByID(ids.DropAttributesCount, row)
 	if err != nil {
-		return err
+		return werror.Wrap(err)
 	}
 	droppedEventsCount, err := los.U32FieldByID(ids.DropEventsCount, row)
 	if err != nil {
-		return err
+		return werror.Wrap(err)
 	}
 	droppedLinksCount, err := los.U32FieldByID(ids.DropLinksCount, row)
 	if err != nil {
-		return err
+		return werror.Wrap(err)
 	}
 	statusDt, statusArr, err := los.StructByID(ids.Status.Id, row)
 	if err != nil {
-		return err
+		return werror.Wrap(err)
 	}
 	if statusDt != nil {
 		// Status exists
 		message, err := arrowutils.StringFromStruct(statusArr, row, ids.Status.Message)
 		if err != nil {
-			return err
+			return werror.Wrap(err)
 		}
 		span.Status().SetMessage(message)
 
 		code, err := arrowutils.I32FromStruct(statusArr, row, ids.Status.Code)
 		if err != nil {
-			return err
+			return werror.Wrap(err)
 		}
 		span.Status().SetCode(ptrace.StatusCode(code))
 	}
 	err = otlp.AppendAttributesInto(span.Attributes(), los.Array(), row, ids.Attributes)
 	if err != nil {
-		return err
+		return werror.Wrap(err)
 	}
 
 	if err := AppendEventsInto(span.Events(), los, row, ids.Events); err != nil {
-		return err
+		return werror.Wrap(err)
 	}
 	if err := AppendLinksInto(span.Links(), los, row, ids.Links); err != nil {
-		return err
+		return werror.Wrap(err)
 	}
 	var tid pcommon.TraceID
 	var sid pcommon.SpanID
 	var psid pcommon.SpanID
-	copy(tid[:], traceId)
-	copy(sid[:], spanId)
-	copy(psid[:], parentSpanId)
+	copy(tid[:], traceID)
+	copy(sid[:], spanID)
+	copy(psid[:], parentSpanID)
 
 	span.SetTraceID(tid)
 	span.SetSpanID(sid)

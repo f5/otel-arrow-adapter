@@ -15,16 +15,15 @@
 package otlp
 
 import (
-	"fmt"
-
 	"github.com/apache/arrow/go/v11/arrow"
 	"github.com/apache/arrow/go/v11/arrow/array"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 
 	arrowutils "github.com/f5/otel-arrow-adapter/pkg/arrow"
-	"github.com/f5/otel-arrow-adapter/pkg/otel/common/otlp"
+	otlp "github.com/f5/otel-arrow-adapter/pkg/otel/common/otlp"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/constants"
+	"github.com/f5/otel-arrow-adapter/pkg/werror"
 )
 
 type UnivariateNdpIds struct {
@@ -40,38 +39,24 @@ type UnivariateNdpIds struct {
 func NewUnivariateNdpIds(parentDT *arrow.StructType) (*UnivariateNdpIds, error) {
 	id, univariateNdpDT, err := arrowutils.ListOfStructsFieldIDFromStruct(parentDT, constants.DataPoints)
 	if err != nil {
-		return nil, err
+		return nil, werror.Wrap(err)
 	}
 
 	attributes, err := otlp.NewAttributeIds(univariateNdpDT)
 	if err != nil {
-		return nil, err
+		return nil, werror.Wrap(err)
 	}
 
-	startTimeUnixNanoId, found := univariateNdpDT.FieldIdx(constants.StartTimeUnixNano)
-	if !found {
-		return nil, fmt.Errorf("field %q not found", constants.StartTimeUnixNano)
-	}
-
-	timeUnixNanoId, found := univariateNdpDT.FieldIdx(constants.TimeUnixNano)
-	if !found {
-		return nil, fmt.Errorf("field %q not found", constants.TimeUnixNano)
-	}
-
-	metricValueId, found := univariateNdpDT.FieldIdx(constants.MetricValue)
-	if !found {
-		return nil, fmt.Errorf("field %q not found", constants.MetricValue)
-	}
+	startTimeUnixNanoId, _ := arrowutils.FieldIDFromStruct(univariateNdpDT, constants.StartTimeUnixNano)
+	timeUnixNanoId, _ := arrowutils.FieldIDFromStruct(univariateNdpDT, constants.TimeUnixNano)
+	metricValueId, _ := arrowutils.FieldIDFromStruct(univariateNdpDT, constants.MetricValue)
 
 	exemplars, err := NewExemplarIds(univariateNdpDT)
 	if err != nil {
-		return nil, err
+		return nil, werror.Wrap(err)
 	}
 
-	flagsId, found := univariateNdpDT.FieldIdx(constants.Flags)
-	if !found {
-		return nil, fmt.Errorf("field %q not found", constants.Flags)
-	}
+	flagsId, _ := arrowutils.FieldIDFromStruct(univariateNdpDT, constants.Flags)
 
 	return &UnivariateNdpIds{
 		Id:                id,
@@ -98,7 +83,7 @@ func AppendUnivariateNdpInto(ndpSlice pmetric.NumberDataPointSlice, ndp *arrowut
 
 		attrs := ndpValue.Attributes()
 		if err := otlp.AppendAttributesInto(attrs, ndp.Array(), ndpIdx, ids.Attributes); err != nil {
-			return err
+			return werror.Wrap(err)
 		}
 		smdata.Attributes.Range(func(k string, v pcommon.Value) bool {
 			v.CopyTo(attrs.PutEmpty(k))
@@ -117,7 +102,7 @@ func AppendUnivariateNdpInto(ndpSlice pmetric.NumberDataPointSlice, ndp *arrowut
 			} else {
 				startTimeUnixNano, err := ndp.TimestampFieldByID(ids.StartTimeUnixNano, ndpIdx)
 				if err != nil {
-					return err
+					return werror.Wrap(err)
 				}
 				ndpValue.SetStartTimestamp(pcommon.Timestamp(startTimeUnixNano))
 			}
@@ -130,7 +115,7 @@ func AppendUnivariateNdpInto(ndpSlice pmetric.NumberDataPointSlice, ndp *arrowut
 			} else {
 				timeUnixNano, err := ndp.TimestampFieldByID(ids.TimeUnixNano, ndpIdx)
 				if err != nil {
-					return err
+					return werror.Wrap(err)
 				}
 				ndpValue.SetTimestamp(pcommon.Timestamp(timeUnixNano))
 			}
@@ -139,25 +124,20 @@ func AppendUnivariateNdpInto(ndpSlice pmetric.NumberDataPointSlice, ndp *arrowut
 		value := ndp.FieldByID(ids.MetricValue)
 		if valueArr, ok := value.(*array.SparseUnion); ok {
 			if err := UpdateValueFromNumberDataPoint(ndpValue, valueArr, ndpIdx); err != nil {
-				return err
+				return werror.Wrap(err)
 			}
 		} else {
-			return fmt.Errorf("value field shound be a SparseUnion")
+			return werror.Wrap(ErrNotArraySparseUnion)
 		}
 
 		flags, err := ndp.U32FieldByID(ids.Flags, ndpIdx)
 		if err != nil {
-			return err
+			return werror.Wrap(err)
 		}
 		ndpValue.SetFlags(pmetric.DataPointFlags(flags))
 
-		exemplars, err := ndp.ListOfStructsById(ndpIdx, ids.Exemplars.Id)
-		if exemplars != nil && err == nil {
-			if err := AppendExemplarsInto(ndpValue.Exemplars(), exemplars, ndpIdx, ids.Exemplars); err != nil {
-				return err
-			}
-		} else if err != nil {
-			return err
+		if err := AppendExemplarsInto(ndpValue.Exemplars(), ndp, ndpIdx, ids.Exemplars); err != nil {
+			return werror.Wrap(err)
 		}
 	}
 
