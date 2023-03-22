@@ -15,15 +15,14 @@
 package otlp
 
 import (
-	"fmt"
-
 	"github.com/apache/arrow/go/v11/arrow"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/ptrace"
 
 	arrowutils "github.com/f5/otel-arrow-adapter/pkg/arrow"
-	"github.com/f5/otel-arrow-adapter/pkg/otel/common/otlp"
+	otlp "github.com/f5/otel-arrow-adapter/pkg/otel/common/otlp"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/constants"
+	"github.com/f5/otel-arrow-adapter/pkg/werror"
 )
 
 type EventIds struct {
@@ -37,24 +36,15 @@ type EventIds struct {
 func NewEventIds(spansDT *arrow.StructType) (*EventIds, error) {
 	id, eventDT, err := arrowutils.ListOfStructsFieldIDFromStruct(spansDT, constants.SpanEvents)
 	if err != nil {
-		return nil, err
+		return nil, werror.Wrap(err)
 	}
 
-	timeUnixNanoID, timeUnixNanoFound := eventDT.FieldIdx(constants.TimeUnixNano)
-	if !timeUnixNanoFound {
-		return nil, fmt.Errorf("field %s not found", constants.TimeUnixNano)
-	}
-	nameID, nameFound := eventDT.FieldIdx(constants.Name)
-	if !nameFound {
-		return nil, fmt.Errorf("field %s not found", constants.Name)
-	}
-	droppedAttributesCountId, droppedAttributesCountFound := eventDT.FieldIdx(constants.DroppedAttributesCount)
-	if !droppedAttributesCountFound {
-		return nil, fmt.Errorf("field %s not found", constants.DroppedAttributesCount)
-	}
+	timeUnixNanoID, _ := arrowutils.FieldIDFromStruct(eventDT, constants.TimeUnixNano)
+	nameID, _ := arrowutils.FieldIDFromStruct(eventDT, constants.Name)
+	droppedAttributesCountId, _ := arrowutils.FieldIDFromStruct(eventDT, constants.DroppedAttributesCount)
 	attributesID, err := otlp.NewAttributeIds(eventDT)
 	if err != nil {
-		return nil, err
+		return nil, werror.Wrap(err)
 	}
 
 	return &EventIds{
@@ -70,7 +60,7 @@ func NewEventIds(spansDT *arrow.StructType) (*EventIds, error) {
 func AppendEventsInto(spans ptrace.SpanEventSlice, arrowSpans *arrowutils.ListOfStructs, spanIdx int, ids *EventIds) error {
 	events, err := arrowSpans.ListOfStructsById(spanIdx, ids.Id)
 	if err != nil {
-		return err
+		return werror.Wrap(err)
 	}
 	if events == nil {
 		// No event found
@@ -86,25 +76,25 @@ func AppendEventsInto(spans ptrace.SpanEventSlice, arrowSpans *arrowutils.ListOf
 
 		timeUnixNano, err := events.TimestampFieldByID(ids.TimeUnixNano, eventIdx)
 		if err != nil {
-			return err
+			return werror.Wrap(err)
 		}
 
 		event.SetTimestamp(pcommon.Timestamp(timeUnixNano))
 
 		name, err := events.StringFieldByID(ids.Name, eventIdx)
 		if err != nil {
-			return err
+			return werror.Wrap(err)
 		}
 
 		event.SetName(name)
 
 		if err = otlp.AppendAttributesInto(event.Attributes(), events.Array(), eventIdx, ids.Attributes); err != nil {
-			return err
+			return werror.Wrap(err)
 		}
 
 		dac, err := events.U32FieldByID(ids.DroppedAttributesCount, eventIdx)
 		if err != nil {
-			return err
+			return werror.Wrap(err)
 		}
 
 		event.SetDroppedAttributesCount(dac)

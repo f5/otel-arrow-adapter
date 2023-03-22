@@ -16,12 +16,14 @@ package otlp
 
 import (
 	"github.com/apache/arrow/go/v11/arrow"
+	"github.com/apache/arrow/go/v11/arrow/array"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 
 	arrowutils "github.com/f5/otel-arrow-adapter/pkg/arrow"
-	"github.com/f5/otel-arrow-adapter/pkg/otel/common/otlp"
+	otlp "github.com/f5/otel-arrow-adapter/pkg/otel/common/otlp"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/constants"
+	"github.com/f5/otel-arrow-adapter/pkg/werror"
 )
 
 type MetricSetIds struct {
@@ -38,27 +40,16 @@ type MetricSetIds struct {
 func NewMetricSetIds(parentDT *arrow.StructType) (*MetricSetIds, error) {
 	id, metricSetDT, err := arrowutils.ListOfStructsFieldIDFromStruct(parentDT, constants.UnivariateMetrics)
 	if err != nil {
-		return nil, err
+		return nil, werror.Wrap(err)
 	}
 
-	name, _, err := arrowutils.FieldIDFromStruct(metricSetDT, constants.Name)
-	if err != nil {
-		return nil, err
-	}
-
-	description, _, err := arrowutils.FieldIDFromStruct(metricSetDT, constants.Description)
-	if err != nil {
-		return nil, err
-	}
-
-	unit, _, err := arrowutils.FieldIDFromStruct(metricSetDT, constants.Unit)
-	if err != nil {
-		return nil, err
-	}
+	name, _ := arrowutils.FieldIDFromStruct(metricSetDT, constants.Name)
+	description, _ := arrowutils.FieldIDFromStruct(metricSetDT, constants.Description)
+	unit, _ := arrowutils.FieldIDFromStruct(metricSetDT, constants.Unit)
 
 	data, err := NewUnivariateMetricIds(metricSetDT)
 	if err != nil {
-		return nil, err
+		return nil, werror.Wrap(err)
 	}
 
 	sharedAttrIds := otlp.NewSharedAttributeIds(metricSetDT)
@@ -82,28 +73,28 @@ func AppendMetricSetInto(metrics pmetric.MetricSlice, los *arrowutils.ListOfStru
 
 	name, err := los.StringFieldByID(ids.Name, row)
 	if err != nil {
-		return err
+		return werror.Wrap(err)
 	}
 	metric.SetName(name)
 
 	description, err := los.StringFieldByID(ids.Description, row)
 	if err != nil {
-		return err
+		return werror.Wrap(err)
 	}
 	metric.SetDescription(description)
 
 	unit, err := los.StringFieldByID(ids.Unit, row)
 	if err != nil {
-		return err
+		return werror.Wrap(err)
 	}
 	metric.SetUnit(unit)
 
 	mdata := &SharedData{}
+	mdata.Attributes = pcommon.NewMap()
 	if ids.SharedAttributeIds != nil {
-		mdata.Attributes = pcommon.NewMap()
 		err = otlp.AppendAttributesInto(mdata.Attributes, los.Array(), row, ids.SharedAttributeIds)
 		if err != nil {
-			return err
+			return werror.Wrap(err)
 		}
 	}
 	if ids.SharedStartTimeID != -1 {
@@ -113,5 +104,9 @@ func AppendMetricSetInto(metrics pmetric.MetricSlice, los *arrowutils.ListOfStru
 		mdata.Time = los.OptionalTimestampFieldByID(ids.SharedTimeID, row)
 	}
 
-	return UpdateUnivariateMetricFrom(metric, los, row, ids.Data, smdata, mdata)
+	arr, ok := los.FieldByID(ids.Data.Id).(*array.SparseUnion)
+	if !ok {
+		return werror.Wrap(ErrNotArraySparseUnion)
+	}
+	return UpdateUnivariateMetricFrom(metric, arr, row, ids.Data, smdata, mdata)
 }

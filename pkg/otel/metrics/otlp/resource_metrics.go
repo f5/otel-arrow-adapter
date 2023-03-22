@@ -19,43 +19,47 @@ import (
 	"go.opentelemetry.io/collector/pdata/pmetric"
 
 	arrowutils "github.com/f5/otel-arrow-adapter/pkg/arrow"
-	"github.com/f5/otel-arrow-adapter/pkg/otel/common/otlp"
+	otlp "github.com/f5/otel-arrow-adapter/pkg/otel/common/otlp"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/constants"
+	"github.com/f5/otel-arrow-adapter/pkg/werror"
 )
 
 type ResourceMetricsIds struct {
-	Id           int
-	Resource     *otlp.ResourceIds
-	SchemaUrl    int
-	ScopeMetrics *ScopeMetricsIds
+	Id             int
+	Resource       *otlp.ResourceIds
+	SchemaUrl      int
+	ScopeMetricsId int
+	ScopeMetrics   *ScopeMetricsIds
 }
 
 func NewResourceMetricsIds(schema *arrow.Schema) (*ResourceMetricsIds, error) {
 	id, rsDT, err := arrowutils.ListOfStructsFieldIDFromSchema(schema, constants.ResourceMetrics)
 	if err != nil {
-		return nil, err
+		return nil, werror.Wrap(err)
 	}
 
-	schemaId, _, err := arrowutils.FieldIDFromStruct(rsDT, constants.SchemaUrl)
-	if err != nil {
-		return nil, err
-	}
+	schemaId, _ := arrowutils.FieldIDFromStruct(rsDT, constants.SchemaUrl)
 
-	scopeMetricsIds, err := NewScopeMetricsIds(rsDT)
+	scopeMetricsId, scopeMetricsDT, err := arrowutils.ListOfStructsFieldIDFromStruct(rsDT, constants.ScopeMetrics)
 	if err != nil {
-		return nil, err
+		return nil, werror.Wrap(err)
+	}
+	scopeMetricsIds, err := NewScopeMetricsIds(scopeMetricsDT)
+	if err != nil {
+		return nil, werror.Wrap(err)
 	}
 
 	resourceIds, err := otlp.NewResourceIds(rsDT)
 	if err != nil {
-		return nil, err
+		return nil, werror.Wrap(err)
 	}
 
 	return &ResourceMetricsIds{
-		Id:           id,
-		Resource:     resourceIds,
-		SchemaUrl:    schemaId,
-		ScopeMetrics: scopeMetricsIds,
+		Id:             id,
+		Resource:       resourceIds,
+		SchemaUrl:      schemaId,
+		ScopeMetricsId: scopeMetricsId,
+		ScopeMetrics:   scopeMetricsIds,
 	}, nil
 }
 
@@ -66,7 +70,7 @@ func AppendResourceMetricsInto(metrics pmetric.Metrics, record arrow.Record, met
 	for metricsIdx := 0; metricsIdx < resMetricsCount; metricsIdx++ {
 		arrowResEnts, err := arrowutils.ListOfStructsFromRecord(record, metricsIds.ResourceMetrics.Id, metricsIdx)
 		if err != nil {
-			return err
+			return werror.Wrap(err)
 		}
 		resMetricsSlice.EnsureCapacity(resMetricsSlice.Len() + arrowResEnts.End() - arrowResEnts.Start())
 
@@ -74,18 +78,22 @@ func AppendResourceMetricsInto(metrics pmetric.Metrics, record arrow.Record, met
 			resMetrics := resMetricsSlice.AppendEmpty()
 
 			if err = otlp.UpdateResourceWith(resMetrics.Resource(), arrowResEnts, resMetricsIdx, metricsIds.ResourceMetrics.Resource); err != nil {
-				return err
+				return werror.Wrap(err)
 			}
 
 			schemaUrl, err := arrowResEnts.StringFieldByID(metricsIds.ResourceMetrics.SchemaUrl, resMetricsIdx)
 			if err != nil {
-				return err
+				return werror.Wrap(err)
 			}
 			resMetrics.SetSchemaUrl(schemaUrl)
 
-			err = AppendScopeMetricsInto(resMetrics, arrowResEnts, resMetricsIdx, metricsIds.ResourceMetrics.ScopeMetrics)
+			arrowScopeMetrics, err := arrowResEnts.ListOfStructsById(resMetricsIdx, metricsIds.ResourceMetrics.ScopeMetricsId)
 			if err != nil {
-				return err
+				return werror.Wrap(err)
+			}
+			err = UpdateScopeMetricsFrom(resMetrics.ScopeMetrics(), arrowScopeMetrics, metricsIds.ResourceMetrics.ScopeMetrics)
+			if err != nil {
+				return werror.Wrap(err)
 			}
 		}
 	}

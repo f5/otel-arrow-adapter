@@ -20,6 +20,7 @@ import (
 
 	arrowutils "github.com/f5/otel-arrow-adapter/pkg/arrow"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/constants"
+	"github.com/f5/otel-arrow-adapter/pkg/werror"
 )
 
 type ScopeIds struct {
@@ -33,23 +34,15 @@ type ScopeIds struct {
 func NewScopeIds(resSpansDT *arrow.StructType) (*ScopeIds, error) {
 	scopeID, scopeDT, err := arrowutils.StructFieldIDFromStruct(resSpansDT, constants.Scope)
 	if err != nil {
-		return nil, err
+		return nil, werror.Wrap(err)
 	}
-	nameID, _, err := arrowutils.FieldIDFromStruct(scopeDT, constants.Name)
-	if err != nil {
-		return nil, err
-	}
-	versionID, _, err := arrowutils.FieldIDFromStruct(scopeDT, constants.Version)
-	if err != nil {
-		return nil, err
-	}
-	droppedAttributesCountID, _, err := arrowutils.FieldIDFromStruct(scopeDT, constants.DroppedAttributesCount)
-	if err != nil {
-		return nil, err
-	}
+
+	nameID, _ := arrowutils.FieldIDFromStruct(scopeDT, constants.Name)
+	versionID, _ := arrowutils.FieldIDFromStruct(scopeDT, constants.Version)
+	droppedAttributesCountID, _ := arrowutils.FieldIDFromStruct(scopeDT, constants.DroppedAttributesCount)
 	attributeIds, err := NewAttributeIds(scopeDT)
 	if err != nil {
-		return nil, err
+		return nil, werror.Wrap(err)
 	}
 	return &ScopeIds{
 		Id:                     scopeID,
@@ -64,24 +57,24 @@ func NewScopeIds(resSpansDT *arrow.StructType) (*ScopeIds, error) {
 func UpdateScopeWith(s pcommon.InstrumentationScope, listOfStructs *arrowutils.ListOfStructs, row int, ids *ScopeIds) error {
 	_, scopeArray, err := listOfStructs.StructByID(ids.Id, row)
 	if err != nil {
-		return err
+		return werror.WrapWithContext(err, map[string]interface{}{"row": row})
 	}
 	name, err := arrowutils.StringFromStruct(scopeArray, row, ids.Name)
 	if err != nil {
-		return err
+		return werror.WrapWithContext(err, map[string]interface{}{"row": row})
 	}
 	version, err := arrowutils.StringFromStruct(scopeArray, row, ids.Version)
 	if err != nil {
-		return err
+		return werror.WrapWithContext(err, map[string]interface{}{"row": row})
 	}
 	droppedAttributesCount, err := arrowutils.U32FromStruct(scopeArray, row, ids.DroppedAttributesCount)
 	if err != nil {
-		return err
+		return werror.WrapWithContext(err, map[string]interface{}{"row": row})
 	}
 
 	err = AppendAttributesInto(s.Attributes(), scopeArray, row, ids.Attributes)
 	if err != nil {
-		return err
+		return werror.WrapWithContext(err, map[string]interface{}{"row": row})
 	}
 	s.SetName(name)
 	s.SetVersion(version)
