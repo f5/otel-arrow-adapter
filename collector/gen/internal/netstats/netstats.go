@@ -28,10 +28,14 @@ import (
 )
 
 const (
-	// ExporterKey used to identify exporters in metrics and traces.
+	// ExporterKey is an attribute name that identifies an
+	// exporter component that produces internal metrics, logs,
+	// and traces.
 	ExporterKey = "exporter"
 
-	// ReceiverKey used to identify receivers in metrics and traces.
+	// ReceiverKey is an attribute name that identifies an
+	// receiver component that produces internal metrics, logs,
+	// and traces.
 	ReceiverKey = "receiver"
 
 	// SentBytes is used to track bytes sent by exporters and receivers.
@@ -84,7 +88,7 @@ func makeSentMetrics(prefix string, meter metric.Meter) (sent, sentWire instrume
 	return sentBytes, sentWireBytes, multierr.Append(err1, err2)
 }
 
-// makeRecvMetrics builds the  and received-wire metric instruments
+// makeRecvMetrics builds the received and received-wire metric instruments
 // for an exporter or receiver using the corresponding `prefix`.
 func makeRecvMetrics(prefix string, meter metric.Meter) (recv, recvWire instrument.Int64Counter, _ error) {
 	recvBytes, err1 := meter.Int64Counter(prefix+"_"+RecvBytes, instrument.WithDescription(recvDescription), instrument.WithUnit(bytesUnit))

@@ -29,7 +29,7 @@ func (rep *NetworkReporter) TagRPC(ctx context.Context, _ *stats.RPCTagInfo) con
 func (rep *NetworkReporter) HandleRPC(ctx context.Context, rs stats.RPCStats) {
 	switch s := rs.(type) {
 	case *stats.Begin, *stats.OutHeader, *stats.OutTrailer, *stats.InHeader, *stats.InTrailer:
-		// Note we have some info aboute header WireLength,
+		// Note we have some info about header WireLength,
 		// but intentionally not counting.
 
 	case *stats.InPayload:
