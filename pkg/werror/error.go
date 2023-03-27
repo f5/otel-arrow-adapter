@@ -53,6 +53,7 @@ func (w Wrapper) Error() string {
 			msg.WriteString(k)
 			msg.WriteString("=")
 			msg.WriteString(fmt.Sprintf("%v", v))
+			msg.WriteString(", ")
 		}
 		msg.WriteString("}")
 	}
@@ -87,7 +88,20 @@ func (w Wrapper) Function() string {
 
 // Wrap wraps the given error with the current file, line, and function.
 func Wrap(err error) error {
-	return WrapWithContext(err, nil)
+	if err == nil {
+		return nil
+	}
+
+	pc, file, line, _ := runtime.Caller(1)
+	fn := runtime.FuncForPC(pc)
+
+	return Wrapper{
+		err:      err,
+		file:     file,
+		line:     line,
+		function: fn.Name(),
+		context:  nil,
+	}
 }
 
 // WrapWithContext wraps the given error with the current file, line, function,
@@ -114,5 +128,20 @@ func WrapWithMsg(err error, msg string) error {
 		return nil
 	}
 
-	return WrapWithContext(err, map[string]interface{}{"msg": msg})
+	context := map[string]interface{}{"msg": msg}
+
+	if err == nil {
+		return nil
+	}
+
+	pc, file, line, _ := runtime.Caller(1)
+	fn := runtime.FuncForPC(pc)
+
+	return Wrapper{
+		err:      err,
+		file:     file,
+		line:     line,
+		function: fn.Name(),
+		context:  context,
+	}
 }

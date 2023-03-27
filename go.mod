@@ -10,10 +10,12 @@ require (
 	github.com/gogo/protobuf v1.3.2
 	github.com/golang/mock v1.6.0
 	github.com/klauspost/compress v1.15.15
+	github.com/lightstep/telemetry-generator/generatorreceiver v0.11.13
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/open-telemetry/opentelemetry-collector-contrib/extension/basicauthextension v0.71.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/extension/headerssetterextension v0.71.0
 	github.com/pierrec/lz4 v2.0.5+incompatible
+	github.com/robfig/cron/v3 v3.0.1
 	github.com/stretchr/testify v1.8.1
 	go.opentelemetry.io/collector v0.71.0
 	go.opentelemetry.io/collector/component v0.71.0
@@ -38,7 +40,7 @@ require (
 	golang.org/x/exp v0.0.0-20220827204233-334a2380cb91
 	golang.org/x/net v0.7.0
 	golang.org/x/sys v0.5.0
-	google.golang.org/genproto v0.0.0-20221118155620-16455021b5e6
+	google.golang.org/genproto v0.0.0-20221206210731-b1a01be3a5f6
 	google.golang.org/grpc v1.52.3
 	google.golang.org/protobuf v1.28.1
 )

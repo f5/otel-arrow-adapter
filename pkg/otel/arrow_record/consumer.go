@@ -164,7 +164,10 @@ func (c *Consumer) Consume(bar *colarspb.BatchArrowRecords) ([]*RecordMessage, e
 				ipc.WithZstd(),
 			)
 			if err != nil {
-				return nil, werror.Wrap(err)
+				return nil, werror.WrapWithContext(err, map[string]interface{}{
+					"sub-stream-id": payload.SubStreamId,
+					"dict-deltas":   true,
+					"zstd":          true})
 			}
 			sc.ipcReader = ipcReader
 		}
