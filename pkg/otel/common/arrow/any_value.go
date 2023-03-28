@@ -18,7 +18,8 @@
 package arrow
 
 import (
-	"fmt"
+	"encoding/hex"
+	"strconv"
 
 	"github.com/apache/arrow/go/v11/arrow"
 	"github.com/apache/arrow/go/v11/arrow/array"
@@ -79,15 +80,15 @@ func ValueID(v pcommon.Value) string {
 	case pcommon.ValueTypeStr:
 		return v.Str()
 	case pcommon.ValueTypeInt:
-		return fmt.Sprintf("%d", v.Int())
+		return strconv.FormatInt(v.Int(), 10)
 	case pcommon.ValueTypeDouble:
-		return fmt.Sprintf("%f", v.Double())
+		return strconv.FormatFloat(v.Double(), 'E', -1, 64)
 	case pcommon.ValueTypeBool:
-		return fmt.Sprintf("%t", v.Bool())
+		return strconv.FormatBool(v.Bool())
 	case pcommon.ValueTypeMap:
 		return AttributesId(v.Map())
 	case pcommon.ValueTypeBytes:
-		return fmt.Sprintf("%x", v.Bytes().AsRaw())
+		return hex.EncodeToString(v.Bytes().AsRaw())
 	case pcommon.ValueTypeSlice:
 		values := v.Slice()
 		valueID := "["

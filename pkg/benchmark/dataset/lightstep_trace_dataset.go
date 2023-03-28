@@ -29,6 +29,7 @@ type LightstepTracesDataset struct {
 	traceCount            int
 	currentTraceGenerator int
 	traceGenerators       []*lightstep.TraceGenerator
+	traces                []*ptrace.Traces
 	tracesStats           *stats.TracesStats
 }
 
@@ -72,25 +73,34 @@ func NewLightstepTracesDataset(topoFileName string, traceCount int) *LightstepTr
 		traceGenerators = append(traceGenerators, lightstep.NewTraceGenerator(topoFile.Topology, routeRand, svc, route))
 	}
 
+	time := time.Now().UnixNano()
+	var traces []*ptrace.Traces
+	for i := 0; i < traceCount; i++ {
+		trace := traceGenerators[i%len(traceGenerators)].Generate(time)
+		traces = append(traces, trace)
+		time += 1000000000
+	}
+
 	ds := &LightstepTracesDataset{
 		traceCount:            traceCount,
 		currentTraceGenerator: 0,
 		traceGenerators:       traceGenerators,
+		traces:                traces,
 		tracesStats:           stats.NewTracesStats(),
 	}
 	return ds
 }
 
 func (d *LightstepTracesDataset) Resize(size int) {
-	d.traceCount = size
+	d.traces = d.traces[:size]
 }
 
 func (d *LightstepTracesDataset) SizeInBytes() int {
-	return 1
+	return 0
 }
 
 func (d *LightstepTracesDataset) Len() int {
-	return d.traceCount
+	return len(d.traces)
 }
 
 func (d *LightstepTracesDataset) ShowStats() {
@@ -102,9 +112,7 @@ func (d *LightstepTracesDataset) ShowStats() {
 func (d *LightstepTracesDataset) Traces(offset, size int) []ptrace.Traces {
 	var traces []ptrace.Traces
 	for i := 0; i < size; i++ {
-		trace := d.traceGenerators[d.currentTraceGenerator].Generate(time.Now().UnixNano())
-		traces = append(traces, *trace)
-		d.currentTraceGenerator = (d.currentTraceGenerator + 1) % len(d.traceGenerators)
+		traces = append(traces, *d.traces[offset+i])
 	}
 
 	return traces
