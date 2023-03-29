@@ -35,13 +35,15 @@ type MetricsOptimizer struct {
 }
 
 type MetricsOptimized struct {
-	ResourceMetrics map[string]*ResourceMetricsGroup // resource metrics id -> resource metrics group
+	ResourceMetricsIdx map[string]int // resource metrics id -> resource metrics group
+	ResourceMetrics    []*ResourceMetricsGroup
 }
 
 type ResourceMetricsGroup struct {
 	Resource          *pcommon.Resource
 	ResourceSchemaUrl string
-	ScopeMetrics      map[string]*ScopeMetricsGroup // scope metrics id -> scope metrics group
+	ScopeMetricsIdx   map[string]int // scope metrics id -> scope metrics group
+	ScopeMetrics      []*ScopeMetricsGroup
 }
 
 type ScopeMetricsGroup struct {
@@ -73,7 +75,8 @@ func NewMetricsOptimizer(cfg ...func(*carrow.Options)) *MetricsOptimizer {
 
 func (t *MetricsOptimizer) Optimize(metrics pmetric.Metrics) *MetricsOptimized {
 	metricsOptimized := &MetricsOptimized{
-		ResourceMetrics: make(map[string]*ResourceMetricsGroup),
+		ResourceMetricsIdx: make(map[string]int),
+		ResourceMetrics:    make([]*ResourceMetricsGroup, 0),
 	}
 
 	resMetricsSlice := metrics.ResourceMetrics()
@@ -93,39 +96,45 @@ func (t *MetricsOptimizer) Optimize(metrics pmetric.Metrics) *MetricsOptimized {
 
 func (t *MetricsOptimized) AddResourceMetrics(resMetrics *pmetric.ResourceMetrics) {
 	resMetricsID := otlp.ResourceID(resMetrics.Resource(), resMetrics.SchemaUrl())
-	resMetricsGroup, found := t.ResourceMetrics[resMetricsID]
+	resMetricsGroupIdx, found := t.ResourceMetricsIdx[resMetricsID]
 	if !found {
 		res := resMetrics.Resource()
-		resMetricsGroup = &ResourceMetricsGroup{
+		resMetricsGroup := &ResourceMetricsGroup{
 			Resource:          &res,
 			ResourceSchemaUrl: resMetrics.SchemaUrl(),
-			ScopeMetrics:      make(map[string]*ScopeMetricsGroup),
+			ScopeMetricsIdx:   make(map[string]int),
+			ScopeMetrics:      make([]*ScopeMetricsGroup, 0),
 		}
-		t.ResourceMetrics[resMetricsID] = resMetricsGroup
+		t.ResourceMetrics = append(t.ResourceMetrics, resMetricsGroup)
+		resMetricsGroupIdx = len(t.ResourceMetrics) - 1
+		t.ResourceMetricsIdx[resMetricsID] = resMetricsGroupIdx
 	}
 	scopeMetricsSlice := resMetrics.ScopeMetrics()
 	for i := 0; i < scopeMetricsSlice.Len(); i++ {
 		scopeMetrics := scopeMetricsSlice.At(i)
-		resMetricsGroup.AddScopeMetrics(&scopeMetrics)
+		t.ResourceMetrics[resMetricsGroupIdx].AddScopeMetrics(&scopeMetrics)
 	}
 }
 
 func (r *ResourceMetricsGroup) AddScopeMetrics(scopeMetrics *pmetric.ScopeMetrics) {
 	scopeMetricsID := otlp.ScopeID(scopeMetrics.Scope(), scopeMetrics.SchemaUrl())
-	scopeMetricsGroup, found := r.ScopeMetrics[scopeMetricsID]
+	scopeMetricsGroupIdx, found := r.ScopeMetricsIdx[scopeMetricsID]
 	if !found {
 		scope := scopeMetrics.Scope()
-		scopeMetricsGroup = &ScopeMetricsGroup{
+		scopeMetricsGroup := &ScopeMetricsGroup{
 			Scope:          &scope,
 			ScopeSchemaUrl: scopeMetrics.SchemaUrl(),
 			Metrics:        make([]*pmetric.Metric, 0),
 		}
-		r.ScopeMetrics[scopeMetricsID] = scopeMetricsGroup
+		r.ScopeMetrics = append(r.ScopeMetrics, scopeMetricsGroup)
+		scopeMetricsGroupIdx = len(r.ScopeMetrics) - 1
+		r.ScopeMetricsIdx[scopeMetricsID] = scopeMetricsGroupIdx
 	}
 	metricsSlice := scopeMetrics.Metrics()
 	for i := 0; i < metricsSlice.Len(); i++ {
 		metric := metricsSlice.At(i)
-		scopeMetricsGroup.Metrics = append(scopeMetricsGroup.Metrics, &metric)
+		scopeMetrics := r.ScopeMetrics[scopeMetricsGroupIdx]
+		scopeMetrics.Metrics = append(scopeMetrics.Metrics, &metric)
 	}
 }
 

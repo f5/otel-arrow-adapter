@@ -35,13 +35,15 @@ type LogsOptimizer struct {
 }
 
 type LogsOptimized struct {
-	ResourceLogs map[string]*ResourceLogGroup // resource logs id -> resource logs group
+	ResourceLogsIdx map[string]int // resource logs id -> resource logs group
+	ResourceLogs    []*ResourceLogGroup
 }
 
 type ResourceLogGroup struct {
 	Resource          *pcommon.Resource
 	ResourceSchemaUrl string
-	ScopeLogs         map[string]*ScopeLogGroup // scope logs id -> scope logs group
+	ScopeLogsIdx      map[string]int // scope logs id -> scope logs group
+	ScopeLogs         []*ScopeLogGroup
 }
 
 type ScopeLogGroup struct {
@@ -73,7 +75,8 @@ func NewLogsOptimizer(cfg ...func(*carrow.Options)) *LogsOptimizer {
 
 func (t *LogsOptimizer) Optimize(logs plog.Logs) *LogsOptimized {
 	logsOptimized := &LogsOptimized{
-		ResourceLogs: make(map[string]*ResourceLogGroup),
+		ResourceLogsIdx: make(map[string]int),
+		ResourceLogs:    make([]*ResourceLogGroup, 0),
 	}
 
 	resLogsSlice := logs.ResourceLogs()
@@ -93,39 +96,45 @@ func (t *LogsOptimizer) Optimize(logs plog.Logs) *LogsOptimized {
 
 func (t *LogsOptimized) AddResourceLogs(resLogs *plog.ResourceLogs) {
 	resLogsID := otlp.ResourceID(resLogs.Resource(), resLogs.SchemaUrl())
-	resLogGroup, found := t.ResourceLogs[resLogsID]
+	resLogGroupIdx, found := t.ResourceLogsIdx[resLogsID]
 	if !found {
 		res := resLogs.Resource()
-		resLogGroup = &ResourceLogGroup{
+		resLogGroup := &ResourceLogGroup{
 			Resource:          &res,
 			ResourceSchemaUrl: resLogs.SchemaUrl(),
-			ScopeLogs:         make(map[string]*ScopeLogGroup),
+			ScopeLogsIdx:      make(map[string]int),
+			ScopeLogs:         make([]*ScopeLogGroup, 0),
 		}
-		t.ResourceLogs[resLogsID] = resLogGroup
+		t.ResourceLogs = append(t.ResourceLogs, resLogGroup)
+		resLogGroupIdx = len(t.ResourceLogs) - 1
+		t.ResourceLogsIdx[resLogsID] = resLogGroupIdx
 	}
 	scopeLogsSlice := resLogs.ScopeLogs()
 	for i := 0; i < scopeLogsSlice.Len(); i++ {
 		scopeLogs := scopeLogsSlice.At(i)
-		resLogGroup.AddScopeLogs(&scopeLogs)
+		t.ResourceLogs[resLogGroupIdx].AddScopeLogs(&scopeLogs)
 	}
 }
 
 func (r *ResourceLogGroup) AddScopeLogs(scopeLogs *plog.ScopeLogs) {
 	scopeLogID := otlp.ScopeID(scopeLogs.Scope(), scopeLogs.SchemaUrl())
-	scopeLogGroup, found := r.ScopeLogs[scopeLogID]
+	scopeLogGroupIdx, found := r.ScopeLogsIdx[scopeLogID]
 	if !found {
 		scope := scopeLogs.Scope()
-		scopeLogGroup = &ScopeLogGroup{
+		scopeLogGroup := &ScopeLogGroup{
 			Scope:          &scope,
 			ScopeSchemaUrl: scopeLogs.SchemaUrl(),
 			Logs:           make([]*plog.LogRecord, 0),
 		}
-		r.ScopeLogs[scopeLogID] = scopeLogGroup
+		r.ScopeLogs = append(r.ScopeLogs, scopeLogGroup)
+		scopeLogGroupIdx = len(r.ScopeLogs) - 1
+		r.ScopeLogsIdx[scopeLogID] = scopeLogGroupIdx
 	}
 	logsSlice := scopeLogs.LogRecords()
 	for i := 0; i < logsSlice.Len(); i++ {
 		log := logsSlice.At(i)
-		scopeLogGroup.Logs = append(scopeLogGroup.Logs, &log)
+		sl := r.ScopeLogs[scopeLogGroupIdx]
+		sl.Logs = append(sl.Logs, &log)
 	}
 }
 

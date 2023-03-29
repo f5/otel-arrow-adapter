@@ -319,7 +319,8 @@ func ToResourceSpanGroup(resSpan ptrace.ResourceSpans) *ResourceSpanGroup {
 	resSpanGroup := ResourceSpanGroup{
 		Resource:          &resource,
 		ResourceSchemaUrl: resSpan.SchemaUrl(),
-		ScopeSpans:        make(map[string]*ScopeSpanGroup),
+		ScopeSpansIdx:     make(map[string]int),
+		ScopeSpans:        make([]*ScopeSpanGroup, 0),
 	}
 	scopeSpanSlice := resSpan.ScopeSpans()
 	for i := 0; i < scopeSpanSlice.Len(); i++ {
