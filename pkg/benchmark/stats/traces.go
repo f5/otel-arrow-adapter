@@ -97,7 +97,7 @@ func (ts *TracesStats) Analyze(traces ptrace.Traces) {
 
 func (ts *TracesStats) ShowStats() {
 	fmt.Printf("\t- ResourceSpans           => %s\n", ts.resourceSpans.ComputeSummary().ToString())
-	fmt.Printf("\t- Attributes/ResourceSpans     => %s\n", ts.resourceAttributes.ComputeSummary().ToString())
+	fmt.Printf("\t- Attributes/Resource     => %s\n", ts.resourceAttributes.ComputeSummary().ToString())
 	fmt.Printf("\t- ScopeSpans/ResourceSpan => %s\n", ts.scopeSpans.ComputeSummary().ToString())
 	fmt.Printf("\t- Attributes/Scope        => %s\n", ts.scopeAttributes.ComputeSummary().ToString())
 	fmt.Printf("\t- Spans/ScopeSpan         => %s\n", ts.spans.ComputeSummary().ToString())

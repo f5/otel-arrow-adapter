@@ -73,7 +73,7 @@ func (ls *LogsStats) Analyze(logs plog.Logs) {
 
 func (ls *LogsStats) ShowStats() {
 	fmt.Printf("\t- ResourceLogs           => %s\n", ls.resourceLogs.ComputeSummary().ToString())
-	fmt.Printf("\t- Attributes/ResourceSpans    => %s\n", ls.resourceAttributes.ComputeSummary().ToString())
+	fmt.Printf("\t- Attributes/Resource    => %s\n", ls.resourceAttributes.ComputeSummary().ToString())
 	fmt.Printf("\t- ScopeLogs/ResourceLogs => %s\n", ls.scopeLogs.ComputeSummary().ToString())
 	fmt.Printf("\t- Attributes/Scope       => %s\n", ls.scopeAttributes.ComputeSummary().ToString())
 	fmt.Printf("\t- LogRecord/ScopeLogs    => %s\n", ls.logs.ComputeSummary().ToString())
