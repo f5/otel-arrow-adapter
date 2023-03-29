@@ -614,7 +614,8 @@ func ToResourceMetricsGroup(resMetrics pmetric.ResourceMetrics) *ResourceMetrics
 	resMetricsGroup := ResourceMetricsGroup{
 		Resource:          &resource,
 		ResourceSchemaUrl: resMetrics.SchemaUrl(),
-		ScopeMetrics:      make(map[string]*ScopeMetricsGroup),
+		ScopeMetricsIdx:   make(map[string]int),
+		ScopeMetrics:      make([]*ScopeMetricsGroup, 0),
 	}
 	scopeMetricsSlice := resMetrics.ScopeMetrics()
 	for i := 0; i < scopeMetricsSlice.Len(); i++ {

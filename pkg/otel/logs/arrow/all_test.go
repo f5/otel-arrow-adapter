@@ -193,7 +193,8 @@ func ToResourceLogGroup(resLogs plog.ResourceLogs) *ResourceLogGroup {
 	resSpanGroup := ResourceLogGroup{
 		Resource:          &resource,
 		ResourceSchemaUrl: resLogs.SchemaUrl(),
-		ScopeLogs:         make(map[string]*ScopeLogGroup),
+		ScopeLogsIdx:      make(map[string]int),
+		ScopeLogs:         make([]*ScopeLogGroup, 0),
 	}
 	scopeLogsSlice := resLogs.ScopeLogs()
 	for i := 0; i < scopeLogsSlice.Len(); i++ {
