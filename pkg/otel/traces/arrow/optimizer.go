@@ -15,7 +15,7 @@
  *
  */
 
-package otlp
+package arrow
 
 import (
 	"sort"
@@ -25,6 +25,8 @@ import (
 	"go.opentelemetry.io/collector/pdata/ptrace"
 
 	"github.com/f5/otel-arrow-adapter/pkg/benchmark/stats"
+	carrow "github.com/f5/otel-arrow-adapter/pkg/otel/common/arrow"
+	"github.com/f5/otel-arrow-adapter/pkg/otel/common/otlp"
 )
 
 type TracesOptimizer struct {
@@ -49,39 +51,22 @@ type ScopeSpanGroup struct {
 	Spans []*ptrace.Span
 }
 
-type Options struct {
-	sort  bool
-	stats bool
-}
-
-func WithSort() func(*Options) {
-	return func(o *Options) {
-		o.sort = true
-	}
-}
-
-func WithStats() func(*Options) {
-	return func(o *Options) {
-		o.stats = true
-	}
-}
-
-func NewTracesOptimizer(cfg ...func(*Options)) *TracesOptimizer {
-	options := Options{
-		sort:  false,
-		stats: false,
+func NewTracesOptimizer(cfg ...func(*carrow.Options)) *TracesOptimizer {
+	options := carrow.Options{
+		Sort:  false,
+		Stats: false,
 	}
 	for _, c := range cfg {
 		c(&options)
 	}
 
 	var s *stats.TracesStats
-	if options.stats {
+	if options.Stats {
 		s = stats.NewTracesStats()
 	}
 
 	return &TracesOptimizer{
-		sort:  options.sort,
+		sort:  options.Sort,
 		stats: s,
 	}
 }
@@ -107,7 +92,7 @@ func (t *TracesOptimizer) Optimize(traces ptrace.Traces) *TracesOptimized {
 }
 
 func (t *TracesOptimized) AddResourceSpan(resSpan *ptrace.ResourceSpans) {
-	resSpanId := ResourceID(resSpan.Resource(), resSpan.SchemaUrl())
+	resSpanId := otlp.ResourceID(resSpan.Resource(), resSpan.SchemaUrl())
 	resSpanGroup, found := t.ResourceSpans[resSpanId]
 	if !found {
 		res := resSpan.Resource()
@@ -126,7 +111,7 @@ func (t *TracesOptimized) AddResourceSpan(resSpan *ptrace.ResourceSpans) {
 }
 
 func (r *ResourceSpanGroup) AddScopeSpan(scopeSpan *ptrace.ScopeSpans) {
-	scopeSpanId := ScopeID(scopeSpan.Scope(), scopeSpan.SchemaUrl())
+	scopeSpanId := otlp.ScopeID(scopeSpan.Scope(), scopeSpan.SchemaUrl())
 	scopeSpanGroup, found := r.ScopeSpans[scopeSpanId]
 	if !found {
 		scope := scopeSpan.Scope()
