@@ -64,7 +64,7 @@ func (ms *MetricsStats) Analyze(metrics pmetric.Metrics) {
 
 func (ms *MetricsStats) ShowStats() {
 	fmt.Printf("\t- ResourceMetrics           => %s\n", ms.resourceMetrics.ComputeSummary().ToString())
-	fmt.Printf("\t- Attributes/Resource       => %s\n", ms.resourceAttributes.ComputeSummary().ToString())
+	fmt.Printf("\t- Attributes/ResourceSpans       => %s\n", ms.resourceAttributes.ComputeSummary().ToString())
 	fmt.Printf("\t- ScopeLogs/ResourceMetrics => %s\n", ms.scopeMetrics.ComputeSummary().ToString())
 	fmt.Printf("\t- Attributes/Scope          => %s\n", ms.scopeAttributes.ComputeSummary().ToString())
 	fmt.Printf("\t- LogRecord/ScopeMetrics    => %s\n", ms.metrics.ComputeSummary().ToString())
