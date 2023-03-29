@@ -18,20 +18,21 @@
 package arrow
 
 import (
+	"fmt"
 	"sort"
 	"strings"
 
+	"github.com/HdrHistogram/hdrhistogram-go"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/ptrace"
 
-	"github.com/f5/otel-arrow-adapter/pkg/benchmark/stats"
 	carrow "github.com/f5/otel-arrow-adapter/pkg/otel/common/arrow"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/otlp"
 )
 
 type TracesOptimizer struct {
 	sort  bool
-	stats *stats.TracesStats
+	stats *TracesStats
 }
 
 type TracesOptimized struct {
@@ -53,6 +54,20 @@ type ScopeSpanGroup struct {
 	Spans []*ptrace.Span
 }
 
+type TracesStats struct {
+	TracesCount            int
+	ResourceSpansHistogram *hdrhistogram.Histogram
+	ResourceAttrsHistogram *hdrhistogram.Histogram
+	ScopeSpansHistogram    *hdrhistogram.Histogram
+	ScopeAttrsHistogram    *hdrhistogram.Histogram
+	SpansHistogram         *hdrhistogram.Histogram
+	SpanAttrsHistogram     *hdrhistogram.Histogram
+	EventsHistogram        *hdrhistogram.Histogram
+	EventAttrsHistogram    *hdrhistogram.Histogram
+	LinksHistogram         *hdrhistogram.Histogram
+	LinkAttrsHistogram     *hdrhistogram.Histogram
+}
+
 func NewTracesOptimizer(cfg ...func(*carrow.Options)) *TracesOptimizer {
 	options := carrow.Options{
 		Sort:  false,
@@ -62,15 +77,31 @@ func NewTracesOptimizer(cfg ...func(*carrow.Options)) *TracesOptimizer {
 		c(&options)
 	}
 
-	var s *stats.TracesStats
+	var s *TracesStats
 	if options.Stats {
-		s = stats.NewTracesStats()
+		s = &TracesStats{
+			TracesCount:            0,
+			ResourceSpansHistogram: hdrhistogram.New(1, 1000000, 1),
+			ResourceAttrsHistogram: hdrhistogram.New(1, 1000000, 1),
+			ScopeSpansHistogram:    hdrhistogram.New(1, 1000000, 1),
+			ScopeAttrsHistogram:    hdrhistogram.New(1, 1000000, 1),
+			SpansHistogram:         hdrhistogram.New(1, 1000000, 1),
+			SpanAttrsHistogram:     hdrhistogram.New(1, 1000000, 1),
+			EventsHistogram:        hdrhistogram.New(1, 1000000, 1),
+			EventAttrsHistogram:    hdrhistogram.New(1, 1000000, 1),
+			LinksHistogram:         hdrhistogram.New(1, 1000000, 1),
+			LinkAttrsHistogram:     hdrhistogram.New(1, 1000000, 1),
+		}
 	}
 
 	return &TracesOptimizer{
 		sort:  options.Sort,
 		stats: s,
 	}
+}
+
+func (t *TracesOptimizer) Stats() *TracesStats {
+	return t.stats
 }
 
 func (t *TracesOptimizer) Optimize(traces ptrace.Traces) *TracesOptimized {
@@ -91,7 +122,24 @@ func (t *TracesOptimizer) Optimize(traces ptrace.Traces) *TracesOptimized {
 		}
 	}
 
+	if t.stats != nil {
+		tracesOptimized.RecordStats(t.stats)
+	}
 	return tracesOptimized
+}
+
+func (t *TracesOptimized) RecordStats(stats *TracesStats) {
+	stats.TracesCount++
+	if err := stats.ResourceSpansHistogram.RecordValue(int64(len(t.ResourceSpans))); err != nil {
+		panic(fmt.Sprintf("number of resource spans is out of range: %v", err))
+	}
+	for _, resSpanGroup := range t.ResourceSpans {
+		attrs := resSpanGroup.Resource.Attributes()
+		if err := stats.ResourceAttrsHistogram.RecordValue(int64(attrs.Len())); err != nil {
+			panic(fmt.Sprintf("number of resource attributes is out of range: %v", err))
+		}
+		resSpanGroup.RecordStats(stats)
+	}
 }
 
 func (t *TracesOptimized) AddResourceSpan(resSpan *ptrace.ResourceSpans) {
@@ -147,4 +195,140 @@ func (r *ResourceSpanGroup) Sort() {
 			) == -1
 		})
 	}
+}
+
+func (t *ResourceSpanGroup) RecordStats(stats *TracesStats) {
+	if err := stats.ScopeSpansHistogram.RecordValue(int64(len(t.ScopeSpans))); err != nil {
+		panic(fmt.Sprintf("number of scope spans is out of range: %v", err))
+	}
+	for _, scopeSpansGroup := range t.ScopeSpans {
+		attrs := scopeSpansGroup.Scope.Attributes()
+		if err := stats.ScopeAttrsHistogram.RecordValue(int64(attrs.Len())); err != nil {
+			panic(fmt.Sprintf("number of scope attributes is out of range: %v", err))
+		}
+		scopeSpansGroup.RecordStats(stats)
+	}
+}
+
+func (t *ScopeSpanGroup) RecordStats(stats *TracesStats) {
+	if err := stats.SpansHistogram.RecordValue(int64(len(t.Spans))); err != nil {
+		panic(fmt.Sprintf("number of spans is out of range: %v", err))
+	}
+	for _, span := range t.Spans {
+		attrs := span.Attributes()
+		if err := stats.SpanAttrsHistogram.RecordValue(int64(attrs.Len())); err != nil {
+			panic(fmt.Sprintf("number of span attributes is out of range: %v", err))
+		}
+		spanEventsSlice := span.Events()
+		if spanEventsSlice.Len() > 0 {
+			if err := stats.EventsHistogram.RecordValue(int64(spanEventsSlice.Len())); err != nil {
+				panic(fmt.Sprintf("number of events is out of range: %v", err))
+			}
+			for i := 0; i < spanEventsSlice.Len(); i++ {
+				event := spanEventsSlice.At(i)
+				attrs = event.Attributes()
+				if err := stats.EventAttrsHistogram.RecordValue(int64(attrs.Len())); err != nil {
+					panic(fmt.Sprintf("number of event attributes is out of range: %v", err))
+				}
+			}
+		}
+		spanLinksSlice := span.Links()
+		if spanLinksSlice.Len() > 0 {
+			if err := stats.LinksHistogram.RecordValue(int64(spanLinksSlice.Len())); err != nil {
+				panic(fmt.Sprintf("number of links is out of range: %v", err))
+			}
+			for i := 0; i < spanLinksSlice.Len(); i++ {
+				link := spanLinksSlice.At(i)
+				attrs = link.Attributes()
+				if err := stats.LinkAttrsHistogram.RecordValue(int64(attrs.Len())); err != nil {
+					panic(fmt.Sprintf("number of link attributes is out of range: %v", err))
+				}
+			}
+		}
+	}
+}
+
+func (t *TracesStats) Show() {
+	println("\nTraces stats (after optimization):")
+	fmt.Printf("\tNumber of trace batches  : %d\n", t.TracesCount)
+	fmt.Printf("\tResource spans/Batch     : mean: %8.2f, min: %8d, max: %8d, std-dev: %8.2f, p50: %8d, p99: %8d\n",
+		t.ResourceSpansHistogram.Mean(),
+		t.ResourceSpansHistogram.Min(),
+		t.ResourceSpansHistogram.Max(),
+		t.ResourceSpansHistogram.StdDev(),
+		t.ResourceSpansHistogram.ValueAtQuantile(50),
+		t.ResourceSpansHistogram.ValueAtQuantile(99),
+	)
+	fmt.Printf("\tAttributes/Resource      : mean: %8.2f, min: %8d, max: %8d, std-dev: %8.2f, p50: %8d, p99: %8d\n",
+		t.ResourceAttrsHistogram.Mean(),
+		t.ResourceAttrsHistogram.Min(),
+		t.ResourceAttrsHistogram.Max(),
+		t.ResourceAttrsHistogram.StdDev(),
+		t.ResourceAttrsHistogram.ValueAtQuantile(50),
+		t.ResourceAttrsHistogram.ValueAtQuantile(99),
+	)
+	fmt.Printf("\tScope spans/ResourceSpans: mean: %8.2f, min: %8d, max: %8d, std-dev: %8.2f, p50: %8d, p99: %8d\n",
+		t.ScopeSpansHistogram.Mean(),
+		t.ScopeSpansHistogram.Min(),
+		t.ScopeSpansHistogram.Max(),
+		t.ScopeSpansHistogram.StdDev(),
+		t.ScopeSpansHistogram.ValueAtQuantile(50),
+		t.ScopeSpansHistogram.ValueAtQuantile(99),
+	)
+	fmt.Printf("\tAttributes/Scope         : mean: %8.2f, min: %8d, max: %8d, std-dev: %8.2f, p50: %8d, p99: %8d\n",
+		t.ScopeAttrsHistogram.Mean(),
+		t.ScopeAttrsHistogram.Min(),
+		t.ScopeAttrsHistogram.Max(),
+		t.ScopeAttrsHistogram.StdDev(),
+		t.ScopeAttrsHistogram.ValueAtQuantile(50),
+		t.ScopeAttrsHistogram.ValueAtQuantile(99),
+	)
+	fmt.Printf("\tSpans/ScopeSpans         : mean: %8.2f, min: %8d, max: %8d, std-dev: %8.2f, p50: %8d, p99: %8d\n",
+		t.SpansHistogram.Mean(),
+		t.SpansHistogram.Min(),
+		t.SpansHistogram.Max(),
+		t.SpansHistogram.StdDev(),
+		t.SpansHistogram.ValueAtQuantile(50),
+		t.SpansHistogram.ValueAtQuantile(99),
+	)
+	fmt.Printf("\tAttributes/Span          : mean: %8.2f, min: %8d, max: %8d, std-dev: %8.2f, p50: %8d, p99: %8d\n",
+		t.SpanAttrsHistogram.Mean(),
+		t.SpanAttrsHistogram.Min(),
+		t.SpanAttrsHistogram.Max(),
+		t.SpanAttrsHistogram.StdDev(),
+		t.SpanAttrsHistogram.ValueAtQuantile(50),
+		t.SpanAttrsHistogram.ValueAtQuantile(99),
+	)
+	fmt.Printf("\tEvents/Spans             : mean: %8.2f, min: %8d, max: %8d, std-dev: %8.2f, p50: %8d, p99: %8d\n",
+		t.EventsHistogram.Mean(),
+		t.EventsHistogram.Min(),
+		t.EventsHistogram.Max(),
+		t.EventsHistogram.StdDev(),
+		t.EventsHistogram.ValueAtQuantile(50),
+		t.EventsHistogram.ValueAtQuantile(99),
+	)
+	fmt.Printf("\tAttributes/Events        : mean: %8.2f, min: %8d, max: %8d, std-dev: %8.2f, p50: %8d, p99: %8d\n",
+		t.EventAttrsHistogram.Mean(),
+		t.EventAttrsHistogram.Min(),
+		t.EventAttrsHistogram.Max(),
+		t.EventAttrsHistogram.StdDev(),
+		t.EventAttrsHistogram.ValueAtQuantile(50),
+		t.EventAttrsHistogram.ValueAtQuantile(99),
+	)
+	fmt.Printf("\tLinks/Spans              : mean: %8.2f, min: %8d, max: %8d, std-dev: %8.2f, p50: %8d, p99: %8d\n",
+		t.LinksHistogram.Mean(),
+		t.LinksHistogram.Min(),
+		t.LinksHistogram.Max(),
+		t.LinksHistogram.StdDev(),
+		t.LinksHistogram.ValueAtQuantile(50),
+		t.LinksHistogram.ValueAtQuantile(99),
+	)
+	fmt.Printf("\tAttributes/Links         : mean: %8.2f, min: %8d, max: %8d, std-dev: %8.2f, p50: %8d, p99: %8d\n",
+		t.LinkAttrsHistogram.Mean(),
+		t.LinkAttrsHistogram.Min(),
+		t.LinkAttrsHistogram.Max(),
+		t.LinkAttrsHistogram.StdDev(),
+		t.LinkAttrsHistogram.ValueAtQuantile(50),
+		t.LinkAttrsHistogram.ValueAtQuantile(99),
+	)
 }

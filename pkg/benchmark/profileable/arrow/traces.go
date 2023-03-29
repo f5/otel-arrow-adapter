@@ -171,4 +171,9 @@ func (s *TracesProfileable) Clear() {
 		}
 	}
 }
-func (s *TracesProfileable) ShowStats() {}
+func (s *TracesProfileable) ShowStats() {
+	stats := s.producer.TracesStats()
+	if stats != nil {
+		stats.Show()
+	}
+}
