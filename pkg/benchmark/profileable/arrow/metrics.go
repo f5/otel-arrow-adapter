@@ -30,7 +30,7 @@ import (
 
 var metricsProducerOptions = []arrow_record.Option{
 	arrow_record.WithNoZstd(),
-	//arrow_record.WithMetricsStats(),
+	arrow_record.WithMetricsStats(),
 }
 
 type MetricsProfileable struct {

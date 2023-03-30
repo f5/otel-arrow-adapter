@@ -57,20 +57,20 @@ type ScopeMetricsGroup struct {
 type MetricsStats struct {
 	MetricsCount               int
 	ResourceMetricsHistogram   *hdrhistogram.Histogram
-	ResourceAttrsHistogram     *hdrhistogram.Histogram
+	ResourceAttrsHistogram     *carrow.AttributesStats
 	ScopeMetricsHistogram      *hdrhistogram.Histogram
-	ScopeAttrsHistogram        *hdrhistogram.Histogram
+	ScopeAttrsHistogram        *carrow.AttributesStats
 	MetricsHistogram           *hdrhistogram.Histogram
 	SumHistogram               *hdrhistogram.Histogram
-	SumAttrsHistogram          *hdrhistogram.Histogram
+	SumAttrsHistogram          *carrow.AttributesStats
 	GaugeHistogram             *hdrhistogram.Histogram
-	GaugeAttrsHistogram        *hdrhistogram.Histogram
+	GaugeAttrsHistogram        *carrow.AttributesStats
 	HistogramHistogram         *hdrhistogram.Histogram
-	HistogramAttrsHistogram    *hdrhistogram.Histogram
+	HistogramAttrsHistogram    *carrow.AttributesStats
 	SummaryHistogram           *hdrhistogram.Histogram
-	SummaryAttrsHistogram      *hdrhistogram.Histogram
+	SummaryAttrsHistogram      *carrow.AttributesStats
 	ExpHistogramHistogram      *hdrhistogram.Histogram
-	ExpHistogramAttrsHistogram *hdrhistogram.Histogram
+	ExpHistogramAttrsHistogram *carrow.AttributesStats
 }
 
 func NewMetricsOptimizer(cfg ...func(*carrow.Options)) *MetricsOptimizer {
@@ -87,20 +87,20 @@ func NewMetricsOptimizer(cfg ...func(*carrow.Options)) *MetricsOptimizer {
 		s = &MetricsStats{
 			MetricsCount:               0,
 			ResourceMetricsHistogram:   hdrhistogram.New(1, 1000000, 1),
-			ResourceAttrsHistogram:     hdrhistogram.New(1, 1000000, 1),
+			ResourceAttrsHistogram:     carrow.NewAttributesStats(),
 			ScopeMetricsHistogram:      hdrhistogram.New(1, 1000000, 1),
-			ScopeAttrsHistogram:        hdrhistogram.New(1, 1000000, 1),
+			ScopeAttrsHistogram:        carrow.NewAttributesStats(),
 			MetricsHistogram:           hdrhistogram.New(1, 1000000, 1),
 			SumHistogram:               hdrhistogram.New(1, 1000000, 1),
-			SumAttrsHistogram:          hdrhistogram.New(1, 1000000, 1),
+			SumAttrsHistogram:          carrow.NewAttributesStats(),
 			GaugeHistogram:             hdrhistogram.New(1, 1000000, 1),
-			GaugeAttrsHistogram:        hdrhistogram.New(1, 1000000, 1),
+			GaugeAttrsHistogram:        carrow.NewAttributesStats(),
 			HistogramHistogram:         hdrhistogram.New(1, 1000000, 1),
-			HistogramAttrsHistogram:    hdrhistogram.New(1, 1000000, 1),
+			HistogramAttrsHistogram:    carrow.NewAttributesStats(),
 			SummaryHistogram:           hdrhistogram.New(1, 1000000, 1),
-			SummaryAttrsHistogram:      hdrhistogram.New(1, 1000000, 1),
+			SummaryAttrsHistogram:      carrow.NewAttributesStats(),
 			ExpHistogramHistogram:      hdrhistogram.New(1, 1000000, 1),
-			ExpHistogramAttrsHistogram: hdrhistogram.New(1, 1000000, 1),
+			ExpHistogramAttrsHistogram: carrow.NewAttributesStats(),
 		}
 	}
 
@@ -146,9 +146,7 @@ func (t *MetricsOptimized) RecordStats(stats *MetricsStats) {
 	}
 	for _, resMetricsGroup := range t.ResourceMetrics {
 		attrs := resMetricsGroup.Resource.Attributes()
-		if err := stats.ResourceAttrsHistogram.RecordValue(int64(attrs.Len())); err != nil {
-			panic(fmt.Sprintf("number of resource attrs is out of range: %v", err))
-		}
+		stats.ResourceAttrsHistogram.UpdateStats(attrs)
 		resMetricsGroup.RecordStats(stats)
 	}
 }
@@ -214,9 +212,7 @@ func (t *ResourceMetricsGroup) RecordStats(stats *MetricsStats) {
 	}
 	for _, scopeMetricsGroup := range t.ScopeMetrics {
 		attrs := scopeMetricsGroup.Scope.Attributes()
-		if err := stats.ScopeAttrsHistogram.RecordValue(int64(attrs.Len())); err != nil {
-			panic(fmt.Sprintf("number of scope attributes is out of range: %v", err))
-		}
+		stats.ScopeAttrsHistogram.UpdateStats(attrs)
 		scopeMetricsGroup.RecordStats(stats)
 	}
 }
@@ -238,45 +234,35 @@ func (t *ScopeMetricsGroup) RecordStats(stats *MetricsStats) {
 			dps := metric.Sum().DataPoints()
 			for i := 0; i < dps.Len(); i++ {
 				dp := dps.At(i)
-				if err := stats.SumAttrsHistogram.RecordValue(int64(dp.Attributes().Len())); err != nil {
-					panic(fmt.Sprintf("number of sum attributes is out of range: %v", err))
-				}
+				stats.SumAttrsHistogram.UpdateStats(dp.Attributes())
 			}
 			sumCount++
 		case pmetric.MetricTypeGauge:
 			dps := metric.Gauge().DataPoints()
 			for i := 0; i < dps.Len(); i++ {
 				dp := dps.At(i)
-				if err := stats.GaugeAttrsHistogram.RecordValue(int64(dp.Attributes().Len())); err != nil {
-					panic(fmt.Sprintf("number of gauge attributes is out of range: %v", err))
-				}
+				stats.GaugeAttrsHistogram.UpdateStats(dp.Attributes())
 			}
 			gaugeCount++
 		case pmetric.MetricTypeSummary:
 			dps := metric.Summary().DataPoints()
 			for i := 0; i < dps.Len(); i++ {
 				dp := dps.At(i)
-				if err := stats.SummaryAttrsHistogram.RecordValue(int64(dp.Attributes().Len())); err != nil {
-					panic(fmt.Sprintf("number of summary attributes is out of range: %v", err))
-				}
+				stats.SummaryAttrsHistogram.UpdateStats(dp.Attributes())
 			}
 			summaryCount++
 		case pmetric.MetricTypeHistogram:
 			dps := metric.Histogram().DataPoints()
 			for i := 0; i < dps.Len(); i++ {
 				dp := dps.At(i)
-				if err := stats.HistogramAttrsHistogram.RecordValue(int64(dp.Attributes().Len())); err != nil {
-					panic(fmt.Sprintf("number of histogram attributes is out of range: %v", err))
-				}
+				stats.HistogramAttrsHistogram.UpdateStats(dp.Attributes())
 			}
 			histogramCount++
 		case pmetric.MetricTypeExponentialHistogram:
 			dps := metric.ExponentialHistogram().DataPoints()
 			for i := 0; i < dps.Len(); i++ {
 				dp := dps.At(i)
-				if err := stats.ExpHistogramAttrsHistogram.RecordValue(int64(dp.Attributes().Len())); err != nil {
-					panic(fmt.Sprintf("number of exponential histogram attributes is out of range: %v", err))
-				}
+				stats.ExpHistogramAttrsHistogram.UpdateStats(dp.Attributes())
 			}
 			expHistogramCount++
 		default: /* ignore */
@@ -301,9 +287,9 @@ func (t *ScopeMetricsGroup) RecordStats(stats *MetricsStats) {
 }
 
 func (t *MetricsStats) Show() {
-	println("\nMetrics stats (after optimization):")
-	fmt.Printf("\tNumber of metric batches   : %d\n", t.MetricsCount)
-	fmt.Printf("\tResource metrics/Batch     : mean: %8.2f, min: %8d, max: %8d, std-dev: %8.2f, p50: %8d, p99: %8d\n",
+	println("\n== Metrics structure distribution ============================================================")
+	fmt.Printf("Metrics : %d\n", t.MetricsCount)
+	fmt.Printf("  ResourceMetrics  -> mean: %8.2f, min: %8d, max: %8d, std-dev: %8.2f, p50: %8d, p99: %8d\n",
 		t.ResourceMetricsHistogram.Mean(),
 		t.ResourceMetricsHistogram.Min(),
 		t.ResourceMetricsHistogram.Max(),
@@ -311,15 +297,9 @@ func (t *MetricsStats) Show() {
 		t.ResourceMetricsHistogram.ValueAtQuantile(50),
 		t.ResourceMetricsHistogram.ValueAtQuantile(99),
 	)
-	fmt.Printf("\tAttributes/Resource        : mean: %8.2f, min: %8d, max: %8d, std-dev: %8.2f, p50: %8d, p99: %8d\n",
-		t.ResourceAttrsHistogram.Mean(),
-		t.ResourceAttrsHistogram.Min(),
-		t.ResourceAttrsHistogram.Max(),
-		t.ResourceAttrsHistogram.StdDev(),
-		t.ResourceAttrsHistogram.ValueAtQuantile(50),
-		t.ResourceAttrsHistogram.ValueAtQuantile(99),
-	)
-	fmt.Printf("\tScope metrics/Resource     : mean: %8.2f, min: %8d, max: %8d, std-dev: %8.2f, p50: %8d, p99: %8d\n",
+	fmt.Printf("    Resource\n")
+	t.ResourceAttrsHistogram.Show("      ")
+	fmt.Printf("    ScopeMetrics   -> mean: %8.2f, min: %8d, max: %8d, std-dev: %8.2f, p50: %8d, p99: %8d\n",
 		t.ScopeMetricsHistogram.Mean(),
 		t.ScopeMetricsHistogram.Min(),
 		t.ScopeMetricsHistogram.Max(),
@@ -327,15 +307,9 @@ func (t *MetricsStats) Show() {
 		t.ScopeMetricsHistogram.ValueAtQuantile(50),
 		t.ScopeMetricsHistogram.ValueAtQuantile(99),
 	)
-	fmt.Printf("\tAttributes/Scope           : mean: %8.2f, min: %8d, max: %8d, std-dev: %8.2f, p50: %8d, p99: %8d\n",
-		t.ScopeAttrsHistogram.Mean(),
-		t.ScopeAttrsHistogram.Min(),
-		t.ScopeAttrsHistogram.Max(),
-		t.ScopeAttrsHistogram.StdDev(),
-		t.ScopeAttrsHistogram.ValueAtQuantile(50),
-		t.ScopeAttrsHistogram.ValueAtQuantile(99),
-	)
-	fmt.Printf("\tNumber of metrics/Scope    : mean: %8.2f, min: %8d, max: %8d, std-dev: %8.2f, p50: %8d, p99: %8d\n",
+	fmt.Printf("      Scope\n")
+	t.ScopeAttrsHistogram.Show("        ")
+	fmt.Printf("      Metrics      -> mean: %8.2f, min: %8d, max: %8d, std-dev: %8.2f, p50: %8d, p99: %8d\n",
 		t.MetricsHistogram.Mean(),
 		t.MetricsHistogram.Min(),
 		t.MetricsHistogram.Max(),
@@ -343,7 +317,7 @@ func (t *MetricsStats) Show() {
 		t.MetricsHistogram.ValueAtQuantile(50),
 		t.MetricsHistogram.ValueAtQuantile(99),
 	)
-	fmt.Printf("\tSum metrics/Scope          : mean: %8.2f, min: %8d, max: %8d, std-dev: %8.2f, p50: %8d, p99: %8d\n",
+	fmt.Printf("        Sum           -> mean: %8.2f, min: %8d, max: %8d, std-dev: %8.2f, p50: %8d, p99: %8d\n",
 		t.SumHistogram.Mean(),
 		t.SumHistogram.Min(),
 		t.SumHistogram.Max(),
@@ -351,15 +325,8 @@ func (t *MetricsStats) Show() {
 		t.SumHistogram.ValueAtQuantile(50),
 		t.SumHistogram.ValueAtQuantile(99),
 	)
-	fmt.Printf("\tAttributes/Sum             : mean: %8.2f, min: %8d, max: %8d, std-dev: %8.2f, p50: %8d, p99: %8d\n",
-		t.SumAttrsHistogram.Mean(),
-		t.SumAttrsHistogram.Min(),
-		t.SumAttrsHistogram.Max(),
-		t.SumAttrsHistogram.StdDev(),
-		t.SumAttrsHistogram.ValueAtQuantile(50),
-		t.SumAttrsHistogram.ValueAtQuantile(99),
-	)
-	fmt.Printf("\tGauge metrics/Scope        : mean: %8.2f, min: %8d, max: %8d, std-dev: %8.2f, p50: %8d, p99: %8d\n",
+	t.SumAttrsHistogram.Show("           ")
+	fmt.Printf("        Gauge         -> mean: %8.2f, min: %8d, max: %8d, std-dev: %8.2f, p50: %8d, p99: %8d\n",
 		t.GaugeHistogram.Mean(),
 		t.GaugeHistogram.Min(),
 		t.GaugeHistogram.Max(),
@@ -367,15 +334,8 @@ func (t *MetricsStats) Show() {
 		t.GaugeHistogram.ValueAtQuantile(50),
 		t.GaugeHistogram.ValueAtQuantile(99),
 	)
-	fmt.Printf("\tAttributes/Gauge           : mean: %8.2f, min: %8d, max: %8d, std-dev: %8.2f, p50: %8d, p99: %8d\n",
-		t.GaugeAttrsHistogram.Mean(),
-		t.GaugeAttrsHistogram.Min(),
-		t.GaugeAttrsHistogram.Max(),
-		t.GaugeAttrsHistogram.StdDev(),
-		t.GaugeAttrsHistogram.ValueAtQuantile(50),
-		t.GaugeAttrsHistogram.ValueAtQuantile(99),
-	)
-	fmt.Printf("\tSummary metrics/Scope      : mean: %8.2f, min: %8d, max: %8d, std-dev: %8.2f, p50: %8d, p99: %8d\n",
+	t.GaugeAttrsHistogram.Show("           ")
+	fmt.Printf("        Summary       -> mean: %8.2f, min: %8d, max: %8d, std-dev: %8.2f, p50: %8d, p99: %8d\n",
 		t.SummaryHistogram.Mean(),
 		t.SummaryHistogram.Min(),
 		t.SummaryHistogram.Max(),
@@ -383,15 +343,8 @@ func (t *MetricsStats) Show() {
 		t.SummaryHistogram.ValueAtQuantile(50),
 		t.SummaryHistogram.ValueAtQuantile(99),
 	)
-	fmt.Printf("\tAttributes/Summary         : mean: %8.2f, min: %8d, max: %8d, std-dev: %8.2f, p50: %8d, p99: %8d\n",
-		t.SummaryAttrsHistogram.Mean(),
-		t.SummaryAttrsHistogram.Min(),
-		t.SummaryAttrsHistogram.Max(),
-		t.SummaryAttrsHistogram.StdDev(),
-		t.SummaryAttrsHistogram.ValueAtQuantile(50),
-		t.SummaryAttrsHistogram.ValueAtQuantile(99),
-	)
-	fmt.Printf("\tHistogram metrics/Scope    : mean: %8.2f, min: %8d, max: %8d, std-dev: %8.2f, p50: %8d, p99: %8d\n",
+	t.SummaryAttrsHistogram.Show("           ")
+	fmt.Printf("        Histogram     -> mean: %8.2f, min: %8d, max: %8d, std-dev: %8.2f, p50: %8d, p99: %8d\n",
 		t.HistogramHistogram.Mean(),
 		t.HistogramHistogram.Min(),
 		t.HistogramHistogram.Max(),
@@ -399,15 +352,8 @@ func (t *MetricsStats) Show() {
 		t.HistogramHistogram.ValueAtQuantile(50),
 		t.HistogramHistogram.ValueAtQuantile(99),
 	)
-	fmt.Printf("\tAttributes/Histogram       : mean: %8.2f, min: %8d, max: %8d, std-dev: %8.2f, p50: %8d, p99: %8d\n",
-		t.HistogramAttrsHistogram.Mean(),
-		t.HistogramAttrsHistogram.Min(),
-		t.HistogramAttrsHistogram.Max(),
-		t.HistogramAttrsHistogram.StdDev(),
-		t.HistogramAttrsHistogram.ValueAtQuantile(50),
-		t.HistogramAttrsHistogram.ValueAtQuantile(99),
-	)
-	fmt.Printf("\tExp Histogram metrics/Scope: mean: %8.2f, min: %8d, max: %8d, std-dev: %8.2f, p50: %8d, p99: %8d\n",
+	t.HistogramAttrsHistogram.Show("           ")
+	fmt.Printf("        Exp Histogram -> mean: %8.2f, min: %8d, max: %8d, std-dev: %8.2f, p50: %8d, p99: %8d\n",
 		t.ExpHistogramHistogram.Mean(),
 		t.ExpHistogramHistogram.Min(),
 		t.ExpHistogramHistogram.Max(),
@@ -415,12 +361,5 @@ func (t *MetricsStats) Show() {
 		t.ExpHistogramHistogram.ValueAtQuantile(50),
 		t.ExpHistogramHistogram.ValueAtQuantile(99),
 	)
-	fmt.Printf("\tAttributes/Exp Histogram   : mean: %8.2f, min: %8d, max: %8d, std-dev: %8.2f, p50: %8d, p99: %8d\n",
-		t.ExpHistogramAttrsHistogram.Mean(),
-		t.ExpHistogramAttrsHistogram.Min(),
-		t.ExpHistogramAttrsHistogram.Max(),
-		t.ExpHistogramAttrsHistogram.StdDev(),
-		t.ExpHistogramAttrsHistogram.ValueAtQuantile(50),
-		t.ExpHistogramAttrsHistogram.ValueAtQuantile(99),
-	)
+	t.ExpHistogramAttrsHistogram.Show("           ")
 }
