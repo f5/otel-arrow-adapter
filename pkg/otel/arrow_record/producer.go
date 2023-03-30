@@ -126,12 +126,12 @@ func NewProducerWithOptions(options ...Option) *Producer {
 		MaxCard: cfg.limitIndexSize,
 	})
 
-	metricsBuilder, err := metricsarrow.NewMetricsBuilder(metricsRecordBuilder)
+	metricsBuilder, err := metricsarrow.NewMetricsBuilder(metricsRecordBuilder, cfg.metricsStats)
 	if err != nil {
 		panic(err)
 	}
 
-	logsBuidler, err := logsarrow.NewLogsBuilder(logsRecordBuilder)
+	logsBuidler, err := logsarrow.NewLogsBuilder(logsRecordBuilder, cfg.logsStats)
 	if err != nil {
 		panic(err)
 	}
@@ -236,6 +236,14 @@ func (p *Producer) LogsRecordBuilderExt() *builder.RecordBuilderExt {
 // TracesRecordBuilderExt returns the record builder used to encode traces.
 func (p *Producer) TracesRecordBuilderExt() *builder.RecordBuilderExt {
 	return p.tracesRecordBuilder
+}
+
+func (p *Producer) MetricsStats() *metricsarrow.MetricsStats {
+	return p.metricsBuilder.Stats()
+}
+
+func (p *Producer) LogsStats() *logsarrow.LogsStats {
+	return p.logsBuilder.Stats()
 }
 
 func (p *Producer) TracesStats() *tracesarrow.TracesStats {
