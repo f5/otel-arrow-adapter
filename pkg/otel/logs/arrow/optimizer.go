@@ -57,11 +57,11 @@ type ScopeLogGroup struct {
 type LogsStats struct {
 	LogsCount              int
 	ResourceLogsHistogram  *hdrhistogram.Histogram
-	ResourceAttrsHistogram *hdrhistogram.Histogram
+	ResourceAttrsHistogram *carrow.AttributesStats
 	ScopeLogsHistogram     *hdrhistogram.Histogram
-	ScopeAttrsHistogram    *hdrhistogram.Histogram
+	ScopeAttrsHistogram    *carrow.AttributesStats
 	LogsHistogram          *hdrhistogram.Histogram
-	LogsAttrsHistogram     *hdrhistogram.Histogram
+	LogsAttrsHistogram     *carrow.AttributesStats
 	IntBodyHistogram       *hdrhistogram.Histogram
 	DoubleBodyHistogram    *hdrhistogram.Histogram
 	StringBodyHistogram    *hdrhistogram.Histogram
@@ -85,11 +85,11 @@ func NewLogsOptimizer(cfg ...func(*carrow.Options)) *LogsOptimizer {
 		s = &LogsStats{
 			LogsCount:              0,
 			ResourceLogsHistogram:  hdrhistogram.New(1, 1000000, 1),
-			ResourceAttrsHistogram: hdrhistogram.New(1, 1000000, 1),
+			ResourceAttrsHistogram: carrow.NewAttributesStats(),
 			ScopeLogsHistogram:     hdrhistogram.New(1, 1000000, 1),
-			ScopeAttrsHistogram:    hdrhistogram.New(1, 1000000, 1),
+			ScopeAttrsHistogram:    carrow.NewAttributesStats(),
 			LogsHistogram:          hdrhistogram.New(1, 1000000, 1),
-			LogsAttrsHistogram:     hdrhistogram.New(1, 1000000, 1),
+			LogsAttrsHistogram:     carrow.NewAttributesStats(),
 			IntBodyHistogram:       hdrhistogram.New(1, 1000000, 1),
 			DoubleBodyHistogram:    hdrhistogram.New(1, 1000000, 1),
 			StringBodyHistogram:    hdrhistogram.New(1, 1000000, 1),
@@ -142,9 +142,7 @@ func (t *LogsOptimized) RecordStats(stats *LogsStats) {
 	}
 	for _, resLogsGroup := range t.ResourceLogs {
 		attrs := resLogsGroup.Resource.Attributes()
-		if err := stats.ResourceAttrsHistogram.RecordValue(int64(attrs.Len())); err != nil {
-			panic(fmt.Sprintf("number of resource attrs is out of range: %v", err))
-		}
+		stats.ResourceAttrsHistogram.UpdateStats(attrs)
 		resLogsGroup.RecordStats(stats)
 	}
 }
@@ -210,9 +208,7 @@ func (t *ResourceLogGroup) RecordStats(stats *LogsStats) {
 	}
 	for _, scopeLogsGroup := range t.ScopeLogs {
 		attrs := scopeLogsGroup.Scope.Attributes()
-		if err := stats.ScopeAttrsHistogram.RecordValue(int64(attrs.Len())); err != nil {
-			panic(fmt.Sprintf("number of scope attributes is out of range: %v", err))
-		}
+		stats.ScopeAttrsHistogram.UpdateStats(attrs)
 		scopeLogsGroup.RecordStats(stats)
 	}
 }
@@ -231,9 +227,8 @@ func (t *ScopeLogGroup) RecordStats(stats *LogsStats) {
 	bytesCount := 0
 
 	for _, log := range t.Logs {
-		if err := stats.LogsAttrsHistogram.RecordValue(int64(log.Attributes().Len())); err != nil {
-			panic(fmt.Sprintf("number of log attributes is out of range: %v", err))
-		}
+		stats.LogsAttrsHistogram.UpdateStats(log.Attributes())
+
 		switch log.Body().Type() {
 		case pcommon.ValueTypeInt:
 			intCount++
@@ -277,9 +272,9 @@ func (t *ScopeLogGroup) RecordStats(stats *LogsStats) {
 }
 
 func (t *LogsStats) Show() {
-	println("\nLogs stats (after optimization):")
-	fmt.Printf("\tNumber of log batches: %d\n", t.LogsCount)
-	fmt.Printf("\tResource logs/Batch  : mean: %8.2f, min: %8d, max: %8d, std-dev: %8.2f, p50: %8d, p99: %8d\n",
+	println("\n == Logs structure distribution ============================================================")
+	fmt.Printf("Logs: %d\n", t.LogsCount)
+	fmt.Printf("  ResourceLogs   -> mean: %8.2f, min: %8d, max: %8d, std-dev: %8.2f, p50: %8d, p99: %8d\n",
 		t.ResourceLogsHistogram.Mean(),
 		t.ResourceLogsHistogram.Min(),
 		t.ResourceLogsHistogram.Max(),
@@ -287,15 +282,9 @@ func (t *LogsStats) Show() {
 		t.ResourceLogsHistogram.ValueAtQuantile(50),
 		t.ResourceLogsHistogram.ValueAtQuantile(99),
 	)
-	fmt.Printf("\tAttributes/Resource  : mean: %8.2f, min: %8d, max: %8d, std-dev: %8.2f, p50: %8d, p99: %8d\n",
-		t.ResourceAttrsHistogram.Mean(),
-		t.ResourceAttrsHistogram.Min(),
-		t.ResourceAttrsHistogram.Max(),
-		t.ResourceAttrsHistogram.StdDev(),
-		t.ResourceAttrsHistogram.ValueAtQuantile(50),
-		t.ResourceAttrsHistogram.ValueAtQuantile(99),
-	)
-	fmt.Printf("\tScope logs/Resource  : mean: %8.2f, min: %8d, max: %8d, std-dev: %8.2f, p50: %8d, p99: %8d\n",
+	fmt.Printf("    Resource\n")
+	t.ResourceAttrsHistogram.Show("      ")
+	fmt.Printf("    ScopeLogs    -> mean: %8.2f, min: %8d, max: %8d, std-dev: %8.2f, p50: %8d, p99: %8d\n",
 		t.ScopeLogsHistogram.Mean(),
 		t.ScopeLogsHistogram.Min(),
 		t.ScopeLogsHistogram.Max(),
@@ -303,15 +292,9 @@ func (t *LogsStats) Show() {
 		t.ScopeLogsHistogram.ValueAtQuantile(50),
 		t.ScopeLogsHistogram.ValueAtQuantile(99),
 	)
-	fmt.Printf("\tAttributes/Scope     : mean: %8.2f, min: %8d, max: %8d, std-dev: %8.2f, p50: %8d, p99: %8d\n",
-		t.ScopeAttrsHistogram.Mean(),
-		t.ScopeAttrsHistogram.Min(),
-		t.ScopeAttrsHistogram.Max(),
-		t.ScopeAttrsHistogram.StdDev(),
-		t.ScopeAttrsHistogram.ValueAtQuantile(50),
-		t.ScopeAttrsHistogram.ValueAtQuantile(99),
-	)
-	fmt.Printf("\tNumber of logs/Scope : mean: %8.2f, min: %8d, max: %8d, std-dev: %8.2f, p50: %8d, p99: %8d\n",
+	fmt.Printf("      Scope\n")
+	t.ScopeAttrsHistogram.Show("        ")
+	fmt.Printf("      LogRecords   -> mean: %8.2f, min: %8d, max: %8d, std-dev: %8.2f, p50: %8d, p99: %8d\n",
 		t.LogsHistogram.Mean(),
 		t.LogsHistogram.Min(),
 		t.LogsHistogram.Max(),
@@ -319,15 +302,9 @@ func (t *LogsStats) Show() {
 		t.LogsHistogram.ValueAtQuantile(50),
 		t.LogsHistogram.ValueAtQuantile(99),
 	)
-	fmt.Printf("\tAttributes/Log       : mean: %8.2f, min: %8d, max: %8d, std-dev: %8.2f, p50: %8d, p99: %8d\n",
-		t.LogsAttrsHistogram.Mean(),
-		t.LogsAttrsHistogram.Min(),
-		t.LogsAttrsHistogram.Max(),
-		t.LogsAttrsHistogram.StdDev(),
-		t.LogsAttrsHistogram.ValueAtQuantile(50),
-		t.LogsAttrsHistogram.ValueAtQuantile(99),
-	)
-	fmt.Printf("\tInt body/Log         : mean: %8.2f, min: %8d, max: %8d, std-dev: %8.2f, p50: %8d, p99: %8d\n",
+	t.LogsAttrsHistogram.Show("        ")
+	fmt.Printf("        Body\n")
+	fmt.Printf("          i64    -> mean: %8.2f, min: %8d, max: %8d, std-dev: %8.2f, p50: %8d, p99: %8d\n",
 		t.IntBodyHistogram.Mean(),
 		t.IntBodyHistogram.Min(),
 		t.IntBodyHistogram.Max(),
@@ -335,7 +312,7 @@ func (t *LogsStats) Show() {
 		t.IntBodyHistogram.ValueAtQuantile(50),
 		t.IntBodyHistogram.ValueAtQuantile(99),
 	)
-	fmt.Printf("\tDouble body/Log      : mean: %8.2f, min: %8d, max: %8d, std-dev: %8.2f, p50: %8d, p99: %8d\n",
+	fmt.Printf("          f64    -> mean: %8.2f, min: %8d, max: %8d, std-dev: %8.2f, p50: %8d, p99: %8d\n",
 		t.DoubleBodyHistogram.Mean(),
 		t.DoubleBodyHistogram.Min(),
 		t.DoubleBodyHistogram.Max(),
@@ -343,7 +320,7 @@ func (t *LogsStats) Show() {
 		t.DoubleBodyHistogram.ValueAtQuantile(50),
 		t.DoubleBodyHistogram.ValueAtQuantile(99),
 	)
-	fmt.Printf("\tString body/Log      : mean: %8.2f, min: %8d, max: %8d, std-dev: %8.2f, p50: %8d, p99: %8d\n",
+	fmt.Printf("          str    -> mean: %8.2f, min: %8d, max: %8d, std-dev: %8.2f, p50: %8d, p99: %8d\n",
 		t.StringBodyHistogram.Mean(),
 		t.StringBodyHistogram.Min(),
 		t.StringBodyHistogram.Max(),
@@ -351,7 +328,7 @@ func (t *LogsStats) Show() {
 		t.StringBodyHistogram.ValueAtQuantile(50),
 		t.StringBodyHistogram.ValueAtQuantile(99),
 	)
-	fmt.Printf("\tBool body/Log        : mean: %8.2f, min: %8d, max: %8d, std-dev: %8.2f, p50: %8d, p99: %8d\n",
+	fmt.Printf("          bool   -> mean: %8.2f, min: %8d, max: %8d, std-dev: %8.2f, p50: %8d, p99: %8d\n",
 		t.BoolBodyHistogram.Mean(),
 		t.BoolBodyHistogram.Min(),
 		t.BoolBodyHistogram.Max(),
@@ -359,7 +336,7 @@ func (t *LogsStats) Show() {
 		t.BoolBodyHistogram.ValueAtQuantile(50),
 		t.BoolBodyHistogram.ValueAtQuantile(99),
 	)
-	fmt.Printf("\tMap body/Log         : mean: %8.2f, min: %8d, max: %8d, std-dev: %8.2f, p50: %8d, p99: %8d\n",
+	fmt.Printf("          map    -> mean: %8.2f, min: %8d, max: %8d, std-dev: %8.2f, p50: %8d, p99: %8d\n",
 		t.MapBodyHistogram.Mean(),
 		t.MapBodyHistogram.Min(),
 		t.MapBodyHistogram.Max(),
@@ -367,7 +344,7 @@ func (t *LogsStats) Show() {
 		t.MapBodyHistogram.ValueAtQuantile(50),
 		t.MapBodyHistogram.ValueAtQuantile(99),
 	)
-	fmt.Printf("\tList body/Log        : mean: %8.2f, min: %8d, max: %8d, std-dev: %8.2f, p50: %8d, p99: %8d\n",
+	fmt.Printf("          list   -> mean: %8.2f, min: %8d, max: %8d, std-dev: %8.2f, p50: %8d, p99: %8d\n",
 		t.ListBodyHistogram.Mean(),
 		t.ListBodyHistogram.Min(),
 		t.ListBodyHistogram.Max(),
@@ -375,7 +352,7 @@ func (t *LogsStats) Show() {
 		t.ListBodyHistogram.ValueAtQuantile(50),
 		t.ListBodyHistogram.ValueAtQuantile(99),
 	)
-	fmt.Printf("\tBytes body/Log       : mean: %8.2f, min: %8d, max: %8d, std-dev: %8.2f, p50: %8d, p99: %8d\n",
+	fmt.Printf("          binary -> mean: %8.2f, min: %8d, max: %8d, std-dev: %8.2f, p50: %8d, p99: %8d\n",
 		t.BytesBodyHistogram.Mean(),
 		t.BytesBodyHistogram.Min(),
 		t.BytesBodyHistogram.Max(),
