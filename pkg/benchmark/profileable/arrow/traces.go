@@ -30,6 +30,7 @@ import (
 
 var tracesProducerOptions = []arrow_record.Option{
 	arrow_record.WithNoZstd(),
+	arrow_record.WithTracesStats(),
 }
 
 type TracesProfileable struct {
