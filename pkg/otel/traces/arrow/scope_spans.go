@@ -20,7 +20,6 @@ package arrow
 import (
 	"github.com/apache/arrow/go/v11/arrow"
 	"github.com/apache/arrow/go/v11/arrow/array"
-	"go.opentelemetry.io/collector/pdata/ptrace"
 
 	acommon "github.com/f5/otel-arrow-adapter/pkg/otel/common/arrow"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema"
@@ -77,21 +76,20 @@ func (b *ScopeSpansBuilder) Build() (*array.Struct, error) {
 }
 
 // Append appends a new scope spans to the builder.
-func (b *ScopeSpansBuilder) Append(ss ptrace.ScopeSpans) error {
+func (b *ScopeSpansBuilder) Append(spg *ScopeSpanGroup) error {
 	if b.released {
 		return werror.Wrap(acommon.ErrBuilderAlreadyReleased)
 	}
 
-	return b.builder.Append(ss, func() error {
-		if err := b.scb.Append(ss.Scope()); err != nil {
+	return b.builder.Append(spg, func() error {
+		if err := b.scb.Append(spg.Scope); err != nil {
 			return werror.Wrap(err)
 		}
-		b.schb.AppendNonEmpty(ss.SchemaUrl())
-		spans := ss.Spans()
-		sc := spans.Len()
+		b.schb.AppendNonEmpty(spg.ScopeSchemaUrl)
+		sc := len(spg.Spans)
 		return b.ssb.Append(sc, func() error {
 			for i := 0; i < sc; i++ {
-				if err := b.sb.Append(spans.At(i)); err != nil {
+				if err := b.sb.Append(spg.Spans[i]); err != nil {
 					return werror.Wrap(err)
 				}
 			}

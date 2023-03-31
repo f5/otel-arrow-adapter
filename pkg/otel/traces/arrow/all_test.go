@@ -184,9 +184,11 @@ func TestSpan(t *testing.T) {
 	for {
 		sb := SpanBuilderFrom(rBuilder.StructBuilder(constants.Spans))
 
-		err := sb.Append(Span1())
+		span := Span1()
+		err := sb.Append(&span)
 		require.NoError(t, err)
-		err = sb.Append(Span2())
+		span = Span2()
+		err = sb.Append(&span)
 		require.NoError(t, err)
 
 		record, err = rBuilder.NewRecord()
@@ -227,9 +229,9 @@ func TestScopeSpans(t *testing.T) {
 	for {
 		ssb := ScopeSpansBuilderFrom(rBuilder.StructBuilder(constants.ScopeSpans))
 
-		err := ssb.Append(ScopeSpans1())
+		err := ssb.Append(ToScopeSpanGroup(ScopeSpans1()))
 		require.NoError(t, err)
-		err = ssb.Append(ScopeSpans2())
+		err = ssb.Append(ToScopeSpanGroup(ScopeSpans2()))
 		require.NoError(t, err)
 
 		record, err = rBuilder.NewRecord()
@@ -253,6 +255,22 @@ func TestScopeSpans(t *testing.T) {
 	require.JSONEq(t, expected, string(json))
 }
 
+func ToScopeSpanGroup(scopeSpans ptrace.ScopeSpans) *ScopeSpanGroup {
+	spans := make([]*ptrace.Span, 0, scopeSpans.Spans().Len())
+	scope := scopeSpans.Scope()
+
+	spanSlice := scopeSpans.Spans()
+	for i := 0; i < spanSlice.Len(); i++ {
+		span := spanSlice.At(i)
+		spans = append(spans, &span)
+	}
+	return &ScopeSpanGroup{
+		Scope:          &scope,
+		ScopeSchemaUrl: scopeSpans.SchemaUrl(),
+		Spans:          spans,
+	}
+}
+
 func TestResourceSpans(t *testing.T) {
 	t.Parallel()
 
@@ -270,9 +288,9 @@ func TestResourceSpans(t *testing.T) {
 	for {
 		rsb := ResourceSpansBuilderFrom(rBuilder.StructBuilder(constants.ResourceSpans))
 
-		err := rsb.Append(ResourceSpans1())
+		err := rsb.Append(ToResourceSpanGroup(ResourceSpans1()))
 		require.NoError(t, err)
-		err = rsb.Append(ResourceSpans2())
+		err = rsb.Append(ToResourceSpanGroup(ResourceSpans2()))
 		require.NoError(t, err)
 
 		record, err = rBuilder.NewRecord()
@@ -294,6 +312,22 @@ func TestResourceSpans(t *testing.T) {
 ]`
 
 	require.JSONEq(t, expected, string(json))
+}
+
+func ToResourceSpanGroup(resSpan ptrace.ResourceSpans) *ResourceSpanGroup {
+	resource := resSpan.Resource()
+	resSpanGroup := ResourceSpanGroup{
+		Resource:          &resource,
+		ResourceSchemaUrl: resSpan.SchemaUrl(),
+		ScopeSpansIdx:     make(map[string]int),
+		ScopeSpans:        make([]*ScopeSpanGroup, 0),
+	}
+	scopeSpanSlice := resSpan.ScopeSpans()
+	for i := 0; i < scopeSpanSlice.Len(); i++ {
+		scopeSpan := scopeSpanSlice.At(i)
+		resSpanGroup.AddScopeSpan(&scopeSpan)
+	}
+	return &resSpanGroup
 }
 
 func TestTraces(t *testing.T) {
