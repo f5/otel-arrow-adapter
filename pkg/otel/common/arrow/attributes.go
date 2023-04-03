@@ -165,11 +165,38 @@ func NewAttributesStats() *AttributesStats {
 }
 
 func (a *AttributesStats) UpdateStats(attrs pcommon.Map) {
-	a.AttrsHistogram.RecordValue(int64(attrs.Len()))
+	counters := ValueTypeCounters{}
+
+	if err := a.AttrsHistogram.RecordValue(int64(attrs.Len())); err != nil {
+		panic(fmt.Sprintf("failed to record attrs count: %v", err))
+	}
+
 	attrs.Range(func(key string, v pcommon.Value) bool {
-		a.AnyValueStats.UpdateStats(v)
+		a.AnyValueStats.UpdateStats(v, &counters)
 		return true
 	})
+
+	if err := a.AnyValueStats.StrHistogram.RecordValue(counters.strCount); err != nil {
+		panic(fmt.Sprintf("failed to record str count: %v", err))
+	}
+	if err := a.AnyValueStats.I64Histogram.RecordValue(counters.i64Count); err != nil {
+		panic(fmt.Sprintf("failed to record i64 count: %v", err))
+	}
+	if err := a.AnyValueStats.F64Histogram.RecordValue(counters.f64Count); err != nil {
+		panic(fmt.Sprintf("failed to record f64 count: %v", err))
+	}
+	if err := a.AnyValueStats.BoolHistogram.RecordValue(counters.boolCount); err != nil {
+		panic(fmt.Sprintf("failed to record bool count: %v", err))
+	}
+	if err := a.AnyValueStats.BinaryHistogram.RecordValue(counters.binaryCount); err != nil {
+		panic(fmt.Sprintf("failed to record binary count: %v", err))
+	}
+	if err := a.AnyValueStats.ListHistogram.RecordValue(counters.listCount); err != nil {
+		panic(fmt.Sprintf("failed to record list count: %v", err))
+	}
+	if err := a.AnyValueStats.MapHistogram.RecordValue(counters.mapCount); err != nil {
+		panic(fmt.Sprintf("failed to record map count: %v", err))
+	}
 }
 
 func (a *AttributesStats) Show(prefix string) {
