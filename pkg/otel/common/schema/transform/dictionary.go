@@ -20,7 +20,7 @@ package transform
 import (
 	"math"
 
-	"github.com/apache/arrow/go/v11/arrow"
+	"github.com/apache/arrow/go/v12/arrow"
 
 	cfg "github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/config"
 	events "github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/events"
@@ -37,6 +37,10 @@ type DictionaryField struct {
 
 	// Dictionary ID
 	DictID string
+
+	// cumulativeTotal is the total number of values observed in the dictionary
+	// since the creation of the dictionary.
+	cumulativeTotal uint64
 
 	// cardinality of the dictionary used to determine dictionary overflow
 	cardinality uint64
@@ -67,9 +71,21 @@ func NewDictionaryField(
 	return &df
 }
 
+func (t *DictionaryField) AddTotal(total int) {
+	t.cumulativeTotal += uint64(total)
+}
+
 func (t *DictionaryField) SetCardinality(card uint64) {
 	t.cardinality = card
 	t.updateIndexType()
+}
+
+func (t *DictionaryField) Cardinality() uint64 {
+	return t.cardinality
+}
+
+func (t *DictionaryField) CumulativeTotal() uint64 {
+	return t.cumulativeTotal
 }
 
 func (t *DictionaryField) IndexType() arrow.DataType {

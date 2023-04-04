@@ -18,7 +18,7 @@
 package arrow
 
 import (
-	"github.com/apache/arrow/go/v11/arrow"
+	"github.com/apache/arrow/go/v12/arrow"
 	"go.opentelemetry.io/collector/pdata/ptrace"
 
 	acommon "github.com/f5/otel-arrow-adapter/pkg/otel/common/arrow"
@@ -125,4 +125,8 @@ func (b *TracesBuilder) Release() {
 		b.builder.Release()
 		b.released = true
 	}
+}
+
+func (b *TracesBuilder) ShowSchema() {
+	b.builder.ShowSchema()
 }

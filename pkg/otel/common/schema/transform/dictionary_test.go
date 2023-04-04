@@ -21,7 +21,7 @@ import (
 	"math"
 	"testing"
 
-	"github.com/apache/arrow/go/v11/arrow"
+	"github.com/apache/arrow/go/v12/arrow"
 	"github.com/stretchr/testify/assert"
 
 	cfg "github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/config"

@@ -20,9 +20,9 @@ package builder
 import (
 	"fmt"
 
-	"github.com/apache/arrow/go/v11/arrow"
-	"github.com/apache/arrow/go/v11/arrow/array"
-	"github.com/apache/arrow/go/v11/arrow/memory"
+	"github.com/apache/arrow/go/v12/arrow"
+	"github.com/apache/arrow/go/v12/arrow/array"
+	"github.com/apache/arrow/go/v12/arrow/memory"
 
 	carrow "github.com/f5/otel-arrow-adapter/pkg/arrow"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema"
@@ -173,6 +173,7 @@ func (rb *RecordBuilderExt) detectDictionaryOverflow(field *arrow.Field, column 
 			if dictTransform, ok := rb.dictTransformNodes[dictId]; ok {
 				switch dictColumn := column.(type) {
 				case *array.Dictionary:
+					dictTransform.AddTotal(dictColumn.Len())
 					dictTransform.SetCardinality(uint64(dictColumn.Dictionary().Len()))
 				}
 			} else {
@@ -577,4 +578,122 @@ func (rb *RecordBuilderExt) SparseUnionBuilder(name string) *SparseUnionBuilder 
 	} else {
 		return &SparseUnionBuilder{protoDataType: protoDataType.(*arrow.SparseUnionType), builder: nil, transformNode: transformNode, updateRequest: rb.updateRequest}
 	}
+}
+
+func (rb *RecordBuilderExt) ShowSchema() {
+	rb.VisitRecordBuilder(rb.recordBuilder, "")
+}
+
+func (rb *RecordBuilderExt) VisitRecordBuilder(recBuilder *array.RecordBuilder, prefix string) {
+	schema := recBuilder.Schema()
+	println(prefix + "Schema {")
+	for i, builder := range recBuilder.Fields() {
+		field := schema.Field(i)
+		rb.VisitField(builder, &field, prefix+"  ")
+	}
+	println(prefix + "}")
+}
+
+func (rb *RecordBuilderExt) VisitField(builder array.Builder, field *arrow.Field, prefix string) {
+	fmt.Printf("%s%s: ", prefix, field.Name)
+	rb.VisitDataType(builder, field.Type, dictionaryID(field), prefix)
+	fmt.Println()
+}
+
+func (rb *RecordBuilderExt) VisitDataType(builder array.Builder, dt arrow.DataType, dictID string, prefix string) {
+	switch t := dt.(type) {
+	case *arrow.BooleanType:
+		fmt.Printf("Bool")
+	case *arrow.Int8Type:
+		fmt.Printf("Int8")
+	case *arrow.Int16Type:
+		fmt.Printf("Int16")
+	case *arrow.Int32Type:
+		fmt.Printf("Int32")
+	case *arrow.Int64Type:
+		fmt.Printf("Int64")
+	case *arrow.Uint8Type:
+		fmt.Printf("Uint8")
+	case *arrow.Uint16Type:
+		fmt.Printf("Uint16")
+	case *arrow.Uint32Type:
+		fmt.Printf("Uint32")
+	case *arrow.Uint64Type:
+		fmt.Printf("Uint64")
+	case *arrow.Float32Type:
+		fmt.Printf("Float32")
+	case *arrow.Float64Type:
+		fmt.Printf("Float64")
+	case *arrow.StringType:
+		fmt.Printf("String")
+	case *arrow.BinaryType:
+		fmt.Printf("Binary")
+	case *arrow.TimestampType:
+		fmt.Printf("Timestamp")
+	case *arrow.StructType:
+		structBuilder := builder.(*array.StructBuilder)
+		fmt.Printf("Struct {\n")
+		for i, field := range t.Fields() {
+			rb.VisitField(structBuilder.FieldBuilder(i), &field, prefix+"  ")
+		}
+		fmt.Printf("%s}", prefix)
+	case *arrow.ListType:
+		listBuilder := builder.(*array.ListBuilder)
+		fmt.Printf("[")
+		elemField := t.ElemField()
+		rb.VisitDataType(listBuilder.ValueBuilder(), elemField.Type, "", prefix)
+		fmt.Printf("]")
+	case *arrow.DictionaryType:
+		dictionaryBuilder := builder.(array.DictionaryBuilder)
+		var cumulativeTotal uint64
+		var card uint64
+		if len(dictID) > 0 {
+			if dictTransform, ok := rb.dictTransformNodes[dictID]; ok {
+				cumulativeTotal = dictTransform.CumulativeTotal()
+				card = dictTransform.Cardinality()
+			} else {
+				panic(fmt.Sprintf("Dictionary transform not found dictID: %s", dictID))
+			}
+		}
+		fmt.Printf("Dictionary<key:")
+		rb.VisitDataType(dictionaryBuilder, t.IndexType, "", prefix)
+		fmt.Printf("{card:%d, total: %d},value:", card, cumulativeTotal)
+		rb.VisitDataType(dictionaryBuilder, t.ValueType, "", prefix)
+		fmt.Printf(">")
+	case *arrow.DenseUnionType:
+		unionBuilder := builder.(*array.DenseUnionBuilder)
+		fmt.Printf("DenseUnion {\n")
+		for i, field := range t.Fields() {
+			rb.VisitField(unionBuilder.Child(i), &field, prefix+"  ")
+		}
+		fmt.Printf("%s}", prefix)
+	case *arrow.SparseUnionType:
+		unionBuilder := builder.(*array.SparseUnionBuilder)
+		fmt.Printf("SparseUnion {\n")
+		for i, field := range t.Fields() {
+			rb.VisitField(unionBuilder.Child(i), &field, prefix+"  ")
+		}
+		fmt.Printf("%s}", prefix)
+	case *arrow.MapType:
+		mapBuilder := builder.(*array.MapBuilder)
+		fmt.Printf("Map<")
+		keyField := t.KeyField()
+		rb.VisitDataType(mapBuilder.KeyBuilder(), t.KeyType(), dictionaryID(&keyField), prefix)
+		fmt.Printf(",")
+		itemField := t.ItemField()
+		rb.VisitDataType(mapBuilder.ItemBuilder(), t.ItemType(), dictionaryID(&itemField), prefix)
+		fmt.Printf(">")
+	case *arrow.FixedSizeBinaryType:
+		fmt.Printf("FixedSizeBinary<%d>", t.ByteWidth)
+	default:
+		panic("unsupported data type " + dt.String())
+	}
+}
+
+func dictionaryID(field *arrow.Field) string {
+	dictIdIdx := field.Metadata.FindKey(transform.DictIdKey)
+	if dictIdIdx != -1 {
+		return field.Metadata.Values()[dictIdIdx]
+	}
+	return ""
 }

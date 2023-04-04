@@ -17,7 +17,7 @@ package arrow
 import (
 	"io"
 
-	"github.com/apache/arrow/go/v11/arrow/memory"
+	"github.com/apache/arrow/go/v12/arrow/memory"
 	"google.golang.org/protobuf/proto"
 
 	"go.opentelemetry.io/collector/pdata/ptrace"
@@ -181,4 +181,5 @@ func (s *TracesProfileable) ShowStats() {
 	if stats != nil {
 		stats.Show()
 	}
+	s.producer.ShowSchemas()
 }

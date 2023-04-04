@@ -20,7 +20,7 @@ package schema
 import (
 	"strconv"
 
-	"github.com/apache/arrow/go/v11/arrow"
+	"github.com/apache/arrow/go/v12/arrow"
 
 	cfg "github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/config"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/events"
@@ -175,21 +175,6 @@ func newTransformNodeFrom(
 			events,
 		))
 
-		// ToDo remove this workaround once the arrow library supports map types with metadata (see https://github.com/apache/arrow/issues/34186).
-		if keyField.Type == arrow.BinaryTypes.String {
-			dictId := strconv.Itoa(len(dictTransformNodes))
-			dictTransform := transform2.NewDictionaryField(
-				path,
-				dictId,
-				dictConfig,
-				schemaUpdateRequest,
-				events,
-			)
-			dictTransformNodes[dictId] = dictTransform
-
-			node.Children[0].transforms = []FieldTransform{dictTransform}
-		}
-
 		valueField := dt.ItemField()
 		node.Children = append(node.Children, newTransformNodeFrom(
 			path,
@@ -199,22 +184,6 @@ func newTransformNodeFrom(
 			schemaUpdateRequest,
 			events,
 		))
-
-		// ToDo remove this workaround once the arrow library supports map types with metadata (see https://github.com/apache/arrow/issues/34186).
-		if valueField.Type == arrow.BinaryTypes.String {
-			dictId := strconv.Itoa(len(dictTransformNodes))
-			dictTransform := transform2.NewDictionaryField(path, dictId, dictConfig, schemaUpdateRequest, events)
-			dictTransformNodes[dictId] = dictTransform
-
-			node.Children[1].transforms = []FieldTransform{dictTransform}
-		}
-		if valueField.Type == arrow.BinaryTypes.Binary {
-			dictId := strconv.Itoa(len(dictTransformNodes))
-			dictTransform := transform2.NewDictionaryField(path, dictId, dictConfig, schemaUpdateRequest, events)
-			dictTransformNodes[dictId] = dictTransform
-
-			node.Children[1].transforms = []FieldTransform{dictTransform}
-		}
 	}
 
 	return &node

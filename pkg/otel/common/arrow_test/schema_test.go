@@ -22,8 +22,8 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/apache/arrow/go/v11/arrow"
-	"github.com/apache/arrow/go/v11/arrow/memory"
+	"github.com/apache/arrow/go/v12/arrow"
+	"github.com/apache/arrow/go/v12/arrow/memory"
 	"github.com/stretchr/testify/assert"
 
 	acommon "github.com/f5/otel-arrow-adapter/pkg/otel/common/schema"

@@ -20,7 +20,7 @@ package schema
 import (
 	"errors"
 
-	"github.com/apache/arrow/go/v11/arrow"
+	"github.com/apache/arrow/go/v12/arrow"
 )
 
 // Metadata constants used to mark fields as optional or dictionary.
@@ -134,7 +134,9 @@ func NewFieldFrom(prototype *arrow.Field, transformNode *TransformNode) *arrow.F
 		if newKeyField == nil || newValueField == nil {
 			return nil
 		}
-		return &arrow.Field{Name: field.Name, Type: arrow.MapOf(newKeyField.Type, newValueField.Type), Nullable: field.Nullable, Metadata: metadata}
+		return &arrow.Field{Name: field.Name, Type: arrow.MapOfWithMetadata(
+			newKeyField.Type, newKeyField.Metadata,
+			newValueField.Type, newValueField.Metadata), Nullable: field.Nullable, Metadata: metadata}
 	default:
 		return &arrow.Field{Name: field.Name, Type: field.Type, Nullable: field.Nullable, Metadata: metadata}
 	}
