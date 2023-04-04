@@ -22,7 +22,6 @@ import (
 	"go.opentelemetry.io/collector/pdata/ptrace"
 
 	acommon "github.com/f5/otel-arrow-adapter/pkg/otel/common/arrow"
-	schema "github.com/f5/otel-arrow-adapter/pkg/otel/common/schema"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/builder"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/constants"
 	"github.com/f5/otel-arrow-adapter/pkg/werror"
@@ -31,7 +30,7 @@ import (
 // Schema is the Arrow schema for the OTLP Arrow Traces record.
 var (
 	Schema = arrow.NewSchema([]arrow.Field{
-		{Name: constants.ResourceSpans, Type: arrow.ListOf(ResourceSpansDT), Metadata: schema.Metadata(schema.Optional)},
+		{Name: constants.ResourceSpans, Type: arrow.ListOf(ResourceSpansDT)},
 	}, nil)
 )
 
@@ -50,9 +49,9 @@ func NewTracesBuilder(rBuilder *builder.RecordBuilderExt, traceStats bool) (*Tra
 	var optimizer *TracesOptimizer
 
 	if traceStats {
-		optimizer = NewTracesOptimizer(acommon.WithStats())
+		optimizer = NewTracesOptimizer(acommon.WithStats(), acommon.WithSort())
 	} else {
-		optimizer = NewTracesOptimizer()
+		optimizer = NewTracesOptimizer(acommon.WithSort())
 	}
 
 	tracesBuilder := &TracesBuilder{

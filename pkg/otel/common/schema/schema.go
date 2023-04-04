@@ -29,7 +29,8 @@ type MetadataKey int
 
 const (
 	Optional MetadataKey = iota
-	Dictionary
+	Dictionary8
+	Dictionary16
 
 	OptionalKey   = "#optional"
 	DictionaryKey = "#dictionary"
@@ -46,8 +47,10 @@ func Metadata(keys ...MetadataKey) arrow.Metadata {
 		switch key {
 		case Optional:
 			m[OptionalKey] = "true"
-		case Dictionary:
-			m[DictionaryKey] = "true"
+		case Dictionary8:
+			m[DictionaryKey] = "8"
+		case Dictionary16:
+			m[DictionaryKey] = "16"
 		}
 	}
 	return arrow.MetadataFrom(m)

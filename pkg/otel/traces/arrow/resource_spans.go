@@ -32,8 +32,8 @@ var (
 	// ResourceSpansDT is the data type for resource spans.
 	ResourceSpansDT = arrow.StructOf([]arrow.Field{
 		{Name: constants.Resource, Type: acommon.ResourceDT, Metadata: schema.Metadata(schema.Optional)},
-		{Name: constants.SchemaUrl, Type: arrow.BinaryTypes.String, Metadata: schema.Metadata(schema.Optional, schema.Dictionary)},
-		{Name: constants.ScopeSpans, Type: arrow.ListOf(ScopeSpansDT), Metadata: schema.Metadata(schema.Optional)},
+		{Name: constants.SchemaUrl, Type: arrow.BinaryTypes.String, Metadata: schema.Metadata(schema.Optional, schema.Dictionary8)},
+		{Name: constants.ScopeSpans, Type: arrow.ListOf(ScopeSpansDT)},
 	}...)
 )
 

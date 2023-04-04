@@ -30,7 +30,7 @@ var (
 	// UnivariateEHistogramDT is the Arrow Data Type describing a univariate exponential histogram.
 	UnivariateEHistogramDT = arrow.StructOf(
 		arrow.Field{Name: constants.DataPoints, Type: arrow.ListOf(UnivariateEHistogramDataPointDT), Metadata: schema.Metadata(schema.Optional)},
-		arrow.Field{Name: constants.AggregationTemporality, Type: arrow.PrimitiveTypes.Int32, Metadata: schema.Metadata(schema.Optional, schema.Dictionary)},
+		arrow.Field{Name: constants.AggregationTemporality, Type: arrow.PrimitiveTypes.Int32, Metadata: schema.Metadata(schema.Optional, schema.Dictionary8)},
 	)
 )
 

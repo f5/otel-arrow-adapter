@@ -29,6 +29,11 @@ import (
 
 const DictIdKey = "dictId"
 
+var (
+	AllIndexTypes   = []arrow.DataType{arrow.PrimitiveTypes.Uint8, arrow.PrimitiveTypes.Uint16, arrow.PrimitiveTypes.Uint32, arrow.PrimitiveTypes.Uint64}
+	AllIndexMaxCard = []uint64{math.MaxUint8, math.MaxUint16, math.MaxUint32, math.MaxUint64}
+)
+
 // DictionaryField is a FieldTransform that transforms dictionary fields to
 // a given index type.
 // If the index type is nil, the dictionary is downgraded to its value type.
@@ -41,6 +46,10 @@ type DictionaryField struct {
 	// cumulativeTotal is the total number of values observed in the dictionary
 	// since the creation of the dictionary.
 	cumulativeTotal uint64
+
+	// prevCumulativeTotal is the total number of values observed in the dictionary
+	// before the last schema update.
+	prevCumulativeTotal uint64
 
 	// cardinality of the dictionary used to determine dictionary overflow
 	cardinality uint64
@@ -71,7 +80,13 @@ func NewDictionaryField(
 	return &df
 }
 
+// RevertCounters resets the cumulative total to the previous cumulative total.
+func (t *DictionaryField) RevertCounters() {
+	t.cumulativeTotal = t.prevCumulativeTotal
+}
+
 func (t *DictionaryField) AddTotal(total int) {
+	t.prevCumulativeTotal = t.cumulativeTotal
 	t.cumulativeTotal += uint64(total)
 }
 
@@ -166,27 +181,33 @@ func (t *DictionaryField) initIndices(config *cfg.Dictionary) {
 		return
 	}
 
-	if config.MaxCard <= math.MaxUint8 {
-		t.indexTypes = []arrow.DataType{arrow.PrimitiveTypes.Uint8}
-		t.indexMaxCard = []uint64{math.MaxUint8}
-		return
-	}
+	t.indexTypes = indexTypesRange(config.MinCard, config.MaxCard)
+	t.indexMaxCard = indexMaxCardRange(config.MinCard, config.MaxCard)
+}
 
-	if config.MaxCard <= math.MaxUint16 {
-		t.indexTypes = []arrow.DataType{arrow.PrimitiveTypes.Uint8, arrow.PrimitiveTypes.Uint16}
-		t.indexMaxCard = []uint64{math.MaxUint8, math.MaxUint16}
-		return
+func indexTypesRange(minCard uint64, maxCard uint64) []arrow.DataType {
+	if minCard > maxCard {
+		panic("minCard > maxCard")
 	}
+	return AllIndexTypes[findIndex(minCard) : findIndex(maxCard)+1]
+}
 
-	if config.MaxCard <= math.MaxUint32 {
-		t.indexTypes = []arrow.DataType{arrow.PrimitiveTypes.Uint8, arrow.PrimitiveTypes.Uint16, arrow.PrimitiveTypes.Uint32}
-		t.indexMaxCard = []uint64{math.MaxUint8, math.MaxUint16, math.MaxUint32}
-		return
+func indexMaxCardRange(minCard uint64, maxCard uint64) []uint64 {
+	if minCard > maxCard {
+		panic("minCard > maxCard")
 	}
+	return AllIndexMaxCard[findIndex(minCard) : findIndex(maxCard)+1]
+}
 
-	if config.MaxCard <= math.MaxUint64 {
-		t.indexTypes = []arrow.DataType{arrow.PrimitiveTypes.Uint8, arrow.PrimitiveTypes.Uint16, arrow.PrimitiveTypes.Uint32, arrow.PrimitiveTypes.Uint64}
-		t.indexMaxCard = []uint64{math.MaxUint8, math.MaxUint16, math.MaxUint32, math.MaxUint64}
-		return
+func findIndex(card uint64) int {
+	if card <= math.MaxUint8 {
+		return 0
 	}
+	if card <= math.MaxUint16 {
+		return 1
+	}
+	if card <= math.MaxUint32 {
+		return 2
+	}
+	return 3
 }

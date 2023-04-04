@@ -49,7 +49,7 @@ func TestScopeMetrics(t *testing.T) {
 		{Name: constants.ScopeMetrics, Type: arrow.ListOf(marrow.ScopeMetricsDT), Metadata: schema.Metadata(schema.Optional)},
 	}, nil)
 
-	rBuilder := builder.NewRecordBuilderExt(pool, s, DefaultDictConfig)
+	rBuilder := builder.NewRecordBuilderExt(pool, s, DefaultDictConfig, false)
 	defer rBuilder.Release()
 
 	var record arrow.Record
@@ -159,7 +159,7 @@ func TestScopeMetricsWithGenerator(t *testing.T) {
 		{Name: constants.ScopeMetrics, Type: arrow.ListOf(marrow.ScopeMetricsDT), Metadata: schema.Metadata(schema.Optional)},
 	}, nil)
 
-	rBuilder := builder.NewRecordBuilderExt(pool, s, DefaultDictConfig)
+	rBuilder := builder.NewRecordBuilderExt(pool, s, DefaultDictConfig, false)
 	defer rBuilder.Release()
 
 	var record arrow.Record

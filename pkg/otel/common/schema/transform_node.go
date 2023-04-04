@@ -18,6 +18,7 @@
 package schema
 
 import (
+	"math"
 	"strconv"
 
 	"github.com/apache/arrow/go/v12/arrow"
@@ -31,6 +32,7 @@ import (
 // FieldTransform is an interface to apply a transformation to a field.
 type FieldTransform interface {
 	Transform(field *arrow.Field) *arrow.Field
+	RevertCounters()
 }
 
 // TransformNode is a node in a transformation tree.
@@ -109,8 +111,20 @@ func newTransformNodeFrom(
 	// dictionary representation by emitting a DictionaryField transformation.
 	keyIdx = metadata.FindKey(DictionaryKey)
 	if keyIdx != -1 {
+		initialDictIndexWidth := metadata.Values()[keyIdx]
+		var localDictConfig *cfg.Dictionary
+
+		switch initialDictIndexWidth {
+		case "8":
+			localDictConfig = cfg.NewDictionaryFrom(math.MaxUint8, dictConfig)
+		case "16":
+			localDictConfig = cfg.NewDictionaryFrom(math.MaxUint16, dictConfig)
+		default:
+			localDictConfig = dictConfig
+		}
+
 		dictId := strconv.Itoa(len(dictTransformNodes))
-		dictTransform := transform2.NewDictionaryField(path, dictId, dictConfig, schemaUpdateRequest, events)
+		dictTransform := transform2.NewDictionaryField(path, dictId, localDictConfig, schemaUpdateRequest, events)
 		dictTransformNodes[dictId] = dictTransform
 		transforms = append(transforms, dictTransform)
 	}
@@ -208,5 +222,14 @@ func (t *TransformNode) RemoveOptional() {
 		t.transforms = []FieldTransform{&transform2.IdentityField{}}
 	} else {
 		t.transforms = t.transforms[:n]
+	}
+}
+
+func (t *TransformNode) RevertCounters() {
+	for _, transform := range t.transforms {
+		transform.RevertCounters()
+	}
+	for _, child := range t.Children {
+		child.RevertCounters()
 	}
 }

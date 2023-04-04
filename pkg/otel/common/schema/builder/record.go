@@ -63,11 +63,19 @@ type RecordBuilderExt struct {
 	schemaID string
 
 	events *events.Events
+
+	// stats is a flag that enables/disables the collection of statistics
+	stats bool
 }
 
 // NewRecordBuilderExt creates a new RecordBuilderExt from the given allocator
 // and a prototype schema.
-func NewRecordBuilderExt(allocator memory.Allocator, protoSchema *arrow.Schema, dictConfig *builder.Dictionary) *RecordBuilderExt {
+func NewRecordBuilderExt(
+	allocator memory.Allocator,
+	protoSchema *arrow.Schema,
+	dictConfig *builder.Dictionary,
+	stats bool,
+) *RecordBuilderExt {
 	schemaUpdateRequest := update.NewSchemaUpdateRequest()
 	evts := &events.Events{
 		DictionariesWithOverflow:     make(map[string]bool),
@@ -87,6 +95,7 @@ func NewRecordBuilderExt(allocator memory.Allocator, protoSchema *arrow.Schema, 
 		updateRequest:      schemaUpdateRequest,
 		schemaID:           schemaID,
 		events:             evts,
+		stats:              stats,
 	}
 }
 
@@ -205,15 +214,21 @@ func (rb *RecordBuilderExt) builder(name string) array.Builder {
 // UpdateSchema updates the schema based on the pending schema update requests
 // the initial prototype schema.
 func (rb *RecordBuilderExt) UpdateSchema() {
+	rb.transformTree.RevertCounters()
 	s := schema.NewSchemaFrom(rb.protoSchema, rb.transformTree)
 
 	// Build a new record builder with the updated schema
 	// and transfer the dictionaries from the old record builder
 	// to the new one.
 	newRecBuilder := array.NewRecordBuilder(rb.allocator, s)
-	if err := copyDictValuesTo(rb.recordBuilder, newRecBuilder); err != nil {
-		panic(err)
+	// ToDo Find a better way to copy the dictionary values who have a lot of reused values between batches. For now, this feature is disabled.
+	//if err := copyDictValuesTo(rb.recordBuilder, newRecBuilder); err != nil {
+	//	panic(err)
+	//}
+	if rb.stats {
+		rb.ShowSchema()
 	}
+
 	rb.recordBuilder.Release()
 	rb.recordBuilder = newRecBuilder
 	rb.schemaID = carrow.SchemaToID(s)
@@ -585,11 +600,11 @@ func (rb *RecordBuilderExt) ShowSchema() {
 }
 
 func (rb *RecordBuilderExt) VisitRecordBuilder(recBuilder *array.RecordBuilder, prefix string) {
-	schema := recBuilder.Schema()
+	s := recBuilder.Schema()
 	println(prefix + "Schema {")
-	for i, builder := range recBuilder.Fields() {
-		field := schema.Field(i)
-		rb.VisitField(builder, &field, prefix+"  ")
+	for i, b := range recBuilder.Fields() {
+		field := s.Field(i)
+		rb.VisitField(b, &field, prefix+"  ")
 	}
 	println(prefix + "}")
 }

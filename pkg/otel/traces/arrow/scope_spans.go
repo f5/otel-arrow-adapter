@@ -32,8 +32,8 @@ import (
 var (
 	ScopeSpansDT = arrow.StructOf([]arrow.Field{
 		{Name: constants.Scope, Type: acommon.ScopeDT, Metadata: schema.Metadata(schema.Optional)},
-		{Name: constants.SchemaUrl, Type: arrow.BinaryTypes.String, Metadata: schema.Metadata(schema.Optional, schema.Dictionary)},
-		{Name: constants.Spans, Type: arrow.ListOf(SpanDT), Metadata: schema.Metadata(schema.Optional)},
+		{Name: constants.SchemaUrl, Type: arrow.BinaryTypes.String, Metadata: schema.Metadata(schema.Optional, schema.Dictionary8)},
+		{Name: constants.Spans, Type: arrow.ListOf(SpanDT)},
 	}...)
 )
 

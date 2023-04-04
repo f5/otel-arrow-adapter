@@ -32,7 +32,7 @@ import (
 var (
 	ScopeLogsDT = arrow.StructOf([]arrow.Field{
 		{Name: constants.Scope, Type: acommon.ScopeDT, Metadata: schema.Metadata(schema.Optional)},
-		{Name: constants.SchemaUrl, Type: arrow.BinaryTypes.String, Metadata: schema.Metadata(schema.Optional, schema.Dictionary)},
+		{Name: constants.SchemaUrl, Type: arrow.BinaryTypes.String, Metadata: schema.Metadata(schema.Optional, schema.Dictionary8)},
 		{Name: constants.Logs, Type: arrow.ListOf(LogRecordDT), Metadata: schema.Metadata(schema.Optional)},
 	}...)
 )

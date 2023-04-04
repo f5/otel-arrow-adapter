@@ -35,9 +35,7 @@ import (
 	tracesotlp "github.com/f5/otel-arrow-adapter/pkg/otel/traces/otlp"
 )
 
-var DefaultDictConfig = &cfg.Dictionary{
-	MaxCard: math.MaxUint16,
-}
+var DefaultDictConfig = cfg.NewDictionary(math.MaxUint16)
 
 // TestConversionFromSyntheticData tests the conversion of OTLP traces to Arrow and back to OTLP.
 // The initial OTLP traces are generated from a synthetic dataset.
@@ -57,7 +55,7 @@ func TestConversionFromSyntheticData(t *testing.T) {
 	pool := memory.NewCheckedAllocator(memory.NewGoAllocator())
 	defer pool.AssertSize(t, 0)
 
-	rBuilder := builder.NewRecordBuilderExt(pool, tracesarrow.Schema, DefaultDictConfig)
+	rBuilder := builder.NewRecordBuilderExt(pool, tracesarrow.Schema, DefaultDictConfig, false)
 	defer rBuilder.Release()
 
 	var record arrow.Record
@@ -112,7 +110,7 @@ func checkTracesConversion(t *testing.T, expectedRequest ptraceotlp.ExportReques
 	pool := memory.NewCheckedAllocator(memory.NewGoAllocator())
 	defer pool.AssertSize(t, 0)
 
-	rBuilder := builder.NewRecordBuilderExt(pool, tracesarrow.Schema, DefaultDictConfig)
+	rBuilder := builder.NewRecordBuilderExt(pool, tracesarrow.Schema, DefaultDictConfig, false)
 	defer rBuilder.Release()
 
 	var record arrow.Record

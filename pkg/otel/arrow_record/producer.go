@@ -118,17 +118,11 @@ func NewProducerWithOptions(options ...Option) *Producer {
 		opt(cfg)
 	}
 
-	metricsRecordBuilder := builder.NewRecordBuilderExt(cfg.pool, metricsarrow.Schema, &config.Dictionary{
-		MaxCard: cfg.limitIndexSize,
-	})
+	metricsRecordBuilder := builder.NewRecordBuilderExt(cfg.pool, metricsarrow.Schema, config.NewDictionary(cfg.limitIndexSize), cfg.metricsStats)
 
-	logsRecordBuilder := builder.NewRecordBuilderExt(cfg.pool, logsarrow.Schema, &config.Dictionary{
-		MaxCard: cfg.limitIndexSize,
-	})
+	logsRecordBuilder := builder.NewRecordBuilderExt(cfg.pool, logsarrow.Schema, config.NewDictionary(cfg.limitIndexSize), cfg.logsStats)
 
-	tracesRecordBuilder := builder.NewRecordBuilderExt(cfg.pool, tracesarrow.Schema, &config.Dictionary{
-		MaxCard: cfg.limitIndexSize,
-	})
+	tracesRecordBuilder := builder.NewRecordBuilderExt(cfg.pool, tracesarrow.Schema, config.NewDictionary(cfg.limitIndexSize), cfg.tracesStats)
 
 	metricsBuilder, err := metricsarrow.NewMetricsBuilder(metricsRecordBuilder, cfg.metricsStats)
 	if err != nil {

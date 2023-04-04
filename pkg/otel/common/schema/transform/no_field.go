@@ -23,6 +23,8 @@ import "github.com/apache/arrow/go/v12/arrow"
 // field.
 type NoField struct{}
 
-func (t *NoField) Transform(_field *arrow.Field) *arrow.Field {
+func (t *NoField) Transform(_ *arrow.Field) *arrow.Field {
 	return nil
 }
+
+func (t *NoField) RevertCounters() {}

@@ -45,7 +45,7 @@ func TestSums(t *testing.T) {
 		{Name: "sums", Type: marrow.UnivariateSumDT, Metadata: schema.Metadata(schema.Optional)},
 	}, nil)
 
-	rBuilder := builder.NewRecordBuilderExt(pool, s, DefaultDictConfig)
+	rBuilder := builder.NewRecordBuilderExt(pool, s, DefaultDictConfig, false)
 	defer rBuilder.Release()
 
 	var record arrow.Record

@@ -25,3 +25,5 @@ type IdentityField struct{}
 func (t *IdentityField) Transform(field *arrow.Field) *arrow.Field {
 	return &arrow.Field{Name: field.Name, Type: field.Type, Nullable: field.Nullable, Metadata: field.Metadata}
 }
+
+func (t *IdentityField) RevertCounters() {}

@@ -39,7 +39,7 @@ func TestMetrics(t *testing.T) {
 	pool := memory.NewCheckedAllocator(memory.NewGoAllocator())
 	defer pool.AssertSize(t, 0)
 
-	rBuilder := builder.NewRecordBuilderExt(pool, ametrics.Schema, DefaultDictConfig)
+	rBuilder := builder.NewRecordBuilderExt(pool, ametrics.Schema, DefaultDictConfig, false)
 	defer rBuilder.Release()
 
 	var record arrow.Record

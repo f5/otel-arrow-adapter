@@ -119,10 +119,8 @@ func TestTracesMultiBatchWithDictionaryIndexChanges(t *testing.T) {
 
 	builder := producer.TracesRecordBuilderExt()
 	dictionariesIndexTypeChanged := builder.Events().DictionariesIndexTypeChanged
-	require.Equal(t, 3, len(dictionariesIndexTypeChanged))
+	require.Equal(t, 1, len(dictionariesIndexTypeChanged))
 	require.Equal(t, "uint16", dictionariesIndexTypeChanged["resource_spans.item.scope_spans.item.spans.item.name"])
-	require.Equal(t, "uint16", dictionariesIndexTypeChanged["resource_spans.item.scope_spans.item.spans.item.attributes.value.str"])
-	require.Equal(t, "uint16", dictionariesIndexTypeChanged["resource_spans.item.scope_spans.item.spans.item.attributes.value.binary"])
 }
 
 // TestTracesMultiBatchWithDictionaryOverflow
@@ -172,10 +170,8 @@ func TestTracesMultiBatchWithDictionaryOverflow(t *testing.T) {
 
 	builder := producer.TracesRecordBuilderExt()
 	dictionariesIndexTypeChanged := builder.Events().DictionariesIndexTypeChanged
-	require.Equal(t, 3, len(dictionariesIndexTypeChanged))
+	require.Equal(t, 1, len(dictionariesIndexTypeChanged))
 	require.Equal(t, "uint16", dictionariesIndexTypeChanged["resource_spans.item.scope_spans.item.spans.item.name"])
-	require.Equal(t, "uint16", dictionariesIndexTypeChanged["resource_spans.item.scope_spans.item.spans.item.attributes.value.str"])
-	require.Equal(t, "uint16", dictionariesIndexTypeChanged["resource_spans.item.scope_spans.item.spans.item.attributes.value.binary"])
 }
 
 // TestTracesMultiBatchWithDictionaryLimit

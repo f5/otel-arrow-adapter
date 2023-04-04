@@ -45,7 +45,7 @@ func TestExponentialHistograms(t *testing.T) {
 		{Name: "ehistograms", Type: marrow.UnivariateEHistogramDT, Metadata: schema.Metadata(schema.Optional)},
 	}, nil)
 
-	rBuilder := builder.NewRecordBuilderExt(pool, s, DefaultDictConfig)
+	rBuilder := builder.NewRecordBuilderExt(pool, s, DefaultDictConfig, false)
 	defer rBuilder.Release()
 
 	var record arrow.Record

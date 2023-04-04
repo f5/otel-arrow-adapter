@@ -30,7 +30,7 @@ var (
 	// UnivariateHistogramDT is the Arrow Data Type describing a univariate histogram.
 	UnivariateHistogramDT = arrow.StructOf(
 		arrow.Field{Name: constants.DataPoints, Type: arrow.ListOf(UnivariateHistogramDataPointDT), Metadata: schema.Metadata(schema.Optional)},
-		arrow.Field{Name: constants.AggregationTemporality, Type: arrow.PrimitiveTypes.Int32, Metadata: schema.Metadata(schema.Optional, schema.Dictionary)},
+		arrow.Field{Name: constants.AggregationTemporality, Type: arrow.PrimitiveTypes.Int32, Metadata: schema.Metadata(schema.Optional, schema.Dictionary8)},
 	)
 )
 
