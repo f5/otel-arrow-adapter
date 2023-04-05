@@ -167,12 +167,13 @@ type MetricSharedData struct {
 }
 
 func NewMetricsSharedData(metrics []*pmetric.Metric) (sharedData *ScopeMetricsSharedData, err error) {
+	sharedData = &ScopeMetricsSharedData{Metrics: make([]*MetricSharedData, len(metrics))}
+
 	if len(metrics) > 0 {
 		msd, err := NewMetricSharedData(metrics[0])
 		if err != nil {
 			return nil, werror.Wrap(err)
 		}
-		sharedData = &ScopeMetricsSharedData{Metrics: make([]*MetricSharedData, len(metrics))}
 		sharedData.StartTime = msd.StartTime
 		sharedData.Time = msd.Time
 		sharedData.Attributes = msd.Attributes.Clone()
