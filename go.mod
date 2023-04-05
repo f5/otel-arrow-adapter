@@ -4,7 +4,6 @@ go 1.18
 
 require (
 	github.com/HdrHistogram/hdrhistogram-go v1.1.2
-	github.com/apache/arrow/go/v11 v11.0.0
 	github.com/apache/arrow/go/v12 v12.0.0-20230404000714-f02d35119ae6
 	github.com/brianvoe/gofakeit/v6 v6.17.0
 	github.com/dustin/go-humanize v1.0.1
