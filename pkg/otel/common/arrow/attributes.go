@@ -19,7 +19,6 @@ package arrow
 
 import (
 	"fmt"
-	"sort"
 
 	"github.com/HdrHistogram/hdrhistogram-go"
 	"github.com/apache/arrow/go/v12/arrow"
@@ -89,29 +88,6 @@ func (b *AttributesBuilder) Build() (*array.Map, error) {
 
 	defer b.Release()
 	return b.builder.NewMapArray(), nil
-}
-
-type (
-	mapEntry struct {
-		key   string
-		value pcommon.Value
-	}
-
-	mapEntries []mapEntry
-)
-
-var _ sort.Interface = mapEntries{}
-
-func (me mapEntries) Len() int {
-	return len(me)
-}
-
-func (me mapEntries) Swap(i, j int) {
-	me[i], me[j] = me[j], me[i]
-}
-
-func (me mapEntries) Less(i, j int) bool {
-	return me[i].key < me[j].key
 }
 
 // Append appends a new set of attributes to the builder.
