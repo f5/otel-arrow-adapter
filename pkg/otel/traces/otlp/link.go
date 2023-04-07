@@ -63,7 +63,7 @@ func NewLinkIds(spanDT *arrow.StructType) (*LinkIds, error) {
 }
 
 // AppendLinksInto initializes a Span's Links from an Arrow representation.
-func AppendLinksInto(result ptrace.SpanLinkSlice, los *arrowutils.ListOfStructs, row int, ids *LinkIds) error {
+func AppendLinksInto(result ptrace.SpanLinkSlice, los *arrowutils.ListOfStructs, row int, ids *LinkIds, sharedAttrs pcommon.Map) error {
 	linkLos, err := los.ListOfStructsById(row, ids.Id)
 	if err != nil {
 		return werror.Wrap(err)
@@ -111,9 +111,17 @@ func AppendLinksInto(result ptrace.SpanLinkSlice, los *arrowutils.ListOfStructs,
 		}
 		link.TraceState().FromRaw(traceState)
 
-		if err = otlp.AppendAttributesInto(link.Attributes(), linkLos.Array(), linkIdx, ids.Attributes); err != nil {
+		linkAttrs := link.Attributes()
+		if err = otlp.AppendAttributesInto(linkAttrs, linkLos.Array(), linkIdx, ids.Attributes); err != nil {
 			return werror.Wrap(err)
 		}
+		if sharedAttrs.Len() > 0 {
+			sharedAttrs.Range(func(k string, v pcommon.Value) bool {
+				v.CopyTo(linkAttrs.PutEmpty(k))
+				return true
+			})
+		}
+
 		dac, err := linkLos.U32FieldByID(ids.DroppedAttributesCount, linkIdx)
 		if err != nil {
 			return werror.Wrap(err)

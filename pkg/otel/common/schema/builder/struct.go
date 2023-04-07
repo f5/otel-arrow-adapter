@@ -75,9 +75,9 @@ func (sb *StructBuilder) StringBuilder(name string) *StringBuilder {
 	_, transformNode := sb.protoDataTypeAndTransformNode(name)
 
 	if stringBuilder != nil {
-		return &StringBuilder{builder: stringBuilder, transformNode: transformNode, updateRequest: sb.updateRequest}
+		return NewStringBuilder(stringBuilder, transformNode, sb.updateRequest)
 	} else {
-		return &StringBuilder{builder: nil, transformNode: transformNode, updateRequest: sb.updateRequest}
+		return NewStringBuilder(nil, transformNode, sb.updateRequest)
 	}
 }
 

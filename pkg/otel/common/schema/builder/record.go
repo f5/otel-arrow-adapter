@@ -27,9 +27,10 @@ import (
 	carrow "github.com/f5/otel-arrow-adapter/pkg/arrow"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/config"
-	events "github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/events"
+	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/events"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/transform"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/update"
+	"github.com/f5/otel-arrow-adapter/pkg/otel/stats"
 	"github.com/f5/otel-arrow-adapter/pkg/werror"
 )
 
@@ -64,8 +65,8 @@ type RecordBuilderExt struct {
 
 	events *events.Events
 
-	// stats is a flag that enables/disables the collection of statistics
-	stats bool
+	// stats is a set of counters that are incremented when certain events occur.
+	stats *stats.ProducerStats
 }
 
 // NewRecordBuilderExt creates a new RecordBuilderExt from the given allocator
@@ -74,7 +75,7 @@ func NewRecordBuilderExt(
 	allocator memory.Allocator,
 	protoSchema *arrow.Schema,
 	dictConfig *builder.Dictionary,
-	stats bool,
+	stats *stats.ProducerStats,
 ) *RecordBuilderExt {
 	schemaUpdateRequest := update.NewSchemaUpdateRequest()
 	evts := &events.Events{
@@ -119,7 +120,8 @@ func (rb *RecordBuilderExt) RecordBuilder() *array.RecordBuilder {
 // NewRecord returns a new record from the underlying array.RecordBuilder or
 // ErrSchemaNotUpToDate if the schema is not up-to-date.
 func (rb *RecordBuilderExt) NewRecord() (arrow.Record, error) {
-	// If field optionality has changed, update the schema
+	// If one of the tree transformation has been removed, or updated, then
+	// the schema must be updated.
 	if !rb.IsSchemaUpToDate() {
 		rb.UpdateSchema()
 		return nil, werror.Wrap(schema.ErrSchemaNotUpToDate)
@@ -183,7 +185,7 @@ func (rb *RecordBuilderExt) detectDictionaryOverflow(field *arrow.Field, column 
 				switch dictColumn := column.(type) {
 				case *array.Dictionary:
 					dictTransform.AddTotal(dictColumn.Len())
-					dictTransform.SetCardinality(uint64(dictColumn.Dictionary().Len()))
+					dictTransform.SetCardinality(uint64(dictColumn.Dictionary().Len()), &rb.stats.RecordBuilderStats)
 				}
 			} else {
 				panic(fmt.Sprintf("Dictionary transform not found for field %s", field.Name))
@@ -222,10 +224,11 @@ func (rb *RecordBuilderExt) UpdateSchema() {
 	// to the new one.
 	newRecBuilder := array.NewRecordBuilder(rb.allocator, s)
 	// ToDo Find a better way to copy the dictionary values who have a lot of reused values between batches. For now, this feature is disabled.
-	//if err := copyDictValuesTo(rb.recordBuilder, newRecBuilder); err != nil {
+	//if err := rb.copyDictValuesTo(rb.recordBuilder, newRecBuilder); err != nil {
 	//	panic(err)
 	//}
-	if rb.stats {
+
+	if rb.stats.SchemaStatsEnabled {
 		rb.ShowSchema()
 	}
 
@@ -234,11 +237,12 @@ func (rb *RecordBuilderExt) UpdateSchema() {
 	rb.schemaID = carrow.SchemaToID(s)
 
 	rb.updateRequest.Reset()
+	rb.stats.RecordBuilderStats.SchemaUpdatesPerformed++
 }
 
 // CopyDictValuesTo recursively copy the dictionary values from the source
 // record builder to the destination record builder.
-func copyDictValuesTo(srcRecBuilder *array.RecordBuilder, destRecBuilder *array.RecordBuilder) error {
+func (rb *RecordBuilderExt) copyDictValuesTo(srcRecBuilder *array.RecordBuilder, destRecBuilder *array.RecordBuilder) error {
 	srcSchema := srcRecBuilder.Schema()
 	destSchema := destRecBuilder.Schema()
 
@@ -247,7 +251,7 @@ func copyDictValuesTo(srcRecBuilder *array.RecordBuilder, destRecBuilder *array.
 		destFieldIndices := destSchema.FieldIndices(srcField.Name)
 		if len(destFieldIndices) == 1 {
 			destBuilder := destRecBuilder.Field(destFieldIndices[0])
-			if err := copyFieldDictValuesTo(srcBuilder, destBuilder); err != nil {
+			if err := rb.copyFieldDictValuesTo(srcBuilder, destBuilder); err != nil {
 				return werror.Wrap(err)
 			}
 		}
@@ -257,7 +261,7 @@ func copyDictValuesTo(srcRecBuilder *array.RecordBuilder, destRecBuilder *array.
 
 // Recursively copy the dictionary values from the source array builder to the
 // destination array builder.
-func copyFieldDictValuesTo(srcBuilder array.Builder, destBuilder array.Builder) (err error) {
+func (rb *RecordBuilderExt) copyFieldDictValuesTo(srcBuilder array.Builder, destBuilder array.Builder) (err error) {
 	srcDT := srcBuilder.Type()
 	destDT := destBuilder.Type()
 
@@ -282,12 +286,12 @@ func copyFieldDictValuesTo(srcBuilder array.Builder, destBuilder array.Builder) 
 			if !found {
 				continue
 			}
-			if err = copyFieldDictValuesTo(sBuilder.FieldBuilder(i), dBuilder.FieldBuilder(destSubFieldIdx)); err != nil {
+			if err = rb.copyFieldDictValuesTo(sBuilder.FieldBuilder(i), dBuilder.FieldBuilder(destSubFieldIdx)); err != nil {
 				return
 			}
 		}
 	case *array.ListBuilder:
-		if err = copyFieldDictValuesTo(sBuilder.ValueBuilder(), destBuilder.(*array.ListBuilder).ValueBuilder()); err != nil {
+		if err = rb.copyFieldDictValuesTo(sBuilder.ValueBuilder(), destBuilder.(*array.ListBuilder).ValueBuilder()); err != nil {
 			return
 		}
 	case array.UnionBuilder:
@@ -307,15 +311,15 @@ func copyFieldDictValuesTo(srcBuilder array.Builder, destBuilder array.Builder) 
 			if destChildID == -1 {
 				continue
 			}
-			if err = copyFieldDictValuesTo(sBuilder.Child(srcChildID), destBuilder.(array.UnionBuilder).Child(destChildID)); err != nil {
+			if err = rb.copyFieldDictValuesTo(sBuilder.Child(srcChildID), destBuilder.(array.UnionBuilder).Child(destChildID)); err != nil {
 				return
 			}
 		}
 	case *array.MapBuilder:
-		if err = copyFieldDictValuesTo(sBuilder.KeyBuilder(), destBuilder.(*array.MapBuilder).KeyBuilder()); err != nil {
+		if err = rb.copyFieldDictValuesTo(sBuilder.KeyBuilder(), destBuilder.(*array.MapBuilder).KeyBuilder()); err != nil {
 			return werror.Wrap(err)
 		}
-		if err = copyFieldDictValuesTo(sBuilder.ItemBuilder(), destBuilder.(*array.MapBuilder).ItemBuilder()); err != nil {
+		if err = rb.copyFieldDictValuesTo(sBuilder.ItemBuilder(), destBuilder.(*array.MapBuilder).ItemBuilder()); err != nil {
 			return werror.Wrap(err)
 		}
 	case array.DictionaryBuilder:
@@ -325,14 +329,29 @@ func copyFieldDictValuesTo(srcBuilder array.Builder, destBuilder array.Builder) 
 		defer srcDict.Release()
 		switch dict := srcDict.(type) {
 		case *array.String:
+			if err := rb.stats.RecordBuilderStats.DictMigrationStats.StringDictSz.RecordValue(int64(dict.Len())); err != nil {
+				return werror.Wrap(err)
+			}
 			err = destBuilder.(*array.BinaryDictionaryBuilder).InsertStringDictValues(dict)
 		case *array.Binary:
+			if err := rb.stats.RecordBuilderStats.DictMigrationStats.BinaryDictSz.RecordValue(int64(dict.Len())); err != nil {
+				return werror.Wrap(err)
+			}
 			err = destBuilder.(*array.BinaryDictionaryBuilder).InsertDictValues(dict)
 		case *array.FixedSizeBinary:
+			if err := rb.stats.RecordBuilderStats.DictMigrationStats.FixedSizeBinaryDictSz.RecordValue(int64(dict.Len())); err != nil {
+				return werror.Wrap(err)
+			}
 			err = destBuilder.(*array.FixedSizeBinaryDictionaryBuilder).InsertDictValues(dict)
 		case *array.Int32:
+			if err := rb.stats.RecordBuilderStats.DictMigrationStats.Int32DictSz.RecordValue(int64(dict.Len())); err != nil {
+				return werror.Wrap(err)
+			}
 			err = destBuilder.(*array.Int32DictionaryBuilder).InsertDictValues(dict)
 		case *array.Uint32:
+			if err := rb.stats.RecordBuilderStats.DictMigrationStats.Uint32DictSz.RecordValue(int64(dict.Len())); err != nil {
+				return werror.Wrap(err)
+			}
 			err = destBuilder.(*array.Uint32DictionaryBuilder).InsertDictValues(dict)
 		default:
 			panic("copyFieldDictValuesTo: unsupported dictionary type " + dict.DataType().Name())
@@ -424,9 +443,9 @@ func (rb *RecordBuilderExt) StringBuilder(name string) *StringBuilder {
 	b := rb.builder(name)
 
 	if b != nil {
-		return &StringBuilder{builder: b, transformNode: transformNode, updateRequest: rb.updateRequest}
+		return NewStringBuilder(b, transformNode, rb.updateRequest)
 	} else {
-		return &StringBuilder{builder: nil, transformNode: transformNode, updateRequest: rb.updateRequest}
+		return NewStringBuilder(nil, transformNode, rb.updateRequest)
 	}
 }
 

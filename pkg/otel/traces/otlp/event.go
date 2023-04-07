@@ -57,7 +57,7 @@ func NewEventIds(spansDT *arrow.StructType) (*EventIds, error) {
 }
 
 // AppendEventsInto initializes a Span's Events from an Arrow representation.
-func AppendEventsInto(spans ptrace.SpanEventSlice, arrowSpans *arrowutils.ListOfStructs, spanIdx int, ids *EventIds) error {
+func AppendEventsInto(spans ptrace.SpanEventSlice, arrowSpans *arrowutils.ListOfStructs, spanIdx int, ids *EventIds, sharedAttrs pcommon.Map) error {
 	events, err := arrowSpans.ListOfStructsById(spanIdx, ids.Id)
 	if err != nil {
 		return werror.Wrap(err)
@@ -88,8 +88,16 @@ func AppendEventsInto(spans ptrace.SpanEventSlice, arrowSpans *arrowutils.ListOf
 
 		event.SetName(name)
 
-		if err = otlp.AppendAttributesInto(event.Attributes(), events.Array(), eventIdx, ids.Attributes); err != nil {
+		eventAttrs := event.Attributes()
+		if err = otlp.AppendAttributesInto(eventAttrs, events.Array(), eventIdx, ids.Attributes); err != nil {
 			return werror.Wrap(err)
+		}
+
+		if sharedAttrs.Len() > 0 {
+			sharedAttrs.Range(func(k string, v pcommon.Value) bool {
+				v.CopyTo(eventAttrs.PutEmpty(k))
+				return true
+			})
 		}
 
 		dac, err := events.U32FieldByID(ids.DroppedAttributesCount, eventIdx)

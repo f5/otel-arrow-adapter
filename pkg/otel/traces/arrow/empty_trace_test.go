@@ -34,7 +34,7 @@ func TestEmptyTrace(t *testing.T) {
 	pool := memory.NewCheckedAllocator(memory.NewGoAllocator())
 	defer pool.AssertSize(t, 0)
 
-	rBuilder := builder.NewRecordBuilderExt(pool, Schema, DefaultDictConfig, false)
+	rBuilder := builder.NewRecordBuilderExt(pool, Schema, DefaultDictConfig, producerStats)
 	defer rBuilder.Release()
 
 	var record arrow.Record
@@ -66,7 +66,7 @@ func TestEmptyResource(t *testing.T) {
 	pool := memory.NewCheckedAllocator(memory.NewGoAllocator())
 	defer pool.AssertSize(t, 0)
 
-	rBuilder := builder.NewRecordBuilderExt(pool, Schema, DefaultDictConfig, false)
+	rBuilder := builder.NewRecordBuilderExt(pool, Schema, DefaultDictConfig, producerStats)
 	defer rBuilder.Release()
 
 	var record arrow.Record
@@ -101,7 +101,7 @@ func TestEmptyResourceAttribute(t *testing.T) {
 	pool := memory.NewCheckedAllocator(memory.NewGoAllocator())
 	defer pool.AssertSize(t, 0)
 
-	rBuilder := builder.NewRecordBuilderExt(pool, Schema, DefaultDictConfig, false)
+	rBuilder := builder.NewRecordBuilderExt(pool, Schema, DefaultDictConfig, producerStats)
 	defer rBuilder.Release()
 
 	var record arrow.Record
@@ -137,7 +137,7 @@ func TestEmptyScopeSpan(t *testing.T) {
 	pool := memory.NewCheckedAllocator(memory.NewGoAllocator())
 	defer pool.AssertSize(t, 0)
 
-	rBuilder := builder.NewRecordBuilderExt(pool, Schema, DefaultDictConfig, false)
+	rBuilder := builder.NewRecordBuilderExt(pool, Schema, DefaultDictConfig, producerStats)
 	defer rBuilder.Release()
 
 	var record arrow.Record
@@ -173,7 +173,7 @@ func TestEmptyScope(t *testing.T) {
 	pool := memory.NewCheckedAllocator(memory.NewGoAllocator())
 	defer pool.AssertSize(t, 0)
 
-	rBuilder := builder.NewRecordBuilderExt(pool, Schema, DefaultDictConfig, false)
+	rBuilder := builder.NewRecordBuilderExt(pool, Schema, DefaultDictConfig, producerStats)
 	defer rBuilder.Release()
 
 	var record arrow.Record
@@ -210,7 +210,7 @@ func TestEmptyScopeAttribute(t *testing.T) {
 	pool := memory.NewCheckedAllocator(memory.NewGoAllocator())
 	defer pool.AssertSize(t, 0)
 
-	rBuilder := builder.NewRecordBuilderExt(pool, Schema, DefaultDictConfig, false)
+	rBuilder := builder.NewRecordBuilderExt(pool, Schema, DefaultDictConfig, producerStats)
 	defer rBuilder.Release()
 
 	var record arrow.Record
@@ -248,7 +248,7 @@ func TestEmptySpans(t *testing.T) {
 	pool := memory.NewCheckedAllocator(memory.NewGoAllocator())
 	defer pool.AssertSize(t, 0)
 
-	rBuilder := builder.NewRecordBuilderExt(pool, Schema, DefaultDictConfig, false)
+	rBuilder := builder.NewRecordBuilderExt(pool, Schema, DefaultDictConfig, producerStats)
 	defer rBuilder.Release()
 
 	var record arrow.Record
@@ -284,7 +284,7 @@ func TestEmptySpanAttribute(t *testing.T) {
 	pool := memory.NewCheckedAllocator(memory.NewGoAllocator())
 	defer pool.AssertSize(t, 0)
 
-	rBuilder := builder.NewRecordBuilderExt(pool, Schema, DefaultDictConfig, false)
+	rBuilder := builder.NewRecordBuilderExt(pool, Schema, DefaultDictConfig, producerStats)
 	defer rBuilder.Release()
 
 	var record arrow.Record
@@ -322,7 +322,7 @@ func TestEmptySpanStatus(t *testing.T) {
 	pool := memory.NewCheckedAllocator(memory.NewGoAllocator())
 	defer pool.AssertSize(t, 0)
 
-	rBuilder := builder.NewRecordBuilderExt(pool, Schema, DefaultDictConfig, false)
+	rBuilder := builder.NewRecordBuilderExt(pool, Schema, DefaultDictConfig, producerStats)
 	defer rBuilder.Release()
 
 	var record arrow.Record
@@ -360,7 +360,7 @@ func TestEmptySpanLink(t *testing.T) {
 	pool := memory.NewCheckedAllocator(memory.NewGoAllocator())
 	defer pool.AssertSize(t, 0)
 
-	rBuilder := builder.NewRecordBuilderExt(pool, Schema, DefaultDictConfig, false)
+	rBuilder := builder.NewRecordBuilderExt(pool, Schema, DefaultDictConfig, producerStats)
 	defer rBuilder.Release()
 
 	var record arrow.Record
@@ -398,7 +398,7 @@ func TestEmptySpanEvent(t *testing.T) {
 	pool := memory.NewCheckedAllocator(memory.NewGoAllocator())
 	defer pool.AssertSize(t, 0)
 
-	rBuilder := builder.NewRecordBuilderExt(pool, Schema, DefaultDictConfig, false)
+	rBuilder := builder.NewRecordBuilderExt(pool, Schema, DefaultDictConfig, producerStats)
 	defer rBuilder.Release()
 
 	var record arrow.Record

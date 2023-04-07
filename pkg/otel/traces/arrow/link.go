@@ -22,6 +22,7 @@ import (
 	"github.com/apache/arrow/go/v12/arrow/array"
 	"go.opentelemetry.io/collector/pdata/ptrace"
 
+	"github.com/f5/otel-arrow-adapter/pkg/otel/common"
 	acommon "github.com/f5/otel-arrow-adapter/pkg/otel/common/arrow"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/builder"
@@ -65,7 +66,7 @@ func LinkBuilderFrom(lb *builder.StructBuilder) *LinkBuilder {
 }
 
 // Append appends a new link to the builder.
-func (b *LinkBuilder) Append(link ptrace.SpanLink) error {
+func (b *LinkBuilder) Append(link ptrace.SpanLink, sharedAttributes *common.SharedAttributes) error {
 	if b.released {
 		return werror.Wrap(acommon.ErrBuilderAlreadyReleased)
 	}
@@ -77,7 +78,7 @@ func (b *LinkBuilder) Append(link ptrace.SpanLink) error {
 		b.sib.Append(sid[:])
 		b.tsb.AppendNonEmpty(link.TraceState().AsRaw())
 		b.dacb.AppendNonZero(link.DroppedAttributesCount())
-		return b.ab.Append(link.Attributes())
+		return b.ab.AppendUniqueAttributes(link.Attributes(), sharedAttributes, nil)
 	})
 }
 

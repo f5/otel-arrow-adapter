@@ -52,7 +52,7 @@ func NewTraceProfileable(tags []string, dataset dataset.TraceDataset, config *be
 		tracesProducerOptions = append(tracesProducerOptions, arrow_record.WithNoZstd())
 	}
 	if config.Stats {
-		tracesProducerOptions = append(tracesProducerOptions, arrow_record.WithTracesStats())
+		tracesProducerOptions = append(tracesProducerOptions, arrow_record.WithStats())
 	}
 
 	return &TracesProfileable{
@@ -192,6 +192,6 @@ func (s *TracesProfileable) ShowStats() {
 		if stats != nil {
 			stats.Show()
 		}
-		s.producer.ShowSchemas()
+		s.producer.ShowStats()
 	}
 }

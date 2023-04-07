@@ -90,6 +90,15 @@ func (b *AttributesBuilder) Build() (*array.Map, error) {
 	return b.builder.NewMapArray(), nil
 }
 
+func (b *AttributesBuilder) AppendNull() error {
+	if b.released {
+		return werror.Wrap(ErrBuilderAlreadyReleased)
+	}
+
+	b.builder.AppendNull()
+	return nil
+}
+
 // Append appends a new set of attributes to the builder.
 // Note: empty keys are skipped.
 func (b *AttributesBuilder) Append(attrs pcommon.Map) error {
@@ -126,7 +135,13 @@ func (b *AttributesBuilder) AppendUniqueAttributes(attrs pcommon.Map, smattrs *c
 
 	return b.builder.Append(uniqueAttrsCount, func() error {
 		var err error
+
 		attrs.Range(func(key string, v pcommon.Value) bool {
+			if key == "" {
+				// Skip entries with empty keys
+				return true
+			}
+
 			// Skip the current attribute if it is a scope metric shared attribute
 			// or a metric shared attribute
 			smattrsFound := false
@@ -147,6 +162,7 @@ func (b *AttributesBuilder) AppendUniqueAttributes(attrs pcommon.Map, smattrs *c
 			uniqueAttrsCount--
 			return err == nil && uniqueAttrsCount > 0
 		})
+
 		return err
 	})
 }

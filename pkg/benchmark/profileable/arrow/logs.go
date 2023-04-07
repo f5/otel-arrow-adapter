@@ -32,7 +32,7 @@ const OtlpArrow = "OTLP_ARROW"
 
 var logsProducerOptions = []arrow_record.Option{
 	arrow_record.WithNoZstd(),
-	arrow_record.WithLogsStats(),
+	arrow_record.WithStats(),
 }
 
 type LogsProfileable struct {

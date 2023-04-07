@@ -116,7 +116,7 @@ func (b *SpanBuilder) Build() (*array.Struct, error) {
 }
 
 // Append appends a new span to the builder.
-func (b *SpanBuilder) Append(span *ptrace.Span) error {
+func (b *SpanBuilder) Append(span *ptrace.Span, sharedData *SharedData) error {
 	if b.released {
 		return werror.Wrap(acommon.ErrBuilderAlreadyReleased)
 	}
@@ -133,15 +133,19 @@ func (b *SpanBuilder) Append(span *ptrace.Span) error {
 		b.psib.Append(psib[:])
 		b.nb.AppendNonEmpty(span.Name())
 		b.kb.AppendNonZero(int32(span.Kind()))
-		if err := b.ab.Append(span.Attributes()); err != nil {
+
+		// Span Attributes
+		if err := b.ab.AppendUniqueAttributes(span.Attributes(), sharedData.sharedAttributes, nil); err != nil {
 			return werror.Wrap(err)
 		}
 		b.dacb.AppendNonZero(span.DroppedAttributesCount())
+
+		// Events
 		evts := span.Events()
 		sc := evts.Len()
 		if err := b.sesb.Append(sc, func() error {
 			for i := 0; i < sc; i++ {
-				if err := b.seb.Append(evts.At(i)); err != nil {
+				if err := b.seb.Append(evts.At(i), sharedData.sharedEventAttributes); err != nil {
 					return werror.Wrap(err)
 				}
 			}
@@ -150,11 +154,13 @@ func (b *SpanBuilder) Append(span *ptrace.Span) error {
 			return werror.Wrap(err)
 		}
 		b.decb.AppendNonZero(span.DroppedEventsCount())
+
+		// Links
 		lks := span.Links()
 		lc := lks.Len()
 		if err := b.slsb.Append(lc, func() error {
 			for i := 0; i < lc; i++ {
-				if err := b.slb.Append(lks.At(i)); err != nil {
+				if err := b.slb.Append(lks.At(i), sharedData.sharedLinkAttributes); err != nil {
 					return werror.Wrap(err)
 				}
 			}
@@ -163,6 +169,7 @@ func (b *SpanBuilder) Append(span *ptrace.Span) error {
 			return werror.Wrap(err)
 		}
 		b.dlcb.AppendNonZero(span.DroppedLinksCount())
+
 		return b.sb.Append(span.Status())
 	})
 }

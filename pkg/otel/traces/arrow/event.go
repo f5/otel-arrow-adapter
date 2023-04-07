@@ -22,6 +22,7 @@ import (
 	"github.com/apache/arrow/go/v12/arrow/array"
 	"go.opentelemetry.io/collector/pdata/ptrace"
 
+	"github.com/f5/otel-arrow-adapter/pkg/otel/common"
 	acommon "github.com/f5/otel-arrow-adapter/pkg/otel/common/arrow"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/builder"
@@ -62,7 +63,7 @@ func EventBuilderFrom(eb *builder.StructBuilder) *EventBuilder {
 }
 
 // Append appends a new event to the builder.
-func (b *EventBuilder) Append(event ptrace.SpanEvent) error {
+func (b *EventBuilder) Append(event ptrace.SpanEvent, sharedAttributes *common.SharedAttributes) error {
 	if b.released {
 		return werror.Wrap(acommon.ErrBuilderAlreadyReleased)
 	}
@@ -71,7 +72,7 @@ func (b *EventBuilder) Append(event ptrace.SpanEvent) error {
 		b.tunb.Append(arrow.Timestamp(event.Timestamp()))
 		b.nb.AppendNonEmpty(event.Name())
 		b.dacb.AppendNonZero(event.DroppedAttributesCount())
-		return b.ab.Append(event.Attributes())
+		return b.ab.AppendUniqueAttributes(event.Attributes(), sharedAttributes, nil)
 	})
 }
 

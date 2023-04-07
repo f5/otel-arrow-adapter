@@ -31,11 +31,13 @@ import (
 	acommon "github.com/f5/otel-arrow-adapter/pkg/otel/common/schema"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/builder"
 	cfg "github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/config"
+	"github.com/f5/otel-arrow-adapter/pkg/otel/stats"
 	tracesarrow "github.com/f5/otel-arrow-adapter/pkg/otel/traces/arrow"
 	tracesotlp "github.com/f5/otel-arrow-adapter/pkg/otel/traces/otlp"
 )
 
 var DefaultDictConfig = cfg.NewDictionary(math.MaxUint16)
+var ProducerStats = stats.NewProducerStats()
 
 // TestConversionFromSyntheticData tests the conversion of OTLP traces to Arrow and back to OTLP.
 // The initial OTLP traces are generated from a synthetic dataset.
@@ -55,7 +57,7 @@ func TestConversionFromSyntheticData(t *testing.T) {
 	pool := memory.NewCheckedAllocator(memory.NewGoAllocator())
 	defer pool.AssertSize(t, 0)
 
-	rBuilder := builder.NewRecordBuilderExt(pool, tracesarrow.Schema, DefaultDictConfig, false)
+	rBuilder := builder.NewRecordBuilderExt(pool, tracesarrow.Schema, DefaultDictConfig, ProducerStats)
 	defer rBuilder.Release()
 
 	var record arrow.Record
@@ -110,7 +112,7 @@ func checkTracesConversion(t *testing.T, expectedRequest ptraceotlp.ExportReques
 	pool := memory.NewCheckedAllocator(memory.NewGoAllocator())
 	defer pool.AssertSize(t, 0)
 
-	rBuilder := builder.NewRecordBuilderExt(pool, tracesarrow.Schema, DefaultDictConfig, false)
+	rBuilder := builder.NewRecordBuilderExt(pool, tracesarrow.Schema, DefaultDictConfig, ProducerStats)
 	defer rBuilder.Release()
 
 	var record arrow.Record

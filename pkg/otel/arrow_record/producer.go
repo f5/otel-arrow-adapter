@@ -36,6 +36,7 @@ import (
 	config "github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/config"
 	logsarrow "github.com/f5/otel-arrow-adapter/pkg/otel/logs/arrow"
 	metricsarrow "github.com/f5/otel-arrow-adapter/pkg/otel/metrics/arrow"
+	pstats "github.com/f5/otel-arrow-adapter/pkg/otel/stats"
 	tracesarrow "github.com/f5/otel-arrow-adapter/pkg/otel/traces/arrow"
 	"github.com/f5/otel-arrow-adapter/pkg/werror"
 )
@@ -71,6 +72,9 @@ type Producer struct {
 	metricsRecordBuilder *builder.RecordBuilderExt
 	logsRecordBuilder    *builder.RecordBuilderExt
 	tracesRecordBuilder  *builder.RecordBuilderExt
+
+	// General stats for the producer
+	stats *pstats.ProducerStats
 }
 
 type streamProducer struct {
@@ -86,9 +90,7 @@ type Config struct {
 	initIndexSize  uint64
 	limitIndexSize uint64
 	zstd           bool // Use IPC ZSTD compression
-	metricsStats   bool
-	logsStats      bool
-	tracesStats    bool
+	stats          bool
 }
 
 type Option func(*Config)
@@ -109,32 +111,35 @@ func NewProducerWithOptions(options ...Option) *Producer {
 		pool:           memory.NewGoAllocator(),
 		initIndexSize:  math.MaxUint16,
 		limitIndexSize: math.MaxUint16,
-		metricsStats:   false,
-		logsStats:      false,
-		tracesStats:    false,
+		stats:          false,
 		zstd:           true,
 	}
 	for _, opt := range options {
 		opt(cfg)
 	}
 
-	metricsRecordBuilder := builder.NewRecordBuilderExt(cfg.pool, metricsarrow.Schema, config.NewDictionary(cfg.limitIndexSize), cfg.metricsStats)
+	stats := pstats.NewProducerStats()
+	if cfg.stats {
+		stats.SchemaStatsEnabled = true
+	}
 
-	logsRecordBuilder := builder.NewRecordBuilderExt(cfg.pool, logsarrow.Schema, config.NewDictionary(cfg.limitIndexSize), cfg.logsStats)
+	metricsRecordBuilder := builder.NewRecordBuilderExt(cfg.pool, metricsarrow.Schema, config.NewDictionary(cfg.limitIndexSize), stats)
 
-	tracesRecordBuilder := builder.NewRecordBuilderExt(cfg.pool, tracesarrow.Schema, config.NewDictionary(cfg.limitIndexSize), cfg.tracesStats)
+	logsRecordBuilder := builder.NewRecordBuilderExt(cfg.pool, logsarrow.Schema, config.NewDictionary(cfg.limitIndexSize), stats)
 
-	metricsBuilder, err := metricsarrow.NewMetricsBuilder(metricsRecordBuilder, cfg.metricsStats)
+	tracesRecordBuilder := builder.NewRecordBuilderExt(cfg.pool, tracesarrow.Schema, config.NewDictionary(cfg.limitIndexSize), stats)
+
+	metricsBuilder, err := metricsarrow.NewMetricsBuilder(metricsRecordBuilder, stats.SchemaStatsEnabled)
 	if err != nil {
 		panic(err)
 	}
 
-	logsBuidler, err := logsarrow.NewLogsBuilder(logsRecordBuilder, cfg.logsStats)
+	logsBuidler, err := logsarrow.NewLogsBuilder(logsRecordBuilder, stats.SchemaStatsEnabled)
 	if err != nil {
 		panic(err)
 	}
 
-	tracesBuilder, err := tracesarrow.NewTracesBuilder(tracesRecordBuilder, cfg.tracesStats)
+	tracesBuilder, err := tracesarrow.NewTracesBuilder(tracesRecordBuilder, stats.SchemaStatsEnabled)
 	if err != nil {
 		panic(err)
 	}
@@ -152,6 +157,7 @@ func NewProducerWithOptions(options ...Option) *Producer {
 		metricsRecordBuilder: metricsRecordBuilder,
 		logsRecordBuilder:    logsRecordBuilder,
 		tracesRecordBuilder:  tracesRecordBuilder,
+		stats:                stats,
 	}
 }
 
@@ -174,6 +180,7 @@ func (p *Producer) BatchArrowRecordsFromMetrics(metrics pmetric.Metrics) (*colar
 	if err != nil {
 		return nil, werror.Wrap(err)
 	}
+	p.stats.MetricsBatchesProduced++
 	return bar, nil
 }
 
@@ -196,6 +203,7 @@ func (p *Producer) BatchArrowRecordsFromLogs(ls plog.Logs) (*colarspb.BatchArrow
 	if err != nil {
 		return nil, werror.Wrap(err)
 	}
+	p.stats.LogsBatchesProduced++
 	return bar, nil
 }
 
@@ -218,6 +226,7 @@ func (p *Producer) BatchArrowRecordsFromTraces(ts ptrace.Traces) (*colarspb.Batc
 	if err != nil {
 		return nil, werror.Wrap(err)
 	}
+	p.stats.TracesBatchesProduced++
 	return bar, nil
 }
 
@@ -262,8 +271,14 @@ func (p *Producer) Close() error {
 		if err := sp.ipcWriter.Close(); err != nil {
 			return werror.Wrap(err)
 		}
+		p.stats.StreamProducersClosed++
 	}
 	return nil
+}
+
+// GetAndResetStats returns the stats and resets them.
+func (p *Producer) GetAndResetStats() pstats.ProducerStats {
+	return p.stats.GetAndReset()
 }
 
 // Produce takes a slice of RecordMessage and returns the corresponding BatchArrowRecords protobuf message.
@@ -283,6 +298,7 @@ func (p *Producer) Produce(rms []*RecordMessage) (*colarspb.BatchArrowRecords, e
 					subStreamId: fmt.Sprintf("%d", len(p.streamProducers)),
 				}
 				p.streamProducers[rm.subStreamId] = sp
+				p.stats.StreamProducersCreated++
 			}
 			sp.lastProduction = time.Now()
 			sp.schema = rm.record.Schema()
@@ -330,13 +346,16 @@ func (p *Producer) Produce(rms []*RecordMessage) (*colarspb.BatchArrowRecords, e
 	}, nil
 }
 
-func (p *Producer) ShowSchemas() {
+func (p *Producer) ShowStats() {
 	type TimeSchema struct {
 		time   time.Time
 		schema *arrow.Schema
 	}
 
 	var schemas []TimeSchema
+
+	println("\n== Producer Stats ==============================================================================")
+	p.stats.Show("")
 
 	for _, producer := range p.streamProducers {
 		schemas = append(schemas, TimeSchema{time: producer.lastProduction, schema: producer.schema})
@@ -478,20 +497,8 @@ func WithNoZstd() Option {
 	}
 }
 
-func WithMetricsStats() Option {
+func WithStats() Option {
 	return func(cfg *Config) {
-		cfg.metricsStats = true
-	}
-}
-
-func WithLogsStats() Option {
-	return func(cfg *Config) {
-		cfg.logsStats = true
-	}
-}
-
-func WithTracesStats() Option {
-	return func(cfg *Config) {
-		cfg.tracesStats = true
+		cfg.stats = true
 	}
 }

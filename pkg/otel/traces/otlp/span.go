@@ -124,7 +124,14 @@ func NewStatusIds(spansDT *arrow.StructType) (*StatusIds, error) {
 	}, nil
 }
 
-func AppendSpanInto(spans ptrace.SpanSlice, los *arrowutils.ListOfStructs, row int, ids *SpansIds) error {
+func AppendSpanInto(
+	spans ptrace.SpanSlice,
+	los *arrowutils.ListOfStructs,
+	row int,
+	ids *SpansIds,
+	sharedAttrs pcommon.Map,
+	sharedEventAttrs pcommon.Map,
+	sharedLinkAttrs pcommon.Map) error {
 	span := spans.AppendEmpty()
 	traceID, err := los.FixedSizeBinaryFieldByID(ids.TraceId, row)
 	if err != nil {
@@ -197,15 +204,23 @@ func AppendSpanInto(spans ptrace.SpanSlice, los *arrowutils.ListOfStructs, row i
 		}
 		span.Status().SetCode(ptrace.StatusCode(code))
 	}
-	err = otlp.AppendAttributesInto(span.Attributes(), los.Array(), row, ids.Attributes)
+	spanAttrs := span.Attributes()
+	err = otlp.AppendAttributesInto(spanAttrs, los.Array(), row, ids.Attributes)
 	if err != nil {
 		return werror.Wrap(err)
 	}
 
-	if err := AppendEventsInto(span.Events(), los, row, ids.Events); err != nil {
+	if sharedAttrs.Len() > 0 {
+		sharedAttrs.Range(func(k string, v pcommon.Value) bool {
+			v.CopyTo(spanAttrs.PutEmpty(k))
+			return true
+		})
+	}
+
+	if err := AppendEventsInto(span.Events(), los, row, ids.Events, sharedEventAttrs); err != nil {
 		return werror.Wrap(err)
 	}
-	if err := AppendLinksInto(span.Links(), los, row, ids.Links); err != nil {
+	if err := AppendLinksInto(span.Links(), los, row, ids.Links, sharedLinkAttrs); err != nil {
 		return werror.Wrap(err)
 	}
 	var tid pcommon.TraceID

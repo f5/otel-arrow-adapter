@@ -28,9 +28,11 @@ import (
 	cfg "github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/config"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/constants"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/internal"
+	"github.com/f5/otel-arrow-adapter/pkg/otel/stats"
 )
 
 var DefaultDictConfig = cfg.NewDictionary(math.MaxUint16)
+var ProducerStats = stats.NewProducerStats()
 
 func TestAttributesBuilder(t *testing.T) {
 	t.Parallel()
@@ -41,7 +43,7 @@ func TestAttributesBuilder(t *testing.T) {
 	schema := arrow.NewSchema([]arrow.Field{
 		{Name: constants.Attributes, Type: AttributesDT, Metadata: acommon.Metadata(acommon.Optional)},
 	}, nil)
-	rBuilder := builder.NewRecordBuilderExt(pool, schema, DefaultDictConfig, false)
+	rBuilder := builder.NewRecordBuilderExt(pool, schema, DefaultDictConfig, ProducerStats)
 	defer rBuilder.Release()
 
 	var record arrow.Record
@@ -89,7 +91,7 @@ func TestScopeBuilder(t *testing.T) {
 	schema := arrow.NewSchema([]arrow.Field{
 		{Name: constants.Scope, Type: ScopeDT, Metadata: acommon.Metadata(acommon.Optional)},
 	}, nil)
-	rBuilder := builder.NewRecordBuilderExt(pool, schema, DefaultDictConfig, false)
+	rBuilder := builder.NewRecordBuilderExt(pool, schema, DefaultDictConfig, ProducerStats)
 	defer rBuilder.Release()
 
 	var record arrow.Record
@@ -135,7 +137,7 @@ func TestResourceBuilder(t *testing.T) {
 	schema := arrow.NewSchema([]arrow.Field{
 		{Name: constants.Resource, Type: ResourceDT, Metadata: acommon.Metadata(acommon.Optional)},
 	}, nil)
-	rBuilder := builder.NewRecordBuilderExt(pool, schema, DefaultDictConfig, false)
+	rBuilder := builder.NewRecordBuilderExt(pool, schema, DefaultDictConfig, ProducerStats)
 	defer rBuilder.Release()
 
 	var record arrow.Record

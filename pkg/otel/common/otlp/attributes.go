@@ -41,6 +41,22 @@ func NewSharedAttributeIds(structDT *arrow.StructType) *AttributeIds {
 	return &AttributeIds{Id: id}
 }
 
+func NewSharedEventAttributeIds(structDT *arrow.StructType) *AttributeIds {
+	id, found := structDT.FieldIdx(constants.SharedEventAttributes)
+	if !found {
+		return nil
+	}
+	return &AttributeIds{Id: id}
+}
+
+func NewSharedLinkAttributeIds(structDT *arrow.StructType) *AttributeIds {
+	id, found := structDT.FieldIdx(constants.SharedLinkAttributes)
+	if !found {
+		return nil
+	}
+	return &AttributeIds{Id: id}
+}
+
 func AppendAttributesInto(attrs pcommon.Map, parentArr *array.Struct, row int, attributeIds *AttributeIds) error {
 	marr, err := attributesFromStruct(attributeIds.Id, parentArr, row)
 	if err != nil {

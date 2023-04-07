@@ -25,16 +25,28 @@ import (
 	"github.com/apache/arrow/go/v12/arrow/memory"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/ptrace"
 
+	"github.com/f5/otel-arrow-adapter/pkg/otel/common"
 	acommon "github.com/f5/otel-arrow-adapter/pkg/otel/common/schema"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/builder"
 	cfg "github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/config"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/constants"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/internal"
+	"github.com/f5/otel-arrow-adapter/pkg/otel/stats"
 )
 
-var DefaultDictConfig = cfg.NewDictionary(math.MaxUint16)
+var (
+	DefaultDictConfig = cfg.NewDictionary(math.MaxUint16)
+	producerStats     = stats.NewProducerStats()
+	emptySharedAttrs  = &common.SharedAttributes{Attributes: make(map[string]pcommon.Value)}
+	emptySharedData   = &SharedData{
+		sharedAttributes:      emptySharedAttrs,
+		sharedEventAttributes: emptySharedAttrs,
+		sharedLinkAttributes:  emptySharedAttrs,
+	}
+)
 
 func TestStatus(t *testing.T) {
 	t.Parallel()
@@ -45,7 +57,7 @@ func TestStatus(t *testing.T) {
 	schema := arrow.NewSchema([]arrow.Field{
 		{Name: constants.Status, Type: StatusDT, Metadata: acommon.Metadata(acommon.Optional)},
 	}, nil)
-	rBuilder := builder.NewRecordBuilderExt(pool, schema, DefaultDictConfig, false)
+	rBuilder := builder.NewRecordBuilderExt(pool, schema, DefaultDictConfig, producerStats)
 	defer rBuilder.Release()
 
 	var record arrow.Record
@@ -88,7 +100,7 @@ func TestEvent(t *testing.T) {
 	schema := arrow.NewSchema([]arrow.Field{
 		{Name: constants.SpanEvents, Type: EventDT, Metadata: acommon.Metadata(acommon.Optional)},
 	}, nil)
-	rBuilder := builder.NewRecordBuilderExt(pool, schema, DefaultDictConfig, false)
+	rBuilder := builder.NewRecordBuilderExt(pool, schema, DefaultDictConfig, producerStats)
 	defer rBuilder.Release()
 
 	var record arrow.Record
@@ -96,9 +108,9 @@ func TestEvent(t *testing.T) {
 	for {
 		eb := EventBuilderFrom(rBuilder.StructBuilder(constants.SpanEvents))
 
-		err := eb.Append(Event1())
+		err := eb.Append(Event1(), emptySharedAttrs)
 		require.NoError(t, err)
-		err = eb.Append(Event2())
+		err = eb.Append(Event2(), emptySharedAttrs)
 		require.NoError(t, err)
 
 		record, err = rBuilder.NewRecord()
@@ -131,7 +143,7 @@ func TestLink(t *testing.T) {
 	schema := arrow.NewSchema([]arrow.Field{
 		{Name: constants.SpanLinks, Type: LinkDT, Metadata: acommon.Metadata(acommon.Optional)},
 	}, nil)
-	rBuilder := builder.NewRecordBuilderExt(pool, schema, DefaultDictConfig, false)
+	rBuilder := builder.NewRecordBuilderExt(pool, schema, DefaultDictConfig, producerStats)
 	defer rBuilder.Release()
 
 	var record arrow.Record
@@ -139,9 +151,9 @@ func TestLink(t *testing.T) {
 	for {
 		lb := LinkBuilderFrom(rBuilder.StructBuilder(constants.SpanLinks))
 
-		err := lb.Append(Link1())
+		err := lb.Append(Link1(), emptySharedAttrs)
 		require.NoError(t, err)
-		err = lb.Append(Link2())
+		err = lb.Append(Link2(), emptySharedAttrs)
 		require.NoError(t, err)
 
 		record, err = rBuilder.NewRecord()
@@ -174,7 +186,7 @@ func TestSpan(t *testing.T) {
 	schema := arrow.NewSchema([]arrow.Field{
 		{Name: constants.Spans, Type: SpanDT, Metadata: acommon.Metadata(acommon.Optional)},
 	}, nil)
-	rBuilder := builder.NewRecordBuilderExt(pool, schema, DefaultDictConfig, false)
+	rBuilder := builder.NewRecordBuilderExt(pool, schema, DefaultDictConfig, producerStats)
 	defer rBuilder.Release()
 
 	var record arrow.Record
@@ -183,10 +195,10 @@ func TestSpan(t *testing.T) {
 		sb := SpanBuilderFrom(rBuilder.StructBuilder(constants.Spans))
 
 		span := Span1()
-		err := sb.Append(&span)
+		err := sb.Append(&span, emptySharedData)
 		require.NoError(t, err)
 		span = Span2()
-		err = sb.Append(&span)
+		err = sb.Append(&span, emptySharedData)
 		require.NoError(t, err)
 
 		record, err = rBuilder.NewRecord()
@@ -219,7 +231,7 @@ func TestScopeSpans(t *testing.T) {
 	schema := arrow.NewSchema([]arrow.Field{
 		{Name: constants.ScopeSpans, Type: ScopeSpansDT, Metadata: acommon.Metadata(acommon.Optional)},
 	}, nil)
-	rBuilder := builder.NewRecordBuilderExt(pool, schema, DefaultDictConfig, false)
+	rBuilder := builder.NewRecordBuilderExt(pool, schema, DefaultDictConfig, producerStats)
 	defer rBuilder.Release()
 
 	var record arrow.Record
@@ -278,7 +290,7 @@ func TestResourceSpans(t *testing.T) {
 	schema := arrow.NewSchema([]arrow.Field{
 		{Name: constants.ResourceSpans, Type: ResourceSpansDT, Metadata: acommon.Metadata(acommon.Optional)},
 	}, nil)
-	rBuilder := builder.NewRecordBuilderExt(pool, schema, DefaultDictConfig, false)
+	rBuilder := builder.NewRecordBuilderExt(pool, schema, DefaultDictConfig, producerStats)
 	defer rBuilder.Release()
 
 	var record arrow.Record
@@ -334,7 +346,7 @@ func TestTraces(t *testing.T) {
 	pool := memory.NewCheckedAllocator(memory.NewGoAllocator())
 	defer pool.AssertSize(t, 0)
 
-	rBuilder := builder.NewRecordBuilderExt(pool, Schema, DefaultDictConfig, false)
+	rBuilder := builder.NewRecordBuilderExt(pool, Schema, DefaultDictConfig, producerStats)
 	defer rBuilder.Release()
 
 	var record arrow.Record
