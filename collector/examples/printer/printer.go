@@ -29,9 +29,9 @@ func otlpTraces(w http.ResponseWriter, r *http.Request) {
 	}
 
 	fmt.Println("Trace Headers:", r.Header)
-	// fmt.Println("Content:", prototext.MarshalOptions{
-	// 	Multiline: true,
-	// }.Format(&tpb))
+	fmt.Println("Content:", prototext.MarshalOptions{
+		Multiline: true,
+	}.Format(&tpb))
 }
 
 func otlpMetrics(w http.ResponseWriter, r *http.Request) {
