@@ -158,6 +158,7 @@ func (s *Stream) run(bgctx context.Context, client arrowpb.ArrowStreamServiceCli
 	ww.Add(1)
 	go func() {
 		defer ww.Done()
+		defer cancel()
 		err := s.write(ctx)
 		if err != nil {
 			s.logStreamError(err)
@@ -413,8 +414,10 @@ func (s *Stream) SendAndWait(ctx context.Context, records interface{}) error {
 	// Note this ensures the caller's timeout is respected.
 	select {
 	case <-ctx.Done():
+		// This caller's context timed out.
 		return ctx.Err()
 	case err := <-errCh:
+		// Note: includes err == nil and err != nil cases.
 		return err
 	}
 }
@@ -424,6 +427,13 @@ func (s *Stream) encode(records interface{}) (_ *arrowpb.BatchArrowRecords, retE
 	// Defensively, protect against panics in the Arrow producer function.
 	defer func() {
 		if err := recover(); err != nil {
+			// When this happens, the stacktrace is
+			// important and lost if we don't capture it
+			// here.
+			s.telemetry.Logger.Debug("panic detail in otel-arrow-adapter",
+				zap.Reflect("recovered", err),
+				zap.Stack("stacktrace"),
+			)
 			retErr = fmt.Errorf("panic in otel-arrow-adapter: %v", err)
 		}
 	}()
