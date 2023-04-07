@@ -21,7 +21,7 @@ exporters:
     endpoint: 127.0.0.1:5000
     wait_for_ready: true
     arrow:
-      enabled: false # Note!
+      enabled: true
       num_streams: 1
       disable_downgrade: true
     tls:
