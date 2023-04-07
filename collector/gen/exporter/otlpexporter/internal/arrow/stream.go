@@ -155,14 +155,12 @@ func (s *Stream) run(bgctx context.Context, client arrowpb.ArrowStreamServiceCli
 	// the writer's goroutine is not added to exporter waitgroup (e.wg).
 	var ww sync.WaitGroup
 
+	var writeErr error
 	ww.Add(1)
 	go func() {
 		defer ww.Done()
 		defer cancel()
-		err := s.write(ctx)
-		if err != nil {
-			s.logStreamError(err)
-		}
+		writeErr = s.write(ctx)
 	}()
 
 	// the result from read() is processed after cancel and wait,
@@ -207,6 +205,25 @@ func (s *Stream) run(bgctx context.Context, client arrowpb.ArrowStreamServiceCli
 						zap.String("message", status.Message()),
 					)
 				}
+
+			case codes.Canceled:
+				// Note that when the writer encounters a local error (such
+				// as a panic in the encoder) it will cancel the context and
+				// writeErr will be set to an actual error, while the error
+				// returned from read() will be the cancellation by the
+				// writer. So if the reader's error is canceled and the
+				// writer's error is non-nil, use it instead.
+				if writeErr != nil {
+					s.telemetry.Logger.Error("arrow stream internal error",
+						zap.Error(writeErr),
+					)
+					// reset the writeErr so it doesn't print below.
+					writeErr = nil
+				} else {
+					s.telemetry.Logger.Error("arrow stream canceled",
+						zap.String("message", status.Message()),
+					)
+				}
 			default:
 				s.telemetry.Logger.Error("arrow stream unknown",
 					zap.Uint32("code", uint32(status.Code())),
@@ -216,6 +233,9 @@ func (s *Stream) run(bgctx context.Context, client arrowpb.ArrowStreamServiceCli
 		} else {
 			s.logStreamError(err)
 		}
+	}
+	if writeErr != nil {
+		s.logStreamError(writeErr)
 	}
 
 	// The reader and writer have both finished; respond to any
