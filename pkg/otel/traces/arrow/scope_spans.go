@@ -161,32 +161,20 @@ func (b *ScopeSpansBuilder) Release() {
 }
 
 func collectAllSharedAttributes(spans []*ptrace.Span) *SharedData {
-	sharedAttrs := common.SharedAttributes{
-		Attributes: make(map[string]pcommon.Value),
-	}
+	sharedAttrs := make(map[string]pcommon.Value)
 	firstSpan := true
 
-	sharedEventAttrs := common.SharedAttributes{
-		Attributes: make(map[string]pcommon.Value),
-	}
+	sharedEventAttrs := make(map[string]pcommon.Value)
 	firstEvent := true
 
-	sharedLinkAttrs := common.SharedAttributes{
-		Attributes: make(map[string]pcommon.Value),
-	}
+	sharedLinkAttrs := make(map[string]pcommon.Value)
 	firstLink := true
-
-	sharedData := SharedData{
-		sharedAttributes:      &sharedAttrs,
-		sharedEventAttributes: &sharedEventAttrs,
-		sharedLinkAttributes:  &sharedLinkAttrs,
-	}
 
 	for i := 0; i < len(spans); i++ {
 		span := spans[i]
 		attrs := span.Attributes()
 
-		firstSpan = collectSharedAttributes(&attrs, firstSpan, &sharedAttrs)
+		firstSpan = collectSharedAttributes(&attrs, firstSpan, sharedAttrs)
 
 		// Collect shared event attributes
 		eventSlice := span.Events()
@@ -195,7 +183,7 @@ func collectAllSharedAttributes(spans []*ptrace.Span) *SharedData {
 				event := eventSlice.At(j)
 				evtAttrs := event.Attributes()
 
-				firstEvent = collectSharedAttributes(&evtAttrs, firstEvent, &sharedEventAttrs)
+				firstEvent = collectSharedAttributes(&evtAttrs, firstEvent, sharedEventAttrs)
 			}
 		}
 
@@ -206,37 +194,51 @@ func collectAllSharedAttributes(spans []*ptrace.Span) *SharedData {
 				link := linkSlice.At(j)
 				linkAttrs := link.Attributes()
 
-				firstLink = collectSharedAttributes(&linkAttrs, firstLink, &sharedLinkAttrs)
+				firstLink = collectSharedAttributes(&linkAttrs, firstLink, sharedLinkAttrs)
 			}
 		}
 
-		if len(sharedAttrs.Attributes) == 0 && len(sharedEventAttrs.Attributes) == 0 && len(sharedLinkAttrs.Attributes) == 0 {
+		if len(sharedAttrs) == 0 && len(sharedEventAttrs) == 0 && len(sharedLinkAttrs) == 0 {
 			break
 		}
 	}
 
-	return &sharedData
+	if len(spans) == 1 {
+		sharedAttrs = make(map[string]pcommon.Value)
+	}
+
+	return &SharedData{
+		sharedAttributes: &common.SharedAttributes{
+			Attributes: sharedAttrs,
+		},
+		sharedEventAttributes: &common.SharedAttributes{
+			Attributes: sharedEventAttrs,
+		},
+		sharedLinkAttributes: &common.SharedAttributes{
+			Attributes: sharedLinkAttrs,
+		},
+	}
 }
 
-func collectSharedAttributes(attrs *pcommon.Map, first bool, sharedAttrs *common.SharedAttributes) bool {
+func collectSharedAttributes(attrs *pcommon.Map, first bool, sharedAttrs map[string]pcommon.Value) bool {
 	if first {
 		attrs.Range(func(k string, v pcommon.Value) bool {
-			sharedAttrs.Attributes[k] = v
+			sharedAttrs[k] = v
 			return true
 		})
 		return false
 	} else {
-		if len(sharedAttrs.Attributes) > 0 {
+		if len(sharedAttrs) > 0 {
 			if attrs.Len() == 0 {
-				sharedAttrs.Attributes = make(map[string]pcommon.Value)
+				sharedAttrs = make(map[string]pcommon.Value)
 			}
-			for k, v := range sharedAttrs.Attributes {
+			for k, v := range sharedAttrs {
 				if otherV, ok := attrs.Get(k); ok {
 					if !pdata.ValuesEqual(v, otherV) {
-						delete(sharedAttrs.Attributes, k)
+						delete(sharedAttrs, k)
 					}
 				} else {
-					delete(sharedAttrs.Attributes, k)
+					delete(sharedAttrs, k)
 				}
 			}
 		}

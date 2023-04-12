@@ -15,6 +15,8 @@
 package common
 
 import (
+	"sort"
+
 	"go.opentelemetry.io/collector/pdata/pcommon"
 
 	"github.com/f5/otel-arrow-adapter/pkg/otel/pdata"
@@ -39,6 +41,9 @@ func NewSharedAttributesFrom(attrs pcommon.Map) *SharedAttributes {
 	}
 }
 
+// CopyTo copies the current SharedAttributes to a [pcommon.Map] of attributes.
+// The attributes are sorted by key before being copied to make the tests
+// deterministic.
 func (sa *SharedAttributes) CopyTo(attrs pcommon.Map) {
 	for k, v := range sa.Attributes {
 		v.CopyTo(attrs.PutEmpty(k))
@@ -94,4 +99,27 @@ func (sa *SharedAttributes) Has(k string) bool {
 // Len returns the number of attributes in the current SharedAttributes.
 func (sa *SharedAttributes) Len() int {
 	return len(sa.Attributes)
+}
+
+type (
+	AttributeEntry struct {
+		Key   string
+		Value pcommon.Value
+	}
+
+	AttributeEntries []AttributeEntry
+)
+
+var _ sort.Interface = AttributeEntries{}
+
+func (ae AttributeEntries) Len() int {
+	return len(ae)
+}
+
+func (ae AttributeEntries) Swap(i, j int) {
+	ae[i], ae[j] = ae[j], ae[i]
+}
+
+func (ae AttributeEntries) Less(i, j int) bool {
+	return ae[i].Key < ae[j].Key
 }
