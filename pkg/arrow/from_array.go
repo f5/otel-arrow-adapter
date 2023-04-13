@@ -232,6 +232,13 @@ func DurationFromArray(arr arrow.Array, row int) (arrow.Duration, error) {
 			} else {
 				return arr.Value(row), nil
 			}
+		case *array.Dictionary:
+			durationArr := arr.Dictionary().(*array.Duration)
+			if arr.IsNull(row) {
+				return 0, nil
+			} else {
+				return durationArr.Value(arr.GetValueIndex(row)), nil
+			}
 		default:
 			return 0, werror.WrapWithMsg(ErrInvalidArrayType, "not a duration array")
 		}

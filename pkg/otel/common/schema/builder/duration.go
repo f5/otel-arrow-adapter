@@ -27,7 +27,7 @@ import (
 
 // DurationBuilder is a wrapper around the arrow DurationBuilder.
 type DurationBuilder struct {
-	builder       *array.DurationBuilder
+	builder       array.Builder
 	transformNode *schema.TransformNode
 	updateRequest *update.SchemaUpdateRequest
 }
@@ -36,7 +36,19 @@ type DurationBuilder struct {
 // transform node if the builder is nil.
 func (b *DurationBuilder) Append(value arrow.Duration) {
 	if b.builder != nil {
-		b.builder.Append(value)
+
+		switch builder := b.builder.(type) {
+		case *array.DurationBuilder:
+			builder.Append(value)
+		case *array.DurationDictionaryBuilder:
+			if err := builder.Append(value); err != nil {
+				// Should never happen.
+				panic(err)
+			}
+		default:
+			// Should never happen.
+			panic("unknown builder type")
+		}
 		return
 	}
 

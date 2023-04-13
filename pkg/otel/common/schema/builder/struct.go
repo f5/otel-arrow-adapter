@@ -75,7 +75,7 @@ func (sb *StructBuilder) DurationBuilder(name string) *DurationBuilder {
 	_, transformNode := sb.protoDataTypeAndTransformNode(name)
 
 	if builder != nil {
-		return &DurationBuilder{builder: builder.(*array.DurationBuilder), transformNode: transformNode, updateRequest: sb.updateRequest}
+		return &DurationBuilder{builder: builder, transformNode: transformNode, updateRequest: sb.updateRequest}
 	} else {
 		return &DurationBuilder{builder: nil, transformNode: transformNode, updateRequest: sb.updateRequest}
 	}
