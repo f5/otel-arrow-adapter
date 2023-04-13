@@ -168,6 +168,16 @@ func (los *ListOfStructs) TimestampFieldByID(fieldID int, row int) (arrow.Timest
 	return TimestampFromArray(column, row)
 }
 
+// DurationFieldByID returns the duration value of a field id for a specific
+// row or a zero duration if the field doesn't exist.
+func (los *ListOfStructs) DurationFieldByID(fieldID int, row int) (arrow.Duration, error) {
+	if fieldID == -1 {
+		return arrow.Duration(0), nil
+	}
+	column := los.arr.Field(fieldID)
+	return DurationFromArray(column, row)
+}
+
 // OptionalTimestampFieldByID returns the timestamp value of a field id for a
 // specific row or nil if the field is null.
 func (los *ListOfStructs) OptionalTimestampFieldByID(fieldID int, row int) *pcommon.Timestamp {

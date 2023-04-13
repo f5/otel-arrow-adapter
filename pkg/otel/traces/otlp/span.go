@@ -15,6 +15,8 @@
 package otlp
 
 import (
+	"time"
+
 	"github.com/apache/arrow/go/v12/arrow"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/ptrace"
@@ -27,22 +29,22 @@ import (
 )
 
 type SpansIds struct {
-	Id                  int
-	TraceId             int
-	SpanId              int
-	TraceState          int
-	ParentSpanId        int
-	Name                int
-	Kind                int
-	StartTimeUnixNano   int
-	EndTimeUnixNano     int
-	Attributes          *otlp.AttributeIds
-	DropAttributesCount int
-	Events              *EventIds
-	DropEventsCount     int
-	Links               *LinkIds
-	DropLinksCount      int
-	Status              *StatusIds
+	Id                   int
+	TraceId              int
+	SpanId               int
+	TraceState           int
+	ParentSpanId         int
+	Name                 int
+	Kind                 int
+	StartTimeUnixNano    int
+	DurationTimeUnixNano int
+	Attributes           *otlp.AttributeIds
+	DropAttributesCount  int
+	Events               *EventIds
+	DropEventsCount      int
+	Links                *LinkIds
+	DropLinksCount       int
+	Status               *StatusIds
 }
 
 type StatusIds struct {
@@ -64,7 +66,7 @@ func NewSpansIds(scopeSpansDT *arrow.StructType) (*SpansIds, error) {
 	name, _ := arrowutils.FieldIDFromStruct(spanDT, constants.Name)
 	kind, _ := arrowutils.FieldIDFromStruct(spanDT, constants.KIND)
 	startTimeUnixNano, _ := arrowutils.FieldIDFromStruct(spanDT, constants.StartTimeUnixNano)
-	endTimeUnixNano, _ := arrowutils.FieldIDFromStruct(spanDT, constants.EndTimeUnixNano)
+	durationTimeUnixNano, _ := arrowutils.FieldIDFromStruct(spanDT, constants.DurationTimeUnixNano)
 	attributes, err := otlp.NewAttributeIds(spanDT)
 	if err != nil {
 		return nil, werror.Wrap(err)
@@ -89,22 +91,22 @@ func NewSpansIds(scopeSpansDT *arrow.StructType) (*SpansIds, error) {
 	}
 
 	return &SpansIds{
-		Id:                  id,
-		TraceId:             traceId,
-		SpanId:              spanId,
-		TraceState:          traceState,
-		ParentSpanId:        parentSpanId,
-		Name:                name,
-		Kind:                kind,
-		StartTimeUnixNano:   startTimeUnixNano,
-		EndTimeUnixNano:     endTimeUnixNano,
-		Attributes:          attributes,
-		DropAttributesCount: droppedAttributesCount,
-		Events:              events,
-		DropEventsCount:     droppedEventsCount,
-		Links:               links,
-		DropLinksCount:      droppedLinksCount,
-		Status:              status,
+		Id:                   id,
+		TraceId:              traceId,
+		SpanId:               spanId,
+		TraceState:           traceState,
+		ParentSpanId:         parentSpanId,
+		Name:                 name,
+		Kind:                 kind,
+		StartTimeUnixNano:    startTimeUnixNano,
+		DurationTimeUnixNano: durationTimeUnixNano,
+		Attributes:           attributes,
+		DropAttributesCount:  droppedAttributesCount,
+		Events:               events,
+		DropEventsCount:      droppedEventsCount,
+		Links:                links,
+		DropLinksCount:       droppedLinksCount,
+		Status:               status,
 	}, nil
 }
 
@@ -170,10 +172,11 @@ func AppendSpanInto(
 	if err != nil {
 		return werror.Wrap(err)
 	}
-	endTimeUnixNano, err := los.TimestampFieldByID(ids.EndTimeUnixNano, row)
+	durationNano, err := los.DurationFieldByID(ids.DurationTimeUnixNano, row)
 	if err != nil {
 		return werror.Wrap(err)
 	}
+	endTimeUnixNano := startTimeUnixNano.ToTime(arrow.Nanosecond).Add(time.Duration(durationNano))
 	droppedAttributesCount, err := los.U32FieldByID(ids.DropAttributesCount, row)
 	if err != nil {
 		return werror.Wrap(err)
@@ -237,7 +240,7 @@ func AppendSpanInto(
 	span.SetName(name)
 	span.SetKind(ptrace.SpanKind(kind))
 	span.SetStartTimestamp(pcommon.Timestamp(startTimeUnixNano))
-	span.SetEndTimestamp(pcommon.Timestamp(endTimeUnixNano))
+	span.SetEndTimestamp(pcommon.Timestamp(endTimeUnixNano.UnixNano()))
 	span.SetDroppedAttributesCount(droppedAttributesCount)
 	span.SetDroppedEventsCount(droppedEventsCount)
 	span.SetDroppedLinksCount(droppedLinksCount)

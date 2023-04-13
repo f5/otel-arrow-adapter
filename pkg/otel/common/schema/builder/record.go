@@ -664,6 +664,8 @@ func (rb *RecordBuilderExt) VisitDataType(builder array.Builder, dt arrow.DataTy
 		fmt.Printf("Binary")
 	case *arrow.TimestampType:
 		fmt.Printf("Timestamp")
+	case *arrow.DurationType:
+		fmt.Printf("Duration")
 	case *arrow.StructType:
 		structBuilder := builder.(*array.StructBuilder)
 		fmt.Printf("Struct {\n")

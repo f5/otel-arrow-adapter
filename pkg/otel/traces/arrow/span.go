@@ -33,7 +33,7 @@ import (
 var (
 	SpanDT = arrow.StructOf([]arrow.Field{
 		{Name: constants.StartTimeUnixNano, Type: arrow.FixedWidthTypes.Timestamp_ns},
-		{Name: constants.EndTimeUnixNano, Type: arrow.FixedWidthTypes.Timestamp_ns},
+		{Name: constants.DurationTimeUnixNano, Type: arrow.FixedWidthTypes.Duration_ms},
 		{Name: constants.TraceId, Type: &arrow.FixedSizeBinaryType{ByteWidth: 16}},
 		{Name: constants.SpanId, Type: &arrow.FixedSizeBinaryType{ByteWidth: 8}},
 		{Name: constants.TraceState, Type: arrow.BinaryTypes.String, Metadata: schema.Metadata(schema.Optional, schema.Dictionary8)},
@@ -57,7 +57,7 @@ type SpanBuilder struct {
 	builder *builder.StructBuilder
 
 	stunb *builder.TimestampBuilder       // start time unix nano builder
-	etunb *builder.TimestampBuilder       // end time unix nano builder
+	dtunb *builder.DurationBuilder        // duration time unix nano builder
 	tib   *builder.FixedSizeBinaryBuilder // trace id builder
 	sib   *builder.FixedSizeBinaryBuilder // span id builder
 	tsb   *builder.StringBuilder          // trace state builder
@@ -83,7 +83,7 @@ func SpanBuilderFrom(sb *builder.StructBuilder) *SpanBuilder {
 		released: false,
 		builder:  sb,
 		stunb:    sb.TimestampBuilder(constants.StartTimeUnixNano),
-		etunb:    sb.TimestampBuilder(constants.EndTimeUnixNano),
+		dtunb:    sb.DurationBuilder(constants.DurationTimeUnixNano),
 		tib:      sb.FixedSizeBinaryBuilder(constants.TraceId),
 		sib:      sb.FixedSizeBinaryBuilder(constants.SpanId),
 		tsb:      sb.StringBuilder(constants.TraceState),
@@ -123,7 +123,8 @@ func (b *SpanBuilder) Append(span *ptrace.Span, sharedData *SharedData) error {
 
 	return b.builder.Append(span, func() error {
 		b.stunb.Append(arrow.Timestamp(span.StartTimestamp()))
-		b.etunb.Append(arrow.Timestamp(span.EndTimestamp()))
+		duration := span.EndTimestamp().AsTime().Sub(span.StartTimestamp().AsTime()).Nanoseconds()
+		b.dtunb.Append(arrow.Duration(duration))
 		tib := span.TraceID()
 		b.tib.Append(tib[:])
 		sib := span.SpanID()

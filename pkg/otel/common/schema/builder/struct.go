@@ -70,6 +70,17 @@ func (sb *StructBuilder) TimestampBuilder(name string) *TimestampBuilder {
 	}
 }
 
+func (sb *StructBuilder) DurationBuilder(name string) *DurationBuilder {
+	builder := sb.getBuilder(name)
+	_, transformNode := sb.protoDataTypeAndTransformNode(name)
+
+	if builder != nil {
+		return &DurationBuilder{builder: builder.(*array.DurationBuilder), transformNode: transformNode, updateRequest: sb.updateRequest}
+	} else {
+		return &DurationBuilder{builder: nil, transformNode: transformNode, updateRequest: sb.updateRequest}
+	}
+}
+
 func (sb *StructBuilder) StringBuilder(name string) *StringBuilder {
 	stringBuilder := sb.getBuilder(name)
 	_, transformNode := sb.protoDataTypeAndTransformNode(name)

@@ -220,6 +220,24 @@ func TimestampFromArray(arr arrow.Array, row int) (arrow.Timestamp, error) {
 	}
 }
 
+// DurationFromArray returns the duration value for a specific row in an Arrow array.
+func DurationFromArray(arr arrow.Array, row int) (arrow.Duration, error) {
+	if arr == nil {
+		return 0, nil
+	} else {
+		switch arr := arr.(type) {
+		case *array.Duration:
+			if arr.IsNull(row) {
+				return 0, nil
+			} else {
+				return arr.Value(row), nil
+			}
+		default:
+			return 0, werror.WrapWithMsg(ErrInvalidArrayType, "not a duration array")
+		}
+	}
+}
+
 // U32FromArray returns the uint32 value for a specific row in an Arrow array.
 func U32FromArray(arr arrow.Array, row int) (uint32, error) {
 	if arr == nil {
