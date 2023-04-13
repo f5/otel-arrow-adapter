@@ -42,14 +42,17 @@ type TracesBuilder struct {
 	rsb       *builder.ListBuilder      // Resource spans list builder
 	rsp       *ResourceSpansBuilder     // resource spans builder
 	optimizer *TracesOptimizer
+	analyzer  *TraceAnalyzer
 }
 
 // NewTracesBuilder creates a new TracesBuilder with a given allocator.
 func NewTracesBuilder(rBuilder *builder.RecordBuilderExt, traceStats bool) (*TracesBuilder, error) {
 	var optimizer *TracesOptimizer
+	var analyzer *TraceAnalyzer
 
 	if traceStats {
 		optimizer = NewTracesOptimizer(acommon.WithStats(), acommon.WithSort())
+		analyzer = NewTraceAnalyzer()
 	} else {
 		optimizer = NewTracesOptimizer(acommon.WithSort())
 	}
@@ -58,6 +61,7 @@ func NewTracesBuilder(rBuilder *builder.RecordBuilderExt, traceStats bool) (*Tra
 		released:  false,
 		builder:   rBuilder,
 		optimizer: optimizer,
+		analyzer:  analyzer,
 	}
 	if err := tracesBuilder.init(); err != nil {
 		return nil, werror.Wrap(err)
@@ -106,6 +110,11 @@ func (b *TracesBuilder) Append(traces ptrace.Traces) error {
 	}
 
 	optimTraces := b.optimizer.Optimize(traces)
+	// ToDo TMP
+	if b.analyzer != nil {
+		b.analyzer.Analyze(optimTraces)
+		b.analyzer.ShowStats("")
+	}
 
 	rc := len(optimTraces.ResourceSpans)
 	return b.rsb.Append(rc, func() error {
