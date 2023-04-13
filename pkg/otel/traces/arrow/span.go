@@ -146,7 +146,7 @@ func (b *SpanBuilder) Append(span *ptrace.Span, sharedData *SharedData) error {
 		sc := evts.Len()
 		if err := b.sesb.Append(sc, func() error {
 			for i := 0; i < sc; i++ {
-				if err := b.seb.Append(evts.At(i), sharedData.sharedEventAttributes); err != nil {
+				if err := b.seb.Append(evts.At(i), sharedData.sharedEventAttributes, span.StartTimestamp()); err != nil {
 					return werror.Wrap(err)
 				}
 			}

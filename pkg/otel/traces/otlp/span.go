@@ -220,7 +220,7 @@ func AppendSpanInto(
 		})
 	}
 
-	if err := AppendEventsInto(span.Events(), los, row, ids.Events, sharedEventAttrs); err != nil {
+	if err := AppendEventsInto(span.Events(), los, row, ids.Events, sharedEventAttrs, startTimeUnixNano); err != nil {
 		return werror.Wrap(err)
 	}
 	if err := AppendLinksInto(span.Links(), los, row, ids.Links, sharedLinkAttrs); err != nil {

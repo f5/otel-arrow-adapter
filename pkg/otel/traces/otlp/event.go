@@ -15,6 +15,8 @@
 package otlp
 
 import (
+	"time"
+
 	"github.com/apache/arrow/go/v12/arrow"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/ptrace"
@@ -27,7 +29,7 @@ import (
 
 type EventIds struct {
 	Id                     int
-	TimeUnixNano           int
+	DurationTimeUnixNano   int
 	Name                   int
 	Attributes             *otlp.AttributeIds
 	DroppedAttributesCount int
@@ -39,7 +41,7 @@ func NewEventIds(spansDT *arrow.StructType) (*EventIds, error) {
 		return nil, werror.Wrap(err)
 	}
 
-	timeUnixNanoID, _ := arrowutils.FieldIDFromStruct(eventDT, constants.TimeUnixNano)
+	durationTimeUnixNanoID, _ := arrowutils.FieldIDFromStruct(eventDT, constants.DurationTimeUnixNano)
 	nameID, _ := arrowutils.FieldIDFromStruct(eventDT, constants.Name)
 	droppedAttributesCountId, _ := arrowutils.FieldIDFromStruct(eventDT, constants.DroppedAttributesCount)
 	attributesID, err := otlp.NewAttributeIds(eventDT)
@@ -49,7 +51,7 @@ func NewEventIds(spansDT *arrow.StructType) (*EventIds, error) {
 
 	return &EventIds{
 		Id:                     id,
-		TimeUnixNano:           timeUnixNanoID,
+		DurationTimeUnixNano:   durationTimeUnixNanoID,
 		Name:                   nameID,
 		Attributes:             attributesID,
 		DroppedAttributesCount: droppedAttributesCountId,
@@ -57,7 +59,7 @@ func NewEventIds(spansDT *arrow.StructType) (*EventIds, error) {
 }
 
 // AppendEventsInto initializes a Span's Events from an Arrow representation.
-func AppendEventsInto(spans ptrace.SpanEventSlice, arrowSpans *arrowutils.ListOfStructs, spanIdx int, ids *EventIds, sharedAttrs pcommon.Map) error {
+func AppendEventsInto(spans ptrace.SpanEventSlice, arrowSpans *arrowutils.ListOfStructs, spanIdx int, ids *EventIds, sharedAttrs pcommon.Map, spanStartTime arrow.Timestamp) error {
 	events, err := arrowSpans.ListOfStructsById(spanIdx, ids.Id)
 	if err != nil {
 		return werror.Wrap(err)
@@ -74,12 +76,13 @@ func AppendEventsInto(spans ptrace.SpanEventSlice, arrowSpans *arrowutils.ListOf
 			continue
 		}
 
-		timeUnixNano, err := events.TimestampFieldByID(ids.TimeUnixNano, eventIdx)
+		durationTimeUnixNano, err := events.DurationFieldByID(ids.DurationTimeUnixNano, eventIdx)
 		if err != nil {
 			return werror.Wrap(err)
 		}
+		timeUnixNano := spanStartTime.ToTime(arrow.Nanosecond).Add(time.Duration(durationTimeUnixNano))
 
-		event.SetTimestamp(pcommon.Timestamp(timeUnixNano))
+		event.SetTimestamp(pcommon.Timestamp(timeUnixNano.UnixNano()))
 
 		name, err := events.StringFieldByID(ids.Name, eventIdx)
 		if err != nil {

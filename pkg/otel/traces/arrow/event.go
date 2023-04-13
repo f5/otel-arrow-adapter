@@ -20,6 +20,7 @@ package arrow
 import (
 	"github.com/apache/arrow/go/v12/arrow"
 	"github.com/apache/arrow/go/v12/arrow/array"
+	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/ptrace"
 
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common"
@@ -33,7 +34,7 @@ import (
 // EventDT is the Arrow Data Type describing a span event.
 var (
 	EventDT = arrow.StructOf([]arrow.Field{
-		{Name: constants.TimeUnixNano, Type: arrow.FixedWidthTypes.Timestamp_ns, Metadata: schema.Metadata(schema.Optional)},
+		{Name: constants.DurationTimeUnixNano, Type: arrow.FixedWidthTypes.Duration_ms, Metadata: schema.Metadata(schema.Optional)},
 		{Name: constants.Name, Type: arrow.BinaryTypes.String, Metadata: schema.Metadata(schema.Dictionary8)},
 		{Name: constants.Attributes, Type: acommon.AttributesDT, Metadata: schema.Metadata(schema.Optional)},
 		{Name: constants.DroppedAttributesCount, Type: arrow.PrimitiveTypes.Uint32, Metadata: schema.Metadata(schema.Optional)},
@@ -45,17 +46,17 @@ type EventBuilder struct {
 
 	builder *builder.StructBuilder
 
-	tunb *builder.TimestampBuilder  // `time_unix_nano` builder
-	nb   *builder.StringBuilder     // `name` builder
-	ab   *acommon.AttributesBuilder // `attributes` builder
-	dacb *builder.Uint32Builder     // `dropped_attributes_count` builder
+	dtunb *builder.DurationBuilder   // `duration_time_unix_nano` builder
+	nb    *builder.StringBuilder     // `name` builder
+	ab    *acommon.AttributesBuilder // `attributes` builder
+	dacb  *builder.Uint32Builder     // `dropped_attributes_count` builder
 }
 
 func EventBuilderFrom(eb *builder.StructBuilder) *EventBuilder {
 	return &EventBuilder{
 		released: false,
 		builder:  eb,
-		tunb:     eb.TimestampBuilder(constants.TimeUnixNano),
+		dtunb:    eb.DurationBuilder(constants.DurationTimeUnixNano),
 		nb:       eb.StringBuilder(constants.Name),
 		ab:       acommon.AttributesBuilderFrom(eb.MapBuilder(constants.Attributes)),
 		dacb:     eb.Uint32Builder(constants.DroppedAttributesCount),
@@ -63,13 +64,14 @@ func EventBuilderFrom(eb *builder.StructBuilder) *EventBuilder {
 }
 
 // Append appends a new event to the builder.
-func (b *EventBuilder) Append(event ptrace.SpanEvent, sharedAttributes *common.SharedAttributes) error {
+func (b *EventBuilder) Append(event ptrace.SpanEvent, sharedAttributes *common.SharedAttributes, spanStartTime pcommon.Timestamp) error {
 	if b.released {
 		return werror.Wrap(acommon.ErrBuilderAlreadyReleased)
 	}
 
 	return b.builder.Append(event, func() error {
-		b.tunb.Append(arrow.Timestamp(event.Timestamp()))
+		duration := event.Timestamp().AsTime().Sub(spanStartTime.AsTime()).Nanoseconds()
+		b.dtunb.Append(arrow.Duration(duration))
 		b.nb.AppendNonEmpty(event.Name())
 		b.dacb.AppendNonZero(event.DroppedAttributesCount())
 		return b.ab.AppendUniqueAttributes(event.Attributes(), sharedAttributes, nil)
