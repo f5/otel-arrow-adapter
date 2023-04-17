@@ -29,6 +29,8 @@ import (
 	"github.com/axiomhq/hyperloglog"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/ptrace"
+
+	"github.com/f5/otel-arrow-adapter/pkg/otel/common"
 )
 
 const (
@@ -45,18 +47,20 @@ type (
 	}
 
 	ResourceSpansStats struct {
-		TotalCount      int64
-		Distribution    *hdrhistogram.Histogram
-		ResourceStats   *ResourceStats
-		ScopeSpansStats *ScopeSpansStats
-		SchemaUrlStats  *SchemaUrlStats
+		TotalCount          int64
+		Distribution        *hdrhistogram.Histogram
+		ResSpansIDsDistinct *hyperloglog.Sketch
+		ResourceStats       *ResourceStats
+		ScopeSpansStats     *ScopeSpansStats
+		SchemaUrlStats      *SchemaUrlStats
 	}
 
 	ScopeSpansStats struct {
-		Distribution   *hdrhistogram.Histogram
-		ScopeStats     *ScopeStats
-		SchemaUrlStats *SchemaUrlStats
-		SpanStats      *SpanStats
+		Distribution          *hdrhistogram.Histogram
+		ScopeSpansIDsDistinct *hyperloglog.Sketch
+		ScopeStats            *ScopeStats
+		SchemaUrlStats        *SchemaUrlStats
+		SpanStats             *SpanStats
 	}
 
 	SchemaUrlStats struct {
@@ -86,6 +90,7 @@ type (
 		TotalCount        int64
 		Distribution      *hdrhistogram.Histogram
 		Attributes        *AttributesStats
+		SharedAttributes  *AttributesStats
 		TimeIntervalStats *TimeIntervalStats
 		Name              *StringStats
 		SpanID            *hyperloglog.Sketch
@@ -111,21 +116,23 @@ type (
 	}
 
 	EventStats struct {
-		TotalCount   int64
-		Missing      int64
-		Distribution *hdrhistogram.Histogram
-		Timestamp    *TimestampStats
-		Name         *StringStats
-		Attributes   *AttributesStats
+		TotalCount       int64
+		Missing          int64
+		Distribution     *hdrhistogram.Histogram
+		Timestamp        *TimestampStats
+		Name             *StringStats
+		Attributes       *AttributesStats
+		SharedAttributes *AttributesStats
 	}
 
 	LinkStats struct {
-		TotalCount   int64
-		Distribution *hdrhistogram.Histogram
-		TraceID      *hyperloglog.Sketch
-		SpanID       *hyperloglog.Sketch
-		TraceState   *hyperloglog.Sketch
-		Attributes   *AttributesStats
+		TotalCount       int64
+		Distribution     *hdrhistogram.Histogram
+		TraceID          *hyperloglog.Sketch
+		SpanID           *hyperloglog.Sketch
+		TraceState       *hyperloglog.Sketch
+		Attributes       *AttributesStats
+		SharedAttributes *AttributesStats
 	}
 
 	AttributesStats struct {
@@ -184,12 +191,14 @@ type (
 func NewTraceAnalyzer() *TraceAnalyzer {
 	return &TraceAnalyzer{
 		ResourceSpansStats: &ResourceSpansStats{
-			Distribution: hdrhistogram.New(1, 1000000, 2),
+			Distribution:        hdrhistogram.New(1, 1000000, 2),
+			ResSpansIDsDistinct: hyperloglog.New16(),
 			ResourceStats: &ResourceStats{
 				AttributesStats: NewAttributesStats(),
 			},
 			ScopeSpansStats: &ScopeSpansStats{
-				Distribution: hdrhistogram.New(1, 1000000, 2),
+				Distribution:          hdrhistogram.New(1, 1000000, 2),
+				ScopeSpansIDsDistinct: hyperloglog.New16(),
 				ScopeStats: &ScopeStats{
 					AttributesStats: NewAttributesStats(),
 					Name:            NewStringStats(),
@@ -236,7 +245,7 @@ func NewAttributesStats() *AttributesStats {
 
 func (t *TraceAnalyzer) Analyze(traces *TracesOptimized) {
 	t.TraceCount++
-	t.ResourceSpansStats.UpdateWith(traces.ResourceSpans)
+	t.ResourceSpansStats.UpdateWith(traces)
 }
 
 func (t *TraceAnalyzer) ShowStats(indent string) {
@@ -248,22 +257,29 @@ func (t *TraceAnalyzer) ShowStats(indent string) {
 	t.ResourceSpansStats.ShowStats(indent)
 }
 
-func (r *ResourceSpansStats) UpdateWith(resSpan []*ResourceSpanGroup) {
+func (r *ResourceSpansStats) UpdateWith(traces *TracesOptimized) {
+	resSpan := traces.ResourceSpans
+
+	for ID := range traces.ResourceSpansIdx {
+		r.ResSpansIDsDistinct.Insert([]byte(ID))
+	}
+
 	r.TotalCount += int64(len(resSpan))
 	RequireNoError(r.Distribution.RecordValue(int64(len(resSpan))))
 
 	for _, rs := range resSpan {
 		r.ResourceStats.UpdateWith(rs.Resource)
-		r.ScopeSpansStats.UpdateWith(rs.ScopeSpans)
+		r.ScopeSpansStats.UpdateWith(rs.ScopeSpans, rs.ScopeSpansIdx)
 		r.SchemaUrlStats.UpdateWith(rs.ResourceSchemaUrl)
 	}
 }
 
 func (r *ResourceSpansStats) ShowStats(indent string) {
+	fmt.Printf("%s                                 |         Distribution per request        |\n", indent)
 	print(Green)
-	fmt.Printf("%sResourceSpans%s |    Total|   Min|   Max|  Mean| Stdev|   P50|   P99| <- Total + Distribution per request\n", indent, ColorReset)
-	fmt.Printf("%s              |%9d|%6d|%6d|%6.1f|%6.1f|%6d|%6d|\n", indent,
-		r.TotalCount, r.Distribution.Min(), r.Distribution.Max(), r.Distribution.Mean(), r.Distribution.StdDev(), r.Distribution.ValueAtQuantile(50), r.Distribution.ValueAtQuantile(99),
+	fmt.Printf("%sResourceSpans%s |    Total|Distinct|   Min|   Max|  Mean| Stdev|   P50|   P99|\n", indent, ColorReset)
+	fmt.Printf("%s              |%9d|%8d|%6d|%6d|%6.1f|%6.1f|%6d|%6d|\n", indent,
+		r.TotalCount, r.ResSpansIDsDistinct.Estimate(), r.Distribution.Min(), r.Distribution.Max(), r.Distribution.Mean(), r.Distribution.StdDev(), r.Distribution.ValueAtQuantile(50), r.Distribution.ValueAtQuantile(99),
 	)
 	indent += "  "
 	r.ResourceStats.ShowStats(indent)
@@ -292,24 +308,28 @@ func (s *ScopeStats) ShowStats(indent string) {
 	indent += "  "
 	s.Name.ShowStats("Name", indent)
 	s.Version.ShowStats("Version", indent)
-	s.AttributesStats.ShowStats(indent)
+	s.AttributesStats.ShowStats(indent, "Attributes", Green)
 }
 
-func (s *ScopeSpansStats) UpdateWith(scopeSpans []*ScopeSpanGroup) {
+func (s *ScopeSpansStats) UpdateWith(scopeSpans []*ScopeSpanGroup, scopeSpansIdx map[string]int) {
 	RequireNoError(s.Distribution.RecordValue(int64(len(scopeSpans))))
+
+	for ID := range scopeSpansIdx {
+		s.ScopeSpansIDsDistinct.Insert([]byte(ID))
+	}
 
 	for _, ss := range scopeSpans {
 		s.ScopeStats.UpdateWith(ss.Scope)
-		s.SpanStats.UpdateWith(ss.Spans)
+		s.SpanStats.UpdateWith(ss)
 		s.SchemaUrlStats.UpdateWith(ss.ScopeSchemaUrl)
 	}
 }
 
 func (s *ScopeSpansStats) ShowStats(indent string) {
 	print(Green)
-	fmt.Printf("%sScopeSpans%s |   Min|   Max|  Mean| Stdev|   P50|   P99|\n", indent, ColorReset)
-	fmt.Printf("%s           |%6d|%6d|%6.1f|%6.1f|%6d|%6d|\n", indent,
-		s.Distribution.Min(), s.Distribution.Max(), s.Distribution.Mean(), s.Distribution.StdDev(), s.Distribution.ValueAtQuantile(50), s.Distribution.ValueAtQuantile(99),
+	fmt.Printf("%sScopeSpans%s |Distinct|   Min|   Max|  Mean| Stdev|   P50|   P99|\n", indent, ColorReset)
+	fmt.Printf("%s           |%8d|%6d|%6d|%6.1f|%6.1f|%6d|%6d|\n", indent,
+		s.ScopeSpansIDsDistinct.Estimate(), s.Distribution.Min(), s.Distribution.Max(), s.Distribution.Mean(), s.Distribution.StdDev(), s.Distribution.ValueAtQuantile(50), s.Distribution.ValueAtQuantile(99),
 	)
 	s.ScopeStats.ShowStats(indent + "  ")
 	s.SpanStats.ShowStats(indent + "  ")
@@ -332,7 +352,7 @@ func (r *ResourceStats) UpdateWith(res *pcommon.Resource) {
 func (r *ResourceStats) ShowStats(indent string) {
 	print(Green)
 	fmt.Printf("%sResource%s (Missing=%d)\n", indent, ColorReset, r.Missing)
-	r.AttributesStats.ShowStats(indent + "  ")
+	r.AttributesStats.ShowStats(indent+"  ", "Attributes", Green)
 }
 
 func (a *AttributesStats) UpdateWith(attrs pcommon.Map, dac uint32) {
@@ -413,23 +433,24 @@ func (a *AttributesStats) UpdateWith(attrs pcommon.Map, dac uint32) {
 		RequireNoError(a.MapTypeDistribution.RecordValue(mapCount))
 	}
 
-	a.DACDistinctValue.Insert([]byte(fmt.Sprintf("%d", dac)))
+	if dac > 0 {
+		a.DACDistinctValue.Insert([]byte(fmt.Sprintf("%d", dac)))
+	}
 }
 
 func (a *AttributesStats) IsPresent() bool {
 	return a.TotalCount > 0
 }
 
-func (a *AttributesStats) ShowStats(indent string) {
+func (a *AttributesStats) ShowStats(indent string, title string, color string) {
 	if !a.IsPresent() {
 		print(Grey)
-		fmt.Printf("%sNo attributes%s\n", indent, ColorReset)
+		fmt.Printf("%sNo %s%s\n", indent, title, ColorReset)
 		return
 	}
 
-	print(Green)
-	fmt.Printf("%sAttribute%s |Missing|    Min|    Max|   Mean|  Stdev|    P50|    P99|\n", indent, ColorReset)
-	fmt.Printf("%s          |%7d|%7d|%7d|%7.1f|%7.1f|%7d|%7d|\n", indent,
+	fmt.Printf("%s%s%s%s |Missing|    Min|    Max|   Mean|  Stdev|    P50|    P99|\n", indent, color, title, ColorReset)
+	fmt.Printf("%s%s |%7d|%7d|%7d|%7.1f|%7.1f|%7d|%7d|\n", indent, strings.Repeat(" ", len(title)),
 		a.Missing, a.Distribution.Min(), a.Distribution.Max(), a.Distribution.Mean(), a.Distribution.StdDev(), a.Distribution.ValueAtQuantile(50), a.Distribution.ValueAtQuantile(99),
 	)
 	indentChildren := indent + "  "
@@ -497,11 +518,13 @@ func (a *AttributesStats) ShowStats(indent string) {
 		)
 	}
 
-	print(Green)
-	fmt.Printf("%sDroppedAttributesCount%s |Distinct|   Total|%%Distinct|\n", indent, ColorReset)
-	fmt.Printf("%s                       |%8d|%8d|%8.1f%%|\n", indent,
-		a.DACDistinctValue.Estimate(), a.TotalCount, float64(a.DACDistinctValue.Estimate())/float64(a.TotalCount)*100,
-	)
+	if a.DACDistinctValue.Estimate() > 0 {
+		print(Green)
+		fmt.Printf("%sDroppedAttributesCount%s |Distinct|   Total|%%Distinct|\n", indent, ColorReset)
+		fmt.Printf("%s                       |%8d|%8d|%8.1f%%|\n", indent,
+			a.DACDistinctValue.Estimate(), a.TotalCount, float64(a.DACDistinctValue.Estimate())/float64(a.TotalCount)*100,
+		)
+	}
 }
 
 func (s *SchemaUrlStats) UpdateWith(schemaUrl string) {
@@ -620,6 +643,7 @@ func NewSpanStats() *SpanStats {
 	return &SpanStats{
 		Distribution:      hdrhistogram.New(0, 1000000, 2),
 		Attributes:        NewAttributesStats(),
+		SharedAttributes:  NewAttributesStats(),
 		TimeIntervalStats: NewTimeIntervalStats(),
 		SpanID:            hyperloglog.New16(),
 		TraceID:           hyperloglog.New16(),
@@ -635,8 +659,13 @@ func NewSpanStats() *SpanStats {
 	}
 }
 
-func (s *SpanStats) UpdateWith(spans []*ptrace.Span) {
+func (s *SpanStats) UpdateWith(ss *ScopeSpanGroup) {
+	spans := ss.Spans
 	RequireNoError(s.Distribution.RecordValue(int64(len(spans))))
+
+	sharedAttrs := pcommon.NewMap()
+	ss.SharedData.sharedAttributes.CopyTo(sharedAttrs)
+	s.SharedAttributes.UpdateWith(sharedAttrs, 0)
 
 	s.TimeIntervalStats.UpdateWithSpans(spans)
 
@@ -648,8 +677,8 @@ func (s *SpanStats) UpdateWith(spans []*ptrace.Span) {
 		s.ParentSpanID.Insert([]byte(span.ParentSpanID().String()))
 		s.Kind.Insert([]byte(span.Kind().String()))
 		s.TraceState.Insert([]byte(span.TraceState().AsRaw()))
-		s.Events.UpdateWith(span.Events(), span.DroppedEventsCount())
-		s.Links.UpdateWith(span.Links(), span.DroppedLinksCount())
+		s.Events.UpdateWith(span.Events(), span.DroppedEventsCount(), ss.SharedData.sharedEventAttributes)
+		s.Links.UpdateWith(span.Links(), span.DroppedLinksCount(), ss.SharedData.sharedLinkAttributes)
 
 		b := make([]byte, 8)
 		binary.LittleEndian.PutUint64(b, uint64(span.DroppedEventsCount()))
@@ -678,7 +707,8 @@ func (s *SpanStats) ShowStats(indent string) {
 	fmt.Printf("%s%sKind%s (Distinct=%d)\n", indent, Green, ColorReset, s.Kind.Estimate())
 	fmt.Printf("%s%sTraceState%s (Distinct=%d)\n", indent, Green, ColorReset, s.TraceState.Estimate())
 
-	s.Attributes.ShowStats(indent)
+	s.Attributes.ShowStats(indent, "Attributes", Green)
+	s.SharedAttributes.ShowStats(indent, "SharedAttributes", Cyan)
 	s.Events.ShowStats(indent)
 	fmt.Printf("%s%sDroppedEventsCount%s (Distinct=%d)\n", indent, Green, ColorReset, s.DropEventsCount.Estimate())
 	s.Links.ShowStats(indent)
@@ -765,14 +795,15 @@ func (t *TimeIntervalStats) ShowStats(indent string) {
 
 func NewEventStats() *EventStats {
 	return &EventStats{
-		Distribution: hdrhistogram.New(0, 10000, 2),
-		Timestamp:    NewTimestampStats(),
-		Name:         NewStringStats(),
-		Attributes:   NewAttributesStats(),
+		Distribution:     hdrhistogram.New(0, 10000, 2),
+		Timestamp:        NewTimestampStats(),
+		Name:             NewStringStats(),
+		Attributes:       NewAttributesStats(),
+		SharedAttributes: NewAttributesStats(),
 	}
 }
 
-func (e *EventStats) UpdateWith(events ptrace.SpanEventSlice, dac uint32) {
+func (e *EventStats) UpdateWith(events ptrace.SpanEventSlice, dac uint32, sharedAttributes *common.SharedAttributes) {
 	ec := events.Len()
 
 	if ec == 0 {
@@ -790,6 +821,10 @@ func (e *EventStats) UpdateWith(events ptrace.SpanEventSlice, dac uint32) {
 		e.Name.UpdateWith(event.Name())
 		e.Attributes.UpdateWith(event.Attributes(), dac)
 	}
+
+	sharedAttrs := pcommon.NewMap()
+	sharedAttributes.CopyTo(sharedAttrs)
+	e.SharedAttributes.UpdateWith(sharedAttrs, 0)
 }
 
 func (e *EventStats) ShowStats(indent string) {
@@ -803,20 +838,22 @@ func (e *EventStats) ShowStats(indent string) {
 
 	e.Timestamp.ShowStats(indent)
 	e.Name.ShowStats("Name", indent)
-	e.Attributes.ShowStats(indent)
+	e.Attributes.ShowStats(indent, "Attributes", Green)
+	e.SharedAttributes.ShowStats(indent, "SharedAttributes", Cyan)
 }
 
 func NewLinkStats() *LinkStats {
 	return &LinkStats{
-		Distribution: hdrhistogram.New(0, 10000, 2),
-		TraceID:      hyperloglog.New16(),
-		SpanID:       hyperloglog.New16(),
-		TraceState:   hyperloglog.New16(),
-		Attributes:   NewAttributesStats(),
+		Distribution:     hdrhistogram.New(0, 10000, 2),
+		TraceID:          hyperloglog.New16(),
+		SpanID:           hyperloglog.New16(),
+		TraceState:       hyperloglog.New16(),
+		Attributes:       NewAttributesStats(),
+		SharedAttributes: NewAttributesStats(),
 	}
 }
 
-func (l *LinkStats) UpdateWith(links ptrace.SpanLinkSlice, dac uint32) {
+func (l *LinkStats) UpdateWith(links ptrace.SpanLinkSlice, dac uint32, sharedAttributes *common.SharedAttributes) {
 	l.TotalCount += int64(links.Len())
 	RequireNoError(l.Distribution.RecordValue(int64(links.Len())))
 	for i := 0; i < links.Len(); i++ {
@@ -826,6 +863,10 @@ func (l *LinkStats) UpdateWith(links ptrace.SpanLinkSlice, dac uint32) {
 		l.TraceState.Insert([]byte(link.TraceState().AsRaw()))
 		l.Attributes.UpdateWith(link.Attributes(), dac)
 	}
+
+	sharedAttrs := pcommon.NewMap()
+	sharedAttributes.CopyTo(sharedAttrs)
+	l.SharedAttributes.UpdateWith(sharedAttrs, 0)
 }
 
 func (l *LinkStats) ShowStats(indent string) {
@@ -845,7 +886,8 @@ func (l *LinkStats) ShowStats(indent string) {
 	print(Green)
 	fmt.Printf("%sTraceState%s |%8d|%8d|%8.1f%%|\n", indent, ColorReset, l.TraceState.Estimate(), l.TotalCount, 100.0*float64(l.TraceState.Estimate())/float64(l.TotalCount))
 
-	l.Attributes.ShowStats(indent)
+	l.Attributes.ShowStats(indent, "Attributes", Green)
+	l.SharedAttributes.ShowStats(indent, "SharedAttributes", Cyan)
 }
 
 func NewTimestampStats() *TimestampStats {

@@ -26,47 +26,59 @@ import (
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/ptrace"
 
+	"github.com/f5/otel-arrow-adapter/pkg/otel/common"
 	carrow "github.com/f5/otel-arrow-adapter/pkg/otel/common/arrow"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/otlp"
+	"github.com/f5/otel-arrow-adapter/pkg/otel/pdata"
 )
 
-type TracesOptimizer struct {
-	sort  bool
-	stats *TracesStats
-}
+type (
+	TracesOptimizer struct {
+		sort  bool
+		stats *TracesStats
+	}
 
-type TracesOptimized struct {
-	ResourceSpansIdx map[string]int // resource span id -> resource span group
-	ResourceSpans    []*ResourceSpanGroup
-}
+	TracesOptimized struct {
+		ResourceSpansIdx map[string]int // resource span id -> resource span group
+		ResourceSpans    []*ResourceSpanGroup
+	}
 
-type ResourceSpanGroup struct {
-	Resource          *pcommon.Resource
-	ResourceSchemaUrl string
-	ScopeSpansIdx     map[string]int // scope span id -> scope span group
-	ScopeSpans        []*ScopeSpanGroup
-}
+	ResourceSpanGroup struct {
+		Resource          *pcommon.Resource
+		ResourceSchemaUrl string
+		ScopeSpansIdx     map[string]int // scope span id -> scope span group
+		ScopeSpans        []*ScopeSpanGroup
+	}
 
-type ScopeSpanGroup struct {
-	Scope          *pcommon.InstrumentationScope
-	ScopeSchemaUrl string
+	ScopeSpanGroup struct {
+		Scope          *pcommon.InstrumentationScope
+		ScopeSchemaUrl string
 
-	Spans []*ptrace.Span
-}
+		SharedData *SharedData
+		Spans      []*ptrace.Span
+	}
 
-type TracesStats struct {
-	TracesCount            int
-	ResourceSpansHistogram *hdrhistogram.Histogram
-	ResourceAttrsHistogram *carrow.AttributesStats
-	ScopeSpansHistogram    *hdrhistogram.Histogram
-	ScopeAttrsHistogram    *carrow.AttributesStats
-	SpansHistogram         *hdrhistogram.Histogram
-	SpanAttrsHistogram     *carrow.AttributesStats
-	EventsHistogram        *hdrhistogram.Histogram
-	EventAttrsHistogram    *carrow.AttributesStats
-	LinksHistogram         *hdrhistogram.Histogram
-	LinkAttrsHistogram     *carrow.AttributesStats
-}
+	TracesStats struct {
+		TracesCount            int
+		ResourceSpansHistogram *hdrhistogram.Histogram
+		ResourceAttrsHistogram *carrow.AttributesStats
+		ScopeSpansHistogram    *hdrhistogram.Histogram
+		ScopeAttrsHistogram    *carrow.AttributesStats
+		SpansHistogram         *hdrhistogram.Histogram
+		SpanAttrsHistogram     *carrow.AttributesStats
+		EventsHistogram        *hdrhistogram.Histogram
+		EventAttrsHistogram    *carrow.AttributesStats
+		LinksHistogram         *hdrhistogram.Histogram
+		LinkAttrsHistogram     *carrow.AttributesStats
+	}
+
+	// SharedData contains all the shared attributes between spans, events, and links.
+	SharedData struct {
+		sharedAttributes      *common.SharedAttributes
+		sharedEventAttributes *common.SharedAttributes
+		sharedLinkAttributes  *common.SharedAttributes
+	}
+)
 
 func NewTracesOptimizer(cfg ...func(*carrow.Options)) *TracesOptimizer {
 	options := carrow.Options{
@@ -116,8 +128,13 @@ func (t *TracesOptimizer) Optimize(traces ptrace.Traces) *TracesOptimized {
 		tracesOptimized.AddResourceSpan(&resSpan)
 	}
 
-	if t.sort {
-		for _, resSpanGroup := range tracesOptimized.ResourceSpans {
+	for _, resSpanGroup := range tracesOptimized.ResourceSpans {
+		// Compute shared attributes for all spans in the resource span group.
+		for _, spg := range resSpanGroup.ScopeSpans {
+			spg.SharedData = collectAllSharedAttributes(spg.Spans)
+		}
+
+		if t.sort {
 			resSpanGroup.Sort()
 		}
 	}
@@ -292,4 +309,90 @@ func (t *TracesStats) Show() {
 		)
 		t.LinkAttrsHistogram.Show("          ")
 	}
+}
+
+func collectAllSharedAttributes(spans []*ptrace.Span) *SharedData {
+	sharedAttrs := make(map[string]pcommon.Value)
+	firstSpan := true
+
+	sharedEventAttrs := make(map[string]pcommon.Value)
+	firstEvent := true
+
+	sharedLinkAttrs := make(map[string]pcommon.Value)
+	firstLink := true
+
+	for i := 0; i < len(spans); i++ {
+		span := spans[i]
+		attrs := span.Attributes()
+
+		firstSpan = collectSharedAttributes(&attrs, firstSpan, sharedAttrs)
+
+		// Collect shared event attributes
+		eventSlice := span.Events()
+		if eventSlice.Len() > 1 {
+			for j := 0; j < eventSlice.Len(); j++ {
+				event := eventSlice.At(j)
+				evtAttrs := event.Attributes()
+
+				firstEvent = collectSharedAttributes(&evtAttrs, firstEvent, sharedEventAttrs)
+			}
+		}
+
+		// Collect shared link attributes
+		linkSlice := span.Links()
+		if linkSlice.Len() > 1 {
+			for j := 0; j < linkSlice.Len(); j++ {
+				link := linkSlice.At(j)
+				linkAttrs := link.Attributes()
+
+				firstLink = collectSharedAttributes(&linkAttrs, firstLink, sharedLinkAttrs)
+			}
+		}
+
+		if len(sharedAttrs) == 0 && len(sharedEventAttrs) == 0 && len(sharedLinkAttrs) == 0 {
+			break
+		}
+	}
+
+	if len(spans) == 1 {
+		sharedAttrs = make(map[string]pcommon.Value)
+	}
+
+	return &SharedData{
+		sharedAttributes: &common.SharedAttributes{
+			Attributes: sharedAttrs,
+		},
+		sharedEventAttributes: &common.SharedAttributes{
+			Attributes: sharedEventAttrs,
+		},
+		sharedLinkAttributes: &common.SharedAttributes{
+			Attributes: sharedLinkAttrs,
+		},
+	}
+}
+
+func collectSharedAttributes(attrs *pcommon.Map, first bool, sharedAttrs map[string]pcommon.Value) bool {
+	if first {
+		attrs.Range(func(k string, v pcommon.Value) bool {
+			sharedAttrs[k] = v
+			return true
+		})
+		return false
+	} else {
+		if len(sharedAttrs) > 0 {
+			if attrs.Len() == 0 {
+				sharedAttrs = make(map[string]pcommon.Value)
+			}
+			for k, v := range sharedAttrs {
+				if otherV, ok := attrs.Get(k); ok {
+					if !pdata.ValuesEqual(v, otherV) {
+						delete(sharedAttrs, k)
+					}
+				} else {
+					delete(sharedAttrs, k)
+				}
+			}
+		}
+	}
+	return first
 }

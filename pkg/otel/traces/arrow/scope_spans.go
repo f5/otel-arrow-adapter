@@ -21,14 +21,12 @@ import (
 	"github.com/apache/arrow/go/v12/arrow"
 	"github.com/apache/arrow/go/v12/arrow/array"
 	"go.opentelemetry.io/collector/pdata/pcommon"
-	"go.opentelemetry.io/collector/pdata/ptrace"
 
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common"
 	acommon "github.com/f5/otel-arrow-adapter/pkg/otel/common/arrow"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/builder"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/constants"
-	"github.com/f5/otel-arrow-adapter/pkg/otel/pdata"
 	"github.com/f5/otel-arrow-adapter/pkg/werror"
 )
 
@@ -57,13 +55,6 @@ type ScopeSpansBuilder struct {
 	sab  *acommon.AttributesBuilder // `shared_attributes` builder
 	seab *acommon.AttributesBuilder // `shared_event_attributes` builder
 	slab *acommon.AttributesBuilder // `shared_link_attributes` builder
-}
-
-// SharedData contains all the shared attributes between spans, events, and links.
-type SharedData struct {
-	sharedAttributes      *common.SharedAttributes
-	sharedEventAttributes *common.SharedAttributes
-	sharedLinkAttributes  *common.SharedAttributes
 }
 
 func ScopeSpansBuilderFrom(builder *builder.StructBuilder) *ScopeSpansBuilder {
@@ -108,26 +99,24 @@ func (b *ScopeSpansBuilder) Append(spg *ScopeSpanGroup) error {
 		b.schb.AppendNonEmpty(spg.ScopeSchemaUrl)
 		sc := len(spg.Spans)
 
-		sharedData := collectAllSharedAttributes(spg.Spans)
-
 		// Append span shared attributes
-		if err := appendSharedAttributes(sharedData.sharedAttributes, b.sab); err != nil {
+		if err := appendSharedAttributes(spg.SharedData.sharedAttributes, b.sab); err != nil {
 			return werror.Wrap(err)
 		}
 
 		// Append event shared attributes
-		if err := appendSharedAttributes(sharedData.sharedEventAttributes, b.seab); err != nil {
+		if err := appendSharedAttributes(spg.SharedData.sharedEventAttributes, b.seab); err != nil {
 			return werror.Wrap(err)
 		}
 
 		// shared link shared attributes
-		if err := appendSharedAttributes(sharedData.sharedLinkAttributes, b.slab); err != nil {
+		if err := appendSharedAttributes(spg.SharedData.sharedLinkAttributes, b.slab); err != nil {
 			return werror.Wrap(err)
 		}
 
 		return b.ssb.Append(sc, func() error {
 			for i := 0; i < sc; i++ {
-				if err := b.sb.Append(spg.Spans[i], sharedData); err != nil {
+				if err := b.sb.Append(spg.Spans[i], spg.SharedData); err != nil {
 					return werror.Wrap(err)
 				}
 			}
@@ -158,90 +147,4 @@ func (b *ScopeSpansBuilder) Release() {
 
 		b.released = true
 	}
-}
-
-func collectAllSharedAttributes(spans []*ptrace.Span) *SharedData {
-	sharedAttrs := make(map[string]pcommon.Value)
-	firstSpan := true
-
-	sharedEventAttrs := make(map[string]pcommon.Value)
-	firstEvent := true
-
-	sharedLinkAttrs := make(map[string]pcommon.Value)
-	firstLink := true
-
-	for i := 0; i < len(spans); i++ {
-		span := spans[i]
-		attrs := span.Attributes()
-
-		firstSpan = collectSharedAttributes(&attrs, firstSpan, sharedAttrs)
-
-		// Collect shared event attributes
-		eventSlice := span.Events()
-		if eventSlice.Len() > 1 {
-			for j := 0; j < eventSlice.Len(); j++ {
-				event := eventSlice.At(j)
-				evtAttrs := event.Attributes()
-
-				firstEvent = collectSharedAttributes(&evtAttrs, firstEvent, sharedEventAttrs)
-			}
-		}
-
-		// Collect shared link attributes
-		linkSlice := span.Links()
-		if linkSlice.Len() > 1 {
-			for j := 0; j < linkSlice.Len(); j++ {
-				link := linkSlice.At(j)
-				linkAttrs := link.Attributes()
-
-				firstLink = collectSharedAttributes(&linkAttrs, firstLink, sharedLinkAttrs)
-			}
-		}
-
-		if len(sharedAttrs) == 0 && len(sharedEventAttrs) == 0 && len(sharedLinkAttrs) == 0 {
-			break
-		}
-	}
-
-	if len(spans) == 1 {
-		sharedAttrs = make(map[string]pcommon.Value)
-	}
-
-	return &SharedData{
-		sharedAttributes: &common.SharedAttributes{
-			Attributes: sharedAttrs,
-		},
-		sharedEventAttributes: &common.SharedAttributes{
-			Attributes: sharedEventAttrs,
-		},
-		sharedLinkAttributes: &common.SharedAttributes{
-			Attributes: sharedLinkAttrs,
-		},
-	}
-}
-
-func collectSharedAttributes(attrs *pcommon.Map, first bool, sharedAttrs map[string]pcommon.Value) bool {
-	if first {
-		attrs.Range(func(k string, v pcommon.Value) bool {
-			sharedAttrs[k] = v
-			return true
-		})
-		return false
-	} else {
-		if len(sharedAttrs) > 0 {
-			if attrs.Len() == 0 {
-				sharedAttrs = make(map[string]pcommon.Value)
-			}
-			for k, v := range sharedAttrs {
-				if otherV, ok := attrs.Get(k); ok {
-					if !pdata.ValuesEqual(v, otherV) {
-						delete(sharedAttrs, k)
-					}
-				} else {
-					delete(sharedAttrs, k)
-				}
-			}
-		}
-	}
-	return first
 }
