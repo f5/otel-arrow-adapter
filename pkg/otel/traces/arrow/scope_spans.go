@@ -93,7 +93,7 @@ func (b *ScopeSpansBuilder) Append(spg *ScopeSpanGroup, attrsBuilders *AttrsBuil
 	}
 
 	return b.builder.Append(spg, func() error {
-		if err := b.scb.Append(spg.Scope); err != nil {
+		if err := b.scb.Append(spg.Scope, attrsBuilders.scope.collector); err != nil {
 			return werror.Wrap(err)
 		}
 		b.schb.AppendNonEmpty(spg.ScopeSchemaUrl)

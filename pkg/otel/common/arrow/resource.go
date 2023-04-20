@@ -65,7 +65,7 @@ func ResourceBuilderFrom(builder *builder.StructBuilder) *ResourceBuilder {
 	return &ResourceBuilder{
 		released: false,
 		builder:  builder,
-		aib:      builder.Uint32DeltaBuilder("attrs_id"),
+		aib:      builder.Uint32DeltaBuilder(constants.AttributesID),
 		dacb:     builder.Uint32Builder(constants.DroppedAttributesCount),
 	}
 }

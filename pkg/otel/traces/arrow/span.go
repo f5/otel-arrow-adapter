@@ -90,7 +90,7 @@ func SpanBuilderFrom(sb *builder.StructBuilder) *SpanBuilder {
 		psib:     sb.FixedSizeBinaryBuilder(constants.ParentSpanId),
 		nb:       sb.StringBuilder(constants.Name),
 		kb:       sb.Int32Builder(constants.KIND),
-		aib:      sb.Uint32DeltaBuilder("attrs_id"),
+		aib:      sb.Uint32DeltaBuilder(constants.AttributesID),
 		dacb:     sb.Uint32Builder(constants.DroppedAttributesCount),
 		sesb:     sesb,
 		seb:      EventBuilderFrom(sesb.StructBuilder()),

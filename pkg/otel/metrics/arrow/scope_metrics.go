@@ -96,7 +96,7 @@ func (b *ScopeMetricsBuilder) Append(smg *ScopeMetricsGroup) error {
 	}
 
 	return b.builder.Append(smg, func() error {
-		if err := b.scb.Append(smg.Scope); err != nil {
+		if err := b.scb.Append(smg.Scope, nil); err != nil {
 			return werror.Wrap(err)
 		}
 		b.schb.AppendNonEmpty(smg.ScopeSchemaUrl)

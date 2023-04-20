@@ -60,7 +60,7 @@ func LinkBuilderFrom(lb *builder.StructBuilder) *LinkBuilder {
 		tib:      lb.FixedSizeBinaryBuilder(constants.TraceId),
 		sib:      lb.FixedSizeBinaryBuilder(constants.SpanId),
 		tsb:      lb.StringBuilder(constants.TraceState),
-		aib:      lb.Uint32DeltaBuilder("attrs_id"),
+		aib:      lb.Uint32DeltaBuilder(constants.AttributesID),
 		dacb:     lb.Uint32Builder(constants.DroppedAttributesCount),
 	}
 }

@@ -58,7 +58,7 @@ func EventBuilderFrom(eb *builder.StructBuilder) *EventBuilder {
 		builder:  eb,
 		dtunb:    eb.DurationBuilder(constants.DurationTimeUnixNano),
 		nb:       eb.StringBuilder(constants.Name),
-		aib:      eb.Uint32DeltaBuilder("attrs_id"),
+		aib:      eb.Uint32DeltaBuilder(constants.AttributesID),
 		dacb:     eb.Uint32Builder(constants.DroppedAttributesCount),
 	}
 }
