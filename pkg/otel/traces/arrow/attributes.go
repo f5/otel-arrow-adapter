@@ -75,6 +75,10 @@ func (b *AttrsBuilder) Accumulator() *acommon.AttributesAccumulator {
 	return b.accumulator
 }
 
+func (b *AttrsBuilder) IsEmpty() bool {
+	return b.accumulator.IsEmpty()
+}
+
 func (b *AttrsBuilder) Build() (record arrow.Record, err error) {
 	if b.released {
 		return nil, werror.Wrap(acommon.ErrBuilderAlreadyReleased)

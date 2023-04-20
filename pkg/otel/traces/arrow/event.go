@@ -100,6 +100,10 @@ func (b *EventBuilder) SchemaID() string {
 	return b.builder.SchemaID()
 }
 
+func (b *EventBuilder) IsEmpty() bool {
+	return b.accumulator.IsEmpty()
+}
+
 func (b *EventBuilder) Accumulator() *EventAccumulator {
 	return b.accumulator
 }
@@ -183,6 +187,10 @@ func NewEventAccumulator() *EventAccumulator {
 		groupCount: 0,
 		events:     make([]Event, 0),
 	}
+}
+
+func (a *EventAccumulator) IsEmpty() bool {
+	return len(a.events) == 0
 }
 
 // Append appends a slice of events to the accumulator.

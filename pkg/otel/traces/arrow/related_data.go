@@ -135,53 +135,57 @@ func (r *RelatedData) Reset() {
 }
 
 func (r *RelatedData) BuildRecordMessages() ([]*record_message.RecordMessage, error) {
+	recordMessages := make([]*record_message.RecordMessage, 0, 6)
 
-	attrsResRec, err := r.attrsBuilders.BuildRecord(r.attrsBuilders.resource)
-	if err != nil {
-		return nil, werror.Wrap(err)
+	if !r.attrsBuilders.resource.IsEmpty() {
+		attrsResRec, err := r.attrsBuilders.BuildRecord(r.attrsBuilders.resource)
+		if err != nil {
+			return nil, werror.Wrap(err)
+		}
+		recordMessages = append(recordMessages, record_message.NewRelatedDataMessage(r.attrsBuilders.resource.SchemaID(), attrsResRec, colarspb.OtlpArrowPayloadType_RESOURCE_ATTRS))
 	}
 
-	attrsScopeRec, err := r.attrsBuilders.BuildRecord(r.attrsBuilders.scope)
-	if err != nil {
-		return nil, werror.Wrap(err)
+	if !r.attrsBuilders.scope.IsEmpty() {
+		attrsScopeRec, err := r.attrsBuilders.BuildRecord(r.attrsBuilders.scope)
+		if err != nil {
+			return nil, werror.Wrap(err)
+		}
+		recordMessages = append(recordMessages, record_message.NewRelatedDataMessage(r.attrsBuilders.scope.SchemaID(), attrsScopeRec, colarspb.OtlpArrowPayloadType_SCOPE_ATTRS))
 	}
 
-	attrsSpanRec, err := r.attrsBuilders.BuildRecord(r.attrsBuilders.span)
-	if err != nil {
-		return nil, werror.Wrap(err)
+	if !r.attrsBuilders.span.IsEmpty() {
+		attrsSpanRec, err := r.attrsBuilders.BuildRecord(r.attrsBuilders.span)
+		if err != nil {
+			return nil, werror.Wrap(err)
+		}
+		recordMessages = append(recordMessages, record_message.NewRelatedDataMessage(r.attrsBuilders.span.SchemaID(), attrsSpanRec, colarspb.OtlpArrowPayloadType_SPAN_ATTRS))
 	}
 
-	eventRec, err := r.eventBuilder.BuildRecord(r.attrsBuilders.event.Accumulator())
-	if err != nil {
-		return nil, werror.Wrap(err)
+	if !r.eventBuilder.IsEmpty() {
+		eventRec, err := r.eventBuilder.BuildRecord(r.attrsBuilders.event.Accumulator())
+		if err != nil {
+			return nil, werror.Wrap(err)
+		}
+		recordMessages = append(recordMessages, record_message.NewRelatedDataMessage(r.eventBuilder.SchemaID(), eventRec, colarspb.OtlpArrowPayloadType_SPAN_EVENTS))
 	}
 
-	attrsEventRec, err := r.attrsBuilders.BuildRecord(r.attrsBuilders.event)
-	if err != nil {
-		return nil, werror.Wrap(err)
+	if !r.attrsBuilders.event.IsEmpty() {
+		attrsEventRec, err := r.attrsBuilders.BuildRecord(r.attrsBuilders.event)
+		if err != nil {
+			return nil, werror.Wrap(err)
+		}
+		recordMessages = append(recordMessages, record_message.NewRelatedDataMessage(r.attrsBuilders.event.SchemaID(), attrsEventRec, colarspb.OtlpArrowPayloadType_SPAN_EVENT_ATTRS))
 	}
 
-	attrsLinkRec, err := r.attrsBuilders.BuildRecord(r.attrsBuilders.link)
-	if err != nil {
-		return nil, werror.Wrap(err)
+	if !r.attrsBuilders.link.IsEmpty() {
+		attrsLinkRec, err := r.attrsBuilders.BuildRecord(r.attrsBuilders.link)
+		if err != nil {
+			return nil, werror.Wrap(err)
+		}
+		recordMessages = append(recordMessages, record_message.NewRelatedDataMessage(r.attrsBuilders.link.SchemaID(), attrsLinkRec, colarspb.OtlpArrowPayloadType_SPAN_LINK_ATTRS))
 	}
 
-	return []*record_message.RecordMessage{
-		// Resource attributes
-		record_message.NewRelatedDataMessage(r.attrsBuilders.resource.SchemaID(), attrsResRec, colarspb.OtlpArrowPayloadType_RESOURCE_ATTRS),
-		// Scope attributes
-		record_message.NewRelatedDataMessage(r.attrsBuilders.scope.SchemaID(), attrsScopeRec, colarspb.OtlpArrowPayloadType_SCOPE_ATTRS),
-		// Span attributes
-		record_message.NewRelatedDataMessage(r.attrsBuilders.span.SchemaID(), attrsSpanRec, colarspb.OtlpArrowPayloadType_SPAN_ATTRS),
-
-		// Span events
-		record_message.NewRelatedDataMessage(r.eventBuilder.SchemaID(), eventRec, colarspb.OtlpArrowPayloadType_SPAN_EVENTS),
-		// Span event attributes
-		record_message.NewRelatedDataMessage(r.attrsBuilders.event.SchemaID(), attrsEventRec, colarspb.OtlpArrowPayloadType_SPAN_EVENT_ATTRS),
-
-		// Span link attributes
-		record_message.NewRelatedDataMessage(r.attrsBuilders.link.SchemaID(), attrsLinkRec, colarspb.OtlpArrowPayloadType_SPAN_LINK_ATTRS),
-	}, nil
+	return recordMessages, nil
 }
 
 func (ab *AttrsBuilders) Resource() *AttrsBuilder {

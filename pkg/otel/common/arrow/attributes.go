@@ -260,6 +260,10 @@ func NewAttributesAccumulator() *AttributesAccumulator {
 	}
 }
 
+func (c *AttributesAccumulator) IsEmpty() bool {
+	return len(c.attrs) == 0
+}
+
 func (c *AttributesAccumulator) Append(attrs pcommon.Map) (int64, error) {
 	ID := c.attrsMapCount
 
