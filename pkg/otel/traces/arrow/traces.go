@@ -44,13 +44,13 @@ type TracesBuilder struct {
 	optimizer *TracesOptimizer
 	analyzer  *TraceAnalyzer
 
-	attrsBuilders *AttrsBuilders
+	relatedData *RelatedData
 }
 
 // NewTracesBuilder creates a new TracesBuilder with a given allocator.
 func NewTracesBuilder(
 	rBuilder *builder.RecordBuilderExt,
-	attrsBuilders *AttrsBuilders,
+	relatedData *RelatedData,
 	traceStats bool,
 ) (*TracesBuilder, error) {
 	var optimizer *TracesOptimizer
@@ -64,11 +64,11 @@ func NewTracesBuilder(
 	}
 
 	tracesBuilder := &TracesBuilder{
-		released:      false,
-		builder:       rBuilder,
-		optimizer:     optimizer,
-		analyzer:      analyzer,
-		attrsBuilders: attrsBuilders,
+		released:    false,
+		builder:     rBuilder,
+		optimizer:   optimizer,
+		analyzer:    analyzer,
+		relatedData: relatedData,
 	}
 	if err := tracesBuilder.init(); err != nil {
 		return nil, werror.Wrap(err)
@@ -126,7 +126,7 @@ func (b *TracesBuilder) Append(traces ptrace.Traces) error {
 	rc := len(optimTraces.ResourceSpans)
 	return b.rsb.Append(rc, func() error {
 		for _, resSpanGroup := range optimTraces.ResourceSpans {
-			if err := b.rsp.Append(resSpanGroup, b.attrsBuilders); err != nil {
+			if err := b.rsp.Append(resSpanGroup, b.relatedData); err != nil {
 				return werror.Wrap(err)
 			}
 		}
@@ -140,7 +140,7 @@ func (b *TracesBuilder) Release() {
 		b.builder.Release()
 		b.released = true
 
-		b.attrsBuilders.Reset()
+		b.relatedData.Reset()
 	}
 }
 

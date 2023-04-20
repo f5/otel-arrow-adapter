@@ -42,7 +42,7 @@ var (
 		{Name: constants.KIND, Type: arrow.PrimitiveTypes.Int32, Metadata: schema.Metadata(schema.Optional, schema.Dictionary8)},
 		{Name: constants.AttributesID, Type: arrow.PrimitiveTypes.Uint32, Metadata: schema.Metadata(schema.Optional)},
 		{Name: constants.DroppedAttributesCount, Type: arrow.PrimitiveTypes.Uint32, Metadata: schema.Metadata(schema.Optional)},
-		{Name: constants.SpanEvents, Type: arrow.ListOf(EventDT), Metadata: schema.Metadata(schema.Optional)},
+		{Name: constants.EventsID, Type: arrow.PrimitiveTypes.Uint32, Metadata: schema.Metadata(schema.Optional)},
 		{Name: constants.DroppedEventsCount, Type: arrow.PrimitiveTypes.Uint32, Metadata: schema.Metadata(schema.Optional)},
 		{Name: constants.SpanLinks, Type: arrow.ListOf(LinkDT), Metadata: schema.Metadata(schema.Optional)},
 		{Name: constants.DroppedLinksCount, Type: arrow.PrimitiveTypes.Uint32, Metadata: schema.Metadata(schema.Optional)},
@@ -66,8 +66,7 @@ type SpanBuilder struct {
 	kb    *builder.Int32Builder           // kind builder
 	aib   *builder.Uint32DeltaBuilder     // attributes id builder
 	dacb  *builder.Uint32Builder          // dropped attributes count builder
-	sesb  *builder.ListBuilder            // span event list builder
-	seb   *EventBuilder                   // span event builder
+	seib  *builder.Uint32DeltaBuilder     // span events id builder
 	decb  *builder.Uint32Builder          // dropped events count builder
 	slsb  *builder.ListBuilder            // span link list builder
 	slb   *LinkBuilder                    // span link builder
@@ -76,7 +75,6 @@ type SpanBuilder struct {
 }
 
 func SpanBuilderFrom(sb *builder.StructBuilder) *SpanBuilder {
-	sesb := sb.ListBuilder(constants.SpanEvents)
 	slsb := sb.ListBuilder(constants.SpanLinks)
 
 	return &SpanBuilder{
@@ -92,8 +90,7 @@ func SpanBuilderFrom(sb *builder.StructBuilder) *SpanBuilder {
 		kb:       sb.Int32Builder(constants.KIND),
 		aib:      sb.Uint32DeltaBuilder(constants.AttributesID),
 		dacb:     sb.Uint32Builder(constants.DroppedAttributesCount),
-		sesb:     sesb,
-		seb:      EventBuilderFrom(sesb.StructBuilder()),
+		seib:     sb.Uint32DeltaBuilder(constants.EventsID),
 		decb:     sb.Uint32Builder(constants.DroppedEventsCount),
 		slsb:     slsb,
 		slb:      LinkBuilderFrom(slsb.StructBuilder()),
@@ -116,7 +113,7 @@ func (b *SpanBuilder) Build() (*array.Struct, error) {
 }
 
 // Append appends a new span to the builder.
-func (b *SpanBuilder) Append(span *ptrace.Span, sharedData *SharedData, attrsBuilders *AttrsBuilders) error {
+func (b *SpanBuilder) Append(span *ptrace.Span, sharedData *SharedData, relatedData *RelatedData) error {
 	if b.released {
 		return werror.Wrap(acommon.ErrBuilderAlreadyReleased)
 	}
@@ -136,7 +133,7 @@ func (b *SpanBuilder) Append(span *ptrace.Span, sharedData *SharedData, attrsBui
 		b.kb.AppendNonZero(int32(span.Kind()))
 
 		// Span Attributes
-		ID, err := attrsBuilders.Span().Accumulator().AppendUniqueAttributes(span.Attributes(), sharedData.sharedAttributes, nil)
+		ID, err := relatedData.AttrsBuilders().Span().Accumulator().AppendUniqueAttributes(span.Attributes(), sharedData.sharedAttributes, nil)
 		if err != nil {
 			return werror.Wrap(err)
 		}
@@ -148,17 +145,14 @@ func (b *SpanBuilder) Append(span *ptrace.Span, sharedData *SharedData, attrsBui
 		b.dacb.AppendNonZero(span.DroppedAttributesCount())
 
 		// Events
-		evts := span.Events()
-		sc := evts.Len()
-		if err := b.sesb.Append(sc, func() error {
-			for i := 0; i < sc; i++ {
-				if err := b.seb.Append(evts.At(i), sharedData.sharedEventAttributes, span.StartTimestamp(), attrsBuilders.Event().Accumulator()); err != nil {
-					return werror.Wrap(err)
-				}
-			}
-			return nil
-		}); err != nil {
+		ID, err = relatedData.EventBuilder().Accumulator().Append(span.Events())
+		if err != nil {
 			return werror.Wrap(err)
+		}
+		if ID >= 0 {
+			b.seib.Append(uint32(ID))
+		} else {
+			b.seib.AppendNull()
 		}
 		b.decb.AppendNonZero(span.DroppedEventsCount())
 
@@ -167,7 +161,7 @@ func (b *SpanBuilder) Append(span *ptrace.Span, sharedData *SharedData, attrsBui
 		lc := lks.Len()
 		if err := b.slsb.Append(lc, func() error {
 			for i := 0; i < lc; i++ {
-				if err := b.slb.Append(lks.At(i), sharedData.sharedLinkAttributes, attrsBuilders.Link().Accumulator()); err != nil {
+				if err := b.slb.Append(lks.At(i), sharedData.sharedLinkAttributes, relatedData.AttrsBuilders().Link().Accumulator()); err != nil {
 					return werror.Wrap(err)
 				}
 			}

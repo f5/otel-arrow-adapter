@@ -43,9 +43,10 @@ type (
 		released bool
 
 		builder *builder.RecordBuilderExt // Record builder
-		ib      *builder.Uint16Builder
-		kb      *builder.StringBuilder
-		ab      *acommon.AnyValueBuilder
+
+		ib *builder.Uint16Builder
+		kb *builder.StringBuilder
+		ab *acommon.AnyValueBuilder
 
 		accumulator *acommon.AttributesAccumulator
 	}

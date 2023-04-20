@@ -87,13 +87,13 @@ func (b *ScopeSpansBuilder) Build() (*array.Struct, error) {
 }
 
 // Append appends a new scope spans to the builder.
-func (b *ScopeSpansBuilder) Append(spg *ScopeSpanGroup, attrsBuilders *AttrsBuilders) error {
+func (b *ScopeSpansBuilder) Append(spg *ScopeSpanGroup, relatedData *RelatedData) error {
 	if b.released {
 		return werror.Wrap(acommon.ErrBuilderAlreadyReleased)
 	}
 
 	return b.builder.Append(spg, func() error {
-		if err := b.scb.Append(spg.Scope, attrsBuilders.scope.Accumulator()); err != nil {
+		if err := b.scb.Append(spg.Scope, relatedData.AttrsBuilders().scope.Accumulator()); err != nil {
 			return werror.Wrap(err)
 		}
 		b.schb.AppendNonEmpty(spg.ScopeSchemaUrl)
@@ -116,7 +116,7 @@ func (b *ScopeSpansBuilder) Append(spg *ScopeSpanGroup, attrsBuilders *AttrsBuil
 
 		return b.ssb.Append(sc, func() error {
 			for i := 0; i < sc; i++ {
-				if err := b.sb.Append(spg.Spans[i], spg.SharedData, attrsBuilders); err != nil {
+				if err := b.sb.Append(spg.Spans[i], spg.SharedData, relatedData); err != nil {
 					return werror.Wrap(err)
 				}
 			}

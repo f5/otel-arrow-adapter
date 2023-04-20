@@ -36,6 +36,9 @@ import (
 type RelatedData struct {
 	attrsBuilders       *AttrsBuilders
 	attrsRecordBuilders *AttrsRecordBuilders
+
+	eventBuilder       *EventBuilder
+	eventRecordBuilder *builder.RecordBuilderExt
 }
 
 // AttrsBuilders groups together AttrsBuilder instances used to build related
@@ -61,57 +64,124 @@ type AttrsRecordBuilders struct {
 }
 
 func NewRelatedData(cfg *config2.Config, stats *stats.ProducerStats) (*RelatedData, error) {
-	resourceRB := builder.NewRecordBuilderExt(cfg.Pool, AttrsSchema, config.NewDictionary(cfg.LimitIndexSize), stats)
-	scopeRB := builder.NewRecordBuilderExt(cfg.Pool, AttrsSchema, config.NewDictionary(cfg.LimitIndexSize), stats)
-	spanRB := builder.NewRecordBuilderExt(cfg.Pool, AttrsSchema, config.NewDictionary(cfg.LimitIndexSize), stats)
-	eventRB := builder.NewRecordBuilderExt(cfg.Pool, AttrsSchema, config.NewDictionary(cfg.LimitIndexSize), stats)
-	linkRB := builder.NewRecordBuilderExt(cfg.Pool, AttrsSchema, config.NewDictionary(cfg.LimitIndexSize), stats)
+	attrsResourceRB := builder.NewRecordBuilderExt(cfg.Pool, AttrsSchema, config.NewDictionary(cfg.LimitIndexSize), stats)
+	attrsScopeRB := builder.NewRecordBuilderExt(cfg.Pool, AttrsSchema, config.NewDictionary(cfg.LimitIndexSize), stats)
+	attrsSpanRB := builder.NewRecordBuilderExt(cfg.Pool, AttrsSchema, config.NewDictionary(cfg.LimitIndexSize), stats)
+	attrsEventRB := builder.NewRecordBuilderExt(cfg.Pool, AttrsSchema, config.NewDictionary(cfg.LimitIndexSize), stats)
+	attrsLinkRB := builder.NewRecordBuilderExt(cfg.Pool, AttrsSchema, config.NewDictionary(cfg.LimitIndexSize), stats)
 
-	resourceBuilder, err := NewAttrsBuilder(resourceRB)
+	attrsResourceBuilder, err := NewAttrsBuilder(attrsResourceRB)
 	if err != nil {
 		return nil, werror.Wrap(err)
 	}
 
-	scopeBuilder, err := NewAttrsBuilder(scopeRB)
+	attrsScopeBuilder, err := NewAttrsBuilder(attrsScopeRB)
 	if err != nil {
 		return nil, werror.Wrap(err)
 	}
 
-	spanBuilder, err := NewAttrsBuilder(spanRB)
+	attrsSpanBuilder, err := NewAttrsBuilder(attrsSpanRB)
 	if err != nil {
 		return nil, werror.Wrap(err)
 	}
 
-	eventBuilder, err := NewAttrsBuilder(eventRB)
+	attrsEventBuilder, err := NewAttrsBuilder(attrsEventRB)
 	if err != nil {
 		return nil, werror.Wrap(err)
 	}
 
-	linkBuilder, err := NewAttrsBuilder(linkRB)
+	attrsLinkBuilder, err := NewAttrsBuilder(attrsLinkRB)
+	if err != nil {
+		return nil, werror.Wrap(err)
+	}
+
+	eventRB := builder.NewRecordBuilderExt(cfg.Pool, EventSchema, config.NewDictionary(cfg.LimitIndexSize), stats)
+	eventBuilder, err := NewEventBuilder(eventRB)
 	if err != nil {
 		return nil, werror.Wrap(err)
 	}
 
 	return &RelatedData{
 		attrsBuilders: &AttrsBuilders{
-			resource: resourceBuilder,
-			scope:    scopeBuilder,
-			span:     spanBuilder,
-			event:    eventBuilder,
-			link:     linkBuilder,
+			resource: attrsResourceBuilder,
+			scope:    attrsScopeBuilder,
+			span:     attrsSpanBuilder,
+			event:    attrsEventBuilder,
+			link:     attrsLinkBuilder,
 		},
 		attrsRecordBuilders: &AttrsRecordBuilders{
-			resource: resourceRB,
-			scope:    scopeRB,
-			span:     spanRB,
-			event:    eventRB,
-			link:     linkRB,
+			resource: attrsResourceRB,
+			scope:    attrsScopeRB,
+			span:     attrsSpanRB,
+			event:    attrsEventRB,
+			link:     attrsLinkRB,
 		},
+		eventBuilder:       eventBuilder,
+		eventRecordBuilder: eventRB,
 	}, nil
 }
 
 func (r *RelatedData) AttrsBuilders() *AttrsBuilders {
 	return r.attrsBuilders
+}
+
+func (r *RelatedData) EventBuilder() *EventBuilder {
+	return r.eventBuilder
+}
+
+func (r *RelatedData) Reset() {
+	r.attrsBuilders.Reset()
+	r.eventBuilder.Accumulator().Reset()
+}
+
+func (r *RelatedData) BuildRecordMessages() ([]*record_message.RecordMessage, error) {
+
+	attrsResRec, err := r.attrsBuilders.buildRecord(r.attrsBuilders.resource)
+	if err != nil {
+		return nil, werror.Wrap(err)
+	}
+
+	attrsScopeRec, err := r.attrsBuilders.buildRecord(r.attrsBuilders.scope)
+	if err != nil {
+		return nil, werror.Wrap(err)
+	}
+
+	attrsSpanRec, err := r.attrsBuilders.buildRecord(r.attrsBuilders.span)
+	if err != nil {
+		return nil, werror.Wrap(err)
+	}
+
+	eventRec, err := r.eventBuilder.Build(r.attrsBuilders.event.Accumulator())
+	if err != nil {
+		return nil, werror.Wrap(err)
+	}
+
+	attrsEventRec, err := r.attrsBuilders.buildRecord(r.attrsBuilders.event)
+	if err != nil {
+		return nil, werror.Wrap(err)
+	}
+
+	attrsLinkRec, err := r.attrsBuilders.buildRecord(r.attrsBuilders.link)
+	if err != nil {
+		return nil, werror.Wrap(err)
+	}
+
+	return []*record_message.RecordMessage{
+		// Resource attributes
+		record_message.NewRelatedDataMessage(r.attrsBuilders.resource.SchemaID(), attrsResRec, colarspb.OtlpArrowPayloadType_RESOURCE_ATTRS),
+		// Scope attributes
+		record_message.NewRelatedDataMessage(r.attrsBuilders.scope.SchemaID(), attrsScopeRec, colarspb.OtlpArrowPayloadType_SCOPE_ATTRS),
+		// Span attributes
+		record_message.NewRelatedDataMessage(r.attrsBuilders.span.SchemaID(), attrsSpanRec, colarspb.OtlpArrowPayloadType_SPAN_ATTRS),
+
+		// Span events
+		record_message.NewRelatedDataMessage(r.eventBuilder.SchemaID(), eventRec, colarspb.OtlpArrowPayloadType_SPAN_EVENTS),
+		// Span event attributes
+		record_message.NewRelatedDataMessage(r.attrsBuilders.event.SchemaID(), attrsEventRec, colarspb.OtlpArrowPayloadType_SPAN_EVENT_ATTRS),
+
+		// Span link attributes
+		record_message.NewRelatedDataMessage(r.attrsBuilders.link.SchemaID(), attrsLinkRec, colarspb.OtlpArrowPayloadType_SPAN_LINK_ATTRS),
+	}, nil
 }
 
 func (ab *AttrsBuilders) Resource() *AttrsBuilder {

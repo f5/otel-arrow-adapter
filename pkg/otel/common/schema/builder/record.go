@@ -539,6 +539,21 @@ func (rb *RecordBuilderExt) Uint64Builder(name string) *Uint64Builder {
 	}
 }
 
+// Uint32DeltaBuilder returns a Uint32DeltaBuilder wrapper for the field with the given
+// name. If the underlying builder doesn't exist, an empty wrapper is returned,
+// so that the feeding process can continue without panicking. This is useful
+// to handle optional fields.
+func (rb *RecordBuilderExt) Uint32DeltaBuilder(name string) *Uint32DeltaBuilder {
+	_, transformNode := rb.protoDataTypeAndTransformNode(name)
+	b := rb.builder(name)
+
+	if b != nil {
+		return &Uint32DeltaBuilder{builder: b, transformNode: transformNode, updateRequest: rb.updateRequest}
+	} else {
+		return &Uint32DeltaBuilder{builder: nil, transformNode: transformNode, updateRequest: rb.updateRequest}
+	}
+}
+
 // Int32Builder returns a Int32Builder wrapper for the field with the given
 // name. If the underlying builder doesn't exist, an empty wrapper is returned,
 // so that the feeding process can continue without panicking. This is useful

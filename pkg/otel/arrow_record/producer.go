@@ -140,7 +140,7 @@ func NewProducerWithOptions(options ...config2.Option) *Producer {
 
 	tracesBuilder, err := tracesarrow.NewTracesBuilder(
 		tracesRecordBuilder,
-		tracesRelatedData.AttrsBuilders(),
+		tracesRelatedData,
 		stats.SchemaStatsEnabled,
 	)
 	if err != nil {
@@ -219,7 +219,7 @@ func (p *Producer) BatchArrowRecordsFromTraces(ts ptrace.Traces) (*colarspb.Batc
 	// Note: The record returned is wrapped into a RecordMessage and will
 	// be released by the Producer.Produce method.
 	record, err := recordBuilder[ptrace.Traces](func() (acommon.EntityBuilder[ptrace.Traces], error) {
-		p.tracesRelatedData.AttrsBuilders().Reset()
+		p.tracesRelatedData.Reset()
 		return p.tracesBuilder, nil
 	}, ts)
 	if err != nil {
