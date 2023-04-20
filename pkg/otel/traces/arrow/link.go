@@ -36,7 +36,7 @@ var (
 		{Name: constants.TraceId, Type: &arrow.FixedSizeBinaryType{ByteWidth: 16}, Metadata: schema.Metadata(schema.Optional, schema.Dictionary8)},
 		{Name: constants.SpanId, Type: &arrow.FixedSizeBinaryType{ByteWidth: 8}, Metadata: schema.Metadata(schema.Optional, schema.Dictionary8)},
 		{Name: constants.TraceState, Type: arrow.BinaryTypes.String, Metadata: schema.Metadata(schema.Optional, schema.Dictionary8)},
-		{Name: constants.Attributes, Type: acommon.AttributesDT, Metadata: schema.Metadata(schema.Optional)},
+		{Name: constants.AttributesID, Type: arrow.PrimitiveTypes.Uint32, Metadata: schema.Metadata(schema.Optional)},
 		{Name: constants.DroppedAttributesCount, Type: arrow.PrimitiveTypes.Uint32, Metadata: schema.Metadata(schema.Optional)},
 	}...)
 )
@@ -49,7 +49,7 @@ type LinkBuilder struct {
 	tib  *builder.FixedSizeBinaryBuilder // `trace_id` builder
 	sib  *builder.FixedSizeBinaryBuilder // `span_id` builder
 	tsb  *builder.StringBuilder          // `trace_state` builder
-	ab   *acommon.AttributesBuilder      // `attributes` builder
+	aib  *builder.Uint32DeltaBuilder     // attributes id builder
 	dacb *builder.Uint32Builder          // `dropped_attributes_count` builder
 }
 
@@ -60,13 +60,13 @@ func LinkBuilderFrom(lb *builder.StructBuilder) *LinkBuilder {
 		tib:      lb.FixedSizeBinaryBuilder(constants.TraceId),
 		sib:      lb.FixedSizeBinaryBuilder(constants.SpanId),
 		tsb:      lb.StringBuilder(constants.TraceState),
-		ab:       acommon.AttributesBuilderFrom(lb.MapBuilder(constants.Attributes)),
+		aib:      lb.Uint32DeltaBuilder("attrs_id"),
 		dacb:     lb.Uint32Builder(constants.DroppedAttributesCount),
 	}
 }
 
 // Append appends a new link to the builder.
-func (b *LinkBuilder) Append(link ptrace.SpanLink, sharedAttributes *common.SharedAttributes) error {
+func (b *LinkBuilder) Append(link ptrace.SpanLink, sharedAttributes *common.SharedAttributes, attrsCollector *acommon.AttributesCollector) error {
 	if b.released {
 		return werror.Wrap(acommon.ErrBuilderAlreadyReleased)
 	}
@@ -78,7 +78,17 @@ func (b *LinkBuilder) Append(link ptrace.SpanLink, sharedAttributes *common.Shar
 		b.sib.Append(sid[:])
 		b.tsb.AppendNonEmpty(link.TraceState().AsRaw())
 		b.dacb.AppendNonZero(link.DroppedAttributesCount())
-		return b.ab.AppendUniqueAttributes(link.Attributes(), sharedAttributes, nil)
+
+		ID, err := attrsCollector.AppendUniqueAttributes(link.Attributes(), sharedAttributes, nil)
+		if err != nil {
+			return werror.Wrap(err)
+		}
+		if ID >= 0 {
+			b.aib.Append(uint32(ID))
+		} else {
+			b.aib.AppendNull()
+		}
+		return nil
 	})
 }
 

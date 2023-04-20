@@ -15,6 +15,7 @@
 package arrow
 
 import (
+	"fmt"
 	"io"
 
 	"github.com/apache/arrow/go/v12/arrow/memory"
@@ -25,6 +26,7 @@ import (
 	v1 "github.com/f5/otel-arrow-adapter/api/collector/arrow/v1"
 	"github.com/f5/otel-arrow-adapter/pkg/benchmark"
 	"github.com/f5/otel-arrow-adapter/pkg/benchmark/dataset"
+	cfg "github.com/f5/otel-arrow-adapter/pkg/config"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/arrow_record"
 )
 
@@ -40,19 +42,19 @@ type TracesProfileable struct {
 	pool                  *memory.GoAllocator
 	unaryRpcMode          bool
 	stats                 bool
-	tracesProducerOptions []arrow_record.Option
+	tracesProducerOptions []cfg.Option
 }
 
 func NewTraceProfileable(tags []string, dataset dataset.TraceDataset, config *benchmark.Config) *TracesProfileable {
-	var tracesProducerOptions []arrow_record.Option
+	var tracesProducerOptions []cfg.Option
 
 	if config.Compression {
-		tracesProducerOptions = append(tracesProducerOptions, arrow_record.WithZstd())
+		tracesProducerOptions = append(tracesProducerOptions, cfg.WithZstd())
 	} else {
-		tracesProducerOptions = append(tracesProducerOptions, arrow_record.WithNoZstd())
+		tracesProducerOptions = append(tracesProducerOptions, cfg.WithNoZstd())
 	}
 	if config.Stats {
-		tracesProducerOptions = append(tracesProducerOptions, arrow_record.WithStats())
+		tracesProducerOptions = append(tracesProducerOptions, cfg.WithStats())
 	}
 
 	return &TracesProfileable{
@@ -144,6 +146,7 @@ func (s *TracesProfileable) Serialize(io.Writer) ([][]byte, error) {
 			return nil, err
 		}
 		buffers[i] = bytes
+		fmt.Printf("Serialized %d bytes (i=%d)\n", len(bytes), i)
 	}
 	return buffers, nil
 }
@@ -162,15 +165,16 @@ func (s *TracesProfileable) Deserialize(_ io.Writer, buffers [][]byte) {
 }
 
 func (s *TracesProfileable) ConvertOtlpArrowToOtlp(_ io.Writer) {
-	for _, batchArrowRecords := range s.batchArrowRecords {
-		traces, err := s.consumer.TracesFrom(batchArrowRecords)
-		if err != nil {
-			panic(err)
-		}
-		if len(traces) == 0 {
-			println("no traces")
-		}
-	}
+	// ToDO Finalize this part
+	//for _, batchArrowRecords := range s.batchArrowRecords {
+	//	traces, err := s.consumer.TracesFrom(batchArrowRecords)
+	//	if err != nil {
+	//		panic(err)
+	//	}
+	//	if len(traces) == 0 {
+	//		println("no traces")
+	//	}
+	//}
 }
 
 func (s *TracesProfileable) Clear() {

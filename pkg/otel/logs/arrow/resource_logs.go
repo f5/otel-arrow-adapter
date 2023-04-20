@@ -81,7 +81,7 @@ func (b *ResourceLogsBuilder) Append(rlg *ResourceLogGroup) error {
 	}
 
 	return b.builder.Append(rlg, func() error {
-		if err := b.rb.Append(rlg.Resource); err != nil {
+		if err := b.rb.Append(rlg.Resource, nil /*todo*/); err != nil {
 			return werror.Wrap(err)
 		}
 		b.schb.AppendNonEmpty(rlg.ResourceSchemaUrl)

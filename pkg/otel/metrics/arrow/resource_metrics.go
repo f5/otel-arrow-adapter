@@ -78,7 +78,7 @@ func (b *ResourceMetricsBuilder) Append(rmg *ResourceMetricsGroup) error {
 	}
 
 	return b.builder.Append(rmg, func() error {
-		if err := b.rb.Append(rmg.Resource); err != nil {
+		if err := b.rb.Append(rmg.Resource, nil /*todo*/); err != nil {
 			return werror.Wrap(err)
 		}
 		b.schb.AppendNonEmpty(rmg.ResourceSchemaUrl)

@@ -18,13 +18,17 @@
 package arrow
 
 import (
+	"bytes"
 	"fmt"
+	"sort"
 
 	"github.com/HdrHistogram/hdrhistogram-go"
 	"github.com/apache/arrow/go/v12/arrow"
 	"github.com/apache/arrow/go/v12/arrow/array"
 	"go.opentelemetry.io/collector/pdata/pcommon"
+	"golang.org/x/exp/rand"
 
+	arrowutils "github.com/f5/otel-arrow-adapter/pkg/arrow"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/builder"
@@ -43,19 +47,32 @@ var (
 	)
 )
 
-type AttributesStats struct {
-	AttrsHistogram *hdrhistogram.Histogram
-	AnyValueStats  *AnyValueStats
-}
+type (
+	AttributesStats struct {
+		AttrsHistogram *hdrhistogram.Histogram
+		AnyValueStats  *AnyValueStats
+	}
 
-// AttributesBuilder is a helper to build a map of attributes.
-type AttributesBuilder struct {
-	released bool
+	// AttributesBuilder is a helper to build a map of attributes.
+	AttributesBuilder struct {
+		released bool
 
-	builder *builder.MapBuilder    // map builder
-	kb      *builder.StringBuilder // key builder
-	ib      *AnyValueBuilder       // item any value builder
-}
+		builder *builder.MapBuilder    // map builder
+		kb      *builder.StringBuilder // key builder
+		ib      *AnyValueBuilder       // item any value builder
+	}
+
+	Attr struct {
+		ID    uint32
+		Key   string
+		Value pcommon.Value
+	}
+
+	AttributesCollector struct {
+		attrsMapCount uint32
+		attrs         []Attr
+	}
+)
 
 // NewAttributesBuilder creates a new AttributesBuilder with a given allocator.
 //
@@ -232,4 +249,207 @@ func (a *AttributesStats) Show(prefix string) {
 		a.AttrsHistogram.ValueAtQuantile(99),
 	)
 	a.AnyValueStats.Show(prefix + "  ")
+}
+
+func NewAttributesCollector() *AttributesCollector {
+	return &AttributesCollector{
+		attrs: make([]Attr, 0),
+	}
+}
+
+func (c *AttributesCollector) Append(attrs pcommon.Map) (int64, error) {
+	ID := c.attrsMapCount
+
+	if attrs.Len() == 0 {
+		return -1, nil
+	}
+
+	attrs.Range(func(k string, v pcommon.Value) bool {
+		c.attrs = append(c.attrs, Attr{
+			ID:    ID,
+			Key:   k,
+			Value: v,
+		})
+		return true
+	})
+
+	c.attrsMapCount++
+
+	return int64(ID), nil
+}
+
+func (c *AttributesCollector) AppendUniqueAttributes(attrs pcommon.Map, smattrs *common.SharedAttributes, mattrs *common.SharedAttributes) (int64, error) {
+	uniqueAttrsCount := attrs.Len()
+	if smattrs != nil {
+		uniqueAttrsCount -= smattrs.Len()
+	}
+	if mattrs != nil {
+		uniqueAttrsCount -= mattrs.Len()
+	}
+
+	ID := c.attrsMapCount
+	if uniqueAttrsCount == 0 {
+		return -1, nil
+	}
+
+	attrs.Range(func(key string, v pcommon.Value) bool {
+		if key == "" {
+			// Skip entries with empty keys
+			return true
+		}
+
+		// Skip the current attribute if it is a scope metric shared attribute
+		// or a metric shared attribute
+		smattrsFound := false
+		mattrsFound := false
+		if smattrs != nil {
+			_, smattrsFound = smattrs.Attributes[key]
+		}
+		if mattrs != nil {
+			_, mattrsFound = mattrs.Attributes[key]
+		}
+		if smattrsFound || mattrsFound {
+			return true
+		}
+
+		c.attrs = append(c.attrs, Attr{
+			ID:    ID,
+			Key:   key,
+			Value: v,
+		})
+
+		uniqueAttrsCount--
+		return uniqueAttrsCount > 0
+	})
+
+	c.attrsMapCount++
+
+	return int64(ID), nil
+}
+
+func (c *AttributesCollector) SortedAttrs() []Attr {
+	sort.Slice(c.attrs, func(i, j int) bool {
+		if c.attrs[i].Key == c.attrs[j].Key {
+			return IsLess(c.attrs[i].Value, c.attrs[j].Value)
+		} else {
+			return c.attrs[i].Key < c.attrs[j].Key
+		}
+	})
+
+	return c.attrs
+}
+
+func (c *AttributesCollector) Reset() {
+	c.attrsMapCount = 0
+	c.attrs = c.attrs[:0]
+}
+
+func IsLess(a, b pcommon.Value) bool {
+	switch a.Type() {
+	case pcommon.ValueTypeInt:
+		return a.Int() < b.Int()
+	case pcommon.ValueTypeDouble:
+		return a.Double() < b.Double()
+	case pcommon.ValueTypeBool:
+		return a.Bool() == true && b.Bool() == false
+	case pcommon.ValueTypeStr:
+		return a.Str() < b.Str()
+	case pcommon.ValueTypeBytes:
+		return bytes.Compare(a.Bytes().AsRaw(), b.Bytes().AsRaw()) < 0
+	case pcommon.ValueTypeMap:
+		return false
+	case pcommon.ValueTypeSlice:
+		return false
+	case pcommon.ValueTypeEmpty:
+		return false
+	default:
+		return false
+	}
+}
+
+func PrintRecord(record arrow.Record) {
+	print("\n")
+	for _, field := range record.Schema().Fields() {
+		print(field.Name + "\t\t")
+	}
+	print("\n")
+
+	// Select a window of 1000 consecutive rows randomly from the record
+	row := rand.Intn(int(record.NumRows()) - 1000)
+
+	record = record.NewSlice(int64(row), int64(row+1000))
+	numRows := int(record.NumRows())
+	numCols := int(record.NumCols())
+
+	for row := 0; row < numRows; row++ {
+		for col := 0; col < numCols; col++ {
+			col := record.Column(col)
+			if col.IsNull(row) {
+				print("null")
+			} else {
+				switch c := col.(type) {
+				case *array.Uint32:
+					print(c.Value(row))
+				case *array.Uint16:
+					print(c.Value(row))
+				case *array.Int64:
+					print(c.Value(row))
+				case *array.String:
+					print(c.Value(row))
+				case *array.Float64:
+					print(c.Value(row))
+				case *array.Boolean:
+					print(c.Value(row))
+				case *array.Binary:
+					print(fmt.Sprintf("%x", c.Value(row)))
+				case *array.Dictionary:
+					switch d := c.Dictionary().(type) {
+					case *array.String:
+						print(d.Value(c.GetValueIndex(row)))
+					case *array.Binary:
+						print(fmt.Sprintf("%x", d.Value(c.GetValueIndex(row))))
+					default:
+						print("unknown dict type")
+					}
+				case *array.SparseUnion:
+					tcode := c.TypeCode(row)
+					fieldID := c.ChildID(row)
+					switch tcode {
+					case StrCode:
+						strArr := c.Field(fieldID)
+						val, err := arrowutils.StringFromArray(strArr, row)
+						if err != nil {
+							panic(err)
+						}
+						print(val)
+					case I64Code:
+						i64Arr := c.Field(fieldID)
+						val := i64Arr.(*array.Int64).Value(row)
+						print(val)
+					case F64Code:
+						f64Arr := c.Field(fieldID)
+						val := f64Arr.(*array.Float64).Value(row)
+						print(val)
+					case BoolCode:
+						boolArr := c.Field(fieldID)
+						val := boolArr.(*array.Boolean).Value(row)
+						print(val)
+					case BinaryCode:
+						binArr := c.Field(fieldID)
+						val, err := arrowutils.BinaryFromArray(binArr, row)
+						if err != nil {
+							panic(err)
+						}
+						print(fmt.Sprintf("%x", val))
+					default:
+						fmt.Print("unknown type")
+					}
+				default:
+					fmt.Print("unknown type")
+				}
+			}
+			print("\t\t")
+		}
+		print("\n")
+	}
 }

@@ -32,8 +32,8 @@ import (
 var (
 	ResourceDT = arrow.StructOf([]arrow.Field{
 		{
-			Name:     constants.Attributes,
-			Type:     AttributesDT,
+			Name:     constants.AttributesID,
+			Type:     arrow.PrimitiveTypes.Uint32,
 			Metadata: acommon.Metadata(acommon.Optional),
 		},
 		{
@@ -50,9 +50,9 @@ type ResourceBuilder struct {
 
 	rBuilder *builder.RecordBuilderExt
 
-	builder *builder.StructBuilder // `resource` builder
-	ab      *AttributesBuilder     // `attributes` field builder
-	dacb    *builder.Uint32Builder // `dropped_attributes_count` field builder
+	builder *builder.StructBuilder      // `resource` builder
+	aib     *builder.Uint32DeltaBuilder // attributes id builder
+	dacb    *builder.Uint32Builder      // `dropped_attributes_count` field builder
 }
 
 // NewResourceBuilder creates a new resource builder with a given allocator.
@@ -65,20 +65,26 @@ func ResourceBuilderFrom(builder *builder.StructBuilder) *ResourceBuilder {
 	return &ResourceBuilder{
 		released: false,
 		builder:  builder,
-		ab:       AttributesBuilderFrom(builder.MapBuilder(constants.Attributes)),
+		aib:      builder.Uint32DeltaBuilder("attrs_id"),
 		dacb:     builder.Uint32Builder(constants.DroppedAttributesCount),
 	}
 }
 
 // Append appends a new resource to the builder.
-func (b *ResourceBuilder) Append(resource *pcommon.Resource) error {
+func (b *ResourceBuilder) Append(resource *pcommon.Resource, attrsCollector *AttributesCollector) error {
 	if b.released {
 		return werror.Wrap(ErrBuilderAlreadyReleased)
 	}
 
 	return b.builder.Append(resource, func() error {
-		if err := b.ab.Append(resource.Attributes()); err != nil {
+		ID, err := attrsCollector.Append(resource.Attributes())
+		if err != nil {
 			return werror.Wrap(err)
+		}
+		if ID >= 0 {
+			b.aib.Append(uint32(ID))
+		} else {
+			b.aib.AppendNull()
 		}
 		b.dacb.AppendNonZero(resource.DroppedAttributesCount())
 		return nil

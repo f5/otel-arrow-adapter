@@ -124,6 +124,10 @@ func (b *ScopeMetricsBuilder) Append(smg *ScopeMetricsGroup) error {
 			if err != nil {
 				return werror.Wrap(err)
 			}
+		} else {
+			if err := b.sab.AppendNull(); err != nil {
+				return werror.Wrap(err)
+			}
 		}
 
 		if sharedData.StartTime != nil {

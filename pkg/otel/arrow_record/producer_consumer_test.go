@@ -28,6 +28,7 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	arrowpb "github.com/f5/otel-arrow-adapter/api/collector/arrow/v1"
+	"github.com/f5/otel-arrow-adapter/pkg/config"
 	"github.com/f5/otel-arrow-adapter/pkg/datagen"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/assert"
 )
@@ -209,7 +210,7 @@ func TestProducerConsumerTraces(t *testing.T) {
 	pool := memory.NewCheckedAllocator(memory.NewGoAllocator())
 	defer pool.AssertSize(t, 0)
 
-	producer := NewProducerWithOptions(WithAllocator(pool))
+	producer := NewProducerWithOptions(config.WithAllocator(pool))
 	defer func() {
 		if err := producer.Close(); err != nil {
 			t.Error("unexpected fail", err)
@@ -246,7 +247,7 @@ func TestProducerConsumerLogs(t *testing.T) {
 	pool := memory.NewCheckedAllocator(memory.NewGoAllocator())
 	defer pool.AssertSize(t, 0)
 
-	producer := NewProducerWithOptions(WithAllocator(pool))
+	producer := NewProducerWithOptions(config.WithAllocator(pool))
 	defer func() {
 		if err := producer.Close(); err != nil {
 			t.Error("unexpected fail", err)
@@ -283,7 +284,7 @@ func TestProducerConsumerMetrics(t *testing.T) {
 	pool := memory.NewCheckedAllocator(memory.NewGoAllocator())
 	defer pool.AssertSize(t, 0)
 
-	producer := NewProducerWithOptions(WithAllocator(pool))
+	producer := NewProducerWithOptions(config.WithAllocator(pool))
 	defer func() {
 		if err := producer.Close(); err != nil {
 			t.Error("unexpected fail", err)

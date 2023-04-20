@@ -36,7 +36,7 @@ var (
 	EventDT = arrow.StructOf([]arrow.Field{
 		{Name: constants.DurationTimeUnixNano, Type: arrow.FixedWidthTypes.Duration_ms, Metadata: schema.Metadata(schema.Optional, schema.Dictionary8)},
 		{Name: constants.Name, Type: arrow.BinaryTypes.String, Metadata: schema.Metadata(schema.Dictionary8)},
-		{Name: constants.Attributes, Type: acommon.AttributesDT, Metadata: schema.Metadata(schema.Optional)},
+		{Name: constants.AttributesID, Type: arrow.PrimitiveTypes.Uint32, Metadata: schema.Metadata(schema.Optional)},
 		{Name: constants.DroppedAttributesCount, Type: arrow.PrimitiveTypes.Uint32, Metadata: schema.Metadata(schema.Optional)},
 	}...)
 )
@@ -46,10 +46,10 @@ type EventBuilder struct {
 
 	builder *builder.StructBuilder
 
-	dtunb *builder.DurationBuilder   // `duration_time_unix_nano` builder
-	nb    *builder.StringBuilder     // `name` builder
-	ab    *acommon.AttributesBuilder // `attributes` builder
-	dacb  *builder.Uint32Builder     // `dropped_attributes_count` builder
+	dtunb *builder.DurationBuilder    // `duration_time_unix_nano` builder
+	nb    *builder.StringBuilder      // `name` builder
+	aib   *builder.Uint32DeltaBuilder // attributes id builder
+	dacb  *builder.Uint32Builder      // `dropped_attributes_count` builder
 }
 
 func EventBuilderFrom(eb *builder.StructBuilder) *EventBuilder {
@@ -58,13 +58,13 @@ func EventBuilderFrom(eb *builder.StructBuilder) *EventBuilder {
 		builder:  eb,
 		dtunb:    eb.DurationBuilder(constants.DurationTimeUnixNano),
 		nb:       eb.StringBuilder(constants.Name),
-		ab:       acommon.AttributesBuilderFrom(eb.MapBuilder(constants.Attributes)),
+		aib:      eb.Uint32DeltaBuilder("attrs_id"),
 		dacb:     eb.Uint32Builder(constants.DroppedAttributesCount),
 	}
 }
 
 // Append appends a new event to the builder.
-func (b *EventBuilder) Append(event ptrace.SpanEvent, sharedAttributes *common.SharedAttributes, spanStartTime pcommon.Timestamp) error {
+func (b *EventBuilder) Append(event ptrace.SpanEvent, sharedAttributes *common.SharedAttributes, spanStartTime pcommon.Timestamp, attrsCollector *acommon.AttributesCollector) error {
 	if b.released {
 		return werror.Wrap(acommon.ErrBuilderAlreadyReleased)
 	}
@@ -74,7 +74,17 @@ func (b *EventBuilder) Append(event ptrace.SpanEvent, sharedAttributes *common.S
 		b.dtunb.Append(arrow.Duration(duration))
 		b.nb.AppendNonEmpty(event.Name())
 		b.dacb.AppendNonZero(event.DroppedAttributesCount())
-		return b.ab.AppendUniqueAttributes(event.Attributes(), sharedAttributes, nil)
+
+		ID, err := attrsCollector.AppendUniqueAttributes(event.Attributes(), sharedAttributes, nil)
+		if err != nil {
+			return werror.Wrap(err)
+		}
+		if ID >= 0 {
+			b.aib.Append(uint32(ID))
+		} else {
+			b.aib.AppendNull()
+		}
+		return nil
 	})
 }
 

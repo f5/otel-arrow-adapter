@@ -40,7 +40,7 @@ var (
 		{Name: constants.ParentSpanId, Type: &arrow.FixedSizeBinaryType{ByteWidth: 8}, Metadata: schema.Metadata(schema.Optional)},
 		{Name: constants.Name, Type: arrow.BinaryTypes.String, Metadata: schema.Metadata(schema.Dictionary8)},
 		{Name: constants.KIND, Type: arrow.PrimitiveTypes.Int32, Metadata: schema.Metadata(schema.Optional, schema.Dictionary8)},
-		{Name: constants.Attributes, Type: acommon.AttributesDT, Metadata: schema.Metadata(schema.Optional)},
+		{Name: constants.AttributesID, Type: arrow.PrimitiveTypes.Uint32, Metadata: schema.Metadata(schema.Optional)},
 		{Name: constants.DroppedAttributesCount, Type: arrow.PrimitiveTypes.Uint32, Metadata: schema.Metadata(schema.Optional)},
 		{Name: constants.SpanEvents, Type: arrow.ListOf(EventDT), Metadata: schema.Metadata(schema.Optional)},
 		{Name: constants.DroppedEventsCount, Type: arrow.PrimitiveTypes.Uint32, Metadata: schema.Metadata(schema.Optional)},
@@ -64,7 +64,7 @@ type SpanBuilder struct {
 	psib  *builder.FixedSizeBinaryBuilder // parent span id builder
 	nb    *builder.StringBuilder          // name builder
 	kb    *builder.Int32Builder           // kind builder
-	ab    *acommon.AttributesBuilder      // attributes builder
+	aib   *builder.Uint32DeltaBuilder     // attributes id builder
 	dacb  *builder.Uint32Builder          // dropped attributes count builder
 	sesb  *builder.ListBuilder            // span event list builder
 	seb   *EventBuilder                   // span event builder
@@ -90,7 +90,7 @@ func SpanBuilderFrom(sb *builder.StructBuilder) *SpanBuilder {
 		psib:     sb.FixedSizeBinaryBuilder(constants.ParentSpanId),
 		nb:       sb.StringBuilder(constants.Name),
 		kb:       sb.Int32Builder(constants.KIND),
-		ab:       acommon.AttributesBuilderFrom(sb.MapBuilder(constants.Attributes)),
+		aib:      sb.Uint32DeltaBuilder("attrs_id"),
 		dacb:     sb.Uint32Builder(constants.DroppedAttributesCount),
 		sesb:     sesb,
 		seb:      EventBuilderFrom(sesb.StructBuilder()),
@@ -116,7 +116,7 @@ func (b *SpanBuilder) Build() (*array.Struct, error) {
 }
 
 // Append appends a new span to the builder.
-func (b *SpanBuilder) Append(span *ptrace.Span, sharedData *SharedData) error {
+func (b *SpanBuilder) Append(span *ptrace.Span, sharedData *SharedData, attrsBuilders *AttrsBuilders) error {
 	if b.released {
 		return werror.Wrap(acommon.ErrBuilderAlreadyReleased)
 	}
@@ -136,8 +136,14 @@ func (b *SpanBuilder) Append(span *ptrace.Span, sharedData *SharedData) error {
 		b.kb.AppendNonZero(int32(span.Kind()))
 
 		// Span Attributes
-		if err := b.ab.AppendUniqueAttributes(span.Attributes(), sharedData.sharedAttributes, nil); err != nil {
+		ID, err := attrsBuilders.Span().Collector().AppendUniqueAttributes(span.Attributes(), sharedData.sharedAttributes, nil)
+		if err != nil {
 			return werror.Wrap(err)
+		}
+		if ID >= 0 {
+			b.aib.Append(uint32(ID))
+		} else {
+			b.aib.AppendNull()
 		}
 		b.dacb.AppendNonZero(span.DroppedAttributesCount())
 
@@ -146,7 +152,7 @@ func (b *SpanBuilder) Append(span *ptrace.Span, sharedData *SharedData) error {
 		sc := evts.Len()
 		if err := b.sesb.Append(sc, func() error {
 			for i := 0; i < sc; i++ {
-				if err := b.seb.Append(evts.At(i), sharedData.sharedEventAttributes, span.StartTimestamp()); err != nil {
+				if err := b.seb.Append(evts.At(i), sharedData.sharedEventAttributes, span.StartTimestamp(), attrsBuilders.Event().Collector()); err != nil {
 					return werror.Wrap(err)
 				}
 			}
@@ -161,7 +167,7 @@ func (b *SpanBuilder) Append(span *ptrace.Span, sharedData *SharedData) error {
 		lc := lks.Len()
 		if err := b.slsb.Append(lc, func() error {
 			for i := 0; i < lc; i++ {
-				if err := b.slb.Append(lks.At(i), sharedData.sharedLinkAttributes); err != nil {
+				if err := b.slb.Append(lks.At(i), sharedData.sharedLinkAttributes, attrsBuilders.Link().Collector()); err != nil {
 					return werror.Wrap(err)
 				}
 			}

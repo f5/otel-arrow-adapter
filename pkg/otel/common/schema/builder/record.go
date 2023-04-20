@@ -494,6 +494,21 @@ func (rb *RecordBuilderExt) Uint8Builder(name string) *Uint8Builder {
 	}
 }
 
+// Uint16Builder returns a Uint16Builder wrapper for the field with the given
+// name. If the underlying builder doesn't exist, an empty wrapper is returned,
+// so that the feeding process can continue without panicking. This is useful
+// to handle optional fields.
+func (rb *RecordBuilderExt) Uint16Builder(name string) *Uint16Builder {
+	_, transformNode := rb.protoDataTypeAndTransformNode(name)
+	b := rb.builder(name)
+
+	if b != nil {
+		return &Uint16Builder{builder: b, transformNode: transformNode, updateRequest: rb.updateRequest}
+	} else {
+		return &Uint16Builder{builder: nil, transformNode: transformNode, updateRequest: rb.updateRequest}
+	}
+}
+
 // Uint32Builder returns a Uint32Builder wrapper for the field with the given
 // name. If the underlying builder doesn't exist, an empty wrapper is returned,
 // so that the feeding process can continue without panicking. This is useful

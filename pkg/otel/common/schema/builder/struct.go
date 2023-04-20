@@ -114,6 +114,17 @@ func (sb *StructBuilder) Uint32Builder(name string) *Uint32Builder {
 	}
 }
 
+func (sb *StructBuilder) Uint32DeltaBuilder(name string) *Uint32DeltaBuilder {
+	uint32Builder := sb.getBuilder(name)
+	_, transformNode := sb.protoDataTypeAndTransformNode(name)
+
+	if uint32Builder != nil {
+		return &Uint32DeltaBuilder{builder: uint32Builder, transformNode: transformNode, updateRequest: sb.updateRequest}
+	} else {
+		return &Uint32DeltaBuilder{builder: nil, transformNode: transformNode, updateRequest: sb.updateRequest}
+	}
+}
+
 func (sb *StructBuilder) Uint64Builder(name string) *Uint64Builder {
 	uint64Builder := sb.getBuilder(name)
 	_, transformNode := sb.protoDataTypeAndTransformNode(name)
