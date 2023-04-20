@@ -47,15 +47,15 @@ type (
 		kb      *builder.StringBuilder
 		ab      *acommon.AnyValueBuilder
 
-		collector *acommon.AttributesCollector
+		accumulator *acommon.AttributesAccumulator
 	}
 )
 
 func NewAttrsBuilder(rBuilder *builder.RecordBuilderExt) (*AttrsBuilder, error) {
 	b := &AttrsBuilder{
-		released:  false,
-		builder:   rBuilder,
-		collector: acommon.NewAttributesCollector(),
+		released:    false,
+		builder:     rBuilder,
+		accumulator: acommon.NewAttributesAccumulator(),
 	}
 	if err := b.init(); err != nil {
 		return nil, werror.Wrap(err)
@@ -70,8 +70,8 @@ func (b *AttrsBuilder) init() error {
 	return nil
 }
 
-func (b *AttrsBuilder) Collector() *acommon.AttributesCollector {
-	return b.collector
+func (b *AttrsBuilder) Accumulator() *acommon.AttributesAccumulator {
+	return b.accumulator
 }
 
 func (b *AttrsBuilder) Build() (record arrow.Record, err error) {
@@ -79,7 +79,7 @@ func (b *AttrsBuilder) Build() (record arrow.Record, err error) {
 		return nil, werror.Wrap(acommon.ErrBuilderAlreadyReleased)
 	}
 
-	for _, attr := range b.collector.SortedAttrs() {
+	for _, attr := range b.accumulator.SortedAttrs() {
 		b.ib.Append(uint16(attr.ID))
 		b.kb.Append(attr.Key)
 		if err := b.ab.Append(attr.Value); err != nil {

@@ -83,7 +83,7 @@ func (b *ResourceSpansBuilder) Append(rsg *ResourceSpanGroup, attrsBuilders *Att
 	}
 
 	return b.builder.Append(rsg, func() error {
-		if err := b.rb.Append(rsg.Resource, attrsBuilders.Resource().Collector()); err != nil {
+		if err := b.rb.Append(rsg.Resource, attrsBuilders.Resource().Accumulator()); err != nil {
 			return werror.Wrap(err)
 		}
 		b.schb.AppendNonEmpty(rsg.ResourceSchemaUrl)

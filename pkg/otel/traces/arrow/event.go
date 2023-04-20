@@ -64,7 +64,7 @@ func EventBuilderFrom(eb *builder.StructBuilder) *EventBuilder {
 }
 
 // Append appends a new event to the builder.
-func (b *EventBuilder) Append(event ptrace.SpanEvent, sharedAttributes *common.SharedAttributes, spanStartTime pcommon.Timestamp, attrsCollector *acommon.AttributesCollector) error {
+func (b *EventBuilder) Append(event ptrace.SpanEvent, sharedAttributes *common.SharedAttributes, spanStartTime pcommon.Timestamp, attrsAccu *acommon.AttributesAccumulator) error {
 	if b.released {
 		return werror.Wrap(acommon.ErrBuilderAlreadyReleased)
 	}
@@ -75,7 +75,7 @@ func (b *EventBuilder) Append(event ptrace.SpanEvent, sharedAttributes *common.S
 		b.nb.AppendNonEmpty(event.Name())
 		b.dacb.AppendNonZero(event.DroppedAttributesCount())
 
-		ID, err := attrsCollector.AppendUniqueAttributes(event.Attributes(), sharedAttributes, nil)
+		ID, err := attrsAccu.AppendUniqueAttributes(event.Attributes(), sharedAttributes, nil)
 		if err != nil {
 			return werror.Wrap(err)
 		}

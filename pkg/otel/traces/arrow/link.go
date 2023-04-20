@@ -66,7 +66,7 @@ func LinkBuilderFrom(lb *builder.StructBuilder) *LinkBuilder {
 }
 
 // Append appends a new link to the builder.
-func (b *LinkBuilder) Append(link ptrace.SpanLink, sharedAttributes *common.SharedAttributes, attrsCollector *acommon.AttributesCollector) error {
+func (b *LinkBuilder) Append(link ptrace.SpanLink, sharedAttributes *common.SharedAttributes, attrsAccu *acommon.AttributesAccumulator) error {
 	if b.released {
 		return werror.Wrap(acommon.ErrBuilderAlreadyReleased)
 	}
@@ -79,7 +79,7 @@ func (b *LinkBuilder) Append(link ptrace.SpanLink, sharedAttributes *common.Shar
 		b.tsb.AppendNonEmpty(link.TraceState().AsRaw())
 		b.dacb.AppendNonZero(link.DroppedAttributesCount())
 
-		ID, err := attrsCollector.AppendUniqueAttributes(link.Attributes(), sharedAttributes, nil)
+		ID, err := attrsAccu.AppendUniqueAttributes(link.Attributes(), sharedAttributes, nil)
 		if err != nil {
 			return werror.Wrap(err)
 		}

@@ -135,11 +135,11 @@ func (ab *AttrsBuilders) Link() *AttrsBuilder {
 }
 
 func (ab *AttrsBuilders) Reset() {
-	ab.resource.Collector().Reset()
-	ab.scope.Collector().Reset()
-	ab.span.Collector().Reset()
-	ab.event.Collector().Reset()
-	ab.link.Collector().Reset()
+	ab.resource.Accumulator().Reset()
+	ab.scope.Accumulator().Reset()
+	ab.span.Accumulator().Reset()
+	ab.event.Accumulator().Reset()
+	ab.link.Accumulator().Reset()
 }
 
 func (ab *AttrsBuilders) BuildRecordMessages() ([]*record_message.RecordMessage, error) {

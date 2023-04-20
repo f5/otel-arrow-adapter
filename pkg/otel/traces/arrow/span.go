@@ -136,7 +136,7 @@ func (b *SpanBuilder) Append(span *ptrace.Span, sharedData *SharedData, attrsBui
 		b.kb.AppendNonZero(int32(span.Kind()))
 
 		// Span Attributes
-		ID, err := attrsBuilders.Span().Collector().AppendUniqueAttributes(span.Attributes(), sharedData.sharedAttributes, nil)
+		ID, err := attrsBuilders.Span().Accumulator().AppendUniqueAttributes(span.Attributes(), sharedData.sharedAttributes, nil)
 		if err != nil {
 			return werror.Wrap(err)
 		}
@@ -152,7 +152,7 @@ func (b *SpanBuilder) Append(span *ptrace.Span, sharedData *SharedData, attrsBui
 		sc := evts.Len()
 		if err := b.sesb.Append(sc, func() error {
 			for i := 0; i < sc; i++ {
-				if err := b.seb.Append(evts.At(i), sharedData.sharedEventAttributes, span.StartTimestamp(), attrsBuilders.Event().Collector()); err != nil {
+				if err := b.seb.Append(evts.At(i), sharedData.sharedEventAttributes, span.StartTimestamp(), attrsBuilders.Event().Accumulator()); err != nil {
 					return werror.Wrap(err)
 				}
 			}
@@ -167,7 +167,7 @@ func (b *SpanBuilder) Append(span *ptrace.Span, sharedData *SharedData, attrsBui
 		lc := lks.Len()
 		if err := b.slsb.Append(lc, func() error {
 			for i := 0; i < lc; i++ {
-				if err := b.slb.Append(lks.At(i), sharedData.sharedLinkAttributes, attrsBuilders.Link().Collector()); err != nil {
+				if err := b.slb.Append(lks.At(i), sharedData.sharedLinkAttributes, attrsBuilders.Link().Accumulator()); err != nil {
 					return werror.Wrap(err)
 				}
 			}

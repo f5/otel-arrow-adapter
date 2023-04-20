@@ -454,7 +454,7 @@ func (p *Profiler) PrintCompressionRatio(maxIter uint64) {
 	_, _ = fmt.Fprintf(p.writer, "\n")
 	headers := []string{"Proto msg size"}
 	for _, benchmark := range p.benchmarks {
-		headers = append(headers, fmt.Sprintf("%s %s - p99", benchmark.BenchName, benchmark.Tags))
+		headers = append(headers, fmt.Sprintf("%s %s - Mean", benchmark.BenchName, benchmark.Tags))
 	}
 
 	table := tablewriter.NewWriter(p.writer)
@@ -579,10 +579,10 @@ func (p *Profiler) AddSectionWithTotal(section *SectionConfig, table *tablewrite
 				refImplName = fmt.Sprintf("%s:%s", result.BenchName, result.Tags)
 			} else {
 				refKey := fmt.Sprintf("%s:%d:%s", refImplName, batchSize, section.ID)
-				improvement = fmt.Sprintf("(x%6.2f)", values[refKey].P99/values[key].P99)
+				improvement = fmt.Sprintf("(x%6.2f)", values[refKey].Total(maxIter)/values[key].Total(maxIter))
 			}
 
-			value := transform(values[key].P99)
+			value := transform(values[key].Mean)
 			decoratedValue := "Not Applicable"
 			if value == math.Trunc(value) {
 				accumulatedSize := uint64(values[key].Total(maxIter))

@@ -65,7 +65,7 @@ func ScopeBuilderFrom(sb *builder.StructBuilder) *ScopeBuilder {
 }
 
 // Append appends a new instrumentation scope to the builder.
-func (b *ScopeBuilder) Append(scope *pcommon.InstrumentationScope, attrsCollector *AttributesCollector) error {
+func (b *ScopeBuilder) Append(scope *pcommon.InstrumentationScope, attrsAccu *AttributesAccumulator) error {
 	if b.released {
 		return werror.Wrap(ErrBuilderAlreadyReleased)
 	}
@@ -74,7 +74,7 @@ func (b *ScopeBuilder) Append(scope *pcommon.InstrumentationScope, attrsCollecto
 		b.nb.AppendNonEmpty(scope.Name())
 		b.vb.AppendNonEmpty(scope.Version())
 
-		ID, err := attrsCollector.Append(scope.Attributes())
+		ID, err := attrsAccu.Append(scope.Attributes())
 		if err != nil {
 			return werror.Wrap(err)
 		}

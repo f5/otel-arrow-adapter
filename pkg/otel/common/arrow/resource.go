@@ -71,13 +71,13 @@ func ResourceBuilderFrom(builder *builder.StructBuilder) *ResourceBuilder {
 }
 
 // Append appends a new resource to the builder.
-func (b *ResourceBuilder) Append(resource *pcommon.Resource, attrsCollector *AttributesCollector) error {
+func (b *ResourceBuilder) Append(resource *pcommon.Resource, attrsAccu *AttributesAccumulator) error {
 	if b.released {
 		return werror.Wrap(ErrBuilderAlreadyReleased)
 	}
 
 	return b.builder.Append(resource, func() error {
-		ID, err := attrsCollector.Append(resource.Attributes())
+		ID, err := attrsAccu.Append(resource.Attributes())
 		if err != nil {
 			return werror.Wrap(err)
 		}

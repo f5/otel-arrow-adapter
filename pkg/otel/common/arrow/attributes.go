@@ -68,7 +68,10 @@ type (
 		Value pcommon.Value
 	}
 
-	AttributesCollector struct {
+	// AttributesAccumulator accumulates attributes for the scope of an entire
+	// batch. It is used to sort globally all attributes and optimize the
+	// the compression ratio.
+	AttributesAccumulator struct {
 		attrsMapCount uint32
 		attrs         []Attr
 	}
@@ -251,13 +254,13 @@ func (a *AttributesStats) Show(prefix string) {
 	a.AnyValueStats.Show(prefix + "  ")
 }
 
-func NewAttributesCollector() *AttributesCollector {
-	return &AttributesCollector{
+func NewAttributesAccumulator() *AttributesAccumulator {
+	return &AttributesAccumulator{
 		attrs: make([]Attr, 0),
 	}
 }
 
-func (c *AttributesCollector) Append(attrs pcommon.Map) (int64, error) {
+func (c *AttributesAccumulator) Append(attrs pcommon.Map) (int64, error) {
 	ID := c.attrsMapCount
 
 	if attrs.Len() == 0 {
@@ -278,7 +281,7 @@ func (c *AttributesCollector) Append(attrs pcommon.Map) (int64, error) {
 	return int64(ID), nil
 }
 
-func (c *AttributesCollector) AppendUniqueAttributes(attrs pcommon.Map, smattrs *common.SharedAttributes, mattrs *common.SharedAttributes) (int64, error) {
+func (c *AttributesAccumulator) AppendUniqueAttributes(attrs pcommon.Map, smattrs *common.SharedAttributes, mattrs *common.SharedAttributes) (int64, error) {
 	uniqueAttrsCount := attrs.Len()
 	if smattrs != nil {
 		uniqueAttrsCount -= smattrs.Len()
@@ -327,7 +330,7 @@ func (c *AttributesCollector) AppendUniqueAttributes(attrs pcommon.Map, smattrs 
 	return int64(ID), nil
 }
 
-func (c *AttributesCollector) SortedAttrs() []Attr {
+func (c *AttributesAccumulator) SortedAttrs() []Attr {
 	sort.Slice(c.attrs, func(i, j int) bool {
 		if c.attrs[i].Key == c.attrs[j].Key {
 			return IsLess(c.attrs[i].Value, c.attrs[j].Value)
@@ -339,7 +342,7 @@ func (c *AttributesCollector) SortedAttrs() []Attr {
 	return c.attrs
 }
 
-func (c *AttributesCollector) Reset() {
+func (c *AttributesAccumulator) Reset() {
 	c.attrsMapCount = 0
 	c.attrs = c.attrs[:0]
 }
