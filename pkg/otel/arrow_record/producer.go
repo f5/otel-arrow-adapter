@@ -226,7 +226,7 @@ func (p *Producer) BatchArrowRecordsFromTraces(ts ptrace.Traces) (*colarspb.Batc
 		return nil, werror.Wrap(err)
 	}
 
-	relatedRecordMessages, err := p.tracesRelatedData.AttrsBuilders().BuildRecordMessages()
+	relatedRecordMessages, err := p.tracesRelatedData.BuildRecordMessages()
 	if err != nil {
 		return nil, werror.Wrap(err)
 	}
@@ -337,6 +337,8 @@ func (p *Producer) Produce(rms []*record_message.RecordMessage) (*colarspb.Batch
 			outputBuf := sp.output.Bytes()
 			buf := make([]byte, len(outputBuf))
 			copy(buf, outputBuf)
+
+			fmt.Printf("Record %q -> %d bytes\n", rm.PayloadType().String(), len(buf))
 
 			// Reset the buffer
 			sp.output.Reset()

@@ -136,32 +136,32 @@ func (r *RelatedData) Reset() {
 
 func (r *RelatedData) BuildRecordMessages() ([]*record_message.RecordMessage, error) {
 
-	attrsResRec, err := r.attrsBuilders.buildRecord(r.attrsBuilders.resource)
+	attrsResRec, err := r.attrsBuilders.BuildRecord(r.attrsBuilders.resource)
 	if err != nil {
 		return nil, werror.Wrap(err)
 	}
 
-	attrsScopeRec, err := r.attrsBuilders.buildRecord(r.attrsBuilders.scope)
+	attrsScopeRec, err := r.attrsBuilders.BuildRecord(r.attrsBuilders.scope)
 	if err != nil {
 		return nil, werror.Wrap(err)
 	}
 
-	attrsSpanRec, err := r.attrsBuilders.buildRecord(r.attrsBuilders.span)
+	attrsSpanRec, err := r.attrsBuilders.BuildRecord(r.attrsBuilders.span)
 	if err != nil {
 		return nil, werror.Wrap(err)
 	}
 
-	eventRec, err := r.eventBuilder.Build(r.attrsBuilders.event.Accumulator())
+	eventRec, err := r.eventBuilder.BuildRecord(r.attrsBuilders.event.Accumulator())
 	if err != nil {
 		return nil, werror.Wrap(err)
 	}
 
-	attrsEventRec, err := r.attrsBuilders.buildRecord(r.attrsBuilders.event)
+	attrsEventRec, err := r.attrsBuilders.BuildRecord(r.attrsBuilders.event)
 	if err != nil {
 		return nil, werror.Wrap(err)
 	}
 
-	attrsLinkRec, err := r.attrsBuilders.buildRecord(r.attrsBuilders.link)
+	attrsLinkRec, err := r.attrsBuilders.BuildRecord(r.attrsBuilders.link)
 	if err != nil {
 		return nil, werror.Wrap(err)
 	}
@@ -213,27 +213,27 @@ func (ab *AttrsBuilders) Reset() {
 }
 
 func (ab *AttrsBuilders) BuildRecordMessages() ([]*record_message.RecordMessage, error) {
-	resourceRecord, err := ab.buildRecord(ab.resource)
+	resourceRecord, err := ab.BuildRecord(ab.resource)
 	if err != nil {
 		return nil, werror.Wrap(err)
 	}
 
-	scopeRecord, err := ab.buildRecord(ab.scope)
+	scopeRecord, err := ab.BuildRecord(ab.scope)
 	if err != nil {
 		return nil, werror.Wrap(err)
 	}
 
-	spanRecord, err := ab.buildRecord(ab.span)
+	spanRecord, err := ab.BuildRecord(ab.span)
 	if err != nil {
 		return nil, werror.Wrap(err)
 	}
 
-	eventRecord, err := ab.buildRecord(ab.event)
+	eventRecord, err := ab.BuildRecord(ab.event)
 	if err != nil {
 		return nil, werror.Wrap(err)
 	}
 
-	linkRecord, err := ab.buildRecord(ab.link)
+	linkRecord, err := ab.BuildRecord(ab.link)
 	if err != nil {
 		return nil, werror.Wrap(err)
 	}
@@ -253,7 +253,7 @@ func (ab *AttrsBuilders) BuildRecordMessages() ([]*record_message.RecordMessage,
 	}, nil
 }
 
-func (ab *AttrsBuilders) buildRecord(attrsBuilder *AttrsBuilder) (arrow.Record, error) {
+func (ab *AttrsBuilders) BuildRecord(attrsBuilder *AttrsBuilder) (arrow.Record, error) {
 	schemaNotUpToDateCount := 0
 
 	var record arrow.Record

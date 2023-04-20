@@ -18,6 +18,7 @@
 package arrow
 
 import (
+	"errors"
 	"sort"
 
 	"github.com/apache/arrow/go/v12/arrow"
@@ -103,7 +104,35 @@ func (b *EventBuilder) Accumulator() *EventAccumulator {
 	return b.accumulator
 }
 
-func (b *EventBuilder) Build(attrsAccu *acommon.AttributesAccumulator) (arrow.Record, error) {
+func (b *EventBuilder) BuildRecord(attrsAccu *acommon.AttributesAccumulator) (record arrow.Record, err error) {
+	schemaNotUpToDateCount := 0
+
+	// Loop until the record is built successfully.
+	// Intermediaries steps may be required to update the schema.
+	for {
+		record, err = b.TryBuild(attrsAccu)
+		if err != nil {
+			if record != nil {
+				record.Release()
+			}
+
+			switch {
+			case errors.Is(err, schema.ErrSchemaNotUpToDate):
+				schemaNotUpToDateCount++
+				if schemaNotUpToDateCount > 5 {
+					panic("Too many consecutive schema updates. This shouldn't happen.")
+				}
+			default:
+				return nil, werror.Wrap(err)
+			}
+		} else {
+			break
+		}
+	}
+	return record, werror.Wrap(err)
+}
+
+func (b *EventBuilder) TryBuild(attrsAccu *acommon.AttributesAccumulator) (record arrow.Record, err error) {
 	if b.released {
 		return nil, werror.Wrap(acommon.ErrBuilderAlreadyReleased)
 	}
@@ -115,9 +144,10 @@ func (b *EventBuilder) Build(attrsAccu *acommon.AttributesAccumulator) (arrow.Re
 		b.nb.AppendNonEmpty(event.Name)
 
 		// Attributes
-		ID, err := attrsAccu.Append(event.Attributes)
+		var ID int64
+		ID, err = attrsAccu.Append(event.Attributes)
 		if err != nil {
-			return nil, werror.Wrap(err)
+			return
 		}
 		if ID >= 0 {
 			b.aib.Append(uint32(ID))
@@ -128,14 +158,14 @@ func (b *EventBuilder) Build(attrsAccu *acommon.AttributesAccumulator) (arrow.Re
 		b.dacb.AppendNonZero(event.DroppedAttributesCount)
 	}
 
-	record, err := b.builder.NewRecord()
+	record, err = b.builder.NewRecord()
 	if err != nil {
 		initErr := b.init()
 		if initErr != nil {
 			return nil, werror.Wrap(initErr)
 		}
 	}
-	return record, nil
+	return
 }
 
 // Release releases the memory allocated by the builder.
