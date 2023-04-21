@@ -23,6 +23,7 @@ import (
 	acommon "github.com/f5/otel-arrow-adapter/pkg/otel/common/arrow"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/builder"
+	"github.com/f5/otel-arrow-adapter/pkg/otel/constants"
 	"github.com/f5/otel-arrow-adapter/pkg/werror"
 )
 
@@ -32,9 +33,9 @@ var (
 	KDT = arrow.BinaryTypes.String
 
 	AttrsSchema = arrow.NewSchema([]arrow.Field{
-		{Name: "id", Type: arrow.PrimitiveTypes.Uint16},
-		{Name: "key", Type: KDT, Metadata: schema.Metadata(schema.Dictionary8)},
-		{Name: "value", Type: acommon.AnyValueDT},
+		{Name: constants.ID, Type: arrow.PrimitiveTypes.Uint16},
+		{Name: constants.AttrsRecordKey, Type: KDT, Metadata: schema.Metadata(schema.Dictionary8)},
+		{Name: constants.AttrsRecordValue, Type: acommon.AnyValueDT},
 	}, nil)
 )
 

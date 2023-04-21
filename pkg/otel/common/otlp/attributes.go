@@ -20,6 +20,7 @@ import (
 	"go.opentelemetry.io/collector/pdata/pcommon"
 
 	arrowutils "github.com/f5/otel-arrow-adapter/pkg/arrow"
+	"github.com/f5/otel-arrow-adapter/pkg/otel/common"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/constants"
 	"github.com/f5/otel-arrow-adapter/pkg/werror"
 )
@@ -82,7 +83,7 @@ func UpdateAttributesFrom(attrs pcommon.Map, marr *array.Map, row int) error {
 	keys := marr.Keys()
 	values, ok := marr.Items().(*array.SparseUnion)
 	if !ok {
-		return werror.WrapWithContext(ErrNotArraySparseUnion, map[string]interface{}{"row": row})
+		return werror.WrapWithContext(common.ErrNotArraySparseUnion, map[string]interface{}{"row": row})
 	}
 
 	for i := start; i < end; i++ {
@@ -112,7 +113,7 @@ func attributesFromStruct(fieldID int, parentArr *array.Struct, row int) (marr *
 
 		marr = arr
 	default:
-		err = werror.WrapWithContext(ErrNotArrayMap, map[string]interface{}{"row": row, "fieldID": fieldID})
+		err = werror.WrapWithContext(common.ErrNotArrayMap, map[string]interface{}{"row": row, "fieldID": fieldID})
 	}
 	return
 }

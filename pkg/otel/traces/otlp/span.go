@@ -40,7 +40,7 @@ type SpansIds struct {
 	DurationTimeUnixNano int
 	Attributes           *otlp.AttributeIds
 	DropAttributesCount  int
-	Events               *EventIds
+	Events               *SpanEventIDs
 	DropEventsCount      int
 	Links                *LinkIds
 	DropLinksCount       int
@@ -72,10 +72,10 @@ func NewSpansIds(scopeSpansDT *arrow.StructType) (*SpansIds, error) {
 		return nil, werror.Wrap(err)
 	}
 	droppedAttributesCount, _ := arrowutils.FieldIDFromStruct(spanDT, constants.DroppedAttributesCount)
-	events, err := NewEventIds(spanDT)
-	if err != nil {
-		return nil, werror.Wrap(err)
-	}
+	//events, err := NewEventIds(spanDT)
+	//if err != nil {
+	//	return nil, werror.Wrap(err)
+	//}
 
 	droppedEventsCount, _ := arrowutils.FieldIDFromStruct(spanDT, constants.DroppedEventsCount)
 	links, err := NewLinkIds(spanDT)
@@ -102,11 +102,11 @@ func NewSpansIds(scopeSpansDT *arrow.StructType) (*SpansIds, error) {
 		DurationTimeUnixNano: durationTimeUnixNano,
 		Attributes:           attributes,
 		DropAttributesCount:  droppedAttributesCount,
-		Events:               events,
-		DropEventsCount:      droppedEventsCount,
-		Links:                links,
-		DropLinksCount:       droppedLinksCount,
-		Status:               status,
+		//Events:               events,
+		DropEventsCount: droppedEventsCount,
+		Links:           links,
+		DropLinksCount:  droppedLinksCount,
+		Status:          status,
 	}, nil
 }
 
@@ -220,9 +220,9 @@ func AppendSpanInto(
 		})
 	}
 
-	if err := AppendEventsInto(span.Events(), los, row, ids.Events, sharedEventAttrs, startTimeUnixNano); err != nil {
-		return werror.Wrap(err)
-	}
+	//if err := AppendEventsInto(span.Events(), los, row, ids.Events, sharedEventAttrs, startTimeUnixNano); err != nil {
+	//	return werror.Wrap(err)
+	//}
 	if err := AppendLinksInto(span.Links(), los, row, ids.Links, sharedLinkAttrs); err != nil {
 		return werror.Wrap(err)
 	}

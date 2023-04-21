@@ -15,20 +15,11 @@
  *
  */
 
-package common
+package arrow_record
 
-import (
-	"errors"
-)
+import "errors"
 
 var (
-	ErrInvalidKeyMap         = errors.New("invalid key map")
-	ErrUnsupportedCborType   = errors.New("unsupported cbor type")
-	ErrInvalidTypeConversion = errors.New("invalid type conversion")
-
-	ErrInvalidSpanIDLength  = errors.New("invalid span id length")
-	ErrInvalidTraceIDLength = errors.New("invalid trace id length")
-
-	ErrNotArraySparseUnion = errors.New("not an arrow array.SparseUnion")
-	ErrNotArrayMap         = errors.New("not an arrow array.Map")
+	ErrMultipleTracesRecords     = errors.New("multiple traces records found")
+	ErrMultipleSpanEventsRecords = errors.New("multiple span events records found")
 )

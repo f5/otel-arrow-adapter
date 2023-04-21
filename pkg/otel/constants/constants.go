@@ -93,3 +93,8 @@ const SharedEventAttributes string = "shared_event_attributes"
 const SharedLinkAttributes string = "shared_link_attributes"
 const SharedStartTimeUnixNano string = "shared_start_time_unix_nano"
 const SharedTimeUnixNano string = "shared_time_unix_nano"
+
+const ID string = "id"
+
+const AttrsRecordKey string = "key"
+const AttrsRecordValue string = "value"

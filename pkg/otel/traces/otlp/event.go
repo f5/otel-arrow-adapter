@@ -15,101 +15,127 @@
 package otlp
 
 import (
-	"time"
-
 	"github.com/apache/arrow/go/v12/arrow"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/ptrace"
 
 	arrowutils "github.com/f5/otel-arrow-adapter/pkg/arrow"
-	otlp "github.com/f5/otel-arrow-adapter/pkg/otel/common/otlp"
+	"github.com/f5/otel-arrow-adapter/pkg/otel/common/otlp"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/constants"
 	"github.com/f5/otel-arrow-adapter/pkg/werror"
 )
 
-type EventIds struct {
-	Id                     int
-	DurationTimeUnixNano   int
-	Name                   int
-	Attributes             *otlp.AttributeIds
-	DroppedAttributesCount int
-}
+type (
+	// SpanEventIDs is a struct containing the Arrow field IDs for the Event struct.
+	SpanEventIDs struct {
+		ID                     int
+		TimeUnixNano           int
+		Name                   int
+		AttrsID                int
+		DroppedAttributesCount int
+	}
 
-func NewEventIds(spansDT *arrow.StructType) (*EventIds, error) {
-	id, eventDT, err := arrowutils.ListOfStructsFieldIDFromStruct(spansDT, constants.SpanEvents)
+	SpanEventsStore struct {
+		eventsByID map[uint32][]*ptrace.SpanEvent
+	}
+)
+
+// SpanEventsStoreFrom creates an SpanEventsStore from an arrow.Record.
+// Note: This function consume the record.
+func SpanEventsStoreFrom(record arrow.Record, attrsStore *otlp.AttributeMapStore) (*SpanEventsStore, error) {
+	defer record.Release()
+
+	store := &SpanEventsStore{
+		eventsByID: make(map[uint32][]*ptrace.SpanEvent),
+	}
+
+	spanEventIDs, err := SchemaToSpanEventIDs(record.Schema())
 	if err != nil {
 		return nil, werror.Wrap(err)
 	}
 
-	durationTimeUnixNanoID, _ := arrowutils.FieldIDFromStruct(eventDT, constants.DurationTimeUnixNano)
-	nameID, _ := arrowutils.FieldIDFromStruct(eventDT, constants.Name)
-	droppedAttributesCountId, _ := arrowutils.FieldIDFromStruct(eventDT, constants.DroppedAttributesCount)
-	attributesID, err := otlp.NewAttributeIds(eventDT)
-	if err != nil {
-		return nil, werror.Wrap(err)
-	}
+	eventsCount := int(record.NumRows())
 
-	return &EventIds{
-		Id:                     id,
-		DurationTimeUnixNano:   durationTimeUnixNanoID,
-		Name:                   nameID,
-		Attributes:             attributesID,
-		DroppedAttributesCount: droppedAttributesCountId,
-	}, nil
-}
-
-// AppendEventsInto initializes a Span's Events from an Arrow representation.
-func AppendEventsInto(spans ptrace.SpanEventSlice, arrowSpans *arrowutils.ListOfStructs, spanIdx int, ids *EventIds, sharedAttrs pcommon.Map, spanStartTime arrow.Timestamp) error {
-	events, err := arrowSpans.ListOfStructsById(spanIdx, ids.Id)
-	if err != nil {
-		return werror.Wrap(err)
-	}
-	if events == nil {
-		// No event found
-		return nil
-	}
-
-	for eventIdx := events.Start(); eventIdx < events.End(); eventIdx++ {
-		event := spans.AppendEmpty()
-
-		if events.IsNull(eventIdx) {
-			continue
-		}
-
-		durationTimeUnixNano, err := events.DurationFieldByID(ids.DurationTimeUnixNano, eventIdx)
+	// Read all event fields from the record and reconstruct the event lists
+	// by ID.
+	for row := 0; row < eventsCount; row++ {
+		ID, err := arrowutils.U32FromRecord(record, spanEventIDs.ID, row)
 		if err != nil {
-			return werror.Wrap(err)
+			return nil, werror.Wrap(err)
 		}
-		timeUnixNano := spanStartTime.ToTime(arrow.Nanosecond).Add(time.Duration(durationTimeUnixNano))
 
-		event.SetTimestamp(pcommon.Timestamp(timeUnixNano.UnixNano()))
-
-		name, err := events.StringFieldByID(ids.Name, eventIdx)
+		timeUnixNano, err := arrowutils.TimestampFromRecord(record, spanEventIDs.TimeUnixNano, row)
 		if err != nil {
-			return werror.Wrap(err)
+			return nil, werror.Wrap(err)
 		}
 
+		name, err := arrowutils.StringFromRecord(record, spanEventIDs.Name, row)
+		if err != nil {
+			return nil, werror.Wrap(err)
+		}
+
+		attrsID, err := arrowutils.U32FromRecord(record, spanEventIDs.AttrsID, row)
+		if err != nil {
+			return nil, werror.Wrap(err)
+		}
+
+		dac, err := arrowutils.U32FromRecord(record, spanEventIDs.DroppedAttributesCount, row)
+		if err != nil {
+			return nil, werror.Wrap(err)
+		}
+
+		eventList, ok := store.eventsByID[ID]
+		if !ok {
+			eventList = make([]*ptrace.SpanEvent, 0)
+			store.eventsByID[ID] = eventList
+		}
+		event := ptrace.NewSpanEvent()
+		event.SetTimestamp(pcommon.Timestamp(timeUnixNano))
 		event.SetName(name)
-
-		eventAttrs := event.Attributes()
-		if err = otlp.AppendAttributesInto(eventAttrs, events.Array(), eventIdx, ids.Attributes); err != nil {
-			return werror.Wrap(err)
+		// ToDo move all attrs id to uint32
+		attrs := attrsStore.AttributesByID(uint16(attrsID))
+		if attrs != nil {
+			attrs.CopyTo(event.Attributes())
 		}
-
-		if sharedAttrs.Len() > 0 {
-			sharedAttrs.Range(func(k string, v pcommon.Value) bool {
-				v.CopyTo(eventAttrs.PutEmpty(k))
-				return true
-			})
-		}
-
-		dac, err := events.U32FieldByID(ids.DroppedAttributesCount, eventIdx)
-		if err != nil {
-			return werror.Wrap(err)
-		}
-
 		event.SetDroppedAttributesCount(dac)
+		eventList = append(eventList, &event)
 	}
 
-	return nil
+	return store, nil
+}
+
+// SchemaToSpanEventIDs pre-computes the field IDs for the events record.
+func SchemaToSpanEventIDs(schema *arrow.Schema) (*SpanEventIDs, error) {
+	ID, err := arrowutils.FieldIDFromSchema(schema, constants.ID)
+	if err != nil {
+		return nil, werror.Wrap(err)
+	}
+
+	timeUnixNano, err := arrowutils.FieldIDFromSchema(schema, constants.TimeUnixNano)
+	if err != nil {
+		return nil, werror.Wrap(err)
+	}
+
+	name, err := arrowutils.FieldIDFromSchema(schema, constants.Name)
+	if err != nil {
+		return nil, werror.Wrap(err)
+	}
+
+	attrsID, err := arrowutils.FieldIDFromSchema(schema, constants.AttributesID)
+	if err != nil {
+		return nil, werror.Wrap(err)
+	}
+
+	dac, err := arrowutils.FieldIDFromSchema(schema, constants.DroppedAttributesCount)
+	if err != nil {
+		return nil, werror.Wrap(err)
+	}
+
+	return &SpanEventIDs{
+		ID:                     ID,
+		TimeUnixNano:           timeUnixNano,
+		Name:                   name,
+		AttrsID:                attrsID,
+		DroppedAttributesCount: dac,
+	}, nil
 }

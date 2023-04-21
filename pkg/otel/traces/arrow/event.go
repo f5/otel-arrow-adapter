@@ -36,6 +36,7 @@ import (
 // to the main trace record).
 var (
 	EventSchema = arrow.NewSchema([]arrow.Field{
+		{Name: constants.ID, Type: arrow.PrimitiveTypes.Uint32},
 		{Name: constants.TimeUnixNano, Type: arrow.FixedWidthTypes.Timestamp_ns, Metadata: schema.Metadata(schema.Optional)},
 		{Name: constants.Name, Type: arrow.BinaryTypes.String, Metadata: schema.Metadata(schema.Dictionary8)},
 		{Name: constants.AttributesID, Type: arrow.PrimitiveTypes.Uint32, Metadata: schema.Metadata(schema.Optional)},
@@ -50,6 +51,7 @@ type (
 
 		builder *builder.RecordBuilderExt
 
+		ib   *builder.Uint32Builder      // `id` builder
 		tunb *builder.TimestampBuilder   // `time_unix_nano` builder
 		nb   *builder.StringBuilder      // `name` builder
 		aib  *builder.Uint32DeltaBuilder // attributes id builder
@@ -89,6 +91,7 @@ func NewEventBuilder(rBuilder *builder.RecordBuilderExt) (*EventBuilder, error) 
 }
 
 func (b *EventBuilder) init() error {
+	b.ib = b.builder.Uint32Builder(constants.ID)
 	b.tunb = b.builder.TimestampBuilder(constants.TimeUnixNano)
 	b.nb = b.builder.StringBuilder(constants.Name)
 	b.aib = b.builder.Uint32DeltaBuilder(constants.AttributesID)
@@ -144,6 +147,7 @@ func (b *EventBuilder) TryBuild(attrsAccu *acommon.AttributesAccumulator) (recor
 	b.accumulator.Sort()
 
 	for _, event := range b.accumulator.events {
+		b.ib.Append(event.ID)
 		b.tunb.Append(arrow.Timestamp(event.TimeUnixNano.AsTime().UnixNano()))
 		b.nb.AppendNonEmpty(event.Name)
 

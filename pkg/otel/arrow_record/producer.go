@@ -226,17 +226,13 @@ func (p *Producer) BatchArrowRecordsFromTraces(ts ptrace.Traces) (*colarspb.Batc
 		return nil, werror.Wrap(err)
 	}
 
-	relatedRecordMessages, err := p.tracesRelatedData.BuildRecordMessages()
+	rms, err := p.tracesRelatedData.BuildRecordMessages()
 	if err != nil {
 		return nil, werror.Wrap(err)
 	}
 
 	schemaID := p.tracesRecordBuilder.SchemaID()
-	rms := []*record_message.RecordMessage{
-		// Main OTEL entity, i.e. traces
-		record_message.NewTraceMessage(schemaID, record),
-	}
-	rms = append(rms, relatedRecordMessages...)
+	rms = append(rms, record_message.NewTraceMessage(schemaID, record))
 
 	bar, err := p.Produce(rms)
 	if err != nil {

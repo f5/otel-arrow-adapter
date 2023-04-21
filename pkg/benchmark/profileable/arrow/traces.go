@@ -165,16 +165,15 @@ func (s *TracesProfileable) Deserialize(_ io.Writer, buffers [][]byte) {
 }
 
 func (s *TracesProfileable) ConvertOtlpArrowToOtlp(_ io.Writer) {
-	// ToDO Finalize this part
-	//for _, batchArrowRecords := range s.batchArrowRecords {
-	//	traces, err := s.consumer.TracesFrom(batchArrowRecords)
-	//	if err != nil {
-	//		panic(err)
-	//	}
-	//	if len(traces) == 0 {
-	//		println("no traces")
-	//	}
-	//}
+	for _, batchArrowRecords := range s.batchArrowRecords {
+		traces, err := s.consumer.TracesFrom(batchArrowRecords)
+		if err != nil {
+			panic(err)
+		}
+		if len(traces) == 0 {
+			println("no traces")
+		}
+	}
 }
 
 func (s *TracesProfileable) Clear() {

@@ -142,7 +142,8 @@ func (r *RelatedData) BuildRecordMessages() ([]*record_message.RecordMessage, er
 		if err != nil {
 			return nil, werror.Wrap(err)
 		}
-		recordMessages = append(recordMessages, record_message.NewRelatedDataMessage(r.attrsBuilders.resource.SchemaID(), attrsResRec, colarspb.OtlpArrowPayloadType_RESOURCE_ATTRS))
+		schemaID := "resource_attrs:" + r.attrsBuilders.resource.SchemaID()
+		recordMessages = append(recordMessages, record_message.NewRelatedDataMessage(schemaID, attrsResRec, colarspb.OtlpArrowPayloadType_RESOURCE_ATTRS))
 	}
 
 	if !r.attrsBuilders.scope.IsEmpty() {
@@ -150,7 +151,8 @@ func (r *RelatedData) BuildRecordMessages() ([]*record_message.RecordMessage, er
 		if err != nil {
 			return nil, werror.Wrap(err)
 		}
-		recordMessages = append(recordMessages, record_message.NewRelatedDataMessage(r.attrsBuilders.scope.SchemaID(), attrsScopeRec, colarspb.OtlpArrowPayloadType_SCOPE_ATTRS))
+		schemaID := "scope_attrs:" + r.attrsBuilders.scope.SchemaID()
+		recordMessages = append(recordMessages, record_message.NewRelatedDataMessage(schemaID, attrsScopeRec, colarspb.OtlpArrowPayloadType_SCOPE_ATTRS))
 	}
 
 	if !r.attrsBuilders.span.IsEmpty() {
@@ -158,7 +160,8 @@ func (r *RelatedData) BuildRecordMessages() ([]*record_message.RecordMessage, er
 		if err != nil {
 			return nil, werror.Wrap(err)
 		}
-		recordMessages = append(recordMessages, record_message.NewRelatedDataMessage(r.attrsBuilders.span.SchemaID(), attrsSpanRec, colarspb.OtlpArrowPayloadType_SPAN_ATTRS))
+		schemaID := "span_attrs:" + r.attrsBuilders.span.SchemaID()
+		recordMessages = append(recordMessages, record_message.NewRelatedDataMessage(schemaID, attrsSpanRec, colarspb.OtlpArrowPayloadType_SPAN_ATTRS))
 	}
 
 	if !r.eventBuilder.IsEmpty() {
@@ -166,7 +169,8 @@ func (r *RelatedData) BuildRecordMessages() ([]*record_message.RecordMessage, er
 		if err != nil {
 			return nil, werror.Wrap(err)
 		}
-		recordMessages = append(recordMessages, record_message.NewRelatedDataMessage(r.eventBuilder.SchemaID(), eventRec, colarspb.OtlpArrowPayloadType_SPAN_EVENTS))
+		schemaID := "span_events:" + r.eventBuilder.SchemaID()
+		recordMessages = append(recordMessages, record_message.NewRelatedDataMessage(schemaID, eventRec, colarspb.OtlpArrowPayloadType_SPAN_EVENTS))
 	}
 
 	if !r.attrsBuilders.event.IsEmpty() {
@@ -174,7 +178,8 @@ func (r *RelatedData) BuildRecordMessages() ([]*record_message.RecordMessage, er
 		if err != nil {
 			return nil, werror.Wrap(err)
 		}
-		recordMessages = append(recordMessages, record_message.NewRelatedDataMessage(r.attrsBuilders.event.SchemaID(), attrsEventRec, colarspb.OtlpArrowPayloadType_SPAN_EVENT_ATTRS))
+		schemaID := "span_event_attrs:" + r.attrsBuilders.event.SchemaID()
+		recordMessages = append(recordMessages, record_message.NewRelatedDataMessage(schemaID, attrsEventRec, colarspb.OtlpArrowPayloadType_SPAN_EVENT_ATTRS))
 	}
 
 	if !r.attrsBuilders.link.IsEmpty() {
@@ -182,7 +187,8 @@ func (r *RelatedData) BuildRecordMessages() ([]*record_message.RecordMessage, er
 		if err != nil {
 			return nil, werror.Wrap(err)
 		}
-		recordMessages = append(recordMessages, record_message.NewRelatedDataMessage(r.attrsBuilders.link.SchemaID(), attrsLinkRec, colarspb.OtlpArrowPayloadType_SPAN_LINK_ATTRS))
+		schemaID := "span_link_attrs:" + r.attrsBuilders.link.SchemaID()
+		recordMessages = append(recordMessages, record_message.NewRelatedDataMessage(schemaID, attrsLinkRec, colarspb.OtlpArrowPayloadType_SPAN_LINK_ATTRS))
 	}
 
 	return recordMessages, nil
