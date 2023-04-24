@@ -138,14 +138,14 @@ func (b *SpanBuilder) Append(span *ptrace.Span, sharedData *SharedData, relatedD
 		b.dacb.AppendNonZero(span.DroppedAttributesCount())
 
 		// Events
-		err = relatedData.EventBuilder().Accumulator().Append(ID, span.Events())
+		err = relatedData.EventBuilder().Accumulator().Append(ID, span.Events(), sharedData.sharedEventAttributes)
 		if err != nil {
 			return werror.Wrap(err)
 		}
 		b.decb.AppendNonZero(span.DroppedEventsCount())
 
 		// Links
-		err = relatedData.LinkBuilder().Accumulator().Append(ID, span.Links())
+		err = relatedData.LinkBuilder().Accumulator().Append(ID, span.Links(), sharedData.sharedLinkAttributes)
 		if err != nil {
 			return werror.Wrap(err)
 		}

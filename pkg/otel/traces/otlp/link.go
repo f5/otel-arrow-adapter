@@ -49,9 +49,19 @@ func NewSpanLinksStore() *SpanLinksStore {
 }
 
 // LinksByID returns the links for the given ID.
-func (s *SpanLinksStore) LinksByID(ID uint16) []*ptrace.SpanLink {
-	if m, ok := s.linksByID[ID]; ok {
-		return m
+func (s *SpanLinksStore) LinksByID(ID uint16, sharedAttrs pcommon.Map) []*ptrace.SpanLink {
+	if links, ok := s.linksByID[ID]; ok {
+		if sharedAttrs.Len() > 0 {
+			// Add shared attributes to all links.
+			for _, link := range links {
+				attrs := link.Attributes()
+				sharedAttrs.Range(func(k string, v pcommon.Value) bool {
+					v.CopyTo(attrs.PutEmpty(k))
+					return true
+				})
+			}
+		}
+		return links
 	}
 	return nil
 }

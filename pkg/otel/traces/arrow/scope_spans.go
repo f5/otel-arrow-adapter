@@ -126,7 +126,7 @@ func (b *ScopeSpansBuilder) Append(spg *ScopeSpanGroup, relatedData *RelatedData
 }
 
 func appendSharedAttributes(sharedAttrs *common.SharedAttributes, builder *acommon.AttributesBuilder) error {
-	if len(sharedAttrs.Attributes) > 0 {
+	if sharedAttrs != nil && len(sharedAttrs.Attributes) > 0 {
 		attrs := pcommon.NewMap()
 		sharedAttrs.CopyTo(attrs)
 		if err := builder.Append(attrs); err != nil {

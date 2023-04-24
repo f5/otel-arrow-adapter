@@ -209,13 +209,13 @@ func AppendSpanInto(
 		})
 	}
 
-	events := relatedData.SpanEventsStore.EventsByID(ID)
+	events := relatedData.SpanEventsStore.EventsByID(ID, sharedEventAttrs)
 	eventSlice := span.Events()
 	for _, event := range events {
 		event.MoveTo(eventSlice.AppendEmpty())
 	}
 
-	links := relatedData.SpanLinksStore.LinksByID(ID)
+	links := relatedData.SpanLinksStore.LinksByID(ID, sharedLinkAttrs)
 	linkSlice := span.Links()
 	for _, link := range links {
 		link.MoveTo(linkSlice.AppendEmpty())

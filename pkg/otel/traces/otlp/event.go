@@ -48,9 +48,19 @@ func NewSpanEventsStore() *SpanEventsStore {
 }
 
 // EventsByID returns the events for the given ID.
-func (s *SpanEventsStore) EventsByID(ID uint16) []*ptrace.SpanEvent {
-	if m, ok := s.eventsByID[ID]; ok {
-		return m
+func (s *SpanEventsStore) EventsByID(ID uint16, sharedAttrs pcommon.Map) []*ptrace.SpanEvent {
+	if events, ok := s.eventsByID[ID]; ok {
+		if sharedAttrs.Len() > 0 {
+			// Add shared attributes to all events.
+			for _, event := range events {
+				attrs := event.Attributes()
+				sharedAttrs.Range(func(k string, v pcommon.Value) bool {
+					v.CopyTo(attrs.PutEmpty(k))
+					return true
+				})
+			}
+		}
+		return events
 	}
 	return nil
 }

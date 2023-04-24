@@ -27,6 +27,7 @@ import (
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/ptrace"
 
+	"github.com/f5/otel-arrow-adapter/pkg/otel/common"
 	acommon "github.com/f5/otel-arrow-adapter/pkg/otel/common/arrow"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/builder"
@@ -72,6 +73,7 @@ type (
 		SpanID                 [8]byte
 		TraceState             string
 		Attributes             pcommon.Map
+		SharedAttributes       *common.SharedAttributes
 		DroppedAttributesCount uint32
 	}
 
@@ -166,7 +168,7 @@ func (b *LinkBuilder) TryBuild(attrsAccu *acommon.Attributes32Accumulator) (reco
 
 		// Attributes
 		var ID int64
-		ID, err = attrsAccu.Append(link.Attributes)
+		ID, err = attrsAccu.AppendUniqueAttributes(link.Attributes, link.SharedAttributes, nil)
 		if err != nil {
 			return
 		}
@@ -211,7 +213,7 @@ func (a *LinkAccumulator) IsEmpty() bool {
 }
 
 // Append appends a new link to the builder.
-func (a *LinkAccumulator) Append(spanID uint16, links ptrace.SpanLinkSlice) error {
+func (a *LinkAccumulator) Append(spanID uint16, links ptrace.SpanLinkSlice, sharedAttrs *common.SharedAttributes) error {
 	if a.groupCount == math.MaxUint16 {
 		panic("The maximum number of group of links has been reached (max is uint16).")
 	}
@@ -228,6 +230,7 @@ func (a *LinkAccumulator) Append(spanID uint16, links ptrace.SpanLinkSlice) erro
 			SpanID:                 link.SpanID(),
 			TraceState:             link.TraceState().AsRaw(),
 			Attributes:             link.Attributes(),
+			SharedAttributes:       sharedAttrs,
 			DroppedAttributesCount: link.DroppedAttributesCount(),
 		})
 	}

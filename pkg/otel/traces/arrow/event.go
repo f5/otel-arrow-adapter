@@ -26,6 +26,7 @@ import (
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/ptrace"
 
+	"github.com/f5/otel-arrow-adapter/pkg/otel/common"
 	acommon "github.com/f5/otel-arrow-adapter/pkg/otel/common/arrow"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/builder"
@@ -68,6 +69,7 @@ type (
 		TimeUnixNano           pcommon.Timestamp
 		Name                   string
 		Attributes             pcommon.Map
+		SharedAttributes       *common.SharedAttributes
 		DroppedAttributesCount uint32
 	}
 
@@ -158,7 +160,7 @@ func (b *EventBuilder) TryBuild(attrsAccu *acommon.Attributes32Accumulator) (rec
 
 		// Attributes
 		var ID int64
-		ID, err = attrsAccu.Append(event.Attributes)
+		ID, err = attrsAccu.AppendUniqueAttributes(event.Attributes, event.SharedAttributes, nil)
 		if err != nil {
 			return
 		}
@@ -203,7 +205,7 @@ func (a *EventAccumulator) IsEmpty() bool {
 }
 
 // Append appends a slice of events to the accumulator.
-func (a *EventAccumulator) Append(spanID uint16, events ptrace.SpanEventSlice) error {
+func (a *EventAccumulator) Append(spanID uint16, events ptrace.SpanEventSlice, sharedAttrs *common.SharedAttributes) error {
 	if a.groupCount == math.MaxUint16 {
 		panic("The maximum number of group of events has been reached (max is uint16).")
 	}
@@ -219,6 +221,7 @@ func (a *EventAccumulator) Append(spanID uint16, events ptrace.SpanEventSlice) e
 			TimeUnixNano:           evt.Timestamp(),
 			Name:                   evt.Name(),
 			Attributes:             evt.Attributes(),
+			SharedAttributes:       sharedAttrs,
 			DroppedAttributesCount: evt.DroppedAttributesCount(),
 		})
 	}
