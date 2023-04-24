@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"math"
 	"sort"
+	"strings"
 
 	"github.com/HdrHistogram/hdrhistogram-go"
 	"github.com/apache/arrow/go/v12/arrow"
@@ -359,10 +360,17 @@ func (c *Attributes16Accumulator) AppendUniqueAttributes(attrs pcommon.Map, smat
 
 func (c *Attributes16Accumulator) SortedAttrs() []Attr16 {
 	sort.Slice(c.attrs, func(i, j int) bool {
-		if c.attrs[i].Key == c.attrs[j].Key {
-			return IsLess(c.attrs[i].Value, c.attrs[j].Value)
+		attrsI := c.attrs[i]
+		attrsJ := c.attrs[j]
+		if attrsI.Key == attrsJ.Key {
+			cmp := Compare(attrsI.Value, attrsJ.Value)
+			if cmp == 0 {
+				return attrsI.ID < attrsJ.ID
+			} else {
+				return cmp == -1
+			}
 		} else {
-			return c.attrs[i].Key < c.attrs[j].Key
+			return attrsI.Key < attrsJ.Key
 		}
 	})
 
@@ -464,10 +472,16 @@ func (c *Attributes32Accumulator) AppendUniqueAttributes(attrs pcommon.Map, smat
 
 func (c *Attributes32Accumulator) SortedAttrs() []Attr32 {
 	sort.Slice(c.attrs, func(i, j int) bool {
-		if c.attrs[i].Key == c.attrs[j].Key {
-			return IsLess(c.attrs[i].Value, c.attrs[j].Value)
+		attrsI := c.attrs[i]
+		attrsJ := c.attrs[j]
+		if attrsI.ID == attrsJ.ID {
+			if attrsI.Key == attrsJ.Key {
+				return IsLess(attrsI.Value, attrsJ.Value)
+			} else {
+				return attrsI.Key < attrsJ.Key
+			}
 		} else {
-			return c.attrs[i].Key < c.attrs[j].Key
+			return attrsI.ID < attrsJ.ID
 		}
 	})
 
@@ -482,15 +496,31 @@ func (c *Attributes32Accumulator) Reset() {
 func IsLess(a, b pcommon.Value) bool {
 	switch a.Type() {
 	case pcommon.ValueTypeInt:
-		return a.Int() < b.Int()
+		if b.Type() == pcommon.ValueTypeInt {
+			return a.Int() < b.Int()
+		} else {
+			return false
+		}
 	case pcommon.ValueTypeDouble:
-		return a.Double() < b.Double()
+		if b.Type() == pcommon.ValueTypeDouble {
+			return a.Double() < b.Double()
+		} else {
+			return false
+		}
 	case pcommon.ValueTypeBool:
 		return a.Bool() == true && b.Bool() == false
 	case pcommon.ValueTypeStr:
-		return a.Str() < b.Str()
+		if b.Type() == pcommon.ValueTypeStr {
+			return a.Str() < b.Str()
+		} else {
+			return false
+		}
 	case pcommon.ValueTypeBytes:
-		return bytes.Compare(a.Bytes().AsRaw(), b.Bytes().AsRaw()) < 0
+		if a.Type() == pcommon.ValueTypeBytes && b.Type() == pcommon.ValueTypeBytes {
+			return bytes.Compare(a.Bytes().AsRaw(), b.Bytes().AsRaw()) < 0
+		} else {
+			return false
+		}
 	case pcommon.ValueTypeMap:
 		return false
 	case pcommon.ValueTypeSlice:
@@ -499,6 +529,69 @@ func IsLess(a, b pcommon.Value) bool {
 		return false
 	default:
 		return false
+	}
+}
+
+func Compare(a, b pcommon.Value) int {
+	switch a.Type() {
+	case pcommon.ValueTypeInt:
+		aI := a.Int()
+		if b.Type() == pcommon.ValueTypeInt {
+			bI := b.Int()
+			if aI == bI {
+				return 0
+			} else if aI < bI {
+				return -1
+			} else {
+				return 1
+			}
+		} else {
+			return 1
+		}
+	case pcommon.ValueTypeDouble:
+		aD := a.Double()
+		if b.Type() == pcommon.ValueTypeDouble {
+			bD := b.Double()
+			if aD == bD {
+				return 0
+			} else if aD < bD {
+				return -1
+			} else {
+				return 1
+			}
+		} else {
+			return 1
+		}
+	case pcommon.ValueTypeBool:
+		aB := a.Bool()
+		bB := b.Bool()
+		if aB == bB {
+			return 0
+		} else if aB == true && bB == false {
+			return 1
+		} else {
+			return -1
+		}
+	case pcommon.ValueTypeStr:
+		if b.Type() == pcommon.ValueTypeStr {
+			return strings.Compare(a.Str(), b.Str())
+		} else {
+			return 1
+		}
+	case pcommon.ValueTypeBytes:
+		if a.Type() == pcommon.ValueTypeBytes && b.Type() == pcommon.ValueTypeBytes {
+			return bytes.Compare(a.Bytes().AsRaw(), b.Bytes().AsRaw())
+		} else {
+			return 1
+		}
+	case pcommon.ValueTypeMap:
+		return 1
+	case pcommon.ValueTypeSlice:
+		return 1
+	case pcommon.ValueTypeEmpty:
+		return 1
+	default:
+		return 1
 	}
 }
 
