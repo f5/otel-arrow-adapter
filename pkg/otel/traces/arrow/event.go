@@ -203,21 +203,19 @@ func (a *EventAccumulator) IsEmpty() bool {
 }
 
 // Append appends a slice of events to the accumulator.
-func (a *EventAccumulator) Append(events ptrace.SpanEventSlice) (int64, error) {
+func (a *EventAccumulator) Append(spanID uint16, events ptrace.SpanEventSlice) error {
 	if a.groupCount == math.MaxUint16 {
 		panic("The maximum number of group of events has been reached (max is uint16).")
 	}
 
-	ID := a.groupCount
-
 	if events.Len() == 0 {
-		return -1, nil
+		return nil
 	}
 
 	for i := 0; i < events.Len(); i++ {
 		evt := events.At(i)
 		a.events = append(a.events, Event{
-			ID:                     ID,
+			ID:                     spanID,
 			TimeUnixNano:           evt.Timestamp(),
 			Name:                   evt.Name(),
 			Attributes:             evt.Attributes(),
@@ -227,7 +225,7 @@ func (a *EventAccumulator) Append(events ptrace.SpanEventSlice) (int64, error) {
 
 	a.groupCount++
 
-	return int64(ID), nil
+	return nil
 }
 
 func (a *EventAccumulator) Sort() {

@@ -37,7 +37,6 @@ type (
 	}
 
 	SpanLinksStore struct {
-		lastID    uint16
 		linksByID map[uint16][]*ptrace.SpanLink
 	}
 )
@@ -51,8 +50,7 @@ func NewSpanLinksStore() *SpanLinksStore {
 
 // LinksByID returns the links for the given ID.
 func (s *SpanLinksStore) LinksByID(ID uint16) []*ptrace.SpanLink {
-	s.lastID = ID
-	if m, ok := s.linksByID[s.lastID]; ok {
+	if m, ok := s.linksByID[ID]; ok {
 		return m
 	}
 	return nil
@@ -120,7 +118,7 @@ func SpanLinksStoreFrom(record arrow.Record, attrsStore *otlp.Attributes32Store)
 		link.TraceState().FromRaw(traceState)
 
 		if attrsID != nil {
-			attrs := attrsStore.AttributesByID(*attrsID)
+			attrs := attrsStore.AttributesByDeltaID(*attrsID)
 			if attrs != nil {
 				attrs.CopyTo(link.Attributes())
 			}

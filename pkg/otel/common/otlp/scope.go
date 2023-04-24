@@ -80,7 +80,7 @@ func UpdateScopeWith(
 		return werror.WrapWithContext(err, map[string]interface{}{"row": row})
 	}
 	if attrsID != nil {
-		attrs := attrsStore.AttributesByID(*attrsID)
+		attrs := attrsStore.AttributesByDeltaID(*attrsID)
 		if attrs != nil {
 			attrs.CopyTo(s.Attributes())
 		}

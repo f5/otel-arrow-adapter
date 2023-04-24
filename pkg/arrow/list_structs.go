@@ -148,7 +148,7 @@ func (los *ListOfStructs) U16FieldByID(fieldID int, row int) (uint16, error) {
 	return U16FromArray(column, row)
 }
 
-// U16FieldByID returns the uint16 value of a field id for a specific row or 0
+// NullableU16FieldByID returns the uint16 value of a field id for a specific row or 0
 // if the field doesn't exist.
 func (los *ListOfStructs) NullableU16FieldByID(fieldID int, row int) (*uint16, error) {
 	if fieldID == -1 {

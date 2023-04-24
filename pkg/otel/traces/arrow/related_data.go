@@ -34,6 +34,8 @@ import (
 
 // RelatedData is a collection of related data constructs used by traces.
 type RelatedData struct {
+	spanCount uint16
+
 	attrsBuilders       *AttrsBuilders
 	attrsRecordBuilders *AttrsRecordBuilders
 
@@ -145,9 +147,20 @@ func (r *RelatedData) LinkBuilder() *LinkBuilder {
 }
 
 func (r *RelatedData) Reset() {
+	r.spanCount = 0
 	r.attrsBuilders.Reset()
 	r.eventBuilder.Accumulator().Reset()
 	r.linkBuilder.Accumulator().Reset()
+}
+
+func (r *RelatedData) SpanCount() uint16 {
+	return r.spanCount
+}
+
+func (r *RelatedData) NextSpanID() uint16 {
+	sc := r.spanCount
+	r.spanCount++
+	return sc
 }
 
 func (r *RelatedData) BuildRecordMessages() ([]*record_message.RecordMessage, error) {

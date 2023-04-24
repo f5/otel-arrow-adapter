@@ -211,21 +211,19 @@ func (a *LinkAccumulator) IsEmpty() bool {
 }
 
 // Append appends a new link to the builder.
-func (a *LinkAccumulator) Append(links ptrace.SpanLinkSlice) (int64, error) {
+func (a *LinkAccumulator) Append(spanID uint16, links ptrace.SpanLinkSlice) error {
 	if a.groupCount == math.MaxUint16 {
 		panic("The maximum number of group of links has been reached (max is uint16).")
 	}
 
-	ID := a.groupCount
-
 	if links.Len() == 0 {
-		return -1, nil
+		return nil
 	}
 
 	for i := 0; i < links.Len(); i++ {
 		link := links.At(i)
 		a.links = append(a.links, Link{
-			ID:                     ID,
+			ID:                     spanID,
 			TraceID:                link.TraceID(),
 			SpanID:                 link.SpanID(),
 			TraceState:             link.TraceState().AsRaw(),
@@ -236,7 +234,7 @@ func (a *LinkAccumulator) Append(links ptrace.SpanLinkSlice) (int64, error) {
 
 	a.groupCount++
 
-	return int64(ID), nil
+	return nil
 }
 
 func (a *LinkAccumulator) Sort() {

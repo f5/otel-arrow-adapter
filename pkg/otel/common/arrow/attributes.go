@@ -305,6 +305,58 @@ func (c *Attributes16Accumulator) Append(attrs pcommon.Map) (int64, error) {
 	return int64(ID), nil
 }
 
+func (c *Attributes16Accumulator) AppendUniqueAttributesWithID(mainID uint16, attrs pcommon.Map, smattrs *common.SharedAttributes, mattrs *common.SharedAttributes) error {
+	uniqueAttrsCount := attrs.Len()
+	if smattrs != nil {
+		uniqueAttrsCount -= smattrs.Len()
+	}
+	if mattrs != nil {
+		uniqueAttrsCount -= mattrs.Len()
+	}
+
+	if uniqueAttrsCount == 0 {
+		return nil
+	}
+
+	if c.attrsMapCount == math.MaxUint16 {
+		panic("The maximum number of group of attributes has been reached (max is uint16).")
+	}
+
+	attrs.Range(func(key string, v pcommon.Value) bool {
+		if key == "" {
+			// Skip entries with empty keys
+			return true
+		}
+
+		// Skip the current attribute if it is a scope metric shared attribute
+		// or a metric shared attribute
+		smattrsFound := false
+		mattrsFound := false
+		if smattrs != nil {
+			_, smattrsFound = smattrs.Attributes[key]
+		}
+		if mattrs != nil {
+			_, mattrsFound = mattrs.Attributes[key]
+		}
+		if smattrsFound || mattrsFound {
+			return true
+		}
+
+		c.attrs = append(c.attrs, Attr16{
+			ID:    mainID,
+			Key:   key,
+			Value: v,
+		})
+
+		uniqueAttrsCount--
+		return uniqueAttrsCount > 0
+	})
+
+	c.attrsMapCount++
+
+	return nil
+}
+
 func (c *Attributes16Accumulator) AppendUniqueAttributes(attrs pcommon.Map, smattrs *common.SharedAttributes, mattrs *common.SharedAttributes) (int64, error) {
 	uniqueAttrsCount := attrs.Len()
 	if smattrs != nil {

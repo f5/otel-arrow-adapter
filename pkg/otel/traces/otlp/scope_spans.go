@@ -129,7 +129,7 @@ func AppendScopeSpansInto(
 			}
 		}
 
-		arrowSpans, err := arrowScopeSpans.ListOfStructsById(scopeSpansIdx, ids.SpansIds.Id)
+		arrowSpans, err := arrowScopeSpans.ListOfStructsById(scopeSpansIdx, ids.SpansIds.SpansID)
 		if err != nil {
 			return werror.Wrap(err)
 		}

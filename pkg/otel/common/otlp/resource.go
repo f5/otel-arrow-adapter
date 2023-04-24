@@ -65,7 +65,7 @@ func UpdateResourceWith(r pcommon.Resource, resList *arrowutils.ListOfStructs, r
 		return werror.WrapWithContext(err, map[string]interface{}{"row": row})
 	}
 	if attrsId != nil {
-		attrs := attrsStore.AttributesByID(*attrsId)
+		attrs := attrsStore.AttributesByDeltaID(*attrsId)
 		if attrs != nil {
 			attrs.CopyTo(r.Attributes())
 		}

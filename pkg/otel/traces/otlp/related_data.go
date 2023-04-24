@@ -27,6 +27,7 @@ import (
 
 type (
 	RelatedData struct {
+		SpanID                uint16
 		ResAttrMapStore       *otlp.Attributes16Store
 		ScopeAttrMapStore     *otlp.Attributes16Store
 		SpanAttrMapStore      *otlp.Attributes16Store
@@ -47,6 +48,11 @@ func NewRelatedData() *RelatedData {
 		SpanEventsStore:       NewSpanEventsStore(),
 		SpanLinksStore:        NewSpanLinksStore(),
 	}
+}
+
+func (r *RelatedData) SpanIDFromDelta(delta uint16) uint16 {
+	r.SpanID += delta
+	return r.SpanID
 }
 
 func RelatedDataFrom(records []*record_message.RecordMessage) (relatedData *RelatedData, tracesRecord *record_message.RecordMessage, err error) {

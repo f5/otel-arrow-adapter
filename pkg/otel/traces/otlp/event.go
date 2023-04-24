@@ -36,7 +36,6 @@ type (
 	}
 
 	SpanEventsStore struct {
-		lastID     uint16
 		eventsByID map[uint16][]*ptrace.SpanEvent
 	}
 )
@@ -50,8 +49,7 @@ func NewSpanEventsStore() *SpanEventsStore {
 
 // EventsByID returns the events for the given ID.
 func (s *SpanEventsStore) EventsByID(ID uint16) []*ptrace.SpanEvent {
-	s.lastID = ID
-	if m, ok := s.eventsByID[s.lastID]; ok {
+	if m, ok := s.eventsByID[ID]; ok {
 		return m
 	}
 	return nil
@@ -106,7 +104,7 @@ func SpanEventsStoreFrom(record arrow.Record, attrsStore *otlp.Attributes32Store
 		event.SetName(name)
 
 		if attrsID != nil {
-			attrs := attrsStore.AttributesByID(*attrsID)
+			attrs := attrsStore.AttributesByDeltaID(*attrsID)
 			if attrs != nil {
 				attrs.CopyTo(event.Attributes())
 			}

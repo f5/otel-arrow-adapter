@@ -64,8 +64,8 @@ func NewAttributes32Store() *Attributes32Store {
 	}
 }
 
-// AttributesByID returns the attributes for the given ID.
-func (s *Attributes16Store) AttributesByID(ID uint16) *pcommon.Map {
+// AttributesByDeltaID returns the attributes for the given Delta ID.
+func (s *Attributes16Store) AttributesByDeltaID(ID uint16) *pcommon.Map {
 	s.lastID += ID
 	if m, ok := s.attributesByID[s.lastID]; ok {
 		return m
@@ -74,7 +74,15 @@ func (s *Attributes16Store) AttributesByID(ID uint16) *pcommon.Map {
 }
 
 // AttributesByID returns the attributes for the given ID.
-func (s *Attributes32Store) AttributesByID(ID uint32) *pcommon.Map {
+func (s *Attributes16Store) AttributesByID(ID uint16) *pcommon.Map {
+	if m, ok := s.attributesByID[ID]; ok {
+		return m
+	}
+	return nil
+}
+
+// AttributesByDeltaID returns the attributes for the given Delta ID.
+func (s *Attributes32Store) AttributesByDeltaID(ID uint32) *pcommon.Map {
 	s.lastID += ID
 	if m, ok := s.attributesByID[s.lastID]; ok {
 		return m
