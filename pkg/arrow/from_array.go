@@ -63,6 +63,13 @@ func I64FromArray(arr arrow.Array, row int) (int64, error) {
 			} else {
 				return arr.Value(row), nil
 			}
+		case *array.Dictionary:
+			i64Arr := arr.Dictionary().(*array.Int64)
+			if arr.IsNull(row) {
+				return 0, nil
+			} else {
+				return i64Arr.Value(arr.GetValueIndex(row)), nil
+			}
 		default:
 			return 0, werror.WrapWithMsg(ErrInvalidArrayType, "not an int64 array")
 		}

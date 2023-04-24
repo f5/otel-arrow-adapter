@@ -29,6 +29,7 @@ import (
 	"go.opentelemetry.io/collector/pdata/ptrace"
 
 	colarspb "github.com/f5/otel-arrow-adapter/api/collector/arrow/v1"
+	carrow "github.com/f5/otel-arrow-adapter/pkg/arrow"
 	config2 "github.com/f5/otel-arrow-adapter/pkg/config"
 	acommon "github.com/f5/otel-arrow-adapter/pkg/otel/common/arrow"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema"
@@ -316,8 +317,10 @@ func (p *Producer) Produce(rms []*record_message.RecordMessage) (*colarspb.Batch
 			buf := make([]byte, len(outputBuf))
 			copy(buf, outputBuf)
 
-			// ToDo Create option to display this info
-			fmt.Printf("Record %q -> %d bytes\n", rm.PayloadType().String(), len(buf))
+			if p.stats.SchemaStatsEnabled {
+				// ToDo Create option to display this info
+				fmt.Printf("Record %q -> %d bytes\n", rm.PayloadType().String(), len(buf))
+			}
 
 			// Reset the buffer
 			sp.output.Reset()
@@ -361,11 +364,11 @@ func (p *Producer) ShowStats() {
 		return schemas[i].time.Before(schemas[j].time)
 	})
 	fmt.Printf("\n== Schema (#stream-producers=%d) ============================================================\n", len(schemas))
-	//for _, schema := range schemas {
-	//	fmt.Printf(">> Schema last update at %s:\n", schema.time)
-	//	carrow.ShowSchema(schema.schema, "  ")
-	//}
-	//println("------")
+	for _, schema := range schemas {
+		fmt.Printf(">> Schema last update at %s:\n", schema.time)
+		carrow.ShowSchema(schema.schema, "  ")
+	}
+	println("------")
 	p.tracesBuilder.ShowSchema()
 }
 

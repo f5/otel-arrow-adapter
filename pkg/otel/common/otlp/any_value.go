@@ -44,7 +44,11 @@ func UpdateValueFrom(v pcommon.Value, vArr *array.SparseUnion, row int) error {
 		if i64Arr == nil {
 			return werror.WrapWithContext(ErrInvalidFieldId, map[string]interface{}{"tcode": tcode, "fieldID": fieldID, "row": row})
 		}
-		val := i64Arr.(*array.Int64).Value(row)
+		val, err := arrowutils.I64FromArray(i64Arr, row)
+		if err != nil {
+			return werror.Wrap(err)
+		}
+		// val := i64Arr.(*array.Int64).Value(row)
 		v.SetInt(val)
 	case commonarrow.F64Code:
 		f64Arr := vArr.Field(fieldID)
