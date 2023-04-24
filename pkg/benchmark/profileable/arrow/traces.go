@@ -15,7 +15,6 @@
 package arrow
 
 import (
-	"fmt"
 	"io"
 
 	"github.com/apache/arrow/go/v12/arrow/memory"
@@ -146,7 +145,6 @@ func (s *TracesProfileable) Serialize(io.Writer) ([][]byte, error) {
 			return nil, err
 		}
 		buffers[i] = bytes
-		fmt.Printf("Serialized %d bytes (i=%d)\n", len(bytes), i)
 	}
 	return buffers, nil
 }

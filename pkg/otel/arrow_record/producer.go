@@ -316,6 +316,7 @@ func (p *Producer) Produce(rms []*record_message.RecordMessage) (*colarspb.Batch
 			buf := make([]byte, len(outputBuf))
 			copy(buf, outputBuf)
 
+			// ToDo Create option to display this info
 			fmt.Printf("Record %q -> %d bytes\n", rm.PayloadType().String(), len(buf))
 
 			// Reset the buffer
