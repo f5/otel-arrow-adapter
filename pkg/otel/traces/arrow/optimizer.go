@@ -18,9 +18,9 @@
 package arrow
 
 import (
+	"bytes"
 	"fmt"
 	"sort"
-	"strings"
 
 	"github.com/HdrHistogram/hdrhistogram-go"
 	"go.opentelemetry.io/collector/pdata/pcommon"
@@ -205,23 +205,17 @@ func (r *ResourceSpanGroup) Sort() {
 			spanI := scopeSpanGroup.Spans[i]
 			spanJ := scopeSpanGroup.Spans[j]
 
-			traceID_I := spanI.TraceID().String()
-			traceID_J := spanJ.TraceID().String()
-			if traceID_I == traceID_J {
-				parentID_I := spanI.ParentSpanID().String()
-				parentID_J := spanJ.ParentSpanID().String()
+			var traceI [16]byte
+			var traceJ [16]byte
 
-				return strings.Compare(
-					parentID_I,
-					parentID_J,
-				) == -1
+			traceI = spanI.TraceID()
+			traceJ = spanJ.TraceID()
+			cmp := bytes.Compare(traceI[:], traceJ[:])
+			if cmp == 0 {
+				return spanI.StartTimestamp() < spanJ.StartTimestamp()
 			} else {
-				return strings.Compare(
-					traceID_I,
-					traceID_J,
-				) == -1
+				return cmp == -1
 			}
-
 		})
 	}
 }
