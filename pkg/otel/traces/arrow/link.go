@@ -241,10 +241,14 @@ func (a *LinkAccumulator) Append(links ptrace.SpanLinkSlice) (int64, error) {
 
 func (a *LinkAccumulator) Sort() {
 	sort.Slice(a.links, func(i, j int) bool {
-		if a.links[i].TraceID == a.links[j].TraceID {
-			return a.links[i].TraceState < a.links[j].TraceState
+		linkI := a.links[i]
+		linkJ := a.links[j]
+
+		cmp := bytes.Compare(linkI.TraceID[:], linkJ.TraceID[:])
+		if cmp == 0 {
+			return linkI.ID < linkJ.ID
 		} else {
-			return bytes.Compare(a.links[i].TraceID[:], a.links[j].TraceID[:]) == -1
+			return cmp == -1
 		}
 	})
 }
