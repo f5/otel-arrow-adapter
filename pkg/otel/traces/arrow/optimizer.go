@@ -134,9 +134,7 @@ func (t *TracesOptimizer) Optimize(traces ptrace.Traces) *TracesOptimized {
 			spg.SharedData = collectAllSharedAttributes(spg.Spans)
 		}
 
-		if t.sort {
-			resSpanGroup.Sort()
-		}
+		resSpanGroup.Sort()
 	}
 
 	if t.stats != nil {
@@ -204,10 +202,26 @@ func (r *ResourceSpanGroup) AddScopeSpan(scopeSpan *ptrace.ScopeSpans) {
 func (r *ResourceSpanGroup) Sort() {
 	for _, scopeSpanGroup := range r.ScopeSpans {
 		sort.Slice(scopeSpanGroup.Spans, func(i, j int) bool {
-			return strings.Compare(
-				scopeSpanGroup.Spans[i].TraceID().String(),
-				scopeSpanGroup.Spans[j].TraceID().String(),
-			) == -1
+			spanI := scopeSpanGroup.Spans[i]
+			spanJ := scopeSpanGroup.Spans[j]
+
+			traceID_I := spanI.TraceID().String()
+			traceID_J := spanJ.TraceID().String()
+			if traceID_I == traceID_J {
+				parentID_I := spanI.ParentSpanID().String()
+				parentID_J := spanJ.ParentSpanID().String()
+
+				return strings.Compare(
+					parentID_I,
+					parentID_J,
+				) == -1
+			} else {
+				return strings.Compare(
+					traceID_I,
+					traceID_J,
+				) == -1
+			}
+
 		})
 	}
 }

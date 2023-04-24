@@ -21,9 +21,11 @@ import (
 	"github.com/apache/arrow/go/v12/arrow"
 	"go.opentelemetry.io/collector/pdata/ptrace"
 
+	"github.com/f5/otel-arrow-adapter/pkg/config"
 	acommon "github.com/f5/otel-arrow-adapter/pkg/otel/common/arrow"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/builder"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/constants"
+	"github.com/f5/otel-arrow-adapter/pkg/otel/stats"
 	"github.com/f5/otel-arrow-adapter/pkg/werror"
 )
 
@@ -50,13 +52,18 @@ type TracesBuilder struct {
 // NewTracesBuilder creates a new TracesBuilder with a given allocator.
 func NewTracesBuilder(
 	rBuilder *builder.RecordBuilderExt,
-	relatedData *RelatedData,
-	traceStats bool,
+	cfg *config.Config,
+	stats *stats.ProducerStats,
 ) (*TracesBuilder, error) {
 	var optimizer *TracesOptimizer
 	var analyzer *TraceAnalyzer
 
-	if traceStats {
+	relatedData, err := NewRelatedData(cfg, stats)
+	if err != nil {
+		panic(err)
+	}
+
+	if stats.SchemaStatsEnabled {
 		optimizer = NewTracesOptimizer(acommon.WithStats(), acommon.WithSort())
 		analyzer = NewTraceAnalyzer()
 	} else {
@@ -81,6 +88,10 @@ func (b *TracesBuilder) init() error {
 	b.rsb = rsb
 	b.rsp = ResourceSpansBuilderFrom(rsb.StructBuilder())
 	return nil
+}
+
+func (b *TracesBuilder) RelatedData() *RelatedData {
+	return b.relatedData
 }
 
 func (b *TracesBuilder) Stats() *TracesStats {

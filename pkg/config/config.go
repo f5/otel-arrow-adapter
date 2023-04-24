@@ -33,6 +33,16 @@ type Config struct {
 
 type Option func(*Config)
 
+func DefaultConfig() *Config {
+	return &Config{
+		Pool:           memory.NewGoAllocator(),
+		InitIndexSize:  math.MaxUint16,
+		LimitIndexSize: math.MaxUint32,
+		Stats:          false,
+		Zstd:           true,
+	}
+}
+
 // WithAllocator sets the allocator to use for the Producer.
 func WithAllocator(allocator memory.Allocator) Option {
 	return func(cfg *Config) {

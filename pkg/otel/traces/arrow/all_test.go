@@ -28,6 +28,7 @@ import (
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/ptrace"
 
+	"github.com/f5/otel-arrow-adapter/pkg/config"
 	jsonassert "github.com/f5/otel-arrow-adapter/pkg/otel/assert"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common"
 	acommon "github.com/f5/otel-arrow-adapter/pkg/otel/common/schema"
@@ -352,8 +353,11 @@ func TestTraces(t *testing.T) {
 
 	var record arrow.Record
 
+	conf := config.DefaultConfig()
+	stats := stats.NewProducerStats()
+
 	for {
-		tb, err := NewTracesBuilder(rBuilder, false)
+		tb, err := NewTracesBuilder(rBuilder, conf, stats)
 		require.NoError(t, err)
 		defer tb.Release()
 

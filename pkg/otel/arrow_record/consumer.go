@@ -16,7 +16,6 @@ package arrow_record
 
 import (
 	"bytes"
-	"fmt"
 
 	"github.com/apache/arrow/go/v12/arrow/ipc"
 	"github.com/apache/arrow/go/v12/arrow/memory"
@@ -26,7 +25,6 @@ import (
 
 	colarspb "github.com/f5/otel-arrow-adapter/api/collector/arrow/v1"
 	common "github.com/f5/otel-arrow-adapter/pkg/otel/common/arrow"
-	"github.com/f5/otel-arrow-adapter/pkg/otel/common/otlp"
 	logsotlp "github.com/f5/otel-arrow-adapter/pkg/otel/logs/otlp"
 	metricsotlp "github.com/f5/otel-arrow-adapter/pkg/otel/metrics/otlp"
 	tracesotlp "github.com/f5/otel-arrow-adapter/pkg/otel/traces/otlp"
@@ -37,8 +35,6 @@ import (
 // This file implements a generic consumer API used to decode BatchArrowRecords messages into
 // their corresponding OTLP representations (i.e. pmetric.Metrics, plog.Logs, ptrace.Traces).
 // The consumer API is used by the OTLP Arrow receiver.
-
-var UnknownPayloadType = fmt.Errorf("unknown payload type")
 
 // ConsumerAPI is the interface of a Consumer considering all signals.
 // This is useful for mock testing.
@@ -129,50 +125,7 @@ func (c *Consumer) TracesFrom(bar *colarspb.BatchArrowRecords) ([]ptrace.Traces,
 
 	result := make([]ptrace.Traces, 0, len(records))
 
-	var tracesRecord *record_message.RecordMessage
-	var spanEventRecord *record_message.RecordMessage
-
-	relatedData := tracesotlp.NewRelatedData()
-
-	// Scan the records to find the traces record and the span event record.
-	// Create the attribute map stores for all the attribute records.
-	for _, record := range records {
-		switch record.PayloadType() {
-		case colarspb.OtlpArrowPayloadType_RESOURCE_ATTRS:
-			relatedData.ResAttrMapStore, err = otlp.AttributeMapStoreFrom(record.Record())
-		case colarspb.OtlpArrowPayloadType_SCOPE_ATTRS:
-			relatedData.ScopeAttrMapStore, err = otlp.AttributeMapStoreFrom(record.Record())
-		case colarspb.OtlpArrowPayloadType_SPAN_ATTRS:
-			relatedData.SpanAttrMapStore, err = otlp.AttributeMapStoreFrom(record.Record())
-		case colarspb.OtlpArrowPayloadType_SPAN_EVENTS:
-			if spanEventRecord != nil {
-				return nil, werror.Wrap(ErrMultipleSpanEventsRecords)
-			}
-			spanEventRecord = record
-		case colarspb.OtlpArrowPayloadType_SPAN_EVENT_ATTRS:
-			relatedData.SpanEventAttrMapStore, err = otlp.AttributeMapStoreFrom(record.Record())
-		case colarspb.OtlpArrowPayloadType_SPAN_LINK_ATTRS:
-			relatedData.SpanLinkAttrMapStore, err = otlp.AttributeMapStoreFrom(record.Record())
-		case colarspb.OtlpArrowPayloadType_SPANS:
-			if tracesRecord != nil {
-				return nil, werror.Wrap(ErrMultipleTracesRecords)
-			}
-			tracesRecord = record
-		default:
-			return nil, werror.Wrap(UnknownPayloadType)
-		}
-
-		if err != nil {
-			return nil, werror.Wrap(err)
-		}
-	}
-
-	if spanEventRecord != nil {
-		relatedData.SpanEventsStore, err = tracesotlp.SpanEventsStoreFrom(spanEventRecord.Record(), relatedData.SpanEventAttrMapStore)
-		if err != nil {
-			return nil, werror.Wrap(err)
-		}
-	}
+	relatedData, tracesRecord, err := tracesotlp.RelatedDataFrom(records)
 
 	if tracesRecord != nil {
 		traces, err := tracesotlp.TracesFrom(tracesRecord.Record(), relatedData)

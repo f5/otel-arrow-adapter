@@ -33,7 +33,7 @@ var (
 	ScopeDT = arrow.StructOf([]arrow.Field{
 		{Name: constants.Name, Type: arrow.BinaryTypes.String, Metadata: acommon.Metadata(acommon.Optional, acommon.Dictionary8)},
 		{Name: constants.Version, Type: arrow.BinaryTypes.String, Metadata: acommon.Metadata(acommon.Optional, acommon.Dictionary8)},
-		{Name: constants.AttributesID, Type: arrow.PrimitiveTypes.Uint32, Metadata: acommon.Metadata(acommon.Optional)},
+		{Name: constants.AttributesID, Type: arrow.PrimitiveTypes.Uint16, Metadata: acommon.Metadata(acommon.Optional, acommon.DeltaEncoding)},
 		{Name: constants.DroppedAttributesCount, Type: arrow.PrimitiveTypes.Uint32, Metadata: acommon.Metadata(acommon.Optional)},
 	}...)
 )
@@ -43,7 +43,7 @@ type ScopeBuilder struct {
 	builder  *builder.StructBuilder
 	nb       *builder.StringBuilder      // Name builder
 	vb       *builder.StringBuilder      // Version builder
-	aib      *builder.Uint32DeltaBuilder // attributes id builder
+	aib      *builder.Uint16DeltaBuilder // attributes id builder
 	dacb     *builder.Uint32Builder      // Dropped attributes count builder
 }
 
@@ -54,18 +54,22 @@ func NewScopeBuilder(builder *builder.StructBuilder) *ScopeBuilder {
 
 // ScopeBuilderFrom creates a new instrumentation scope array builder from an existing struct builder.
 func ScopeBuilderFrom(sb *builder.StructBuilder) *ScopeBuilder {
+	aib := sb.Uint16DeltaBuilder(constants.AttributesID)
+	// As the attributes are sorted before insertion, the delta between two
+	// consecutive attributes ID should always be <=1.
+	aib.SetMaxDelta(1)
 	return &ScopeBuilder{
 		released: false,
 		builder:  sb,
 		nb:       sb.StringBuilder(constants.Name),
 		vb:       sb.StringBuilder(constants.Version),
-		aib:      sb.Uint32DeltaBuilder(constants.AttributesID),
+		aib:      aib,
 		dacb:     sb.Uint32Builder(constants.DroppedAttributesCount),
 	}
 }
 
 // Append appends a new instrumentation scope to the builder.
-func (b *ScopeBuilder) Append(scope *pcommon.InstrumentationScope, attrsAccu *AttributesAccumulator) error {
+func (b *ScopeBuilder) Append(scope *pcommon.InstrumentationScope, attrsAccu *Attributes16Accumulator) error {
 	if b.released {
 		return werror.Wrap(ErrBuilderAlreadyReleased)
 	}
@@ -79,7 +83,7 @@ func (b *ScopeBuilder) Append(scope *pcommon.InstrumentationScope, attrsAccu *At
 			return werror.Wrap(err)
 		}
 		if ID >= 0 {
-			b.aib.Append(uint32(ID))
+			b.aib.Append(uint16(ID))
 		} else {
 			b.aib.AppendNull()
 		}

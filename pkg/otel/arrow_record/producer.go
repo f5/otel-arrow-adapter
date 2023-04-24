@@ -18,7 +18,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"math"
 	"sort"
 	"time"
 
@@ -101,13 +100,7 @@ func NewProducer() *Producer {
 // The method close MUST be called when the producer is not used anymore to release the memory and avoid memory leaks.
 func NewProducerWithOptions(options ...config2.Option) *Producer {
 	// Default configuration
-	cfg := &config2.Config{
-		Pool:           memory.NewGoAllocator(),
-		InitIndexSize:  math.MaxUint16,
-		LimitIndexSize: math.MaxUint32,
-		Stats:          false,
-		Zstd:           true,
-	}
+	cfg := config2.DefaultConfig()
 	for _, opt := range options {
 		opt(cfg)
 	}
@@ -123,11 +116,6 @@ func NewProducerWithOptions(options ...config2.Option) *Producer {
 
 	tracesRecordBuilder := builder.NewRecordBuilderExt(cfg.Pool, tracesarrow.Schema, config.NewDictionary(cfg.LimitIndexSize), stats)
 
-	tracesRelatedData, err := tracesarrow.NewRelatedData(cfg, stats)
-	if err != nil {
-		panic(err)
-	}
-
 	metricsBuilder, err := metricsarrow.NewMetricsBuilder(metricsRecordBuilder, stats.SchemaStatsEnabled)
 	if err != nil {
 		panic(err)
@@ -138,11 +126,7 @@ func NewProducerWithOptions(options ...config2.Option) *Producer {
 		panic(err)
 	}
 
-	tracesBuilder, err := tracesarrow.NewTracesBuilder(
-		tracesRecordBuilder,
-		tracesRelatedData,
-		stats.SchemaStatsEnabled,
-	)
+	tracesBuilder, err := tracesarrow.NewTracesBuilder(tracesRecordBuilder, cfg, stats)
 	if err != nil {
 		panic(err)
 	}
@@ -160,8 +144,6 @@ func NewProducerWithOptions(options ...config2.Option) *Producer {
 		metricsRecordBuilder: metricsRecordBuilder,
 		logsRecordBuilder:    logsRecordBuilder,
 		tracesRecordBuilder:  tracesRecordBuilder,
-
-		tracesRelatedData: tracesRelatedData,
 
 		stats: stats,
 	}
@@ -219,14 +201,14 @@ func (p *Producer) BatchArrowRecordsFromTraces(ts ptrace.Traces) (*colarspb.Batc
 	// Note: The record returned is wrapped into a RecordMessage and will
 	// be released by the Producer.Produce method.
 	record, err := recordBuilder[ptrace.Traces](func() (acommon.EntityBuilder[ptrace.Traces], error) {
-		p.tracesRelatedData.Reset()
+		p.tracesBuilder.RelatedData().Reset()
 		return p.tracesBuilder, nil
 	}, ts)
 	if err != nil {
 		return nil, werror.Wrap(err)
 	}
 
-	rms, err := p.tracesRelatedData.BuildRecordMessages()
+	rms, err := p.tracesBuilder.RelatedData().BuildRecordMessages()
 	if err != nil {
 		return nil, werror.Wrap(err)
 	}

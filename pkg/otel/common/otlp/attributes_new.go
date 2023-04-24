@@ -35,33 +35,61 @@ type (
 		value int
 	}
 
-	// AttributeMapStore is a store for attributes.
+	// Attributes16Store is a store for attributes.
 	// The attributes are stored in a map by ID.
-	AttributeMapStore struct {
+	Attributes16Store struct {
+		lastID         uint16
 		attributesByID map[uint16]*pcommon.Map
+	}
+
+	// Attributes32Store is a store for attributes.
+	// The attributes are stored in a map by ID.
+	Attributes32Store struct {
+		lastID         uint32
+		attributesByID map[uint32]*pcommon.Map
 	}
 )
 
+// NewAttributes16Store creates a new Attributes16Store.
+func NewAttributes16Store() *Attributes16Store {
+	return &Attributes16Store{
+		attributesByID: make(map[uint16]*pcommon.Map),
+	}
+}
+
+// NewAttributes32Store creates a new Attributes32Store.
+func NewAttributes32Store() *Attributes32Store {
+	return &Attributes32Store{
+		attributesByID: make(map[uint32]*pcommon.Map),
+	}
+}
+
 // AttributesByID returns the attributes for the given ID.
-func (s *AttributeMapStore) AttributesByID(id uint16) *pcommon.Map {
-	if m, ok := s.attributesByID[id]; ok {
+func (s *Attributes16Store) AttributesByID(ID uint16) *pcommon.Map {
+	s.lastID += ID
+	if m, ok := s.attributesByID[s.lastID]; ok {
 		return m
 	}
 	return nil
 }
 
-// AttributeMapStoreFrom creates an AttributeMapStore from an arrow.Record.
-// Note: This function consume the record.
-func AttributeMapStoreFrom(record arrow.Record) (*AttributeMapStore, error) {
-	defer record.Release()
-
-	store := &AttributeMapStore{
-		attributesByID: make(map[uint16]*pcommon.Map),
+// AttributesByID returns the attributes for the given ID.
+func (s *Attributes32Store) AttributesByID(ID uint32) *pcommon.Map {
+	s.lastID += ID
+	if m, ok := s.attributesByID[s.lastID]; ok {
+		return m
 	}
+	return nil
+}
+
+// Attributes16StoreFrom creates an Attribute16Store from an arrow.Record.
+// Note: This function consume the record.
+func Attributes16StoreFrom(record arrow.Record, store *Attributes16Store) error {
+	defer record.Release()
 
 	attrIDS, err := SchemaToAttributeIDs(record.Schema())
 	if err != nil {
-		return nil, werror.Wrap(err)
+		return werror.Wrap(err)
 	}
 
 	attrsCount := int(record.NumRows())
@@ -71,22 +99,22 @@ func AttributeMapStoreFrom(record arrow.Record) (*AttributeMapStore, error) {
 	for i := 0; i < attrsCount; i++ {
 		ID, err := arrowutils.U16FromRecord(record, attrIDS.ID, i)
 		if err != nil {
-			return nil, werror.Wrap(err)
+			return werror.Wrap(err)
 		}
 
 		key, err := arrowutils.StringFromRecord(record, attrIDS.Key, i)
 		if err != nil {
-			return nil, werror.Wrap(err)
+			return werror.Wrap(err)
 		}
 
 		arrValue, err := arrowutils.SparseUnionFromRecord(record, attrIDS.value, i)
 		if err != nil {
-			return nil, werror.Wrap(err)
+			return werror.Wrap(err)
 		}
 
 		value := pcommon.NewValueEmpty()
 		if err := UpdateValueFrom(value, arrValue, i); err != nil {
-			return nil, werror.Wrap(err)
+			return werror.Wrap(err)
 		}
 
 		m, ok := store.attributesByID[ID]
@@ -98,7 +126,54 @@ func AttributeMapStoreFrom(record arrow.Record) (*AttributeMapStore, error) {
 		value.CopyTo(m.PutEmpty(key))
 	}
 
-	return store, nil
+	return nil
+}
+
+// Attributes32StoreFrom creates an Attributes32Store from an arrow.Record.
+// Note: This function consume the record.
+func Attributes32StoreFrom(record arrow.Record, store *Attributes32Store) error {
+	defer record.Release()
+
+	attrIDS, err := SchemaToAttributeIDs(record.Schema())
+	if err != nil {
+		return werror.Wrap(err)
+	}
+
+	attrsCount := int(record.NumRows())
+
+	// Read all key/value tuples from the record and reconstruct the attributes
+	// map by ID.
+	for i := 0; i < attrsCount; i++ {
+		ID, err := arrowutils.U32FromRecord(record, attrIDS.ID, i)
+		if err != nil {
+			return werror.Wrap(err)
+		}
+
+		key, err := arrowutils.StringFromRecord(record, attrIDS.Key, i)
+		if err != nil {
+			return werror.Wrap(err)
+		}
+
+		arrValue, err := arrowutils.SparseUnionFromRecord(record, attrIDS.value, i)
+		if err != nil {
+			return werror.Wrap(err)
+		}
+
+		value := pcommon.NewValueEmpty()
+		if err := UpdateValueFrom(value, arrValue, i); err != nil {
+			return werror.Wrap(err)
+		}
+
+		m, ok := store.attributesByID[ID]
+		if !ok {
+			newMap := pcommon.NewMap()
+			m = &newMap
+			store.attributesByID[ID] = m
+		}
+		value.CopyTo(m.PutEmpty(key))
+	}
+
+	return nil
 }
 
 // SchemaToAttributeIDs pre-computes the field IDs for the attributes record.

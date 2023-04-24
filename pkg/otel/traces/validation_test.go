@@ -26,6 +26,7 @@ import (
 	"go.opentelemetry.io/collector/pdata/ptrace/ptraceotlp"
 
 	"github.com/f5/otel-arrow-adapter/pkg/benchmark/dataset"
+	"github.com/f5/otel-arrow-adapter/pkg/config"
 	"github.com/f5/otel-arrow-adapter/pkg/datagen"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/assert"
 	acommon "github.com/f5/otel-arrow-adapter/pkg/otel/common/schema"
@@ -34,6 +35,7 @@ import (
 	"github.com/f5/otel-arrow-adapter/pkg/otel/stats"
 	tracesarrow "github.com/f5/otel-arrow-adapter/pkg/otel/traces/arrow"
 	tracesotlp "github.com/f5/otel-arrow-adapter/pkg/otel/traces/otlp"
+	"github.com/f5/otel-arrow-adapter/pkg/record_message"
 )
 
 var DefaultDictConfig = cfg.NewDictionary(math.MaxUint16)
@@ -51,7 +53,7 @@ func TestConversionFromSyntheticData(t *testing.T) {
 	tracesGen := datagen.NewTracesGenerator(entropy, entropy.NewStandardResourceAttributes(), entropy.NewStandardInstrumentationScopes())
 
 	// Generate a random OTLP traces request.
-	expectedRequest := ptraceotlp.NewExportRequestFromTraces(tracesGen.Generate(10, 100))
+	expectedRequest := ptraceotlp.NewExportRequestFromTraces(tracesGen.Generate(1, 100))
 
 	// Convert the OTLP traces request to Arrow.
 	pool := memory.NewCheckedAllocator(memory.NewGoAllocator())
@@ -61,9 +63,12 @@ func TestConversionFromSyntheticData(t *testing.T) {
 	defer rBuilder.Release()
 
 	var record arrow.Record
+	var relatedRecords []*record_message.RecordMessage
+
+	conf := config.DefaultConfig()
 
 	for {
-		tb, err := tracesarrow.NewTracesBuilder(rBuilder, false)
+		tb, err := tracesarrow.NewTracesBuilder(rBuilder, conf, stats.NewProducerStats())
 		require.NoError(t, err)
 		defer tb.Release()
 		err = tb.Append(expectedRequest.Traces())
@@ -71,13 +76,18 @@ func TestConversionFromSyntheticData(t *testing.T) {
 
 		record, err = rBuilder.NewRecord()
 		if err == nil {
+			relatedRecords, err = tb.RelatedData().BuildRecordMessages()
+			require.NoError(t, err)
 			break
 		}
 		require.Error(t, acommon.ErrSchemaNotUpToDate)
 	}
 
+	relatedData, _, err := tracesotlp.RelatedDataFrom(relatedRecords)
+	require.NoError(t, err)
+
 	// Convert the Arrow record back to OTLP.
-	traces, err := tracesotlp.TracesFrom(record)
+	traces, err := tracesotlp.TracesFrom(record, relatedData)
 	require.NoError(t, err)
 
 	record.Release()
@@ -116,21 +126,29 @@ func checkTracesConversion(t *testing.T, expectedRequest ptraceotlp.ExportReques
 	defer rBuilder.Release()
 
 	var record arrow.Record
+	var relatedRecords []*record_message.RecordMessage
+
+	cfg := config.DefaultConfig()
 
 	for {
-		tb, err := tracesarrow.NewTracesBuilder(rBuilder, false)
+		tb, err := tracesarrow.NewTracesBuilder(rBuilder, cfg, stats.NewProducerStats())
 		require.NoError(t, err)
 		err = tb.Append(expectedRequest.Traces())
 		require.NoError(t, err)
 		record, err = rBuilder.NewRecord()
 		if err == nil {
+			relatedRecords, err = tb.RelatedData().BuildRecordMessages()
+			require.NoError(t, err)
 			break
 		}
 		require.Error(t, acommon.ErrSchemaNotUpToDate)
 	}
 
+	relatedData, _, err := tracesotlp.RelatedDataFrom(relatedRecords)
+	require.NoError(t, err)
+
 	// Convert the Arrow records back to OTLP.
-	traces, err := tracesotlp.TracesFrom(record)
+	traces, err := tracesotlp.TracesFrom(record, relatedData)
 	if err != nil {
 		t.Fatal(err)
 	}

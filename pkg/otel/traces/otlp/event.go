@@ -36,17 +36,34 @@ type (
 	}
 
 	SpanEventsStore struct {
-		eventsByID map[uint32][]*ptrace.SpanEvent
+		lastID     uint16
+		eventsByID map[uint16][]*ptrace.SpanEvent
 	}
 )
 
+// NewSpanEventsStore creates a new SpanEventsStore.
+func NewSpanEventsStore() *SpanEventsStore {
+	return &SpanEventsStore{
+		eventsByID: make(map[uint16][]*ptrace.SpanEvent),
+	}
+}
+
+// EventsByID returns the events for the given ID.
+func (s *SpanEventsStore) EventsByID(ID uint16) []*ptrace.SpanEvent {
+	s.lastID = ID
+	if m, ok := s.eventsByID[s.lastID]; ok {
+		return m
+	}
+	return nil
+}
+
 // SpanEventsStoreFrom creates an SpanEventsStore from an arrow.Record.
 // Note: This function consume the record.
-func SpanEventsStoreFrom(record arrow.Record, attrsStore *otlp.AttributeMapStore) (*SpanEventsStore, error) {
+func SpanEventsStoreFrom(record arrow.Record, attrsStore *otlp.Attributes32Store) (*SpanEventsStore, error) {
 	defer record.Release()
 
 	store := &SpanEventsStore{
-		eventsByID: make(map[uint32][]*ptrace.SpanEvent),
+		eventsByID: make(map[uint16][]*ptrace.SpanEvent),
 	}
 
 	spanEventIDs, err := SchemaToSpanEventIDs(record.Schema())
@@ -59,7 +76,7 @@ func SpanEventsStoreFrom(record arrow.Record, attrsStore *otlp.AttributeMapStore
 	// Read all event fields from the record and reconstruct the event lists
 	// by ID.
 	for row := 0; row < eventsCount; row++ {
-		ID, err := arrowutils.U32FromRecord(record, spanEventIDs.ID, row)
+		ID, err := arrowutils.U16FromRecord(record, spanEventIDs.ID, row)
 		if err != nil {
 			return nil, werror.Wrap(err)
 		}
@@ -74,7 +91,7 @@ func SpanEventsStoreFrom(record arrow.Record, attrsStore *otlp.AttributeMapStore
 			return nil, werror.Wrap(err)
 		}
 
-		attrsID, err := arrowutils.U32FromRecord(record, spanEventIDs.AttrsID, row)
+		attrsID, err := arrowutils.NullableU32FromRecord(record, spanEventIDs.AttrsID, row)
 		if err != nil {
 			return nil, werror.Wrap(err)
 		}
@@ -84,21 +101,19 @@ func SpanEventsStoreFrom(record arrow.Record, attrsStore *otlp.AttributeMapStore
 			return nil, werror.Wrap(err)
 		}
 
-		eventList, ok := store.eventsByID[ID]
-		if !ok {
-			eventList = make([]*ptrace.SpanEvent, 0)
-			store.eventsByID[ID] = eventList
-		}
 		event := ptrace.NewSpanEvent()
 		event.SetTimestamp(pcommon.Timestamp(timeUnixNano))
 		event.SetName(name)
-		// ToDo move all attrs id to uint32
-		attrs := attrsStore.AttributesByID(uint16(attrsID))
-		if attrs != nil {
-			attrs.CopyTo(event.Attributes())
+
+		if attrsID != nil {
+			attrs := attrsStore.AttributesByID(*attrsID)
+			if attrs != nil {
+				attrs.CopyTo(event.Attributes())
+			}
 		}
+
 		event.SetDroppedAttributesCount(dac)
-		eventList = append(eventList, &event)
+		store.eventsByID[ID] = append(store.eventsByID[ID], &event)
 	}
 
 	return store, nil

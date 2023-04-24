@@ -17,19 +17,106 @@
 
 package otlp
 
-import "github.com/f5/otel-arrow-adapter/pkg/otel/common/otlp"
+import (
+	colarspb "github.com/f5/otel-arrow-adapter/api/collector/arrow/v1"
+	"github.com/f5/otel-arrow-adapter/pkg/otel"
+	"github.com/f5/otel-arrow-adapter/pkg/otel/common/otlp"
+	"github.com/f5/otel-arrow-adapter/pkg/record_message"
+	"github.com/f5/otel-arrow-adapter/pkg/werror"
+)
 
 type (
 	RelatedData struct {
-		ResAttrMapStore       *otlp.AttributeMapStore
-		ScopeAttrMapStore     *otlp.AttributeMapStore
-		SpanAttrMapStore      *otlp.AttributeMapStore
-		SpanEventAttrMapStore *otlp.AttributeMapStore
-		SpanLinkAttrMapStore  *otlp.AttributeMapStore
+		ResAttrMapStore       *otlp.Attributes16Store
+		ScopeAttrMapStore     *otlp.Attributes16Store
+		SpanAttrMapStore      *otlp.Attributes16Store
+		SpanEventAttrMapStore *otlp.Attributes32Store
+		SpanLinkAttrMapStore  *otlp.Attributes32Store
 		SpanEventsStore       *SpanEventsStore
+		SpanLinksStore        *SpanLinksStore
 	}
 )
 
 func NewRelatedData() *RelatedData {
-	return &RelatedData{}
+	return &RelatedData{
+		ResAttrMapStore:       otlp.NewAttributes16Store(),
+		ScopeAttrMapStore:     otlp.NewAttributes16Store(),
+		SpanAttrMapStore:      otlp.NewAttributes16Store(),
+		SpanEventAttrMapStore: otlp.NewAttributes32Store(),
+		SpanLinkAttrMapStore:  otlp.NewAttributes32Store(),
+		SpanEventsStore:       NewSpanEventsStore(),
+		SpanLinksStore:        NewSpanLinksStore(),
+	}
+}
+
+func RelatedDataFrom(records []*record_message.RecordMessage) (relatedData *RelatedData, tracesRecord *record_message.RecordMessage, err error) {
+	var spanEventRecord *record_message.RecordMessage
+	var spanLinkRecord *record_message.RecordMessage
+
+	relatedData = NewRelatedData()
+
+	// Scan the records to find the traces record and the span event record.
+	// Create the attribute map stores for all the attribute records.
+	for _, record := range records {
+		switch record.PayloadType() {
+		case colarspb.OtlpArrowPayloadType_RESOURCE_ATTRS:
+			err = otlp.Attributes16StoreFrom(record.Record(), relatedData.ResAttrMapStore)
+			if err != nil {
+				return nil, nil, werror.Wrap(err)
+			}
+		case colarspb.OtlpArrowPayloadType_SCOPE_ATTRS:
+			err = otlp.Attributes16StoreFrom(record.Record(), relatedData.ScopeAttrMapStore)
+			if err != nil {
+				return nil, nil, werror.Wrap(err)
+			}
+		case colarspb.OtlpArrowPayloadType_SPAN_ATTRS:
+			err = otlp.Attributes16StoreFrom(record.Record(), relatedData.SpanAttrMapStore)
+			if err != nil {
+				return nil, nil, werror.Wrap(err)
+			}
+		case colarspb.OtlpArrowPayloadType_SPAN_EVENTS:
+			if spanEventRecord != nil {
+				return nil, nil, werror.Wrap(otel.ErrMultipleSpanEventsRecords)
+			}
+			spanEventRecord = record
+		case colarspb.OtlpArrowPayloadType_SPAN_EVENT_ATTRS:
+			err = otlp.Attributes32StoreFrom(record.Record(), relatedData.SpanEventAttrMapStore)
+			if err != nil {
+				return nil, nil, werror.Wrap(err)
+			}
+		case colarspb.OtlpArrowPayloadType_SPAN_LINKS:
+			if spanLinkRecord != nil {
+				return nil, nil, werror.Wrap(otel.ErrMultipleSpanEventsRecords)
+			}
+			spanLinkRecord = record
+		case colarspb.OtlpArrowPayloadType_SPAN_LINK_ATTRS:
+			err = otlp.Attributes32StoreFrom(record.Record(), relatedData.SpanLinkAttrMapStore)
+			if err != nil {
+				return nil, nil, werror.Wrap(err)
+			}
+		case colarspb.OtlpArrowPayloadType_SPANS:
+			if tracesRecord != nil {
+				return nil, nil, werror.Wrap(otel.ErrMultipleTracesRecords)
+			}
+			tracesRecord = record
+		default:
+			return nil, nil, werror.Wrap(otel.UnknownPayloadType)
+		}
+	}
+
+	if spanEventRecord != nil {
+		relatedData.SpanEventsStore, err = SpanEventsStoreFrom(spanEventRecord.Record(), relatedData.SpanEventAttrMapStore)
+		if err != nil {
+			return nil, nil, werror.Wrap(err)
+		}
+	}
+
+	if spanLinkRecord != nil {
+		relatedData.SpanLinksStore, err = SpanLinksStoreFrom(spanLinkRecord.Record(), relatedData.SpanLinkAttrMapStore)
+		if err != nil {
+			return nil, nil, werror.Wrap(err)
+		}
+	}
+
+	return
 }

@@ -15,11 +15,14 @@
  *
  */
 
-package arrow_record
+package otel
 
-import "errors"
+import (
+	"errors"
+)
 
 var (
 	ErrMultipleTracesRecords     = errors.New("multiple traces records found")
 	ErrMultipleSpanEventsRecords = errors.New("multiple span events records found")
+	UnknownPayloadType           = errors.New("unknown payload type")
 )

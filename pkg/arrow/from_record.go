@@ -73,6 +73,35 @@ func U32FromRecord(record arrow.Record, fieldID int, row int) (uint32, error) {
 	}
 }
 
+// NullableU32FromRecord returns the uint32 value for a specific row and column in an
+// Arrow record.
+func NullableU32FromRecord(record arrow.Record, fieldID int, row int) (*uint32, error) {
+	if fieldID == -1 {
+		return nil, nil
+	}
+
+	arr := record.Column(fieldID)
+	if arr == nil {
+		return nil, nil
+	}
+
+	if arr.IsNull(row) {
+		return nil, nil
+	}
+
+	switch arr := arr.(type) {
+	case *array.Uint32:
+		if arr.IsNull(row) {
+			return nil, nil
+		} else {
+			val := arr.Value(row)
+			return &val, nil
+		}
+	default:
+		return nil, werror.WrapWithMsg(ErrInvalidArrayType, "not a uint32 array")
+	}
+}
+
 // StringFromRecord returns the string value for a specific row and column in
 // an Arrow record.
 func StringFromRecord(record arrow.Record, fieldID int, row int) (string, error) {
@@ -130,4 +159,19 @@ func TimestampFromRecord(record arrow.Record, fieldID int, row int) (arrow.Times
 			return 0, werror.WrapWithMsg(ErrInvalidArrayType, "not a timestamp array")
 		}
 	}
+}
+
+// FixedSizeBinaryFieldByIDFromRecord returns the fixed size binary value of a field id for a specific row.
+func FixedSizeBinaryFieldByIDFromRecord(record arrow.Record, fieldID int, row int) ([]byte, error) {
+	if fieldID == -1 {
+		return nil, nil
+	}
+
+	arr := record.Column(fieldID)
+
+	if arr == nil {
+		return nil, nil
+	}
+
+	return FixedSizeBinaryFromArray(arr, row)
 }

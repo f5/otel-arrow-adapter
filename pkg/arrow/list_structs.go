@@ -138,6 +138,33 @@ func (los *ListOfStructs) StringFieldByID(fieldID int, row int) (string, error) 
 	return StringFromArray(column, row)
 }
 
+// U16FieldByID returns the uint16 value of a field id for a specific row or 0
+// if the field doesn't exist.
+func (los *ListOfStructs) U16FieldByID(fieldID int, row int) (uint16, error) {
+	if fieldID == -1 {
+		return 0, nil
+	}
+	column := los.arr.Field(fieldID)
+	return U16FromArray(column, row)
+}
+
+// U16FieldByID returns the uint16 value of a field id for a specific row or 0
+// if the field doesn't exist.
+func (los *ListOfStructs) NullableU16FieldByID(fieldID int, row int) (*uint16, error) {
+	if fieldID == -1 {
+		return nil, nil
+	}
+	column := los.arr.Field(fieldID)
+	if column.IsNull(row) {
+		return nil, nil
+	}
+	val, err := U16FromArray(column, row)
+	if err != nil {
+		return nil, err
+	}
+	return &val, nil
+}
+
 // U32FieldByID returns the uint32 value of a field id for a specific row or 0
 // if the field doesn't exist.
 func (los *ListOfStructs) U32FieldByID(fieldID int, row int) (uint32, error) {

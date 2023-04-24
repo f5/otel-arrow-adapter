@@ -29,35 +29,32 @@ import (
 
 // Schema is the Arrow schema for the OTLP Arrow Traces record.
 var (
-	// KDT is the Arrow key data type.
-	KDT = arrow.BinaryTypes.String
-
-	AttrsSchema = arrow.NewSchema([]arrow.Field{
-		{Name: constants.ID, Type: arrow.PrimitiveTypes.Uint16},
-		{Name: constants.AttrsRecordKey, Type: KDT, Metadata: schema.Metadata(schema.Dictionary8)},
+	AttrsSchema32 = arrow.NewSchema([]arrow.Field{
+		{Name: constants.ID, Type: arrow.PrimitiveTypes.Uint32},
+		{Name: constants.AttrsRecordKey, Type: arrow.BinaryTypes.String, Metadata: schema.Metadata(schema.Dictionary8)},
 		{Name: constants.AttrsRecordValue, Type: acommon.AnyValueDT},
 	}, nil)
 )
 
 type (
-	AttrsBuilder struct {
+	Attrs32Builder struct {
 		released bool
 
 		builder *builder.RecordBuilderExt // Record builder
 
-		ib *builder.Uint16Builder
+		ib *builder.Uint32Builder
 		kb *builder.StringBuilder
 		ab *acommon.AnyValueBuilder
 
-		accumulator *acommon.AttributesAccumulator
+		accumulator *acommon.Attributes32Accumulator
 	}
 )
 
-func NewAttrsBuilder(rBuilder *builder.RecordBuilderExt) (*AttrsBuilder, error) {
-	b := &AttrsBuilder{
+func NewAttrs32Builder(rBuilder *builder.RecordBuilderExt) (*Attrs32Builder, error) {
+	b := &Attrs32Builder{
 		released:    false,
 		builder:     rBuilder,
-		accumulator: acommon.NewAttributesAccumulator(),
+		accumulator: acommon.NewAttributes32Accumulator(),
 	}
 	if err := b.init(); err != nil {
 		return nil, werror.Wrap(err)
@@ -65,28 +62,28 @@ func NewAttrsBuilder(rBuilder *builder.RecordBuilderExt) (*AttrsBuilder, error) 
 	return b, nil
 }
 
-func (b *AttrsBuilder) init() error {
-	b.ib = b.builder.Uint16Builder("id")
+func (b *Attrs32Builder) init() error {
+	b.ib = b.builder.Uint32Builder("id")
 	b.kb = b.builder.StringBuilder("key")
 	b.ab = acommon.AnyValueBuilderFrom(b.builder.SparseUnionBuilder("value"))
 	return nil
 }
 
-func (b *AttrsBuilder) Accumulator() *acommon.AttributesAccumulator {
+func (b *Attrs32Builder) Accumulator() *acommon.Attributes32Accumulator {
 	return b.accumulator
 }
 
-func (b *AttrsBuilder) IsEmpty() bool {
+func (b *Attrs32Builder) IsEmpty() bool {
 	return b.accumulator.IsEmpty()
 }
 
-func (b *AttrsBuilder) Build() (record arrow.Record, err error) {
+func (b *Attrs32Builder) Build() (record arrow.Record, err error) {
 	if b.released {
 		return nil, werror.Wrap(acommon.ErrBuilderAlreadyReleased)
 	}
 
 	for _, attr := range b.accumulator.SortedAttrs() {
-		b.ib.Append(uint16(attr.ID))
+		b.ib.Append(attr.ID)
 		b.kb.Append(attr.Key)
 		if err := b.ab.Append(attr.Value); err != nil {
 			return nil, werror.Wrap(err)
@@ -106,18 +103,18 @@ func (b *AttrsBuilder) Build() (record arrow.Record, err error) {
 	return
 }
 
-func (b *AttrsBuilder) SchemaID() string {
+func (b *Attrs32Builder) SchemaID() string {
 	return b.builder.SchemaID()
 }
 
 // Release releases the memory allocated by the builder.
-func (b *AttrsBuilder) Release() {
+func (b *Attrs32Builder) Release() {
 	if !b.released {
 		b.builder.Release()
 		b.released = true
 	}
 }
 
-func (b *AttrsBuilder) ShowSchema() {
+func (b *Attrs32Builder) ShowSchema() {
 	b.builder.ShowSchema()
 }

@@ -71,7 +71,7 @@ func AppendResourceLogsInto(logs plog.Logs, record arrow.Record, ids *LogsIds) e
 		for resLogsIdx := arrowResLogs.Start(); resLogsIdx < arrowResLogs.End(); resLogsIdx++ {
 			resLogs := resLogsSlice.AppendEmpty()
 
-			if err = otlp.UpdateResourceWith(resLogs.Resource(), arrowResLogs, resLogsIdx, ids.ResourceLogs.Resource); err != nil {
+			if err = otlp.UpdateResourceWith(resLogs.Resource(), arrowResLogs, resLogsIdx, ids.ResourceLogs.Resource, nil /*todo*/); err != nil {
 				return werror.Wrap(err)
 			}
 

@@ -33,8 +33,8 @@ var (
 	ResourceDT = arrow.StructOf([]arrow.Field{
 		{
 			Name:     constants.AttributesID,
-			Type:     arrow.PrimitiveTypes.Uint32,
-			Metadata: acommon.Metadata(acommon.Optional),
+			Type:     arrow.PrimitiveTypes.Uint16,
+			Metadata: acommon.Metadata(acommon.Optional, acommon.DeltaEncoding),
 		},
 		{
 			Name:     constants.DroppedAttributesCount,
@@ -51,7 +51,7 @@ type ResourceBuilder struct {
 	rBuilder *builder.RecordBuilderExt
 
 	builder *builder.StructBuilder      // `resource` builder
-	aib     *builder.Uint32DeltaBuilder // attributes id builder
+	aib     *builder.Uint16DeltaBuilder // attributes id builder
 	dacb    *builder.Uint32Builder      // `dropped_attributes_count` field builder
 }
 
@@ -62,16 +62,20 @@ func NewResourceBuilder(builder *builder.StructBuilder) *ResourceBuilder {
 
 // ResourceBuilderFrom creates a new resource builder from an existing struct builder.
 func ResourceBuilderFrom(builder *builder.StructBuilder) *ResourceBuilder {
+	aib := builder.Uint16DeltaBuilder(constants.AttributesID)
+	// As the attributes are sorted before insertion, the delta between two
+	// consecutive attributes ID should always be <=1.
+	aib.SetMaxDelta(1)
 	return &ResourceBuilder{
 		released: false,
 		builder:  builder,
-		aib:      builder.Uint32DeltaBuilder(constants.AttributesID),
+		aib:      aib,
 		dacb:     builder.Uint32Builder(constants.DroppedAttributesCount),
 	}
 }
 
 // Append appends a new resource to the builder.
-func (b *ResourceBuilder) Append(resource *pcommon.Resource, attrsAccu *AttributesAccumulator) error {
+func (b *ResourceBuilder) Append(resource *pcommon.Resource, attrsAccu *Attributes16Accumulator) error {
 	if b.released {
 		return werror.Wrap(ErrBuilderAlreadyReleased)
 	}
@@ -82,7 +86,7 @@ func (b *ResourceBuilder) Append(resource *pcommon.Resource, attrsAccu *Attribut
 			return werror.Wrap(err)
 		}
 		if ID >= 0 {
-			b.aib.Append(uint32(ID))
+			b.aib.Append(uint16(ID))
 		} else {
 			b.aib.AppendNull()
 		}

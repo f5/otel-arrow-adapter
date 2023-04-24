@@ -23,7 +23,6 @@ import (
 
 	arrowutils "github.com/f5/otel-arrow-adapter/pkg/arrow"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common"
-	otlp "github.com/f5/otel-arrow-adapter/pkg/otel/common/otlp"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/constants"
 	"github.com/f5/otel-arrow-adapter/pkg/werror"
 )
@@ -38,11 +37,11 @@ type SpansIds struct {
 	Kind                 int
 	StartTimeUnixNano    int
 	DurationTimeUnixNano int
-	Attributes           *otlp.AttributeIds
+	AttrsID              int
 	DropAttributesCount  int
-	Events               *SpanEventIDs
+	EventsID             int
 	DropEventsCount      int
-	Links                *LinkIds
+	LinksID              int
 	DropLinksCount       int
 	Status               *StatusIds
 }
@@ -67,22 +66,11 @@ func NewSpansIds(scopeSpansDT *arrow.StructType) (*SpansIds, error) {
 	kind, _ := arrowutils.FieldIDFromStruct(spanDT, constants.KIND)
 	startTimeUnixNano, _ := arrowutils.FieldIDFromStruct(spanDT, constants.StartTimeUnixNano)
 	durationTimeUnixNano, _ := arrowutils.FieldIDFromStruct(spanDT, constants.DurationTimeUnixNano)
-	attributes, err := otlp.NewAttributeIds(spanDT)
-	if err != nil {
-		return nil, werror.Wrap(err)
-	}
+	attrsID, _ := arrowutils.FieldIDFromStruct(spanDT, constants.AttributesID)
 	droppedAttributesCount, _ := arrowutils.FieldIDFromStruct(spanDT, constants.DroppedAttributesCount)
-	//events, err := NewEventIds(spanDT)
-	//if err != nil {
-	//	return nil, werror.Wrap(err)
-	//}
-
+	eventsID, _ := arrowutils.FieldIDFromStruct(spanDT, constants.EventsID)
 	droppedEventsCount, _ := arrowutils.FieldIDFromStruct(spanDT, constants.DroppedEventsCount)
-	links, err := NewLinkIds(spanDT)
-	if err != nil {
-		return nil, werror.Wrap(err)
-	}
-
+	linksID, _ := arrowutils.FieldIDFromStruct(spanDT, constants.LinksID)
 	droppedLinksCount, _ := arrowutils.FieldIDFromStruct(spanDT, constants.DroppedLinksCount)
 
 	status, err := NewStatusIds(spanDT)
@@ -100,13 +88,13 @@ func NewSpansIds(scopeSpansDT *arrow.StructType) (*SpansIds, error) {
 		Kind:                 kind,
 		StartTimeUnixNano:    startTimeUnixNano,
 		DurationTimeUnixNano: durationTimeUnixNano,
-		Attributes:           attributes,
+		AttrsID:              attrsID,
 		DropAttributesCount:  droppedAttributesCount,
-		//Events:               events,
-		DropEventsCount: droppedEventsCount,
-		Links:           links,
-		DropLinksCount:  droppedLinksCount,
-		Status:          status,
+		EventsID:             eventsID,
+		DropEventsCount:      droppedEventsCount,
+		LinksID:              linksID,
+		DropLinksCount:       droppedLinksCount,
+		Status:               status,
 	}, nil
 }
 
@@ -133,7 +121,9 @@ func AppendSpanInto(
 	ids *SpansIds,
 	sharedAttrs pcommon.Map,
 	sharedEventAttrs pcommon.Map,
-	sharedLinkAttrs pcommon.Map) error {
+	sharedLinkAttrs pcommon.Map,
+	relatedData *RelatedData,
+) error {
 	span := spans.AppendEmpty()
 	traceID, err := los.FixedSizeBinaryFieldByID(ids.TraceId, row)
 	if err != nil {
@@ -208,11 +198,16 @@ func AppendSpanInto(
 		span.Status().SetCode(ptrace.StatusCode(code))
 	}
 	spanAttrs := span.Attributes()
-	err = otlp.AppendAttributesInto(spanAttrs, los.Array(), row, ids.Attributes)
+	attrsID, err := los.NullableU16FieldByID(ids.AttrsID, row)
 	if err != nil {
 		return werror.Wrap(err)
 	}
-
+	if attrsID != nil {
+		attrs := relatedData.SpanAttrMapStore.AttributesByID(*attrsID)
+		if attrs != nil {
+			attrs.CopyTo(spanAttrs)
+		}
+	}
 	if sharedAttrs.Len() > 0 {
 		sharedAttrs.Range(func(k string, v pcommon.Value) bool {
 			v.CopyTo(spanAttrs.PutEmpty(k))
@@ -220,12 +215,30 @@ func AppendSpanInto(
 		})
 	}
 
-	//if err := AppendEventsInto(span.Events(), los, row, ids.Events, sharedEventAttrs, startTimeUnixNano); err != nil {
-	//	return werror.Wrap(err)
-	//}
-	if err := AppendLinksInto(span.Links(), los, row, ids.Links, sharedLinkAttrs); err != nil {
+	eventsID, err := los.NullableU16FieldByID(ids.EventsID, row)
+	if err != nil {
 		return werror.Wrap(err)
 	}
+	if eventsID != nil {
+		events := relatedData.SpanEventsStore.EventsByID(*eventsID)
+		eventSlice := span.Events()
+		for _, event := range events {
+			event.MoveTo(eventSlice.AppendEmpty())
+		}
+	}
+
+	linksID, err := los.NullableU16FieldByID(ids.LinksID, row)
+	if err != nil {
+		return werror.Wrap(err)
+	}
+	if linksID != nil {
+		links := relatedData.SpanLinksStore.LinksByID(*linksID)
+		linkSlice := span.Links()
+		for _, link := range links {
+			link.MoveTo(linkSlice.AppendEmpty())
+		}
+	}
+
 	var tid pcommon.TraceID
 	var sid pcommon.SpanID
 	var psid pcommon.SpanID
@@ -244,5 +257,6 @@ func AppendSpanInto(
 	span.SetDroppedAttributesCount(droppedAttributesCount)
 	span.SetDroppedEventsCount(droppedEventsCount)
 	span.SetDroppedLinksCount(droppedLinksCount)
+
 	return nil
 }

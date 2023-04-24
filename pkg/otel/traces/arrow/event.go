@@ -19,6 +19,7 @@ package arrow
 
 import (
 	"errors"
+	"math"
 	"sort"
 
 	"github.com/apache/arrow/go/v12/arrow"
@@ -36,10 +37,10 @@ import (
 // to the main trace record).
 var (
 	EventSchema = arrow.NewSchema([]arrow.Field{
-		{Name: constants.ID, Type: arrow.PrimitiveTypes.Uint32},
+		{Name: constants.ID, Type: arrow.PrimitiveTypes.Uint16},
 		{Name: constants.TimeUnixNano, Type: arrow.FixedWidthTypes.Timestamp_ns, Metadata: schema.Metadata(schema.Optional)},
 		{Name: constants.Name, Type: arrow.BinaryTypes.String, Metadata: schema.Metadata(schema.Dictionary8)},
-		{Name: constants.AttributesID, Type: arrow.PrimitiveTypes.Uint32, Metadata: schema.Metadata(schema.Optional)},
+		{Name: constants.AttributesID, Type: arrow.PrimitiveTypes.Uint32, Metadata: schema.Metadata(schema.Optional, schema.DeltaEncoding)},
 		{Name: constants.DroppedAttributesCount, Type: arrow.PrimitiveTypes.Uint32, Metadata: schema.Metadata(schema.Optional)},
 	}, nil)
 )
@@ -51,7 +52,7 @@ type (
 
 		builder *builder.RecordBuilderExt
 
-		ib   *builder.Uint32Builder      // `id` builder
+		ib   *builder.Uint16Builder      // `id` builder
 		tunb *builder.TimestampBuilder   // `time_unix_nano` builder
 		nb   *builder.StringBuilder      // `name` builder
 		aib  *builder.Uint32DeltaBuilder // attributes id builder
@@ -63,7 +64,7 @@ type (
 	// Event is an internal representation of an event used by the
 	// EventAccumulator.
 	Event struct {
-		ID                     uint32
+		ID                     uint16
 		TimeUnixNano           pcommon.Timestamp
 		Name                   string
 		Attributes             pcommon.Map
@@ -73,7 +74,7 @@ type (
 	// EventAccumulator is an accumulator for events that is used to sort events
 	// globally in order to improve compression.
 	EventAccumulator struct {
-		groupCount uint32
+		groupCount uint16
 		events     []Event
 	}
 )
@@ -91,10 +92,13 @@ func NewEventBuilder(rBuilder *builder.RecordBuilderExt) (*EventBuilder, error) 
 }
 
 func (b *EventBuilder) init() error {
-	b.ib = b.builder.Uint32Builder(constants.ID)
+	b.ib = b.builder.Uint16Builder(constants.ID)
 	b.tunb = b.builder.TimestampBuilder(constants.TimeUnixNano)
 	b.nb = b.builder.StringBuilder(constants.Name)
 	b.aib = b.builder.Uint32DeltaBuilder(constants.AttributesID)
+	// As the attributes are sorted before insertion, the delta between two
+	// consecutive attributes ID should always be <=1.
+	b.aib.SetMaxDelta(1)
 	b.dacb = b.builder.Uint32Builder(constants.DroppedAttributesCount)
 	return nil
 }
@@ -111,12 +115,13 @@ func (b *EventBuilder) Accumulator() *EventAccumulator {
 	return b.accumulator
 }
 
-func (b *EventBuilder) BuildRecord(attrsAccu *acommon.AttributesAccumulator) (record arrow.Record, err error) {
+func (b *EventBuilder) BuildRecord(attrsAccu *acommon.Attributes32Accumulator) (record arrow.Record, err error) {
 	schemaNotUpToDateCount := 0
 
 	// Loop until the record is built successfully.
 	// Intermediaries steps may be required to update the schema.
 	for {
+		attrsAccu.Reset()
 		record, err = b.TryBuild(attrsAccu)
 		if err != nil {
 			if record != nil {
@@ -139,7 +144,7 @@ func (b *EventBuilder) BuildRecord(attrsAccu *acommon.AttributesAccumulator) (re
 	return record, werror.Wrap(err)
 }
 
-func (b *EventBuilder) TryBuild(attrsAccu *acommon.AttributesAccumulator) (record arrow.Record, err error) {
+func (b *EventBuilder) TryBuild(attrsAccu *acommon.Attributes32Accumulator) (record arrow.Record, err error) {
 	if b.released {
 		return nil, werror.Wrap(acommon.ErrBuilderAlreadyReleased)
 	}
@@ -199,6 +204,10 @@ func (a *EventAccumulator) IsEmpty() bool {
 
 // Append appends a slice of events to the accumulator.
 func (a *EventAccumulator) Append(events ptrace.SpanEventSlice) (int64, error) {
+	if a.groupCount == math.MaxUint16 {
+		panic("The maximum number of group of events has been reached (max is uint16).")
+	}
+
 	ID := a.groupCount
 
 	if events.Len() == 0 {

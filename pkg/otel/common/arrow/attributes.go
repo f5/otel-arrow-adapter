@@ -20,6 +20,7 @@ package arrow
 import (
 	"bytes"
 	"fmt"
+	"math"
 	"sort"
 
 	"github.com/HdrHistogram/hdrhistogram-go"
@@ -62,18 +63,32 @@ type (
 		ib      *AnyValueBuilder       // item any value builder
 	}
 
-	Attr struct {
+	Attr16 struct {
+		ID    uint16
+		Key   string
+		Value pcommon.Value
+	}
+
+	Attr32 struct {
 		ID    uint32
 		Key   string
 		Value pcommon.Value
 	}
 
-	// AttributesAccumulator accumulates attributes for the scope of an entire
+	// Attributes16Accumulator accumulates attributes for the scope of an entire
 	// batch. It is used to sort globally all attributes and optimize the
-	// the compression ratio.
-	AttributesAccumulator struct {
+	// compression ratio. Attribute IDs are 16-bit.
+	Attributes16Accumulator struct {
+		attrsMapCount uint16
+		attrs         []Attr16
+	}
+
+	// Attributes32Accumulator accumulates attributes for the scope of an entire
+	// batch. It is used to sort globally all attributes and optimize the
+	// compression ratio. Attribute IDs are 32-bit.
+	Attributes32Accumulator struct {
 		attrsMapCount uint32
-		attrs         []Attr
+		attrs         []Attr32
 	}
 )
 
@@ -254,25 +269,29 @@ func (a *AttributesStats) Show(prefix string) {
 	a.AnyValueStats.Show(prefix + "  ")
 }
 
-func NewAttributesAccumulator() *AttributesAccumulator {
-	return &AttributesAccumulator{
-		attrs: make([]Attr, 0),
+func NewAttributes16Accumulator() *Attributes16Accumulator {
+	return &Attributes16Accumulator{
+		attrs: make([]Attr16, 0),
 	}
 }
 
-func (c *AttributesAccumulator) IsEmpty() bool {
+func (c *Attributes16Accumulator) IsEmpty() bool {
 	return len(c.attrs) == 0
 }
 
-func (c *AttributesAccumulator) Append(attrs pcommon.Map) (int64, error) {
+func (c *Attributes16Accumulator) Append(attrs pcommon.Map) (int64, error) {
 	ID := c.attrsMapCount
 
 	if attrs.Len() == 0 {
 		return -1, nil
 	}
 
+	if c.attrsMapCount == math.MaxUint16 {
+		panic("The maximum number of group of attributes has been reached (max is uint16).")
+	}
+
 	attrs.Range(func(k string, v pcommon.Value) bool {
-		c.attrs = append(c.attrs, Attr{
+		c.attrs = append(c.attrs, Attr16{
 			ID:    ID,
 			Key:   k,
 			Value: v,
@@ -285,7 +304,7 @@ func (c *AttributesAccumulator) Append(attrs pcommon.Map) (int64, error) {
 	return int64(ID), nil
 }
 
-func (c *AttributesAccumulator) AppendUniqueAttributes(attrs pcommon.Map, smattrs *common.SharedAttributes, mattrs *common.SharedAttributes) (int64, error) {
+func (c *Attributes16Accumulator) AppendUniqueAttributes(attrs pcommon.Map, smattrs *common.SharedAttributes, mattrs *common.SharedAttributes) (int64, error) {
 	uniqueAttrsCount := attrs.Len()
 	if smattrs != nil {
 		uniqueAttrsCount -= smattrs.Len()
@@ -297,6 +316,10 @@ func (c *AttributesAccumulator) AppendUniqueAttributes(attrs pcommon.Map, smattr
 	ID := c.attrsMapCount
 	if uniqueAttrsCount == 0 {
 		return -1, nil
+	}
+
+	if c.attrsMapCount == math.MaxUint16 {
+		panic("The maximum number of group of attributes has been reached (max is uint16).")
 	}
 
 	attrs.Range(func(key string, v pcommon.Value) bool {
@@ -319,7 +342,7 @@ func (c *AttributesAccumulator) AppendUniqueAttributes(attrs pcommon.Map, smattr
 			return true
 		}
 
-		c.attrs = append(c.attrs, Attr{
+		c.attrs = append(c.attrs, Attr16{
 			ID:    ID,
 			Key:   key,
 			Value: v,
@@ -334,7 +357,7 @@ func (c *AttributesAccumulator) AppendUniqueAttributes(attrs pcommon.Map, smattr
 	return int64(ID), nil
 }
 
-func (c *AttributesAccumulator) SortedAttrs() []Attr {
+func (c *Attributes16Accumulator) SortedAttrs() []Attr16 {
 	sort.Slice(c.attrs, func(i, j int) bool {
 		if c.attrs[i].Key == c.attrs[j].Key {
 			return IsLess(c.attrs[i].Value, c.attrs[j].Value)
@@ -346,7 +369,112 @@ func (c *AttributesAccumulator) SortedAttrs() []Attr {
 	return c.attrs
 }
 
-func (c *AttributesAccumulator) Reset() {
+func (c *Attributes16Accumulator) Reset() {
+	c.attrsMapCount = 0
+	c.attrs = c.attrs[:0]
+}
+
+func NewAttributes32Accumulator() *Attributes32Accumulator {
+	return &Attributes32Accumulator{
+		attrs: make([]Attr32, 0),
+	}
+}
+
+func (c *Attributes32Accumulator) IsEmpty() bool {
+	return len(c.attrs) == 0
+}
+
+func (c *Attributes32Accumulator) Append(attrs pcommon.Map) (int64, error) {
+	ID := c.attrsMapCount
+
+	if attrs.Len() == 0 {
+		return -1, nil
+	}
+
+	if c.attrsMapCount == math.MaxUint32 {
+		panic("The maximum number of group of attributes has been reached (max is uint32).")
+	}
+
+	attrs.Range(func(k string, v pcommon.Value) bool {
+		c.attrs = append(c.attrs, Attr32{
+			ID:    ID,
+			Key:   k,
+			Value: v,
+		})
+		return true
+	})
+
+	c.attrsMapCount++
+
+	return int64(ID), nil
+}
+
+func (c *Attributes32Accumulator) AppendUniqueAttributes(attrs pcommon.Map, smattrs *common.SharedAttributes, mattrs *common.SharedAttributes) (int64, error) {
+	uniqueAttrsCount := attrs.Len()
+	if smattrs != nil {
+		uniqueAttrsCount -= smattrs.Len()
+	}
+	if mattrs != nil {
+		uniqueAttrsCount -= mattrs.Len()
+	}
+
+	ID := c.attrsMapCount
+	if uniqueAttrsCount == 0 {
+		return -1, nil
+	}
+
+	if c.attrsMapCount == math.MaxUint32 {
+		panic("The maximum number of group of attributes has been reached (max is uint32).")
+	}
+
+	attrs.Range(func(key string, v pcommon.Value) bool {
+		if key == "" {
+			// Skip entries with empty keys
+			return true
+		}
+
+		// Skip the current attribute if it is a scope metric shared attribute
+		// or a metric shared attribute
+		smattrsFound := false
+		mattrsFound := false
+		if smattrs != nil {
+			_, smattrsFound = smattrs.Attributes[key]
+		}
+		if mattrs != nil {
+			_, mattrsFound = mattrs.Attributes[key]
+		}
+		if smattrsFound || mattrsFound {
+			return true
+		}
+
+		c.attrs = append(c.attrs, Attr32{
+			ID:    ID,
+			Key:   key,
+			Value: v,
+		})
+
+		uniqueAttrsCount--
+		return uniqueAttrsCount > 0
+	})
+
+	c.attrsMapCount++
+
+	return int64(ID), nil
+}
+
+func (c *Attributes32Accumulator) SortedAttrs() []Attr32 {
+	sort.Slice(c.attrs, func(i, j int) bool {
+		if c.attrs[i].Key == c.attrs[j].Key {
+			return IsLess(c.attrs[i].Value, c.attrs[j].Value)
+		} else {
+			return c.attrs[i].Key < c.attrs[j].Key
+		}
+	})
+
+	return c.attrs
+}
+
+func (c *Attributes32Accumulator) Reset() {
 	c.attrsMapCount = 0
 	c.attrs = c.attrs[:0]
 }

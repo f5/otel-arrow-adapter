@@ -68,7 +68,13 @@ func NewScopeSpansIds(dt *arrow.StructType) (*ScopeSpansIds, error) {
 	}, nil
 }
 
-func AppendScopeSpansInto(resSpans ptrace.ResourceSpans, arrowResSpans *arrowutils.ListOfStructs, resSpansIdx int, ids *ScopeSpansIds) error {
+func AppendScopeSpansInto(
+	resSpans ptrace.ResourceSpans,
+	arrowResSpans *arrowutils.ListOfStructs,
+	resSpansIdx int,
+	ids *ScopeSpansIds,
+	relatedData *RelatedData,
+) error {
 	if arrowResSpans == nil {
 		return nil
 	}
@@ -89,7 +95,7 @@ func AppendScopeSpansInto(resSpans ptrace.ResourceSpans, arrowResSpans *arrowuti
 	for scopeSpansIdx := arrowScopeSpans.Start(); scopeSpansIdx < arrowScopeSpans.End(); scopeSpansIdx++ {
 		scopeSpans := scopeSpansSlice.AppendEmpty()
 
-		if err = otlp.UpdateScopeWith(scopeSpans.Scope(), arrowScopeSpans, scopeSpansIdx, ids.ScopeIds); err != nil {
+		if err = otlp.UpdateScopeWith(scopeSpans.Scope(), arrowScopeSpans, scopeSpansIdx, ids.ScopeIds, relatedData.ScopeAttrMapStore); err != nil {
 			return werror.Wrap(err)
 		}
 
@@ -130,7 +136,7 @@ func AppendScopeSpansInto(resSpans ptrace.ResourceSpans, arrowResSpans *arrowuti
 		spansSlice := scopeSpans.Spans()
 		spansSlice.EnsureCapacity(arrowSpans.End() - arrowSpans.Start())
 		for entityIdx := arrowSpans.Start(); entityIdx < arrowSpans.End(); entityIdx++ {
-			err = AppendSpanInto(spansSlice, arrowSpans, entityIdx, ids.SpansIds, sharedAttrs, sharedEventAttrs, sharedLinkAttrs)
+			err = AppendSpanInto(spansSlice, arrowSpans, entityIdx, ids.SpansIds, sharedAttrs, sharedEventAttrs, sharedLinkAttrs, relatedData)
 			if err != nil {
 				return werror.Wrap(err)
 			}
