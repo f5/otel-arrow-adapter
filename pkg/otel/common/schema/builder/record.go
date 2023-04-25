@@ -223,7 +223,11 @@ func (rb *RecordBuilderExt) UpdateSchema() {
 	// and transfer the dictionaries from the old record builder
 	// to the new one.
 	newRecBuilder := array.NewRecordBuilder(rb.allocator, s)
-	// ToDo Find a better way to copy the dictionary values who have a lot of reused values between batches. For now, this feature is disabled.
+
+	// Note: dictionaries are no longer copied between schema changes as it can
+	// be very expensive when the number of reusable dictionary entries is not
+	// an important percentage of the existing dictionary.
+	// ToDo Find a way to identify when it makes sense to use dictionary migration between schema changes.
 	//if err := rb.copyDictValuesTo(rb.recordBuilder, newRecBuilder); err != nil {
 	//	panic(err)
 	//}
@@ -348,11 +352,18 @@ func (rb *RecordBuilderExt) copyFieldDictValuesTo(srcBuilder array.Builder, dest
 				return werror.Wrap(err)
 			}
 			err = destBuilder.(*array.Int32DictionaryBuilder).InsertDictValues(dict)
+		case *array.Int64:
+			if err := rb.stats.RecordBuilderStats.DictMigrationStats.Int64DictSz.RecordValue(int64(dict.Len())); err != nil {
+				return werror.Wrap(err)
+			}
+			err = destBuilder.(*array.Int64DictionaryBuilder).InsertDictValues(dict)
 		case *array.Uint32:
 			if err := rb.stats.RecordBuilderStats.DictMigrationStats.Uint32DictSz.RecordValue(int64(dict.Len())); err != nil {
 				return werror.Wrap(err)
 			}
 			err = destBuilder.(*array.Uint32DictionaryBuilder).InsertDictValues(dict)
+		case *array.Duration:
+			err = destBuilder.(*array.DurationDictionaryBuilder).InsertDictValues(dict)
 		default:
 			panic("copyFieldDictValuesTo: unsupported dictionary type " + dict.DataType().Name())
 		}

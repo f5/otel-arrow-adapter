@@ -54,6 +54,8 @@ type DictionaryMigrationStats struct {
 	FixedSizeBinaryDictSz *hdrhistogram.Histogram
 	// Histogram of int32 dictionary size
 	Int32DictSz *hdrhistogram.Histogram
+	// Histogram of int64 dictionary size
+	Int64DictSz *hdrhistogram.Histogram
 	// Histogram of uint32 dictionary size
 	Uint32DictSz *hdrhistogram.Histogram
 }
@@ -75,6 +77,7 @@ func NewProducerStats() *ProducerStats {
 				BinaryDictSz:          hdrhistogram.New(1, 1000000, 2),
 				FixedSizeBinaryDictSz: hdrhistogram.New(1, 1000000, 2),
 				Int32DictSz:           hdrhistogram.New(1, 1000000, 2),
+				Int64DictSz:           hdrhistogram.New(1, 1000000, 2),
 				Uint32DictSz:          hdrhistogram.New(1, 1000000, 2),
 			},
 		},
@@ -113,6 +116,7 @@ func (s *DictionaryMigrationStats) Reset() {
 	s.BinaryDictSz.Reset()
 	s.FixedSizeBinaryDictSz.Reset()
 	s.Int32DictSz.Reset()
+	s.Int64DictSz.Reset()
 	s.Uint32DictSz.Reset()
 }
 
@@ -169,6 +173,14 @@ func (s *DictionaryMigrationStats) Show(indent string) {
 			s.Int32DictSz.ValueAtQuantile(50),
 			s.Int32DictSz.ValueAtQuantile(90),
 			s.Int32DictSz.ValueAtQuantile(99))
+	}
+	if s.Int64DictSz.TotalCount() > 0 {
+		fmt.Printf("%s- Int64 dictionary size (count, p50, p90, p99): %d, %d, %d, %d\n",
+			indent,
+			s.Int64DictSz.TotalCount(),
+			s.Int64DictSz.ValueAtQuantile(50),
+			s.Int64DictSz.ValueAtQuantile(90),
+			s.Int64DictSz.ValueAtQuantile(99))
 	}
 	if s.Uint32DictSz.TotalCount() > 0 {
 		fmt.Printf("%s- Uint32 dictionary size (count, p50, p90, p99): %d, %d, %d, %d\n",

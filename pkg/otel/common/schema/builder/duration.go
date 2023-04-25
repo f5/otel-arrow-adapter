@@ -17,6 +17,8 @@
 
 package builder
 
+// Support of Arrow duration data type.
+
 import (
 	"github.com/apache/arrow/go/v12/arrow"
 	"github.com/apache/arrow/go/v12/arrow/array"
