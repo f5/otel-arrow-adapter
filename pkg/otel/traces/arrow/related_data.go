@@ -17,6 +17,8 @@
 
 package arrow
 
+// Infrastructure to manage related records.
+
 import (
 	"errors"
 	"math"

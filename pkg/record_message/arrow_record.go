@@ -37,6 +37,7 @@ type RecordMessage struct {
 	record      arrow.Record
 }
 
+// NewRecordMessage creates a record message.
 func NewRecordMessage(batchId string, payloadType PayloadType, record arrow.Record) *RecordMessage {
 	return &RecordMessage{
 		batchId:     batchId,

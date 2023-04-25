@@ -17,6 +17,8 @@
 
 package otlp
 
+// Infrastructure used to process related records.
+
 import (
 	colarspb "github.com/f5/otel-arrow-adapter/api/collector/arrow/v1"
 	"github.com/f5/otel-arrow-adapter/pkg/otel"

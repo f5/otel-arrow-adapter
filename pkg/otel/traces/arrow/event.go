@@ -17,6 +17,13 @@
 
 package arrow
 
+// Events are represented as Arrow records.
+//
+// An event accumulator is used to collect of the events across all spans, and
+// once the entire trace is processed, the events are being globally sorted and
+// written to the Arrow record batch. This process improves the compression
+// ratio of the Arrow record batch.
+
 import (
 	"errors"
 	"math"

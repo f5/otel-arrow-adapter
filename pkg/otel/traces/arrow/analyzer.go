@@ -17,6 +17,13 @@
 
 package arrow
 
+// A trace analyzer to build statistics about traces structure and content
+// distribution. It is used to help with the design of the OTLP --> Arrow
+// mapping.
+//
+// The result of the analysis can be printed to the console with the -stats
+// flag available in the benchmark tool.
+
 import (
 	"encoding/binary"
 	"fmt"

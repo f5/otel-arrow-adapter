@@ -17,6 +17,9 @@
 
 package arrow
 
+// Attributes record builder for 16-bit IDs.
+// ToDo move this to the common package once the metrics and logs builders are refactored.
+
 import (
 	"github.com/apache/arrow/go/v12/arrow"
 

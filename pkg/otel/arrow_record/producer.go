@@ -248,10 +248,6 @@ func (p *Producer) LogsStats() *logsarrow.LogsStats {
 	return p.logsBuilder.Stats()
 }
 
-func (p *Producer) TracesStats() *tracesarrow.TracesStats {
-	return p.tracesBuilder.Stats()
-}
-
 // Close closes all stream producers.
 func (p *Producer) Close() error {
 	p.metricsBuilder.Release()
@@ -364,9 +360,9 @@ func (p *Producer) ShowStats() {
 		return schemas[i].time.Before(schemas[j].time)
 	})
 	fmt.Printf("\n== Schema (#stream-producers=%d) ============================================================\n", len(schemas))
-	for _, schema := range schemas {
-		fmt.Printf(">> Schema last update at %s:\n", schema.time)
-		carrow.ShowSchema(schema.schema, "  ")
+	for _, s := range schemas {
+		fmt.Printf(">> Schema last update at %s:\n", s.time)
+		carrow.ShowSchema(s.schema, "  ")
 	}
 	println("------")
 	p.tracesBuilder.ShowSchema()

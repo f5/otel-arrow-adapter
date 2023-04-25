@@ -189,10 +189,6 @@ func (s *TracesProfileable) Clear() {
 }
 func (s *TracesProfileable) ShowStats() {
 	if s.stats {
-		stats := s.producer.TracesStats()
-		if stats != nil {
-			stats.Show()
-		}
 		s.producer.ShowStats()
 	}
 }

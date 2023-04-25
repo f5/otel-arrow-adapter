@@ -17,6 +17,13 @@
 
 package arrow
 
+// Links are represented as Arrow records.
+//
+// A link accumulator is used to collect of the links across all spans, and
+// once the entire trace is processed, the links are being globally sorted and
+// written to the Arrow record batch. This process improves the compression
+// ratio of the Arrow record batch.
+
 import (
 	"bytes"
 	"errors"

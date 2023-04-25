@@ -94,10 +94,6 @@ func (b *TracesBuilder) RelatedData() *RelatedData {
 	return b.relatedData
 }
 
-func (b *TracesBuilder) Stats() *TracesStats {
-	return b.optimizer.Stats()
-}
-
 // Build builds an Arrow Record from the builder.
 //
 // Once the array is no longer needed, Release() must be called to free the
@@ -128,7 +124,6 @@ func (b *TracesBuilder) Append(traces ptrace.Traces) error {
 	}
 
 	optimTraces := b.optimizer.Optimize(traces)
-	// ToDo TMP
 	if b.analyzer != nil {
 		b.analyzer.Analyze(optimTraces)
 		b.analyzer.ShowStats("")
