@@ -17,6 +17,8 @@
 
 package pdata
 
+// pdata utilities
+
 import "go.opentelemetry.io/collector/pdata/pcommon"
 
 // ValuesEqual compares two pdata.Values for equality.

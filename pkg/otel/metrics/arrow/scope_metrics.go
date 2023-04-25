@@ -96,7 +96,7 @@ func (b *ScopeMetricsBuilder) Append(smg *ScopeMetricsGroup) error {
 	}
 
 	return b.builder.Append(smg, func() error {
-		if err := b.scb.Append(smg.Scope, nil); err != nil {
+		if err := b.scb.Append(smg.Scope, nil /* ToDo will be done in a new PR */); err != nil {
 			return werror.Wrap(err)
 		}
 		b.schb.AppendNonEmpty(smg.ScopeSchemaUrl)
@@ -125,6 +125,7 @@ func (b *ScopeMetricsBuilder) Append(smg *ScopeMetricsGroup) error {
 				return werror.Wrap(err)
 			}
 		} else {
+			// if no shared attributes
 			if err := b.sab.AppendNull(); err != nil {
 				return werror.Wrap(err)
 			}

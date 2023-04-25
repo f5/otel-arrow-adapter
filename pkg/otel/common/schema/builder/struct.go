@@ -59,6 +59,7 @@ func (sb *StructBuilder) getBuilder(name string) array.Builder {
 	return nil
 }
 
+// TimestampBuilder creates a new TimestampBuilder for the given field name.
 func (sb *StructBuilder) TimestampBuilder(name string) *TimestampBuilder {
 	timestampBuilder := sb.getBuilder(name)
 	_, transformNode := sb.protoDataTypeAndTransformNode(name)
@@ -70,6 +71,7 @@ func (sb *StructBuilder) TimestampBuilder(name string) *TimestampBuilder {
 	}
 }
 
+// DurationBuilder returns a DurationBuilder for the given field name.
 func (sb *StructBuilder) DurationBuilder(name string) *DurationBuilder {
 	builder := sb.getBuilder(name)
 	_, transformNode := sb.protoDataTypeAndTransformNode(name)
@@ -81,6 +83,7 @@ func (sb *StructBuilder) DurationBuilder(name string) *DurationBuilder {
 	}
 }
 
+// StringBuilder returns a StringBuilder for the given field name.
 func (sb *StructBuilder) StringBuilder(name string) *StringBuilder {
 	stringBuilder := sb.getBuilder(name)
 	_, transformNode := sb.protoDataTypeAndTransformNode(name)
@@ -92,6 +95,7 @@ func (sb *StructBuilder) StringBuilder(name string) *StringBuilder {
 	}
 }
 
+// Uint8Builder returns a Uint8Builder for the given field name.
 func (sb *StructBuilder) Uint8Builder(name string) *Uint8Builder {
 	uint8Builder := sb.getBuilder(name)
 	_, transformNode := sb.protoDataTypeAndTransformNode(name)
@@ -103,6 +107,7 @@ func (sb *StructBuilder) Uint8Builder(name string) *Uint8Builder {
 	}
 }
 
+// Uint32Builder returns a Uint32Builder for the given field name.
 func (sb *StructBuilder) Uint32Builder(name string) *Uint32Builder {
 	uint32Builder := sb.getBuilder(name)
 	_, transformNode := sb.protoDataTypeAndTransformNode(name)
@@ -114,6 +119,7 @@ func (sb *StructBuilder) Uint32Builder(name string) *Uint32Builder {
 	}
 }
 
+// Uint16DeltaBuilder returns a Uint16DeltaBuilder for the given field name.
 func (sb *StructBuilder) Uint16DeltaBuilder(name string) *Uint16DeltaBuilder {
 	b := sb.getBuilder(name)
 	_, transformNode := sb.protoDataTypeAndTransformNode(name)
@@ -125,6 +131,7 @@ func (sb *StructBuilder) Uint16DeltaBuilder(name string) *Uint16DeltaBuilder {
 	}
 }
 
+// Uint32DeltaBuilder returns a Uint32DeltaBuilder for the given field name.
 func (sb *StructBuilder) Uint32DeltaBuilder(name string) *Uint32DeltaBuilder {
 	uint32Builder := sb.getBuilder(name)
 	_, transformNode := sb.protoDataTypeAndTransformNode(name)
@@ -136,6 +143,7 @@ func (sb *StructBuilder) Uint32DeltaBuilder(name string) *Uint32DeltaBuilder {
 	}
 }
 
+// Uint64Builder returns a Uint64Builder for the given field name.
 func (sb *StructBuilder) Uint64Builder(name string) *Uint64Builder {
 	uint64Builder := sb.getBuilder(name)
 	_, transformNode := sb.protoDataTypeAndTransformNode(name)
@@ -147,6 +155,7 @@ func (sb *StructBuilder) Uint64Builder(name string) *Uint64Builder {
 	}
 }
 
+// Int32Builder returns a Int32Builder for the given field name.
 func (sb *StructBuilder) Int32Builder(name string) *Int32Builder {
 	int32Builder := sb.getBuilder(name)
 	_, transformNode := sb.protoDataTypeAndTransformNode(name)
@@ -158,6 +167,7 @@ func (sb *StructBuilder) Int32Builder(name string) *Int32Builder {
 	}
 }
 
+// Int64Builder returns a Int64Builder for the given field name.
 func (sb *StructBuilder) Int64Builder(name string) *Int64Builder {
 	int64Builder := sb.getBuilder(name)
 	_, transformNode := sb.protoDataTypeAndTransformNode(name)
@@ -169,6 +179,7 @@ func (sb *StructBuilder) Int64Builder(name string) *Int64Builder {
 	}
 }
 
+// Float64Builder returns a Float64Builder for the given field name.
 func (sb *StructBuilder) Float64Builder(name string) *Float64Builder {
 	float64Builder := sb.getBuilder(name)
 	_, transformNode := sb.protoDataTypeAndTransformNode(name)
@@ -180,6 +191,7 @@ func (sb *StructBuilder) Float64Builder(name string) *Float64Builder {
 	}
 }
 
+// FixedSizeBinaryBuilder returns a FixedSizeBinaryBuilder for the given field name.
 func (sb *StructBuilder) FixedSizeBinaryBuilder(name string) *FixedSizeBinaryBuilder {
 	fixedSizeBinaryBuilder := sb.getBuilder(name)
 	_, transformNode := sb.protoDataTypeAndTransformNode(name)
@@ -191,6 +203,7 @@ func (sb *StructBuilder) FixedSizeBinaryBuilder(name string) *FixedSizeBinaryBui
 	}
 }
 
+// ListBuilder returns a ListBuilder for the given field name.
 func (sb *StructBuilder) ListBuilder(name string) *ListBuilder {
 	listBuilder := sb.getBuilder(name)
 	protoDataType, transformNode := sb.protoDataTypeAndTransformNode(name)
@@ -202,6 +215,7 @@ func (sb *StructBuilder) ListBuilder(name string) *ListBuilder {
 	}
 }
 
+// StructBuilder returns a StructBuilder for the given field name.
 func (sb *StructBuilder) StructBuilder(name string) *StructBuilder {
 	structBuilder := sb.getBuilder(name)
 	protoDataType, transformNode := sb.protoDataTypeAndTransformNode(name)
@@ -213,6 +227,7 @@ func (sb *StructBuilder) StructBuilder(name string) *StructBuilder {
 	}
 }
 
+// BooleanBuilder returns a BooleanBuilder for the given field name.
 func (sb *StructBuilder) BooleanBuilder(name string) *BooleanBuilder {
 	booleanBuilder := sb.getBuilder(name)
 	_, transformNode := sb.protoDataTypeAndTransformNode(name)
@@ -224,6 +239,7 @@ func (sb *StructBuilder) BooleanBuilder(name string) *BooleanBuilder {
 	}
 }
 
+// MapBuilder returns a MapBuilder for the given field name.
 func (sb *StructBuilder) MapBuilder(name string) *MapBuilder {
 	mapBuilder := sb.getBuilder(name)
 	protoDataType, transformNode := sb.protoDataTypeAndTransformNode(name)
@@ -245,6 +261,7 @@ func (sb *StructBuilder) MapBuilder(name string) *MapBuilder {
 	}
 }
 
+// SparseUnionBuilder returns a SparseUnionBuilder for the given field name.
 func (sb *StructBuilder) SparseUnionBuilder(name string) *SparseUnionBuilder {
 	sparseUnionBuilder := sb.getBuilder(name)
 	protoDataType, transformNode := sb.protoDataTypeAndTransformNode(name)
@@ -256,6 +273,7 @@ func (sb *StructBuilder) SparseUnionBuilder(name string) *SparseUnionBuilder {
 	}
 }
 
+// BinaryBuilder returns a BinaryBuilder for the given field name.
 func (sb *StructBuilder) BinaryBuilder(name string) *BinaryBuilder {
 	binaryBuilder := sb.getBuilder(name)
 	_, transformNode := sb.protoDataTypeAndTransformNode(name)

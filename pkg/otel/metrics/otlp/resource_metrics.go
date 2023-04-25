@@ -77,7 +77,7 @@ func AppendResourceMetricsInto(metrics pmetric.Metrics, record arrow.Record, met
 		for resMetricsIdx := arrowResEnts.Start(); resMetricsIdx < arrowResEnts.End(); resMetricsIdx++ {
 			resMetrics := resMetricsSlice.AppendEmpty()
 
-			if err = otlp.UpdateResourceWith(resMetrics.Resource(), arrowResEnts, resMetricsIdx, metricsIds.ResourceMetrics.Resource, nil /*todo*/); err != nil {
+			if err = otlp.UpdateResourceWith(resMetrics.Resource(), arrowResEnts, resMetricsIdx, metricsIds.ResourceMetrics.Resource, nil /* ToDo will be done in a new PR */); err != nil {
 				return werror.Wrap(err)
 			}
 

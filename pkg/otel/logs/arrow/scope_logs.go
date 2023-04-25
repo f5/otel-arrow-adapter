@@ -81,7 +81,7 @@ func (b *ScopeLogsBuilder) Append(slg *ScopeLogGroup) error {
 	}
 
 	return b.builder.Append(slg, func() error {
-		if err := b.scb.Append(slg.Scope, nil); err != nil {
+		if err := b.scb.Append(slg.Scope, nil /* ToDo will be done in a new PR */); err != nil {
 			return werror.Wrap(err)
 		}
 		b.schb.AppendNonEmpty(slg.ScopeSchemaUrl)

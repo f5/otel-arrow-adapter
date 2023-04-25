@@ -67,7 +67,7 @@ func UpdateScopeMetricsFrom(scopeMetricsSlice pmetric.ScopeMetricsSlice, arrowSc
 	for scopeMetricsIdx := arrowScopeMetrics.Start(); scopeMetricsIdx < arrowScopeMetrics.End(); scopeMetricsIdx++ {
 		scopeMetrics := scopeMetricsSlice.AppendEmpty()
 
-		if err := otlp.UpdateScopeWith(scopeMetrics.Scope(), arrowScopeMetrics, scopeMetricsIdx, ids.ScopeIds, nil /*todo*/); err != nil {
+		if err := otlp.UpdateScopeWith(scopeMetrics.Scope(), arrowScopeMetrics, scopeMetricsIdx, ids.ScopeIds, nil /* ToDo will be done in a new PR */); err != nil {
 			return werror.Wrap(err)
 		}
 

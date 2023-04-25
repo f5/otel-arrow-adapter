@@ -333,34 +333,16 @@ func (rb *RecordBuilderExt) copyFieldDictValuesTo(srcBuilder array.Builder, dest
 		defer srcDict.Release()
 		switch dict := srcDict.(type) {
 		case *array.String:
-			if err := rb.stats.RecordBuilderStats.DictMigrationStats.StringDictSz.RecordValue(int64(dict.Len())); err != nil {
-				return werror.Wrap(err)
-			}
 			err = destBuilder.(*array.BinaryDictionaryBuilder).InsertStringDictValues(dict)
 		case *array.Binary:
-			if err := rb.stats.RecordBuilderStats.DictMigrationStats.BinaryDictSz.RecordValue(int64(dict.Len())); err != nil {
-				return werror.Wrap(err)
-			}
 			err = destBuilder.(*array.BinaryDictionaryBuilder).InsertDictValues(dict)
 		case *array.FixedSizeBinary:
-			if err := rb.stats.RecordBuilderStats.DictMigrationStats.FixedSizeBinaryDictSz.RecordValue(int64(dict.Len())); err != nil {
-				return werror.Wrap(err)
-			}
 			err = destBuilder.(*array.FixedSizeBinaryDictionaryBuilder).InsertDictValues(dict)
 		case *array.Int32:
-			if err := rb.stats.RecordBuilderStats.DictMigrationStats.Int32DictSz.RecordValue(int64(dict.Len())); err != nil {
-				return werror.Wrap(err)
-			}
 			err = destBuilder.(*array.Int32DictionaryBuilder).InsertDictValues(dict)
 		case *array.Int64:
-			if err := rb.stats.RecordBuilderStats.DictMigrationStats.Int64DictSz.RecordValue(int64(dict.Len())); err != nil {
-				return werror.Wrap(err)
-			}
 			err = destBuilder.(*array.Int64DictionaryBuilder).InsertDictValues(dict)
 		case *array.Uint32:
-			if err := rb.stats.RecordBuilderStats.DictMigrationStats.Uint32DictSz.RecordValue(int64(dict.Len())); err != nil {
-				return werror.Wrap(err)
-			}
 			err = destBuilder.(*array.Uint32DictionaryBuilder).InsertDictValues(dict)
 		case *array.Duration:
 			err = destBuilder.(*array.DurationDictionaryBuilder).InsertDictValues(dict)

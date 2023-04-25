@@ -224,8 +224,10 @@ type Uint16DeltaBuilder struct {
 	builder       array.Builder
 	transformNode *schema.TransformNode
 	updateRequest *update.SchemaUpdateRequest
-	prev          uint16
 
+	// Used to calculate the delta.
+	prev uint16
+	// Used to enforce delta encoding.
 	maxDelta uint16
 }
 
@@ -294,8 +296,10 @@ type Uint32DeltaBuilder struct {
 	builder       array.Builder
 	transformNode *schema.TransformNode
 	updateRequest *update.SchemaUpdateRequest
-	prev          uint32
 
+	// Used to calculate the delta.
+	prev uint32
+	// Used to enforce delta encoding.
 	maxDelta uint32
 }
 
