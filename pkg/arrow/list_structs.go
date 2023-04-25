@@ -148,7 +148,7 @@ func (los *ListOfStructs) U16FieldByID(fieldID int, row int) (uint16, error) {
 	return U16FromArray(column, row)
 }
 
-// NullableU16FieldByID returns the uint16 value of a field id for a specific row or 0
+// NullableU16FieldByID returns the uint16 value of a field id for a specific row or nil
 // if the field doesn't exist.
 func (los *ListOfStructs) NullableU16FieldByID(fieldID int, row int) (*uint16, error) {
 	if fieldID == -1 {
@@ -196,7 +196,7 @@ func (los *ListOfStructs) TimestampFieldByID(fieldID int, row int) (arrow.Timest
 }
 
 // DurationFieldByID returns the duration value of a field id for a specific
-// row or a zero duration if the field doesn't exist.
+// row or a 0 if the field doesn't exist.
 func (los *ListOfStructs) DurationFieldByID(fieldID int, row int) (arrow.Duration, error) {
 	if fieldID == -1 {
 		return arrow.Duration(0), nil

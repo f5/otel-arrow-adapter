@@ -125,9 +125,12 @@ func (c *Consumer) TracesFrom(bar *colarspb.BatchArrowRecords) ([]ptrace.Traces,
 
 	result := make([]ptrace.Traces, 0, len(records))
 
+	// Compute all related records (i.e. Attributes, Events, and Links)
 	relatedData, tracesRecord, err := tracesotlp.RelatedDataFrom(records)
 
 	if tracesRecord != nil {
+		// Decode OTLP traces from the combination of the main record and the
+		// related records.
 		traces, err := tracesotlp.TracesFrom(tracesRecord.Record(), relatedData)
 		if err != nil {
 			return nil, werror.Wrap(err)

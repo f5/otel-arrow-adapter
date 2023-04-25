@@ -17,6 +17,9 @@
 
 package otlp
 
+// Note: This file will replace pkg/otel/common/otlp/attributes.go once all OTel
+// entities will be migrated to the hybrid model.
+
 import (
 	"github.com/apache/arrow/go/v12/arrow"
 	"go.opentelemetry.io/collector/pdata/pcommon"
@@ -36,14 +39,20 @@ type (
 	}
 
 	// Attributes16Store is a store for attributes.
-	// The attributes are stored in a map by ID.
+	// The attributes are stored in a map by ID. This ID represents the
+	// identifier of the main entity (span, event, link, etc.) to which the
+	// attributes are attached. So the maximum number of attributes per entity
+	// is not limited.
 	Attributes16Store struct {
 		lastID         uint16
 		attributesByID map[uint16]*pcommon.Map
 	}
 
 	// Attributes32Store is a store for attributes.
-	// The attributes are stored in a map by ID.
+	// The attributes are stored in a map by ID. This ID represents the
+	// identifier of the main entity (span, event, link, etc.) to which the
+	// attributes are attached. So the maximum number of attributes per entity
+	// is not limited.
 	Attributes32Store struct {
 		lastID         uint32
 		attributesByID map[uint32]*pcommon.Map

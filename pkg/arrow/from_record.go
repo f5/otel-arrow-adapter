@@ -17,6 +17,8 @@
 
 package arrow
 
+// Utility functions to extract values from Arrow Records.
+
 import (
 	"github.com/apache/arrow/go/v12/arrow"
 	"github.com/apache/arrow/go/v12/arrow/array"
@@ -26,7 +28,7 @@ import (
 )
 
 // U16FromRecord returns the uint16 value for a specific row and column in an
-// Arrow record.
+// Arrow record. If the value is null, it returns 0.
 func U16FromRecord(record arrow.Record, fieldID int, row int) (uint16, error) {
 	if fieldID == -1 {
 		return 0, nil
@@ -50,7 +52,7 @@ func U16FromRecord(record arrow.Record, fieldID int, row int) (uint16, error) {
 }
 
 // U32FromRecord returns the uint32 value for a specific row and column in an
-// Arrow record.
+// Arrow record. If the value is null, it returns 0.
 func U32FromRecord(record arrow.Record, fieldID int, row int) (uint32, error) {
 	if fieldID == -1 {
 		return 0, nil
@@ -74,7 +76,7 @@ func U32FromRecord(record arrow.Record, fieldID int, row int) (uint32, error) {
 }
 
 // NullableU32FromRecord returns the uint32 value for a specific row and column in an
-// Arrow record.
+// Arrow record. If the value is null, it returns nil.
 func NullableU32FromRecord(record arrow.Record, fieldID int, row int) (*uint32, error) {
 	if fieldID == -1 {
 		return nil, nil
@@ -103,7 +105,7 @@ func NullableU32FromRecord(record arrow.Record, fieldID int, row int) (*uint32, 
 }
 
 // StringFromRecord returns the string value for a specific row and column in
-// an Arrow record.
+// an Arrow record. If the value is null, it returns an empty string.
 func StringFromRecord(record arrow.Record, fieldID int, row int) (string, error) {
 	if fieldID == -1 {
 		return "", nil
@@ -117,6 +119,8 @@ func StringFromRecord(record arrow.Record, fieldID int, row int) (string, error)
 	return StringFromArray(arr, row)
 }
 
+// SparseUnionFromRecord returns the sparse union value for a specific row and
+// column in an Arrow record. If the value is null, it returns nil.
 func SparseUnionFromRecord(record arrow.Record, fieldID int, row int) (marr *array.SparseUnion, err error) {
 	if fieldID == -1 {
 		return nil, nil
@@ -137,7 +141,7 @@ func SparseUnionFromRecord(record arrow.Record, fieldID int, row int) (marr *arr
 }
 
 // TimestampFromRecord returns the timestamp value for a specific row and column
-// in an Arrow record.
+// in an Arrow record. If the value is null, it returns 0.
 func TimestampFromRecord(record arrow.Record, fieldID int, row int) (arrow.Timestamp, error) {
 	if fieldID == -1 {
 		return 0, nil
@@ -162,6 +166,7 @@ func TimestampFromRecord(record arrow.Record, fieldID int, row int) (arrow.Times
 }
 
 // FixedSizeBinaryFieldByIDFromRecord returns the fixed size binary value of a field id for a specific row.
+// If the value is null, it returns nil.
 func FixedSizeBinaryFieldByIDFromRecord(record arrow.Record, fieldID int, row int) ([]byte, error) {
 	if fieldID == -1 {
 		return nil, nil

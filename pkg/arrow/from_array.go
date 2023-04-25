@@ -27,6 +27,7 @@ import (
 )
 
 // I32FromArray returns the int32 value for a specific row in an Arrow array.
+// This Arrow array can be either an int32 array or a dictionary-encoded array.
 func I32FromArray(arr arrow.Array, row int) (int32, error) {
 	if arr == nil {
 		return 0, nil
@@ -52,6 +53,7 @@ func I32FromArray(arr arrow.Array, row int) (int32, error) {
 }
 
 // I64FromArray returns the int64 value for a specific row in an Arrow array.
+// This Arrow array can be either an int64 array or a dictionary-encoded int64 array.
 func I64FromArray(arr arrow.Array, row int) (int64, error) {
 	if arr == nil {
 		return 0, nil
@@ -228,6 +230,7 @@ func TimestampFromArray(arr arrow.Array, row int) (arrow.Timestamp, error) {
 }
 
 // DurationFromArray returns the duration value for a specific row in an Arrow array.
+// This Arrow array can be either a duration array or a dictionary array.
 func DurationFromArray(arr arrow.Array, row int) (arrow.Duration, error) {
 	if arr == nil {
 		return 0, nil

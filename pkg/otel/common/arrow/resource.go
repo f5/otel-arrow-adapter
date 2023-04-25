@@ -65,7 +65,10 @@ func ResourceBuilderFrom(builder *builder.StructBuilder) *ResourceBuilder {
 	aib := builder.Uint16DeltaBuilder(constants.AttributesID)
 	// As the attributes are sorted before insertion, the delta between two
 	// consecutive attributes ID should always be <=1.
+	// We are enforcing this constraint to make sure that the delta encoding
+	// will always be used efficiently.
 	aib.SetMaxDelta(1)
+
 	return &ResourceBuilder{
 		released: false,
 		builder:  builder,
@@ -88,6 +91,7 @@ func (b *ResourceBuilder) Append(resource *pcommon.Resource, attrsAccu *Attribut
 		if ID >= 0 {
 			b.aib.Append(uint16(ID))
 		} else {
+			// ID == -1 when the attributes are empty.
 			b.aib.AppendNull()
 		}
 		b.dacb.AppendNonZero(resource.DroppedAttributesCount())

@@ -19,6 +19,7 @@ package arrow
 
 import (
 	"errors"
+	"math"
 
 	"github.com/apache/arrow/go/v12/arrow"
 
@@ -159,6 +160,11 @@ func (r *RelatedData) SpanCount() uint16 {
 
 func (r *RelatedData) NextSpanID() uint16 {
 	sc := r.spanCount
+
+	if sc == math.MaxUint16 {
+		panic("maximum number of spans reached per batch, please reduce the batch size to a maximum of 65535 spans")
+	}
+
 	r.spanCount++
 	return sc
 }

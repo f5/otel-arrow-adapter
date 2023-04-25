@@ -17,6 +17,8 @@
 
 package config
 
+// Main configuration object in the package.
+
 import (
 	"math"
 
@@ -24,15 +26,27 @@ import (
 )
 
 type Config struct {
-	Pool           memory.Allocator
-	InitIndexSize  uint64
+	Pool memory.Allocator
+
+	// InitIndexSize sets the initial size of a dictionary index.
+	InitIndexSize uint64
+	// LimitIndexSize sets the maximum size of a dictionary index
+	// before it is no longer encoded as a dictionary.
 	LimitIndexSize uint64
-	Zstd           bool // Use IPC ZSTD compression
-	Stats          bool
+	// Zstd enables the use of ZSTD compression for IPC messages.
+	Zstd bool // Use IPC ZSTD compression
+	// Stats enables the collection of statistics about the data being encoded.
+	Stats bool
 }
 
 type Option func(*Config)
 
+// DefaultConfig returns a Config with the following default values:
+//  - Pool: memory.NewGoAllocator()
+//  - InitIndexSize: math.MaxUint16
+//  - LimitIndexSize: math.MaxUint32
+//  - Stats: false
+//  - Zstd: true
 func DefaultConfig() *Config {
 	return &Config{
 		Pool:           memory.NewGoAllocator(),
@@ -128,6 +142,7 @@ func WithNoZstd() Option {
 	}
 }
 
+// WithStats enables the collection of statistics about the data being encoded.
 func WithStats() Option {
 	return func(cfg *Config) {
 		cfg.Stats = true

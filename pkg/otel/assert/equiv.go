@@ -309,6 +309,8 @@ func CanonicalSliceID(slice []interface{}) string {
 	return ID.String()
 }
 
+// jsonFrom converts a string or a byte slice to a Go object representing
+// this JSON object.
 func jsonFrom(json interface{}) (interface{}, error) {
 	switch j := json.(type) {
 	case string:
@@ -320,6 +322,8 @@ func jsonFrom(json interface{}) (interface{}, error) {
 	}
 }
 
+// jsonFromBytes converts a byte slice, representing a JSON object, to a Go
+// map or a slice of Go map.
 func jsonFromBytes(jsonBytes []byte) (interface{}, error) {
 	var jsonMap map[string]interface{}
 	err := json.Unmarshal(jsonBytes, &jsonMap)
