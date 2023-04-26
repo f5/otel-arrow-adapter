@@ -73,15 +73,10 @@ func main() {
 		//ds.Resize(5000)
 		profiler.Printf("Dataset '%s' (%s) loaded\n", inputFiles[i], humanize.Bytes(uint64(ds.SizeInBytes())))
 		otlpTraces := otlp.NewTraceProfileable(ds, compressionAlgo)
-		otlpDictTraces := otlpdict.NewTraceProfileable(ds, compressionAlgo)
 
 		otlpArrowTraces := arrow.NewTraceProfileable([]string{"stream mode"}, ds, conf)
 
 		if err := profiler.Profile(otlpTraces, maxIter); err != nil {
-			panic(fmt.Errorf("expected no error, got %v", err))
-		}
-
-		if err := profiler.Profile(otlpDictTraces, maxIter); err != nil {
 			panic(fmt.Errorf("expected no error, got %v", err))
 		}
 
