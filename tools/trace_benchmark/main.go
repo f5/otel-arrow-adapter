@@ -25,7 +25,6 @@ import (
 	"github.com/f5/otel-arrow-adapter/pkg/benchmark/dataset"
 	"github.com/f5/otel-arrow-adapter/pkg/benchmark/profileable/arrow"
 	"github.com/f5/otel-arrow-adapter/pkg/benchmark/profileable/otlp"
-	"github.com/f5/otel-arrow-adapter/pkg/benchmark/profileable/otlpdict"
 )
 
 var help = flag.Bool("help", false, "Show help")
@@ -87,12 +86,6 @@ func main() {
 		// If the unary RPC mode is enabled,
 		// run the OTLP Arrow benchmark in unary RPC mode.
 		if *unaryRpcPtr {
-			otlpDictTraces := otlpdict.NewTraceProfileable(ds, compressionAlgo)
-			otlpDictTraces.EnableUnaryRpcMode()
-			if err := profiler.Profile(otlpDictTraces, maxIter); err != nil {
-				panic(fmt.Errorf("expected no error, got %v", err))
-			}
-
 			otlpArrowTraces := arrow.NewTraceProfileable([]string{"unary rpc mode"}, ds, conf)
 			otlpArrowTraces.EnableUnaryRpcMode()
 			if err := profiler.Profile(otlpArrowTraces, maxIter); err != nil {
