@@ -311,14 +311,14 @@ func CanonicalSliceID(slice []interface{}) string {
 
 // jsonFrom converts a string or a byte slice to a Go object representing
 // this JSON object.
-func jsonFrom(json interface{}) (interface{}, error) {
-	switch j := json.(type) {
+func jsonFrom(value interface{}) (interface{}, error) {
+	switch v := value.(type) {
 	case string:
-		return jsonFromBytes([]byte(j))
+		return jsonFromBytes([]byte(v))
 	case []byte:
-		return jsonFromBytes(j)
+		return jsonFromBytes(v)
 	default:
-		return nil, fmt.Errorf("unsupported type: %T", json)
+		return nil, fmt.Errorf("unsupported type: %T", value)
 	}
 }
 

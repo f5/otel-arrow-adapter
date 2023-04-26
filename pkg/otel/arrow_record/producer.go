@@ -213,7 +213,9 @@ func (p *Producer) BatchArrowRecordsFromTraces(ts ptrace.Traces) (*colarspb.Batc
 	}
 
 	schemaID := p.tracesRecordBuilder.SchemaID()
-	rms = append(rms, record_message.NewTraceMessage(schemaID, record))
+	// The main record must be the first one to simplify the decoding
+	// in the collector.
+	rms = append([]*record_message.RecordMessage{record_message.NewTraceMessage(schemaID, record)}, rms...)
 
 	bar, err := p.Produce(rms)
 	if err != nil {

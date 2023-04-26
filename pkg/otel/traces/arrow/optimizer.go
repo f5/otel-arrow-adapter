@@ -25,6 +25,7 @@ import (
 
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/ptrace"
+	"golang.org/x/exp/maps"
 
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common"
 	carrow "github.com/f5/otel-arrow-adapter/pkg/otel/common/arrow"
@@ -192,6 +193,9 @@ func collectAllSharedAttributes(spans []*ptrace.Span) *SharedData {
 				evtAttrs := event.Attributes()
 
 				firstEvent = collectSharedAttributes(&evtAttrs, firstEvent, sharedEventAttrs)
+				if len(sharedEventAttrs) == 0 {
+					break
+				}
 			}
 		}
 
@@ -203,6 +207,9 @@ func collectAllSharedAttributes(spans []*ptrace.Span) *SharedData {
 				linkAttrs := link.Attributes()
 
 				firstLink = collectSharedAttributes(&linkAttrs, firstLink, sharedLinkAttrs)
+				if len(sharedLinkAttrs) == 0 {
+					break
+				}
 			}
 		}
 
@@ -238,7 +245,8 @@ func collectSharedAttributes(attrs *pcommon.Map, first bool, sharedAttrs map[str
 	} else {
 		if len(sharedAttrs) > 0 {
 			if attrs.Len() == 0 {
-				sharedAttrs = make(map[string]pcommon.Value)
+				maps.Clear(sharedAttrs)
+				return first
 			}
 			for k, v := range sharedAttrs {
 				if otherV, ok := attrs.Get(k); ok {
