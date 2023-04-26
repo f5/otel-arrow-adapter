@@ -246,6 +246,18 @@ func (p *Producer) LogsStats() *logsarrow.LogsStats {
 	return p.logsBuilder.Stats()
 }
 
+func (p *Producer) MetricsBuilder() *metricsarrow.MetricsBuilder {
+	return p.metricsBuilder
+}
+
+func (p *Producer) LogsBuilder() *logsarrow.LogsBuilder {
+	return p.logsBuilder
+}
+
+func (p *Producer) TracesBuilder() *tracesarrow.TracesBuilder {
+	return p.tracesBuilder
+}
+
 // Close closes all stream producers.
 func (p *Producer) Close() error {
 	p.metricsBuilder.Release()

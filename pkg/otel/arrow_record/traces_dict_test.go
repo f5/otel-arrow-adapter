@@ -219,12 +219,16 @@ func TestTracesMultiBatchWithDictionaryLimit(t *testing.T) {
 		)
 	}
 
-	builder := producer.TracesRecordBuilderExt()
-	dictionaryWithOverflow := builder.Events().DictionariesWithOverflow
-	require.Equal(t, 3, len(dictionaryWithOverflow))
+	spanBuilder := producer.TracesRecordBuilderExt()
+	dictionaryWithOverflow := spanBuilder.Events().DictionariesWithOverflow
+	require.Equal(t, 1, len(dictionaryWithOverflow))
 	require.True(t, dictionaryWithOverflow["resource_spans.item.scope_spans.item.spans.item.name"])
-	require.True(t, dictionaryWithOverflow["resource_spans.item.scope_spans.item.spans.item.attributes.value.str"])
-	require.True(t, dictionaryWithOverflow["resource_spans.item.scope_spans.item.spans.item.attributes.value.binary"])
+
+	spanAttrsBuilder := producer.TracesBuilder().RelatedData().AttrsRecordBuilders().Span()
+	dictionaryWithOverflow = spanAttrsBuilder.Events().DictionariesWithOverflow
+	require.Equal(t, 2, len(dictionaryWithOverflow))
+	require.True(t, dictionaryWithOverflow["value.str"])
+	require.True(t, dictionaryWithOverflow["value.binary"])
 }
 
 func GenerateTraces(initValue int, spanCount int) ptrace.Traces {

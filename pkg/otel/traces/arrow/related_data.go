@@ -163,6 +163,18 @@ func (r *RelatedData) LinkBuilder() *LinkBuilder {
 	return r.linkBuilder
 }
 
+func (r *RelatedData) AttrsRecordBuilders() *AttrsRecordBuilders {
+	return r.attrsRecordBuilders
+}
+
+func (r *RelatedData) EventRecordBuilder() *builder.RecordBuilderExt {
+	return r.eventRecordBuilder
+}
+
+func (r *RelatedData) LinkRecordBuilder() *builder.RecordBuilderExt {
+	return r.linkRecordBuilder
+}
+
 func (r *RelatedData) Reset() {
 	r.spanCount = 0
 	r.attrsBuilders.Reset()
