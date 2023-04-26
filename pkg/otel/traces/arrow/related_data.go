@@ -137,6 +137,20 @@ func NewRelatedData(cfg *config2.Config, stats *stats.ProducerStats) (*RelatedDa
 	}, nil
 }
 
+func (r *RelatedData) Release() {
+	if r.attrsBuilders != nil {
+		r.attrsBuilders.Release()
+	}
+	if r.attrsRecordBuilders != nil {
+		r.attrsRecordBuilders.Release()
+	}
+
+	r.eventBuilder.Release()
+	r.eventRecordBuilder.Release()
+	r.linkBuilder.Release()
+	r.linkRecordBuilder.Release()
+}
+
 func (r *RelatedData) AttrsBuilders() *AttrsBuilders {
 	return r.attrsBuilders
 }
@@ -240,6 +254,14 @@ func (r *RelatedData) BuildRecordMessages() ([]*record_message.RecordMessage, er
 	return recordMessages, nil
 }
 
+func (ab *AttrsBuilders) Release() {
+	ab.resource.Release()
+	ab.scope.Release()
+	ab.span.Release()
+	ab.event.Release()
+	ab.link.Release()
+}
+
 func (ab *AttrsBuilders) Resource() *Attrs16Builder {
 	return ab.resource
 }
@@ -328,6 +350,14 @@ func (ab *AttrsBuilders) BuildAttrs32Record(attrsBuilder *Attrs32Builder) (arrow
 		}
 	}
 	return record, werror.Wrap(err)
+}
+
+func (arb *AttrsRecordBuilders) Release() {
+	arb.resource.Release()
+	arb.scope.Release()
+	arb.span.Release()
+	arb.event.Release()
+	arb.link.Release()
 }
 
 func (arb *AttrsRecordBuilders) Resource() *builder.RecordBuilderExt {

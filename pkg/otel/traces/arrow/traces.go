@@ -146,7 +146,7 @@ func (b *TracesBuilder) Release() {
 		b.builder.Release()
 		b.released = true
 
-		b.relatedData.Reset()
+		b.relatedData.Release()
 	}
 }
 

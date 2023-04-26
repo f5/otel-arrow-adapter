@@ -75,8 +75,6 @@ type Producer struct {
 	logsRecordBuilder    *builder.RecordBuilderExt
 	tracesRecordBuilder  *builder.RecordBuilderExt
 
-	tracesRelatedData *tracesarrow.RelatedData
-
 	// General stats for the producer
 	stats *pstats.ProducerStats
 }
@@ -278,7 +276,9 @@ func (p *Producer) Produce(rms []*record_message.RecordMessage) (*colarspb.Batch
 
 	for i, rm := range rms {
 		err := func() error {
-			defer rm.Record().Release()
+			defer func() {
+				rm.Record().Release()
+			}()
 
 			// Retrieves (or creates) the stream Producer for the sub-stream id defined in the RecordMessage.
 			sp := p.streamProducers[rm.SubStreamId()]
