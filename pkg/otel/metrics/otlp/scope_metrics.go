@@ -20,7 +20,7 @@ import (
 	"go.opentelemetry.io/collector/pdata/pmetric"
 
 	arrowutils "github.com/f5/otel-arrow-adapter/pkg/arrow"
-	otlp "github.com/f5/otel-arrow-adapter/pkg/otel/common/otlp"
+	otlp "github.com/f5/otel-arrow-adapter/pkg/otel/common/otlp_old"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/constants"
 	"github.com/f5/otel-arrow-adapter/pkg/werror"
 )
@@ -67,7 +67,7 @@ func UpdateScopeMetricsFrom(scopeMetricsSlice pmetric.ScopeMetricsSlice, arrowSc
 	for scopeMetricsIdx := arrowScopeMetrics.Start(); scopeMetricsIdx < arrowScopeMetrics.End(); scopeMetricsIdx++ {
 		scopeMetrics := scopeMetricsSlice.AppendEmpty()
 
-		if err := otlp.UpdateScopeWith(scopeMetrics.Scope(), arrowScopeMetrics, scopeMetricsIdx, ids.ScopeIds, nil /* ToDo will be done in a new PR */); err != nil {
+		if err := otlp.UpdateScopeWith(scopeMetrics.Scope(), arrowScopeMetrics, scopeMetricsIdx, ids.ScopeIds); err != nil {
 			return werror.Wrap(err)
 		}
 

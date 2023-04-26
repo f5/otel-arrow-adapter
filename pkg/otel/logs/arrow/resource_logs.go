@@ -21,7 +21,7 @@ import (
 	"github.com/apache/arrow/go/v12/arrow"
 	"github.com/apache/arrow/go/v12/arrow/array"
 
-	acommon "github.com/f5/otel-arrow-adapter/pkg/otel/common/arrow"
+	acommon "github.com/f5/otel-arrow-adapter/pkg/otel/common/arrow_old"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/builder"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/constants"
@@ -81,7 +81,7 @@ func (b *ResourceLogsBuilder) Append(rlg *ResourceLogGroup) error {
 	}
 
 	return b.builder.Append(rlg, func() error {
-		if err := b.rb.Append(rlg.Resource, nil /* ToDo will be done in a new PR */); err != nil {
+		if err := b.rb.Append(rlg.Resource); err != nil {
 			return werror.Wrap(err)
 		}
 		b.schb.AppendNonEmpty(rlg.ResourceSchemaUrl)

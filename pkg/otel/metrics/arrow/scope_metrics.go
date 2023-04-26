@@ -21,7 +21,7 @@ import (
 	"go.opentelemetry.io/collector/pdata/pmetric"
 
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common"
-	acommon "github.com/f5/otel-arrow-adapter/pkg/otel/common/arrow"
+	acommon "github.com/f5/otel-arrow-adapter/pkg/otel/common/arrow_old"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/builder"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/constants"
@@ -96,7 +96,7 @@ func (b *ScopeMetricsBuilder) Append(smg *ScopeMetricsGroup) error {
 	}
 
 	return b.builder.Append(smg, func() error {
-		if err := b.scb.Append(smg.Scope, nil /* ToDo will be done in a new PR */); err != nil {
+		if err := b.scb.Append(smg.Scope); err != nil {
 			return werror.Wrap(err)
 		}
 		b.schb.AppendNonEmpty(smg.ScopeSchemaUrl)

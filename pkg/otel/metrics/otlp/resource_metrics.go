@@ -19,7 +19,7 @@ import (
 	"go.opentelemetry.io/collector/pdata/pmetric"
 
 	arrowutils "github.com/f5/otel-arrow-adapter/pkg/arrow"
-	otlp "github.com/f5/otel-arrow-adapter/pkg/otel/common/otlp"
+	otlp "github.com/f5/otel-arrow-adapter/pkg/otel/common/otlp_old"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/constants"
 	"github.com/f5/otel-arrow-adapter/pkg/werror"
 )
@@ -77,7 +77,7 @@ func AppendResourceMetricsInto(metrics pmetric.Metrics, record arrow.Record, met
 		for resMetricsIdx := arrowResEnts.Start(); resMetricsIdx < arrowResEnts.End(); resMetricsIdx++ {
 			resMetrics := resMetricsSlice.AppendEmpty()
 
-			if err = otlp.UpdateResourceWith(resMetrics.Resource(), arrowResEnts, resMetricsIdx, metricsIds.ResourceMetrics.Resource, nil /* ToDo will be done in a new PR */); err != nil {
+			if err = otlp.UpdateResourceWith(resMetrics.Resource(), arrowResEnts, resMetricsIdx, metricsIds.ResourceMetrics.Resource); err != nil {
 				return werror.Wrap(err)
 			}
 

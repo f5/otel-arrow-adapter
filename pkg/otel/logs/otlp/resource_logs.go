@@ -19,7 +19,7 @@ import (
 	"go.opentelemetry.io/collector/pdata/plog"
 
 	arrowutils "github.com/f5/otel-arrow-adapter/pkg/arrow"
-	otlp "github.com/f5/otel-arrow-adapter/pkg/otel/common/otlp"
+	otlp "github.com/f5/otel-arrow-adapter/pkg/otel/common/otlp_old"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/constants"
 	"github.com/f5/otel-arrow-adapter/pkg/werror"
 )
@@ -71,7 +71,7 @@ func AppendResourceLogsInto(logs plog.Logs, record arrow.Record, ids *LogsIds) e
 		for resLogsIdx := arrowResLogs.Start(); resLogsIdx < arrowResLogs.End(); resLogsIdx++ {
 			resLogs := resLogsSlice.AppendEmpty()
 
-			if err = otlp.UpdateResourceWith(resLogs.Resource(), arrowResLogs, resLogsIdx, ids.ResourceLogs.Resource, nil /*  ToDo will be done in a new PR */); err != nil {
+			if err = otlp.UpdateResourceWith(resLogs.Resource(), arrowResLogs, resLogsIdx, ids.ResourceLogs.Resource); err != nil {
 				return werror.Wrap(err)
 			}
 

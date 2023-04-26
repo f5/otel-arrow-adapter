@@ -21,7 +21,7 @@ import (
 	"github.com/apache/arrow/go/v12/arrow"
 	"github.com/apache/arrow/go/v12/arrow/array"
 
-	acommon "github.com/f5/otel-arrow-adapter/pkg/otel/common/arrow"
+	acommon "github.com/f5/otel-arrow-adapter/pkg/otel/common/arrow_old"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/builder"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/constants"
@@ -81,7 +81,7 @@ func (b *ScopeLogsBuilder) Append(slg *ScopeLogGroup) error {
 	}
 
 	return b.builder.Append(slg, func() error {
-		if err := b.scb.Append(slg.Scope, nil /* ToDo will be done in a new PR */); err != nil {
+		if err := b.scb.Append(slg.Scope); err != nil {
 			return werror.Wrap(err)
 		}
 		b.schb.AppendNonEmpty(slg.ScopeSchemaUrl)
