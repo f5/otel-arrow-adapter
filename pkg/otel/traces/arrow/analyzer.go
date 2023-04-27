@@ -196,14 +196,6 @@ func (s *ScopeSpansStats) ShowStats(indent string) {
 	s.SchemaUrlStats.ShowStats(indent + "  ")
 }
 
-func NewStatusStats() *carrow.StatusStats {
-	return &carrow.StatusStats{
-		CodeDistinctValue:      hyperloglog.New16(),
-		MessageDistincValue:    hyperloglog.New16(),
-		MessageLenDistribution: hdrhistogram.New(0, 10000, 2),
-	}
-}
-
 func NewSpanStats() *SpanStats {
 	return &SpanStats{
 		Distribution:      hdrhistogram.New(0, 1000000, 2),
@@ -220,7 +212,7 @@ func NewSpanStats() *SpanStats {
 		DropEventsCount:   hyperloglog.New16(),
 		Links:             NewLinkStats(),
 		DropLinksCount:    hyperloglog.New16(),
-		StatusStats:       NewStatusStats(),
+		StatusStats:       carrow.NewStatusStats(),
 	}
 }
 

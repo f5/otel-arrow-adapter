@@ -159,9 +159,8 @@ func (s *StatusStats) ShowStats(indent string) {
 }
 
 type AnyValueStats struct {
-	TotalCount   int64
-	Missing      int64
-	Distribution *hdrhistogram.Histogram
+	TotalCount int64
+	Missing    int64
 
 	// Attribute type distribution
 	I64TypeDistribution    *hdrhistogram.Histogram
@@ -219,6 +218,26 @@ type StringStats struct {
 	Missing         int64
 	LenDistribution *hdrhistogram.Histogram
 	DistinctValue   *hyperloglog.Sketch
+}
+
+func NewAnyValueStats() *AnyValueStats {
+	return &AnyValueStats{
+		I64TypeDistribution:    hdrhistogram.New(1, 1000000, 2),
+		F64TypeDistribution:    hdrhistogram.New(1, 1000000, 2),
+		BoolTypeDistribution:   hdrhistogram.New(1, 1000000, 2),
+		StringTypeDistribution: hdrhistogram.New(1, 1000000, 2),
+		BinaryTypeDistribution: hdrhistogram.New(1, 1000000, 2),
+		ListTypeDistribution:   hdrhistogram.New(1, 1000000, 2),
+		MapTypeDistribution:    hdrhistogram.New(1, 1000000, 2),
+
+		I64DistinctValue:    hyperloglog.New16(),
+		F64DistinctValue:    hyperloglog.New16(),
+		StringDistinctValue: hyperloglog.New16(),
+		BinaryDistinctValue: hyperloglog.New16(),
+
+		StringLenDistribution: hdrhistogram.New(1, 1000000, 2),
+		BinaryLenDistribution: hdrhistogram.New(1, 1000000, 2),
+	}
 }
 
 func NewAttributesStats() *AttributesStats {
@@ -420,6 +439,151 @@ func (a *AttributesStats) ShowStats(indent string, title string, color string) {
 	}
 }
 
+func (a *AnyValueStats) UpdateWith(value pcommon.Value) {
+	if value.Type() == pcommon.ValueTypeEmpty {
+		a.Missing++
+		return
+	}
+
+	a.TotalCount++
+
+	var (
+		i64Count    int64
+		f64Count    int64
+		boolCount   int64
+		stringCount int64
+		binaryCount int64
+		listCount   int64
+		mapCount    int64
+	)
+
+	switch value.Type() {
+	case pcommon.ValueTypeInt:
+		i64Count++
+		b := make([]byte, 8)
+		binary.LittleEndian.PutUint64(b, uint64(value.Int()))
+		a.I64DistinctValue.Insert(b)
+	case pcommon.ValueTypeDouble:
+		f64Count++
+		b := make([]byte, 8)
+		binary.LittleEndian.PutUint64(b, math.Float64bits(value.Double()))
+		a.F64DistinctValue.Insert(b)
+	case pcommon.ValueTypeBool:
+		boolCount++
+	case pcommon.ValueTypeStr:
+		stringCount++
+		a.StringDistinctValue.Insert([]byte(value.Str()))
+		RequireNoError(a.StringLenDistribution.RecordValue(int64(len(value.Str()))))
+	case pcommon.ValueTypeBytes:
+		binaryCount++
+		a.BinaryDistinctValue.Insert(value.Bytes().AsRaw())
+		RequireNoError(a.BinaryLenDistribution.RecordValue(int64(len(value.Bytes().AsRaw()))))
+	case pcommon.ValueTypeSlice:
+		listCount++
+	case pcommon.ValueTypeMap:
+		mapCount++
+	default:
+		// no-op
+	}
+
+	if i64Count > 0 {
+		RequireNoError(a.I64TypeDistribution.RecordValue(i64Count))
+	}
+	if f64Count > 0 {
+		RequireNoError(a.F64TypeDistribution.RecordValue(f64Count))
+	}
+	if boolCount > 0 {
+		RequireNoError(a.BoolTypeDistribution.RecordValue(boolCount))
+	}
+	if stringCount > 0 {
+		RequireNoError(a.StringTypeDistribution.RecordValue(stringCount))
+	}
+	if binaryCount > 0 {
+		RequireNoError(a.BinaryTypeDistribution.RecordValue(binaryCount))
+	}
+	if listCount > 0 {
+		RequireNoError(a.ListTypeDistribution.RecordValue(listCount))
+	}
+	if mapCount > 0 {
+		RequireNoError(a.MapTypeDistribution.RecordValue(mapCount))
+	}
+}
+
+func (a *AnyValueStats) IsPresent() bool {
+	return a.TotalCount > 0
+}
+
+func (a *AnyValueStats) ShowStats(indent string, title string, color string) {
+	if !a.IsPresent() {
+		print(Grey)
+		fmt.Printf("%sNo %s%s\n", indent, title, ColorReset)
+		return
+	}
+
+	fmt.Printf("%s%s%s%s |Missing|    Min|    Max|   Mean|  Stdev|    P50|    P99|\n", indent, color, title, ColorReset)
+	fmt.Printf("%s%s |%7d|\n", indent, strings.Repeat(" ", len(title)),
+		a.Missing,
+	)
+	indentChildren := indent + "  "
+
+	print(Cyan)
+	fmt.Printf("%sType%s     | Total|   Min|   Max|  Mean| Stdev|   P50|   P99|\n", indentChildren, ColorReset)
+	if a.I64TypeDistribution.TotalCount() > 0 {
+		fmt.Printf("%sI64    |%6d|%6d|%6d|%6.1f|%6.1f|%6d|%6d|\n", indentChildren+"  ",
+			a.I64TypeDistribution.TotalCount(), a.I64TypeDistribution.Min(), a.I64TypeDistribution.Max(), a.I64TypeDistribution.Mean(), a.I64TypeDistribution.StdDev(), a.I64TypeDistribution.ValueAtQuantile(50), a.I64TypeDistribution.ValueAtQuantile(99),
+		)
+	}
+	if a.F64TypeDistribution.TotalCount() > 0 {
+		fmt.Printf("%sF64    |%6d|%6d|%6d|%6.1f|%6.1f|%6d|%6d|\n", indentChildren+"  ",
+			a.F64TypeDistribution.TotalCount(), a.F64TypeDistribution.Min(), a.F64TypeDistribution.Max(), a.F64TypeDistribution.Mean(), a.F64TypeDistribution.StdDev(), a.F64TypeDistribution.ValueAtQuantile(50), a.F64TypeDistribution.ValueAtQuantile(99),
+		)
+	}
+	if a.BoolTypeDistribution.TotalCount() > 0 {
+		fmt.Printf("%sBool   |%6d|%6d|%6d|%6.1f|%6.1f|%6d|%6d|\n", indentChildren+"  ",
+			a.BoolTypeDistribution.TotalCount(), a.BoolTypeDistribution.Min(), a.BoolTypeDistribution.Max(), a.BoolTypeDistribution.Mean(), a.BoolTypeDistribution.StdDev(), a.BoolTypeDistribution.ValueAtQuantile(50), a.BoolTypeDistribution.ValueAtQuantile(99),
+		)
+	}
+	if a.StringTypeDistribution.TotalCount() > 0 {
+		fmt.Printf("%sString |%6d|%6d|%6d|%6.1f|%6.1f|%6d|%6d|\n", indentChildren+"  ",
+			a.StringTypeDistribution.TotalCount(), a.StringTypeDistribution.Min(), a.StringTypeDistribution.Max(), a.StringTypeDistribution.Mean(), a.StringTypeDistribution.StdDev(), a.StringTypeDistribution.ValueAtQuantile(50), a.StringTypeDistribution.ValueAtQuantile(99),
+		)
+	}
+	if a.BinaryTypeDistribution.TotalCount() > 0 {
+		fmt.Printf("%sBinary |%6d|%6d|%6d|%6.1f|%6.1f|%6d|%6d|\n", indentChildren+"  ",
+			a.BinaryTypeDistribution.TotalCount(), a.BinaryTypeDistribution.Min(), a.BinaryTypeDistribution.Max(), a.BinaryTypeDistribution.Mean(), a.BinaryTypeDistribution.StdDev(), a.BinaryTypeDistribution.ValueAtQuantile(50), a.BinaryTypeDistribution.ValueAtQuantile(99),
+		)
+	}
+	if a.ListTypeDistribution.TotalCount() > 0 {
+		fmt.Printf("%sList   |%6d|%6d|%6d|%6.1f|%6.1f|%6d|%6d|\n", indentChildren+"  ",
+			a.ListTypeDistribution.TotalCount(), a.ListTypeDistribution.Min(), a.ListTypeDistribution.Max(), a.ListTypeDistribution.Mean(), a.ListTypeDistribution.StdDev(), a.ListTypeDistribution.ValueAtQuantile(50), a.ListTypeDistribution.ValueAtQuantile(99),
+		)
+	}
+	if a.MapTypeDistribution.TotalCount() > 0 {
+		fmt.Printf("%sMap    |%6d|%6d|%6d|%6.1f|%6.1f|%6d|%6d|\n", indentChildren+"  ",
+			a.MapTypeDistribution.TotalCount(), a.MapTypeDistribution.Min(), a.MapTypeDistribution.Max(), a.MapTypeDistribution.Mean(), a.MapTypeDistribution.StdDev(), a.MapTypeDistribution.ValueAtQuantile(50), a.MapTypeDistribution.ValueAtQuantile(99),
+		)
+	}
+
+	print(Cyan)
+	fmt.Printf("%sValue%s    |Distinct|Len Min|Len Max|Len Mean|Len Stdev|Len P50|Len P99|\n", indentChildren, ColorReset)
+	if a.I64DistinctValue.Estimate() > 0 {
+		fmt.Printf("%sI64    |%8d|     NA|     NA|      NA|       NA|     NA|     NA|\n", indentChildren+"  ", a.I64DistinctValue.Estimate())
+	}
+	if a.F64DistinctValue.Estimate() > 0 {
+		fmt.Printf("%sF64    |%8d|     NA|     NA|      NA|       NA|     NA|     NA|\n", indentChildren+"  ", a.F64DistinctValue.Estimate())
+	}
+	if a.StringDistinctValue.Estimate() > 0 {
+		fmt.Printf("%sString |%8d|%7d|%7d|%8.2f|%9.2f|%7d|%7d|\n", indentChildren+"  ", a.StringDistinctValue.Estimate(),
+			a.StringLenDistribution.Min(), a.StringLenDistribution.Max(), a.StringLenDistribution.Mean(), a.StringLenDistribution.StdDev(), a.StringLenDistribution.ValueAtQuantile(50), a.StringLenDistribution.ValueAtQuantile(99),
+		)
+	}
+	if a.BinaryDistinctValue.Estimate() > 0 {
+		fmt.Printf("%sBinary |%8d|%7d|%7d|%8.2f|%9.2f|%7d|%7d|\n", indentChildren+"  ", a.BinaryDistinctValue.Estimate(),
+			a.BinaryLenDistribution.Min(), a.BinaryLenDistribution.Max(), a.BinaryLenDistribution.Mean(), a.BinaryLenDistribution.StdDev(), a.BinaryLenDistribution.ValueAtQuantile(50), a.BinaryLenDistribution.ValueAtQuantile(99),
+		)
+	}
+}
+
 func NewStringStats() *StringStats {
 	return &StringStats{
 		LenDistribution: hdrhistogram.New(0, 1000000, 2),
@@ -588,4 +752,12 @@ func (s *SchemaUrlStats) ShowStats(indent string) {
 	fmt.Printf("%sSchemaUrl string length distribution (total-count, missing, min, max, mean, stdev, p50, p99): %d, %d, %d, %d, %f, %f, %d, %d\n", indent,
 		s.SizeDistribution.TotalCount(), s.Missing, s.SizeDistribution.Min(), s.SizeDistribution.Max(), s.SizeDistribution.Mean(), s.SizeDistribution.StdDev(), s.SizeDistribution.ValueAtQuantile(50), s.SizeDistribution.ValueAtQuantile(99),
 	)
+}
+
+func NewStatusStats() *StatusStats {
+	return &StatusStats{
+		CodeDistinctValue:      hyperloglog.New16(),
+		MessageDistincValue:    hyperloglog.New16(),
+		MessageLenDistribution: hdrhistogram.New(0, 10000, 2),
+	}
 }
