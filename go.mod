@@ -1,6 +1,6 @@
 module github.com/f5/otel-arrow-adapter
 
-go 1.18
+go 1.19
 
 require (
 	github.com/HdrHistogram/hdrhistogram-go v1.1.2
