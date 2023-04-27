@@ -37,6 +37,7 @@ type (
 	}
 
 	SpanLinksStore struct {
+		nextID    uint16
 		linksByID map[uint16][]*ptrace.SpanLink
 	}
 )
@@ -61,6 +62,24 @@ func (s *SpanLinksStore) LinksByID(ID uint16, sharedAttrs pcommon.Map) []*ptrace
 				})
 			}
 		}
+		return links
+	}
+	return nil
+}
+
+func (s *SpanLinksStore) NextLinks(sharedAttrs pcommon.Map) []*ptrace.SpanLink {
+	if links, ok := s.linksByID[s.nextID]; ok {
+		if sharedAttrs.Len() > 0 {
+			// Add shared attributes to all links.
+			for _, link := range links {
+				attrs := link.Attributes()
+				sharedAttrs.Range(func(k string, v pcommon.Value) bool {
+					v.CopyTo(attrs.PutEmpty(k))
+					return true
+				})
+			}
+		}
+		s.nextID++
 		return links
 	}
 	return nil

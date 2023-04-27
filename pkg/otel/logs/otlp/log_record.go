@@ -78,7 +78,13 @@ func NewLogRecordIds(scopeLogsDT *arrow.StructType) (*LogRecordIds, error) {
 	}, nil
 }
 
-func AppendLogRecordInto(logs plog.LogRecordSlice, los *arrowutils.ListOfStructs, row int, ids *LogRecordIds) error {
+func AppendLogRecordInto(
+	logs plog.LogRecordSlice,
+	los *arrowutils.ListOfStructs,
+	row int,
+	ids *LogRecordIds,
+	relatedData *RelatedData,
+) error {
 	logRecord := logs.AppendEmpty()
 
 	timeUnixNano, err := los.TimestampFieldByID(ids.TimeUnixNano, row)
@@ -121,6 +127,12 @@ func AppendLogRecordInto(logs plog.LogRecordSlice, los *arrowutils.ListOfStructs
 		}
 	} else {
 		return werror.WrapWithContext(ErrBodyNotSparseUnion, map[string]interface{}{"row": row})
+	}
+
+	logRecordAttrs := logRecord.Attributes()
+	attrs := relatedData.LogRecordAttrMapStore.NextAttributes()
+	if attrs != nil {
+		attrs.CopyTo(logRecordAttrs)
 	}
 
 	err = otlp.AppendAttributesInto(logRecord.Attributes(), los.Array(), row, ids.Attributes)

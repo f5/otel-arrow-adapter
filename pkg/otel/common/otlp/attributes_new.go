@@ -90,6 +90,16 @@ func (s *Attributes16Store) AttributesByID(ID uint16) *pcommon.Map {
 	return nil
 }
 
+// NextAttributes returns the attributes for the next main OTel entity
+// considering that the order of the main record has not changed.
+func (s *Attributes16Store) NextAttributes() *pcommon.Map {
+	if m, ok := s.attributesByID[s.lastID]; ok {
+		s.lastID++
+		return m
+	}
+	return nil
+}
+
 // AttributesByDeltaID returns the attributes for the given Delta ID.
 func (s *Attributes32Store) AttributesByDeltaID(ID uint32) *pcommon.Map {
 	s.lastID += ID
