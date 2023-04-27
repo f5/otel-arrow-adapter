@@ -529,6 +529,8 @@ func TestArrowExporterStreaming(t *testing.T) {
 	close(channel.sent)
 	wg.Wait()
 
+	// As this equality check doesn't support out of order slices,
+	// we sort the slices directly in the GenerateTraces function.
 	require.Equal(t, expectOutput, actualOutput)
 	require.NoError(t, tc.exporter.Shutdown(bg))
 }
