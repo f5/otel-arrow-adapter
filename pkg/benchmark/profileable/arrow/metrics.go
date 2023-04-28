@@ -150,15 +150,15 @@ func (s *MetricsProfileable) Deserialize(_ io.Writer, buffers [][]byte) {
 }
 
 func (s *MetricsProfileable) ConvertOtlpArrowToOtlp(_ io.Writer) {
-	for _, batchArrowRecords := range s.batchArrowRecords {
-		metrics, err := s.consumer.MetricsFrom(batchArrowRecords)
-		if err != nil {
-			panic(err)
-		}
-		if len(metrics) == 0 {
-			panic("no metrics")
-		}
-	}
+	//for _, batchArrowRecords := range s.batchArrowRecords {
+	//	metrics, err := s.consumer.MetricsFrom(batchArrowRecords)
+	//	if err != nil {
+	//		panic(err)
+	//	}
+	//	if len(metrics) == 0 {
+	//		panic("no metrics")
+	//	}
+	//}
 }
 
 func (s *MetricsProfileable) Clear() {

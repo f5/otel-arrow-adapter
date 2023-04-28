@@ -104,7 +104,12 @@ func (b *UnivariateMetricBuilder) Release() {
 }
 
 // Append appends a new univariate metric to the builder.
-func (b *UnivariateMetricBuilder) Append(metric *pmetric.Metric, smdata *ScopeMetricsSharedData, mdata *MetricSharedData) error {
+func (b *UnivariateMetricBuilder) Append(
+	metric *pmetric.Metric,
+	smdata *ScopeMetricsSharedData,
+	mdata *MetricSharedData,
+	relatedData *RelatedData,
+) error {
 	if b.released {
 		return werror.Wrap(acommon.ErrBuilderAlreadyReleased)
 	}
@@ -112,7 +117,7 @@ func (b *UnivariateMetricBuilder) Append(metric *pmetric.Metric, smdata *ScopeMe
 	switch metric.Type() {
 	case pmetric.MetricTypeGauge:
 		b.builder.Append(GaugeCode)
-		if err := b.gb.Append(metric.Gauge(), smdata, mdata); err != nil {
+		if err := b.gb.Append(metric.Gauge(), smdata, mdata, relatedData); err != nil {
 			return werror.Wrap(err)
 		}
 		b.sb.AppendNull()
@@ -121,7 +126,7 @@ func (b *UnivariateMetricBuilder) Append(metric *pmetric.Metric, smdata *ScopeMe
 		b.ehb.AppendNull()
 	case pmetric.MetricTypeSum:
 		b.builder.Append(SumCode)
-		if err := b.sb.Append(metric.Sum(), smdata, mdata); err != nil {
+		if err := b.sb.Append(metric.Sum(), smdata, mdata, relatedData); err != nil {
 			return werror.Wrap(err)
 		}
 		b.gb.AppendNull()

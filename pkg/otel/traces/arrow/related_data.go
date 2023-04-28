@@ -17,7 +17,7 @@
 
 package arrow
 
-// Infrastructure to manage related records.
+// Infrastructure to manage span related records.
 
 import (
 	"math"

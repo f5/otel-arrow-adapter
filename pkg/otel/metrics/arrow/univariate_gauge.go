@@ -79,7 +79,12 @@ func (b *UnivariateGaugeBuilder) Release() {
 }
 
 // Append appends a new univariate gauge to the builder.
-func (b *UnivariateGaugeBuilder) Append(gauge pmetric.Gauge, smdata *ScopeMetricsSharedData, mdata *MetricSharedData) error {
+func (b *UnivariateGaugeBuilder) Append(
+	gauge pmetric.Gauge,
+	smdata *ScopeMetricsSharedData,
+	mdata *MetricSharedData,
+	relatedData *RelatedData,
+) error {
 	if b.released {
 		return werror.Wrap(acommon.ErrBuilderAlreadyReleased)
 	}
@@ -89,7 +94,8 @@ func (b *UnivariateGaugeBuilder) Append(gauge pmetric.Gauge, smdata *ScopeMetric
 		dpc := dps.Len()
 		return b.dplb.Append(dpc, func() error {
 			for i := 0; i < dpc; i++ {
-				if err := b.dpb.Append(dps.At(i), smdata, mdata); err != nil {
+				ID := relatedData.NextGaugeID()
+				if err := b.dpb.Append(dps.At(i), smdata, mdata, ID, relatedData.AttrsBuilders().Gauge()); err != nil {
 					return werror.Wrap(err)
 				}
 			}

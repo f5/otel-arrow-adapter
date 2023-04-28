@@ -20,7 +20,7 @@ import (
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 
-	acommon "github.com/f5/otel-arrow-adapter/pkg/otel/common/arrow_old"
+	acommon "github.com/f5/otel-arrow-adapter/pkg/otel/common/arrow"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/builder"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/constants"
@@ -83,7 +83,12 @@ func (b *MetricSetBuilder) Build() (*array.Struct, error) {
 }
 
 // Append appends a new metric to the builder.
-func (b *MetricSetBuilder) Append(metric *pmetric.Metric, smdata *ScopeMetricsSharedData, mdata *MetricSharedData) error {
+func (b *MetricSetBuilder) Append(
+	metric *pmetric.Metric,
+	smdata *ScopeMetricsSharedData,
+	mdata *MetricSharedData,
+	relatedData *RelatedData,
+) error {
 	if b.released {
 		return werror.Wrap(acommon.ErrBuilderAlreadyReleased)
 	}
@@ -92,7 +97,7 @@ func (b *MetricSetBuilder) Append(metric *pmetric.Metric, smdata *ScopeMetricsSh
 		b.nb.AppendNonEmpty(metric.Name())
 		b.db.AppendNonEmpty(metric.Description())
 		b.ub.AppendNonEmpty(metric.Unit())
-		if err := b.dtb.Append(metric, smdata, mdata); err != nil {
+		if err := b.dtb.Append(metric, smdata, mdata, relatedData); err != nil {
 			return werror.Wrap(err)
 		}
 

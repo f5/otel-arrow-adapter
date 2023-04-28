@@ -458,6 +458,58 @@ func (c *Attributes32Accumulator) AppendUniqueAttributes(attrs pcommon.Map, smat
 	return int64(ID), nil
 }
 
+func (c *Attributes32Accumulator) AppendUniqueAttributesWithID(ID uint32, attrs pcommon.Map, smattrs *common.SharedAttributes, mattrs *common.SharedAttributes) error {
+	uniqueAttrsCount := attrs.Len()
+	if smattrs != nil {
+		uniqueAttrsCount -= smattrs.Len()
+	}
+	if mattrs != nil {
+		uniqueAttrsCount -= mattrs.Len()
+	}
+
+	if uniqueAttrsCount == 0 {
+		return nil
+	}
+
+	if c.attrsMapCount == math.MaxUint32 {
+		panic("The maximum number of group of attributes has been reached (max is uint32).")
+	}
+
+	attrs.Range(func(key string, v pcommon.Value) bool {
+		if key == "" {
+			// Skip entries with empty keys
+			return true
+		}
+
+		// Skip the current attribute if it is a scope metric shared attribute
+		// or a metric shared attribute
+		smattrsFound := false
+		mattrsFound := false
+		if smattrs != nil {
+			_, smattrsFound = smattrs.Attributes[key]
+		}
+		if mattrs != nil {
+			_, mattrsFound = mattrs.Attributes[key]
+		}
+		if smattrsFound || mattrsFound {
+			return true
+		}
+
+		c.attrs = append(c.attrs, Attr32{
+			ID:    ID,
+			Key:   key,
+			Value: v,
+		})
+
+		uniqueAttrsCount--
+		return uniqueAttrsCount > 0
+	})
+
+	c.attrsMapCount++
+
+	return nil
+}
+
 func (c *Attributes32Accumulator) SortedAttrs() []Attr32 {
 	sort.Slice(c.attrs, func(i, j int) bool {
 		attrsI := c.attrs[i]

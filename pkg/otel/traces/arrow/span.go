@@ -108,7 +108,11 @@ func (b *SpanBuilder) Build() (*array.Struct, error) {
 }
 
 // Append appends a new span to the builder.
-func (b *SpanBuilder) Append(span *ptrace.Span, sharedData *SharedData, relatedData *RelatedData) error {
+func (b *SpanBuilder) Append(
+	span *ptrace.Span,
+	sharedData *SharedData,
+	relatedData *RelatedData,
+) error {
 	if b.released {
 		return werror.Wrap(acommon.ErrBuilderAlreadyReleased)
 	}

@@ -19,6 +19,7 @@ import (
 	"github.com/apache/arrow/go/v12/arrow/array"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 
+	carrow "github.com/f5/otel-arrow-adapter/pkg/otel/common/arrow"
 	acommon "github.com/f5/otel-arrow-adapter/pkg/otel/common/arrow_old"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/builder"
@@ -29,7 +30,7 @@ import (
 var (
 	// UnivariateNumberDataPointDT is the data type for a single univariate number data point.
 	UnivariateNumberDataPointDT = arrow.StructOf(
-		arrow.Field{Name: constants.Attributes, Type: acommon.AttributesDT, Metadata: schema.Metadata(schema.Optional)},
+		arrow.Field{Name: constants.ID, Type: arrow.PrimitiveTypes.Uint32, Metadata: schema.Metadata(schema.Optional, schema.DeltaEncoding)},
 		arrow.Field{Name: constants.StartTimeUnixNano, Type: arrow.FixedWidthTypes.Timestamp_ns, Metadata: schema.Metadata(schema.Optional)},
 		arrow.Field{Name: constants.TimeUnixNano, Type: arrow.FixedWidthTypes.Timestamp_ns, Metadata: schema.Metadata(schema.Optional)},
 		arrow.Field{Name: constants.MetricValue, Type: MetricValueDT, Metadata: schema.Metadata(schema.Optional)},
@@ -44,23 +45,28 @@ type NumberDataPointBuilder struct {
 
 	builder *builder.StructBuilder
 
-	ab    *acommon.AttributesBuilder // attributes builder
-	stunb *builder.TimestampBuilder  // start_time_unix_nano builder
-	tunb  *builder.TimestampBuilder  // time_unix_nano builder
-	mvb   *MetricValueBuilder        // metric_value builder
-	elb   *builder.ListBuilder       // exemplars builder
-	eb    *ExemplarBuilder           // exemplar builder
-	fb    *builder.Uint32Builder     // flags builder
+	ib    *builder.Uint32DeltaBuilder // id builder
+	stunb *builder.TimestampBuilder   // start_time_unix_nano builder
+	tunb  *builder.TimestampBuilder   // time_unix_nano builder
+	mvb   *MetricValueBuilder         // metric_value builder
+	elb   *builder.ListBuilder        // exemplars builder
+	eb    *ExemplarBuilder            // exemplar builder
+	fb    *builder.Uint32Builder      // flags builder
 }
 
 // NumberDataPointBuilderFrom creates a new NumberDataPointBuilder from an existing StructBuilder.
 func NumberDataPointBuilderFrom(ndpb *builder.StructBuilder) *NumberDataPointBuilder {
+	ib := ndpb.Uint32DeltaBuilder(constants.ID)
+	// As the attributes are sorted before insertion, the delta between two
+	// consecutive attributes ID should always be <=1.
+	ib.SetMaxDelta(1)
+
 	exemplars := ndpb.ListBuilder(constants.Exemplars)
 	return &NumberDataPointBuilder{
 		released: false,
 		builder:  ndpb,
 
-		ab:    acommon.AttributesBuilderFrom(ndpb.MapBuilder(constants.Attributes)),
+		ib:    ib,
 		stunb: ndpb.TimestampBuilder(constants.StartTimeUnixNano),
 		tunb:  ndpb.TimestampBuilder(constants.TimeUnixNano),
 		mvb:   MetricValueBuilderFrom(ndpb.SparseUnionBuilder(constants.MetricValue)),
@@ -93,15 +99,25 @@ func (b *NumberDataPointBuilder) Release() {
 }
 
 // Append appends a new data point to the builder.
-func (b *NumberDataPointBuilder) Append(ndp pmetric.NumberDataPoint, smdata *ScopeMetricsSharedData, mdata *MetricSharedData) error {
+func (b *NumberDataPointBuilder) Append(
+	ndp pmetric.NumberDataPoint,
+	smdata *ScopeMetricsSharedData,
+	mdata *MetricSharedData,
+	ID uint32,
+	attrsBuilder *carrow.Attrs32Builder,
+) error {
 	if b.released {
 		return werror.Wrap(acommon.ErrBuilderAlreadyReleased)
 	}
 
 	return b.builder.Append(ndp, func() error {
-		if err := b.ab.AppendUniqueAttributes(ndp.Attributes(), smdata.Attributes, mdata.Attributes); err != nil {
+		b.ib.Append(ID)
+
+		err := attrsBuilder.Accumulator().AppendUniqueAttributesWithID(ID, ndp.Attributes(), smdata.Attributes, mdata.Attributes)
+		if err != nil {
 			return werror.Wrap(err)
 		}
+
 		if smdata.StartTime == nil && mdata.StartTime == nil {
 			b.stunb.Append(arrow.Timestamp(ndp.StartTimestamp()))
 		} else {

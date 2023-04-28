@@ -18,10 +18,12 @@ import (
 	"github.com/apache/arrow/go/v12/arrow"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 
+	"github.com/f5/otel-arrow-adapter/pkg/config"
 	carrow "github.com/f5/otel-arrow-adapter/pkg/otel/common/arrow"
 	acommon "github.com/f5/otel-arrow-adapter/pkg/otel/common/schema"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/builder"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/constants"
+	"github.com/f5/otel-arrow-adapter/pkg/otel/stats"
 	"github.com/f5/otel-arrow-adapter/pkg/werror"
 )
 
@@ -36,29 +38,50 @@ var (
 type MetricsBuilder struct {
 	released bool
 
-	builder   *builder.RecordBuilderExt // Record builder
-	rmb       *builder.ListBuilder      // resource metrics list builder
-	rmp       *ResourceMetricsBuilder   // resource metrics builder
+	builder *builder.RecordBuilderExt // Record builder
+	rmb     *builder.ListBuilder      // resource metrics list builder
+	rmp     *ResourceMetricsBuilder   // resource metrics builder
+
 	optimizer *MetricsOptimizer
+	analyzer  *MetricsAnalyzer
+
+	relatedData *RelatedData
 }
 
 // NewMetricsBuilder creates a new MetricsBuilder with a given allocator.
-func NewMetricsBuilder(rBuilder *builder.RecordBuilderExt, metricsStats bool) (*MetricsBuilder, error) {
+func NewMetricsBuilder(
+	rBuilder *builder.RecordBuilderExt,
+	cfg *config.Config,
+	stats *stats.ProducerStats,
+) (*MetricsBuilder, error) {
 	var optimizer *MetricsOptimizer
-	if metricsStats {
+	var analyzer *MetricsAnalyzer
+
+	relatedData, err := NewRelatedData(cfg, stats)
+	if err != nil {
+		panic(err)
+	}
+
+	if stats.SchemaStatsEnabled {
 		optimizer = NewMetricsOptimizer(carrow.WithSort(), carrow.WithStats())
+		analyzer = NewMetricsAnalyzer()
 	} else {
 		optimizer = NewMetricsOptimizer(carrow.WithSort())
 	}
-	metricsBuilder := &MetricsBuilder{
-		released:  false,
-		builder:   rBuilder,
-		optimizer: optimizer,
+
+	b := &MetricsBuilder{
+		released:    false,
+		builder:     rBuilder,
+		optimizer:   optimizer,
+		analyzer:    analyzer,
+		relatedData: relatedData,
 	}
-	if err := metricsBuilder.init(); err != nil {
+
+	if err := b.init(); err != nil {
 		return nil, werror.Wrap(err)
 	}
-	return metricsBuilder, nil
+
+	return b, nil
 }
 
 func (b *MetricsBuilder) init() error {
@@ -68,8 +91,8 @@ func (b *MetricsBuilder) init() error {
 	return nil
 }
 
-func (b *MetricsBuilder) Stats() *MetricsStats {
-	return b.optimizer.Stats()
+func (b *MetricsBuilder) RelatedData() *RelatedData {
+	return b.relatedData
 }
 
 // Build builds an Arrow Record from the builder.
@@ -99,11 +122,15 @@ func (b *MetricsBuilder) Append(metrics pmetric.Metrics) error {
 	}
 
 	optimMetrics := b.optimizer.Optimize(metrics)
+	if b.analyzer != nil {
+		b.analyzer.Analyze(optimMetrics)
+		b.analyzer.ShowStats("")
+	}
 
 	rc := len(optimMetrics.ResourceMetrics)
 	return b.rmb.Append(rc, func() error {
 		for _, resMetricsGroup := range optimMetrics.ResourceMetrics {
-			if err := b.rmp.Append(resMetricsGroup); err != nil {
+			if err := b.rmp.Append(resMetricsGroup, b.relatedData); err != nil {
 				return werror.Wrap(err)
 			}
 		}
@@ -115,7 +142,12 @@ func (b *MetricsBuilder) Append(metrics pmetric.Metrics) error {
 func (b *MetricsBuilder) Release() {
 	if !b.released {
 		b.builder.Release()
-
 		b.released = true
+
+		b.relatedData.Release()
 	}
+}
+
+func (b *MetricsBuilder) ShowSchema() {
+	b.builder.ShowSchema()
 }

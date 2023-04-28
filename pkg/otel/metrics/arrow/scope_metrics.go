@@ -21,7 +21,7 @@ import (
 	"go.opentelemetry.io/collector/pdata/pmetric"
 
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common"
-	acommon "github.com/f5/otel-arrow-adapter/pkg/otel/common/arrow_old"
+	acommon "github.com/f5/otel-arrow-adapter/pkg/otel/common/arrow"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/builder"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/constants"
@@ -90,13 +90,13 @@ func (b *ScopeMetricsBuilder) Build() (*array.Struct, error) {
 }
 
 // Append appends a new scope metrics to the builder.
-func (b *ScopeMetricsBuilder) Append(smg *ScopeMetricsGroup) error {
+func (b *ScopeMetricsBuilder) Append(smg *ScopeMetricsGroup, relatedData *RelatedData) error {
 	if b.released {
 		return werror.Wrap(acommon.ErrBuilderAlreadyReleased)
 	}
 
 	return b.builder.Append(smg, func() error {
-		if err := b.scb.Append(smg.Scope); err != nil {
+		if err := b.scb.Append(smg.Scope, relatedData.AttrsBuilders().scope.Accumulator()); err != nil {
 			return werror.Wrap(err)
 		}
 		b.schb.AppendNonEmpty(smg.ScopeSchemaUrl)
@@ -108,7 +108,7 @@ func (b *ScopeMetricsBuilder) Append(smg *ScopeMetricsGroup) error {
 		mc := len(smg.Metrics)
 		if err = b.smb.Append(mc, func() error {
 			for i, metric := range smg.Metrics {
-				if err := b.mb.Append(metric, sharedData, sharedData.Metrics[i]); err != nil {
+				if err := b.mb.Append(metric, sharedData, sharedData.Metrics[i], relatedData); err != nil {
 					return werror.Wrap(err)
 				}
 			}
