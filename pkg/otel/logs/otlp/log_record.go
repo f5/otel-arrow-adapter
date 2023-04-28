@@ -29,6 +29,7 @@ import (
 
 type LogRecordIds struct {
 	Id                   int
+	RecordID             int
 	TimeUnixNano         int
 	ObservedTimeUnixNano int
 	TraceID              int
@@ -47,6 +48,7 @@ func NewLogRecordIds(scopeLogsDT *arrow.StructType) (*LogRecordIds, error) {
 		return nil, werror.Wrap(err)
 	}
 
+	ID, _ := arrowutils.FieldIDFromStruct(logDT, constants.ID)
 	timeUnixNano, _ := arrowutils.FieldIDFromStruct(logDT, constants.TimeUnixNano)
 	observedTimeUnixNano, _ := arrowutils.FieldIDFromStruct(logDT, constants.ObservedTimeUnixNano)
 	traceID, _ := arrowutils.FieldIDFromStruct(logDT, constants.TraceId)
@@ -65,6 +67,7 @@ func NewLogRecordIds(scopeLogsDT *arrow.StructType) (*LogRecordIds, error) {
 
 	return &LogRecordIds{
 		Id:                   id,
+		RecordID:             ID,
 		TimeUnixNano:         timeUnixNano,
 		ObservedTimeUnixNano: observedTimeUnixNano,
 		TraceID:              traceID,
@@ -86,6 +89,11 @@ func AppendLogRecordInto(
 	relatedData *RelatedData,
 ) error {
 	logRecord := logs.AppendEmpty()
+	deltaID, err := los.U16FieldByID(ids.RecordID, row)
+	if err != nil {
+		return werror.Wrap(err)
+	}
+	ID := relatedData.LogRecordIDFromDelta(deltaID)
 
 	timeUnixNano, err := los.TimestampFieldByID(ids.TimeUnixNano, row)
 	if err != nil {
@@ -130,7 +138,7 @@ func AppendLogRecordInto(
 	}
 
 	logRecordAttrs := logRecord.Attributes()
-	attrs := relatedData.LogRecordAttrMapStore.NextAttributes()
+	attrs := relatedData.LogRecordAttrMapStore.AttributesByID(ID)
 	if attrs != nil {
 		attrs.CopyTo(logRecordAttrs)
 	}

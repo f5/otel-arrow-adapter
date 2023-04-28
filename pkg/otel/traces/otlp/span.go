@@ -29,6 +29,7 @@ import (
 
 type SpansIds struct {
 	SpansID              int
+	ID                   int
 	TraceID              int
 	SpanID               int
 	TraceState           int
@@ -55,6 +56,7 @@ func NewSpansIds(scopeSpansDT *arrow.StructType) (*SpansIds, error) {
 		return nil, werror.Wrap(err)
 	}
 
+	ID, _ := arrowutils.FieldIDFromStruct(spanDT, constants.ID)
 	traceId, _ := arrowutils.FieldIDFromStruct(spanDT, constants.TraceId)
 	spanId, _ := arrowutils.FieldIDFromStruct(spanDT, constants.SpanId)
 	traceState, _ := arrowutils.FieldIDFromStruct(spanDT, constants.TraceState)
@@ -74,6 +76,7 @@ func NewSpansIds(scopeSpansDT *arrow.StructType) (*SpansIds, error) {
 
 	return &SpansIds{
 		SpansID:              spansID,
+		ID:                   ID,
 		TraceID:              traceId,
 		SpanID:               spanId,
 		TraceState:           traceState,
@@ -116,6 +119,11 @@ func AppendSpanInto(
 	relatedData *RelatedData,
 ) error {
 	span := spans.AppendEmpty()
+	deltaID, err := los.U16FieldByID(ids.ID, row)
+	if err != nil {
+		return werror.Wrap(err)
+	}
+	ID := relatedData.SpanIDFromDelta(deltaID)
 
 	traceID, err := los.FixedSizeBinaryFieldByID(ids.TraceID, row)
 	if err != nil {
@@ -190,7 +198,7 @@ func AppendSpanInto(
 		span.Status().SetCode(ptrace.StatusCode(code))
 	}
 	spanAttrs := span.Attributes()
-	attrs := relatedData.SpanAttrMapStore.NextAttributes()
+	attrs := relatedData.SpanAttrMapStore.AttributesByID(ID)
 	if attrs != nil {
 		attrs.CopyTo(spanAttrs)
 	}
@@ -201,13 +209,13 @@ func AppendSpanInto(
 		})
 	}
 
-	events := relatedData.SpanEventsStore.NextEvents(sharedEventAttrs)
+	events := relatedData.SpanEventsStore.EventsByID(ID, sharedEventAttrs)
 	eventSlice := span.Events()
 	for _, event := range events {
 		event.MoveTo(eventSlice.AppendEmpty())
 	}
 
-	links := relatedData.SpanLinksStore.NextLinks(sharedLinkAttrs)
+	links := relatedData.SpanLinksStore.LinksByID(ID, sharedLinkAttrs)
 	linkSlice := span.Links()
 	for _, link := range links {
 		link.MoveTo(linkSlice.AppendEmpty())

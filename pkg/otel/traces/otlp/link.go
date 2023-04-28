@@ -67,24 +67,6 @@ func (s *SpanLinksStore) LinksByID(ID uint16, sharedAttrs pcommon.Map) []*ptrace
 	return nil
 }
 
-func (s *SpanLinksStore) NextLinks(sharedAttrs pcommon.Map) []*ptrace.SpanLink {
-	if links, ok := s.linksByID[s.nextID]; ok {
-		if sharedAttrs.Len() > 0 {
-			// Add shared attributes to all links.
-			for _, link := range links {
-				attrs := link.Attributes()
-				sharedAttrs.Range(func(k string, v pcommon.Value) bool {
-					v.CopyTo(attrs.PutEmpty(k))
-					return true
-				})
-			}
-		}
-		s.nextID++
-		return links
-	}
-	return nil
-}
-
 // SpanLinksStoreFrom creates an SpanLinksStore from an arrow.Record.
 // Note: This function consume the record.
 func SpanLinksStoreFrom(record arrow.Record, attrsStore *otlp.Attributes32Store) (*SpanLinksStore, error) {

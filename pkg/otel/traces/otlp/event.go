@@ -66,24 +66,6 @@ func (s *SpanEventsStore) EventsByID(ID uint16, sharedAttrs pcommon.Map) []*ptra
 	return nil
 }
 
-func (s *SpanEventsStore) NextEvents(sharedAttrs pcommon.Map) []*ptrace.SpanEvent {
-	if events, ok := s.eventsByID[s.nextID]; ok {
-		if sharedAttrs.Len() > 0 {
-			// Add shared attributes to all events.
-			for _, event := range events {
-				attrs := event.Attributes()
-				sharedAttrs.Range(func(k string, v pcommon.Value) bool {
-					v.CopyTo(attrs.PutEmpty(k))
-					return true
-				})
-			}
-		}
-		s.nextID++
-		return events
-	}
-	return nil
-}
-
 // SpanEventsStoreFrom creates an SpanEventsStore from an arrow.Record.
 // Note: This function consume the record.
 func SpanEventsStoreFrom(record arrow.Record, attrsStore *otlp.Attributes32Store) (*SpanEventsStore, error) {

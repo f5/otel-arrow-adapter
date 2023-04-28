@@ -33,6 +33,7 @@ import (
 var (
 	// LogRecordDT is the Arrow Data Type describing a log record.
 	LogRecordDT = arrow.StructOf([]arrow.Field{
+		{Name: constants.ID, Type: arrow.PrimitiveTypes.Uint16, Metadata: schema.Metadata(schema.Optional, schema.DeltaEncoding)},
 		{Name: constants.TimeUnixNano, Type: arrow.FixedWidthTypes.Timestamp_ns},
 		{Name: constants.ObservedTimeUnixNano, Type: arrow.FixedWidthTypes.Timestamp_ns},
 		{Name: constants.TraceId, Type: &arrow.FixedSizeBinaryType{ByteWidth: 16}, Metadata: schema.Metadata(schema.Optional, schema.Dictionary8)},
@@ -51,6 +52,7 @@ type LogRecordBuilder struct {
 
 	builder *builder.StructBuilder
 
+	ib    *builder.Uint16DeltaBuilder     //  id builder
 	tunb  *builder.TimestampBuilder       // time unix nano builder
 	otunb *builder.TimestampBuilder       // observed time unix nano builder
 	tib   *builder.FixedSizeBinaryBuilder // trace id builder
@@ -63,9 +65,15 @@ type LogRecordBuilder struct {
 }
 
 func LogRecordBuilderFrom(sb *builder.StructBuilder) *LogRecordBuilder {
+	ib := sb.Uint16DeltaBuilder(constants.ID)
+	// As the attributes are sorted before insertion, the delta between two
+	// consecutive attributes ID should always be <=1.
+	ib.SetMaxDelta(1)
+
 	return &LogRecordBuilder{
 		released: false,
 		builder:  sb,
+		ib:       ib,
 		tunb:     sb.TimestampBuilder(constants.TimeUnixNano),
 		otunb:    sb.TimestampBuilder(constants.ObservedTimeUnixNano),
 		tib:      sb.FixedSizeBinaryBuilder(constants.TraceId),
@@ -100,6 +108,7 @@ func (b *LogRecordBuilder) Append(log *plog.LogRecord, relatedData *RelatedData)
 	return b.builder.Append(log, func() error {
 		ID := relatedData.NextSpanID()
 
+		b.ib.Append(ID)
 		b.tunb.Append(arrow.Timestamp(log.Timestamp()))
 		b.otunb.Append(arrow.Timestamp(log.ObservedTimestamp()))
 		tib := log.TraceID()

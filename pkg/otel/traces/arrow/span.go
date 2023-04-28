@@ -32,6 +32,7 @@ import (
 // SpanDT is the Arrow Data Type describing a span.
 var (
 	SpanDT = arrow.StructOf([]arrow.Field{
+		{Name: constants.ID, Type: arrow.PrimitiveTypes.Uint16, Metadata: schema.Metadata(schema.Optional, schema.DeltaEncoding)},
 		{Name: constants.StartTimeUnixNano, Type: arrow.FixedWidthTypes.Timestamp_ns},
 		{Name: constants.DurationTimeUnixNano, Type: arrow.FixedWidthTypes.Duration_ms, Metadata: schema.Metadata(schema.Dictionary8)},
 		{Name: constants.TraceId, Type: &arrow.FixedSizeBinaryType{ByteWidth: 16}},
@@ -53,6 +54,7 @@ type SpanBuilder struct {
 
 	builder *builder.StructBuilder
 
+	ib    *builder.Uint16DeltaBuilder     //  id builder
 	stunb *builder.TimestampBuilder       // start time unix nano builder
 	dtunb *builder.DurationBuilder        // duration time unix nano builder
 	tib   *builder.FixedSizeBinaryBuilder // trace id builder
@@ -68,9 +70,15 @@ type SpanBuilder struct {
 }
 
 func SpanBuilderFrom(sb *builder.StructBuilder) *SpanBuilder {
+	ib := sb.Uint16DeltaBuilder(constants.ID)
+	// As the attributes are sorted before insertion, the delta between two
+	// consecutive attributes ID should always be <=1.
+	ib.SetMaxDelta(1)
+
 	return &SpanBuilder{
 		released: false,
 		builder:  sb,
+		ib:       ib,
 		stunb:    sb.TimestampBuilder(constants.StartTimeUnixNano),
 		dtunb:    sb.DurationBuilder(constants.DurationTimeUnixNano),
 		tib:      sb.FixedSizeBinaryBuilder(constants.TraceId),
@@ -108,6 +116,7 @@ func (b *SpanBuilder) Append(span *ptrace.Span, sharedData *SharedData, relatedD
 	return b.builder.Append(span, func() error {
 		ID := relatedData.NextSpanID()
 
+		b.ib.Append(ID)
 		b.stunb.Append(arrow.Timestamp(span.StartTimestamp()))
 		duration := span.EndTimestamp().AsTime().Sub(span.StartTimestamp().AsTime()).Nanoseconds()
 		b.dtunb.Append(arrow.Duration(duration))
