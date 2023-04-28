@@ -186,4 +186,7 @@ func (s *LogsProfileable) Clear() {
 	}
 }
 func (s *LogsProfileable) ShowStats() {
+	if s.stats {
+		s.producer.ShowStats()
+	}
 }

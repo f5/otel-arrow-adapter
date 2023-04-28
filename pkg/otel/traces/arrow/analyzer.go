@@ -316,7 +316,7 @@ func (e *EventStats) ShowStats(indent string) {
 
 	indent += "  "
 
-	e.Timestamp.ShowStats(indent)
+	e.Timestamp.ShowStats("Timestamp", indent)
 	e.Name.ShowStats("Name", indent)
 	e.Attributes.ShowStats(indent, "Attributes", carrow.Green)
 	e.SharedAttributes.ShowStats(indent, "SharedAttributes", carrow.Cyan)

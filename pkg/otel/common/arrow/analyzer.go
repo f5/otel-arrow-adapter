@@ -727,10 +727,10 @@ func (t *TimestampStats) UpdateWith(timestamp pcommon.Timestamp) {
 	t.TotalCount++
 }
 
-func (t *TimestampStats) ShowStats(indent string) {
+func (t *TimestampStats) ShowStats(title, indent string) {
 	print(Green)
-	fmt.Printf("%sTimestamp%s |Distinct|   Total|%%Distinct|\n", indent, ColorReset)
-	fmt.Printf("%s          |%8d|%8d|%8.1f%%|\n", indent, t.TimeDistinctValue.Estimate(), t.TotalCount, 100.0*float64(t.TimeDistinctValue.Estimate())/float64(t.TotalCount))
+	fmt.Printf("%s%s%s |Distinct|   Total|%%Distinct|\n", indent, title, ColorReset)
+	fmt.Printf("%s%s |%8d|%8d|%8.1f%%|\n", indent, strings.Repeat(" ", len(title)), t.TimeDistinctValue.Estimate(), t.TotalCount, 100.0*float64(t.TimeDistinctValue.Estimate())/float64(t.TotalCount))
 }
 
 type SchemaUrlStats struct {

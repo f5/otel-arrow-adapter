@@ -202,12 +202,12 @@ func (s *LogRecordStats) UpdateWith(sl *ScopeLogGroup) {
 func (s *LogRecordStats) ShowStats(indent string) {
 	print(carrow.Green)
 	fmt.Printf("%sLogRecords%s |   Total|   Min|   Max|  Mean|  Stdev|   P50|   P99|\n", indent, carrow.ColorReset)
-	fmt.Printf("%s      |%8d|%6d|%6d|%6.1f|%7.1f|%6d|%6d|\n", indent,
+	fmt.Printf("%s           |%8d|%6d|%6d|%6.1f|%7.1f|%6d|%6d|\n", indent,
 		s.TotalCount, s.Distribution.Min(), s.Distribution.Max(), s.Distribution.Mean(), s.Distribution.StdDev(), s.Distribution.ValueAtQuantile(50), s.Distribution.ValueAtQuantile(99),
 	)
 	indent += "  "
-	s.TimeUnixNano.ShowStats(indent)
-	s.ObservedTimeUnixNano.ShowStats(indent)
+	s.TimeUnixNano.ShowStats("TimeUnixNano", indent)
+	s.ObservedTimeUnixNano.ShowStats("ObservedTimeUnixNano", indent)
 	fmt.Printf("%s             |Distinct|   Total|%%Distinct|\n", indent)
 	fmt.Printf("%s%sSpanID%s       |%8d|%8d|%8.1f%%|\n", indent, carrow.Green, carrow.ColorReset, s.SpanID.Estimate(), s.TotalCount, 100.0*float64(s.SpanID.Estimate())/float64(s.TotalCount))
 	fmt.Printf("%s%sTraceID%s      |%8d|%8d|%8.1f%%|\n", indent, carrow.Green, carrow.ColorReset, s.TraceID.Estimate(), s.TotalCount, 100.0*float64(s.TraceID.Estimate())/float64(s.TotalCount))
