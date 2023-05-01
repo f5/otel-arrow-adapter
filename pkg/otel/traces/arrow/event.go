@@ -41,8 +41,8 @@ import (
 	"github.com/f5/otel-arrow-adapter/pkg/werror"
 )
 
-// EventSchema is the Arrow Data Type describing an event (as a related record
-// to the main trace record).
+// EventSchema is the Arrow schema representing events.
+// Related record.
 var (
 	EventSchema = arrow.NewSchema([]arrow.Field{
 		{Name: constants.ID, Type: arrow.PrimitiveTypes.Uint16},
@@ -94,6 +94,7 @@ func NewEventBuilder(rBuilder *builder.RecordBuilderExt) (*EventBuilder, error) 
 		builder:     rBuilder,
 		accumulator: NewEventAccumulator(),
 	}
+
 	if err := b.init(); err != nil {
 		return nil, werror.Wrap(err)
 	}
