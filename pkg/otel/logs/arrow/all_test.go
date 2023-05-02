@@ -104,12 +104,12 @@ func TestLogRecord(t *testing.T) {
 	for _, relatedRecord := range relatedRecords {
 		switch relatedRecord.PayloadType() {
 		case v1.OtlpArrowPayloadType_LOG_ATTRS:
-			expected = `[{"id":0,"key":"double","value":[2,1]}
-,{"id":1,"key":"double","value":[2,2]}
-,{"id":0,"key":"int","value":[1,1]}
-,{"id":1,"key":"int","value":[1,2]}
-,{"id":0,"key":"str","value":[0,"string1"]}
-,{"id":1,"key":"str","value":[0,"string2"]}
+			expected = `[{"parent_id":0,"key":"double","value":[2,1]}
+,{"parent_id":1,"key":"double","value":[2,2]}
+,{"parent_id":0,"key":"int","value":[1,1]}
+,{"parent_id":1,"key":"int","value":[1,2]}
+,{"parent_id":0,"key":"str","value":[0,"string1"]}
+,{"parent_id":1,"key":"str","value":[0,"string2"]}
 ]`
 
 		default:
@@ -188,27 +188,27 @@ func TestScopeLogs(t *testing.T) {
 	for _, relatedRecord := range relatedRecords {
 		switch relatedRecord.PayloadType() {
 		case v1.OtlpArrowPayloadType_SCOPE_ATTRS:
-			expected = `[{"id":0,"key":"bool","value":[3,true]}
-,{"id":0,"key":"bytes","value":[4,"Ynl0ZXMx"]}
-,{"id":1,"key":"bytes","value":[4,"Ynl0ZXMy"]}
-,{"id":0,"key":"double","value":[2,1]}
-,{"id":1,"key":"double","value":[2,2]}
-,{"id":0,"key":"int","value":[1,1]}
-,{"id":1,"key":"int","value":[1,2]}
-,{"id":0,"key":"str","value":[0,"string1"]}
-,{"id":1,"key":"str","value":[0,"string2"]}
+			expected = `[{"parent_id":0,"key":"bool","value":[3,true]}
+,{"parent_id":0,"key":"bytes","value":[4,"Ynl0ZXMx"]}
+,{"parent_id":1,"key":"bytes","value":[4,"Ynl0ZXMy"]}
+,{"parent_id":0,"key":"double","value":[2,1]}
+,{"parent_id":1,"key":"double","value":[2,2]}
+,{"parent_id":0,"key":"int","value":[1,1]}
+,{"parent_id":1,"key":"int","value":[1,2]}
+,{"parent_id":0,"key":"str","value":[0,"string1"]}
+,{"parent_id":1,"key":"str","value":[0,"string2"]}
 ]`
 
 		case v1.OtlpArrowPayloadType_LOG_ATTRS:
-			expected = `[{"id":0,"key":"double","value":[2,1]}
-,{"id":1,"key":"double","value":[2,2]}
-,{"id":2,"key":"double","value":[2,2]}
-,{"id":0,"key":"int","value":[1,1]}
-,{"id":1,"key":"int","value":[1,2]}
-,{"id":2,"key":"int","value":[1,2]}
-,{"id":0,"key":"str","value":[0,"string1"]}
-,{"id":1,"key":"str","value":[0,"string2"]}
-,{"id":2,"key":"str","value":[0,"string2"]}
+			expected = `[{"parent_id":0,"key":"double","value":[2,1]}
+,{"parent_id":1,"key":"double","value":[2,2]}
+,{"parent_id":2,"key":"double","value":[2,2]}
+,{"parent_id":0,"key":"int","value":[1,1]}
+,{"parent_id":1,"key":"int","value":[1,2]}
+,{"parent_id":2,"key":"int","value":[1,2]}
+,{"parent_id":0,"key":"str","value":[0,"string1"]}
+,{"parent_id":1,"key":"str","value":[0,"string2"]}
+,{"parent_id":2,"key":"str","value":[0,"string2"]}
 ]`
 
 		default:
@@ -302,46 +302,46 @@ func TestResourceLogs(t *testing.T) {
 	for _, relatedRecord := range relatedRecords {
 		switch relatedRecord.PayloadType() {
 		case v1.OtlpArrowPayloadType_RESOURCE_ATTRS:
-			expected = `[{"id":0,"key":"bool","value":[3,true]}
-,{"id":0,"key":"bytes","value":[4,"Ynl0ZXMx"]}
-,{"id":1,"key":"bytes","value":[4,"Ynl0ZXMy"]}
-,{"id":0,"key":"double","value":[2,1]}
-,{"id":1,"key":"double","value":[2,2]}
-,{"id":0,"key":"int","value":[1,1]}
-,{"id":1,"key":"int","value":[1,2]}
-,{"id":0,"key":"str","value":[0,"string1"]}
-,{"id":1,"key":"str","value":[0,"string2"]}
+			expected = `[{"parent_id":0,"key":"bool","value":[3,true]}
+,{"parent_id":0,"key":"bytes","value":[4,"Ynl0ZXMx"]}
+,{"parent_id":1,"key":"bytes","value":[4,"Ynl0ZXMy"]}
+,{"parent_id":0,"key":"double","value":[2,1]}
+,{"parent_id":1,"key":"double","value":[2,2]}
+,{"parent_id":0,"key":"int","value":[1,1]}
+,{"parent_id":1,"key":"int","value":[1,2]}
+,{"parent_id":0,"key":"str","value":[0,"string1"]}
+,{"parent_id":1,"key":"str","value":[0,"string2"]}
 ]`
 
 		case v1.OtlpArrowPayloadType_SCOPE_ATTRS:
-			expected = `[{"id":0,"key":"bool","value":[3,true]}
-,{"id":0,"key":"bytes","value":[4,"Ynl0ZXMx"]}
-,{"id":1,"key":"bytes","value":[4,"Ynl0ZXMy"]}
-,{"id":2,"key":"bytes","value":[4,"Ynl0ZXMy"]}
-,{"id":0,"key":"double","value":[2,1]}
-,{"id":1,"key":"double","value":[2,2]}
-,{"id":2,"key":"double","value":[2,2]}
-,{"id":0,"key":"int","value":[1,1]}
-,{"id":1,"key":"int","value":[1,2]}
-,{"id":2,"key":"int","value":[1,2]}
-,{"id":0,"key":"str","value":[0,"string1"]}
-,{"id":1,"key":"str","value":[0,"string2"]}
-,{"id":2,"key":"str","value":[0,"string2"]}
+			expected = `[{"parent_id":0,"key":"bool","value":[3,true]}
+,{"parent_id":0,"key":"bytes","value":[4,"Ynl0ZXMx"]}
+,{"parent_id":1,"key":"bytes","value":[4,"Ynl0ZXMy"]}
+,{"parent_id":2,"key":"bytes","value":[4,"Ynl0ZXMy"]}
+,{"parent_id":0,"key":"double","value":[2,1]}
+,{"parent_id":1,"key":"double","value":[2,2]}
+,{"parent_id":2,"key":"double","value":[2,2]}
+,{"parent_id":0,"key":"int","value":[1,1]}
+,{"parent_id":1,"key":"int","value":[1,2]}
+,{"parent_id":2,"key":"int","value":[1,2]}
+,{"parent_id":0,"key":"str","value":[0,"string1"]}
+,{"parent_id":1,"key":"str","value":[0,"string2"]}
+,{"parent_id":2,"key":"str","value":[0,"string2"]}
 ]`
 
 		case v1.OtlpArrowPayloadType_LOG_ATTRS:
-			expected = `[{"id":0,"key":"double","value":[2,1]}
-,{"id":1,"key":"double","value":[2,2]}
-,{"id":2,"key":"double","value":[2,2]}
-,{"id":3,"key":"double","value":[2,2]}
-,{"id":0,"key":"int","value":[1,1]}
-,{"id":1,"key":"int","value":[1,2]}
-,{"id":2,"key":"int","value":[1,2]}
-,{"id":3,"key":"int","value":[1,2]}
-,{"id":0,"key":"str","value":[0,"string1"]}
-,{"id":1,"key":"str","value":[0,"string2"]}
-,{"id":2,"key":"str","value":[0,"string2"]}
-,{"id":3,"key":"str","value":[0,"string2"]}
+			expected = `[{"parent_id":0,"key":"double","value":[2,1]}
+,{"parent_id":1,"key":"double","value":[2,2]}
+,{"parent_id":2,"key":"double","value":[2,2]}
+,{"parent_id":3,"key":"double","value":[2,2]}
+,{"parent_id":0,"key":"int","value":[1,1]}
+,{"parent_id":1,"key":"int","value":[1,2]}
+,{"parent_id":2,"key":"int","value":[1,2]}
+,{"parent_id":3,"key":"int","value":[1,2]}
+,{"parent_id":0,"key":"str","value":[0,"string1"]}
+,{"parent_id":1,"key":"str","value":[0,"string2"]}
+,{"parent_id":2,"key":"str","value":[0,"string2"]}
+,{"parent_id":3,"key":"str","value":[0,"string2"]}
 ]`
 
 		default:
@@ -422,46 +422,46 @@ func TestLogs(t *testing.T) {
 	for _, relatedRecord := range relatedRecords {
 		switch relatedRecord.PayloadType() {
 		case v1.OtlpArrowPayloadType_RESOURCE_ATTRS:
-			expected = `[{"id":0,"key":"bool","value":[3,true]}
-,{"id":0,"key":"bytes","value":[4,"Ynl0ZXMx"]}
-,{"id":1,"key":"bytes","value":[4,"Ynl0ZXMy"]}
-,{"id":0,"key":"double","value":[2,1]}
-,{"id":1,"key":"double","value":[2,2]}
-,{"id":0,"key":"int","value":[1,1]}
-,{"id":1,"key":"int","value":[1,2]}
-,{"id":0,"key":"str","value":[0,"string1"]}
-,{"id":1,"key":"str","value":[0,"string2"]}
+			expected = `[{"parent_id":0,"key":"bool","value":[3,true]}
+,{"parent_id":0,"key":"bytes","value":[4,"Ynl0ZXMx"]}
+,{"parent_id":1,"key":"bytes","value":[4,"Ynl0ZXMy"]}
+,{"parent_id":0,"key":"double","value":[2,1]}
+,{"parent_id":1,"key":"double","value":[2,2]}
+,{"parent_id":0,"key":"int","value":[1,1]}
+,{"parent_id":1,"key":"int","value":[1,2]}
+,{"parent_id":0,"key":"str","value":[0,"string1"]}
+,{"parent_id":1,"key":"str","value":[0,"string2"]}
 ]`
 
 		case v1.OtlpArrowPayloadType_SCOPE_ATTRS:
-			expected = `[{"id":0,"key":"bool","value":[3,true]}
-,{"id":0,"key":"bytes","value":[4,"Ynl0ZXMx"]}
-,{"id":1,"key":"bytes","value":[4,"Ynl0ZXMy"]}
-,{"id":2,"key":"bytes","value":[4,"Ynl0ZXMy"]}
-,{"id":0,"key":"double","value":[2,1]}
-,{"id":1,"key":"double","value":[2,2]}
-,{"id":2,"key":"double","value":[2,2]}
-,{"id":0,"key":"int","value":[1,1]}
-,{"id":1,"key":"int","value":[1,2]}
-,{"id":2,"key":"int","value":[1,2]}
-,{"id":0,"key":"str","value":[0,"string1"]}
-,{"id":1,"key":"str","value":[0,"string2"]}
-,{"id":2,"key":"str","value":[0,"string2"]}
+			expected = `[{"parent_id":0,"key":"bool","value":[3,true]}
+,{"parent_id":0,"key":"bytes","value":[4,"Ynl0ZXMx"]}
+,{"parent_id":1,"key":"bytes","value":[4,"Ynl0ZXMy"]}
+,{"parent_id":2,"key":"bytes","value":[4,"Ynl0ZXMy"]}
+,{"parent_id":0,"key":"double","value":[2,1]}
+,{"parent_id":1,"key":"double","value":[2,2]}
+,{"parent_id":2,"key":"double","value":[2,2]}
+,{"parent_id":0,"key":"int","value":[1,1]}
+,{"parent_id":1,"key":"int","value":[1,2]}
+,{"parent_id":2,"key":"int","value":[1,2]}
+,{"parent_id":0,"key":"str","value":[0,"string1"]}
+,{"parent_id":1,"key":"str","value":[0,"string2"]}
+,{"parent_id":2,"key":"str","value":[0,"string2"]}
 ]`
 
 		case v1.OtlpArrowPayloadType_LOG_ATTRS:
-			expected = `[{"id":0,"key":"double","value":[2,1]}
-,{"id":1,"key":"double","value":[2,2]}
-,{"id":2,"key":"double","value":[2,2]}
-,{"id":3,"key":"double","value":[2,2]}
-,{"id":0,"key":"int","value":[1,1]}
-,{"id":1,"key":"int","value":[1,2]}
-,{"id":2,"key":"int","value":[1,2]}
-,{"id":3,"key":"int","value":[1,2]}
-,{"id":0,"key":"str","value":[0,"string1"]}
-,{"id":1,"key":"str","value":[0,"string2"]}
-,{"id":2,"key":"str","value":[0,"string2"]}
-,{"id":3,"key":"str","value":[0,"string2"]}
+			expected = `[{"parent_id":0,"key":"double","value":[2,1]}
+,{"parent_id":1,"key":"double","value":[2,2]}
+,{"parent_id":2,"key":"double","value":[2,2]}
+,{"parent_id":3,"key":"double","value":[2,2]}
+,{"parent_id":0,"key":"int","value":[1,1]}
+,{"parent_id":1,"key":"int","value":[1,2]}
+,{"parent_id":2,"key":"int","value":[1,2]}
+,{"parent_id":3,"key":"int","value":[1,2]}
+,{"parent_id":0,"key":"str","value":[0,"string1"]}
+,{"parent_id":1,"key":"str","value":[0,"string2"]}
+,{"parent_id":2,"key":"str","value":[0,"string2"]}
+,{"parent_id":3,"key":"str","value":[0,"string2"]}
 ]`
 
 		default:

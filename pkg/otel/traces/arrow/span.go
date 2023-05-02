@@ -135,7 +135,8 @@ func (b *SpanBuilder) Append(
 		b.kb.AppendNonZero(int32(span.Kind()))
 
 		// Span Attributes
-		err := relatedData.AttrsBuilders().Span().Accumulator().AppendUniqueAttributesWithID(ID, span.Attributes(), sharedData.sharedAttributes, nil)
+		attrsAccu := relatedData.AttrsBuilders().Span().Accumulator()
+		err := attrsAccu.AppendUniqueAttributesWithID(ID, span.Attributes(), sharedData.sharedAttributes, nil)
 		if err != nil {
 			return werror.Wrap(err)
 		}

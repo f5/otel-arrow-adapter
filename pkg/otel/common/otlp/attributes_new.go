@@ -33,9 +33,9 @@ type (
 	// AttributeIDs is a struct containing the Arrow field IDs of the
 	// attributes.
 	AttributeIDs struct {
-		ID    int
-		Key   int
-		value int
+		ParentID int
+		Key      int
+		value    int
 	}
 
 	// Attributes16Store is a store for attributes.
@@ -114,7 +114,7 @@ func Attributes16StoreFrom(record arrow.Record, store *Attributes16Store) error 
 	// Read all key/value tuples from the record and reconstruct the attributes
 	// map by ID.
 	for i := 0; i < attrsCount; i++ {
-		ID, err := arrowutils.U16FromRecord(record, attrIDS.ID, i)
+		ParentID, err := arrowutils.U16FromRecord(record, attrIDS.ParentID, i)
 		if err != nil {
 			return werror.Wrap(err)
 		}
@@ -134,11 +134,11 @@ func Attributes16StoreFrom(record arrow.Record, store *Attributes16Store) error 
 			return werror.Wrap(err)
 		}
 
-		m, ok := store.attributesByID[ID]
+		m, ok := store.attributesByID[ParentID]
 		if !ok {
 			newMap := pcommon.NewMap()
 			m = &newMap
-			store.attributesByID[ID] = m
+			store.attributesByID[ParentID] = m
 		}
 		value.CopyTo(m.PutEmpty(key))
 	}
@@ -161,7 +161,7 @@ func Attributes32StoreFrom(record arrow.Record, store *Attributes32Store) error 
 	// Read all key/value tuples from the record and reconstruct the attributes
 	// map by ID.
 	for i := 0; i < attrsCount; i++ {
-		ID, err := arrowutils.U32FromRecord(record, attrIDS.ID, i)
+		ParentID, err := arrowutils.U32FromRecord(record, attrIDS.ParentID, i)
 		if err != nil {
 			return werror.Wrap(err)
 		}
@@ -181,11 +181,11 @@ func Attributes32StoreFrom(record arrow.Record, store *Attributes32Store) error 
 			return werror.Wrap(err)
 		}
 
-		m, ok := store.attributesByID[ID]
+		m, ok := store.attributesByID[ParentID]
 		if !ok {
 			newMap := pcommon.NewMap()
 			m = &newMap
-			store.attributesByID[ID] = m
+			store.attributesByID[ParentID] = m
 		}
 		value.CopyTo(m.PutEmpty(key))
 	}
@@ -195,7 +195,7 @@ func Attributes32StoreFrom(record arrow.Record, store *Attributes32Store) error 
 
 // SchemaToAttributeIDs pre-computes the field IDs for the attributes record.
 func SchemaToAttributeIDs(schema *arrow.Schema) (*AttributeIDs, error) {
-	ID, err := arrowutils.FieldIDFromSchema(schema, constants.ID)
+	ID, err := arrowutils.FieldIDFromSchema(schema, constants.ParentID)
 	if err != nil {
 		return nil, werror.Wrap(err)
 	}
@@ -211,8 +211,8 @@ func SchemaToAttributeIDs(schema *arrow.Schema) (*AttributeIDs, error) {
 	}
 
 	return &AttributeIDs{
-		ID:    ID,
-		Key:   key,
-		value: value,
+		ParentID: ID,
+		Key:      key,
+		value:    value,
 	}, nil
 }

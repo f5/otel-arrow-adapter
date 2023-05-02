@@ -75,25 +75,10 @@ func NewRelatedData(cfg *cfg.Config, stats *stats.ProducerStats) (*RelatedData, 
 	sumAttrsRB := builder.NewRecordBuilderExt(cfg.Pool, carrow.AttrsSchema32, config.NewDictionary(cfg.LimitIndexSize), stats)
 	gaugeAttrsRB := builder.NewRecordBuilderExt(cfg.Pool, carrow.AttrsSchema32, config.NewDictionary(cfg.LimitIndexSize), stats)
 
-	resourceAttrsBuilder, err := carrow.NewAttrs16Builder(resourceAttrsRB)
-	if err != nil {
-		return nil, werror.Wrap(err)
-	}
-
-	scopeAttrsBuilder, err := carrow.NewAttrs16Builder(scopeAttrsRB)
-	if err != nil {
-		return nil, werror.Wrap(err)
-	}
-
-	sumAttrsBuilder, err := carrow.NewAttrs32Builder(sumAttrsRB)
-	if err != nil {
-		return nil, werror.Wrap(err)
-	}
-
-	gaugeAttrsBuilder, err := carrow.NewAttrs32Builder(gaugeAttrsRB)
-	if err != nil {
-		return nil, werror.Wrap(err)
-	}
+	resourceAttrsBuilder := carrow.NewAttrs16Builder(resourceAttrsRB, carrow.PayloadTypes.ResourceAttrs)
+	scopeAttrsBuilder := carrow.NewAttrs16Builder(scopeAttrsRB, carrow.PayloadTypes.ScopeAttrs)
+	sumAttrsBuilder := carrow.NewAttrs32Builder(sumAttrsRB, carrow.PayloadTypes.SumAttrs)
+	gaugeAttrsBuilder := carrow.NewAttrs32Builder(gaugeAttrsRB, carrow.PayloadTypes.GaugeAttrs)
 
 	return &RelatedData{
 		attrsBuilders: &AttrsBuilders{
