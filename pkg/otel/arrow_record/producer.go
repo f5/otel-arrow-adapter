@@ -344,9 +344,9 @@ func (p *Producer) Produce(rms []*record_message.RecordMessage) (*colarspb.Batch
 					ipc.WithSchema(rm.Record().Schema()),
 					ipc.WithDictionaryDeltas(true), // enable dictionary deltas
 				}
-				if p.zstd {
-					options = append(options, ipc.WithZstd())
-				}
+				//if p.zstd {
+				options = append(options, ipc.WithZstd())
+				//}
 				sp.ipcWriter = ipc.NewWriter(&sp.output, options...)
 			}
 			err := sp.ipcWriter.Write(rm.Record())

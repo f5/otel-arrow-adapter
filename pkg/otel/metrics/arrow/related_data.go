@@ -40,6 +40,7 @@ type (
 		metricsBuilder      *MetricBuilder
 		sumNDPBuilder       *NumberDataPointBuilder
 		gaugeNDPBuilder     *NumberDataPointBuilder
+		summaryDPBuilder    *SummaryDataPointBuilder
 		histogramDPBuilder  *HistogramDataPointBuilder
 		ehistogramDPBuilder *EHistogramDataPointBuilder
 	}
@@ -53,6 +54,7 @@ type (
 
 		// metrics attributes
 		sum        *carrow.Attrs32Builder
+		summary    *carrow.Attrs32Builder
 		gauge      *carrow.Attrs32Builder
 		histogram  *carrow.Attrs32Builder
 		ehistogram *carrow.Attrs32Builder
@@ -98,6 +100,18 @@ func NewRelatedData(cfg *cfg.Config, stats *stats.ProducerStats) (*RelatedData, 
 		return gab
 	})
 
+	summaryDPBuilder := rrManager.Declare(SummaryDataPointSchema, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
+		summaryBuilder := NewSummaryDataPointBuilder(b)
+		metricBuilder.(*MetricBuilder).SetSummaryAccumulator(summaryBuilder.Accumulator())
+		return summaryBuilder
+	})
+
+	summaryAttrsBuilder := rrManager.Declare(carrow.AttrsSchema32, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
+		sab := carrow.NewAttrs32Builder(b, carrow.PayloadTypes.SummaryAttrs)
+		summaryDPBuilder.(*SummaryDataPointBuilder).SetAttributesAccumulator(sab.Accumulator())
+		return sab
+	})
+
 	histogramDPBuilder := rrManager.Declare(HistogramDataPointSchema, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
 		histoBuilder := NewHistogramDataPointBuilder(b)
 		metricBuilder.(*MetricBuilder).SetHistogramAccumulator(histoBuilder.Accumulator())
@@ -128,6 +142,7 @@ func NewRelatedData(cfg *cfg.Config, stats *stats.ProducerStats) (*RelatedData, 
 			resource:   resourceAttrsBuilder.(*carrow.Attrs16Builder),
 			scope:      scopeAttrsBuilder.(*carrow.Attrs16Builder),
 			sum:        sumAttrsBuilder.(*carrow.Attrs32Builder),
+			summary:    summaryAttrsBuilder.(*carrow.Attrs32Builder),
 			gauge:      gaugeAttrsBuilder.(*carrow.Attrs32Builder),
 			histogram:  histogramAttrsBuilder.(*carrow.Attrs32Builder),
 			ehistogram: ehistogramAttrsBuilder.(*carrow.Attrs32Builder),
@@ -135,6 +150,7 @@ func NewRelatedData(cfg *cfg.Config, stats *stats.ProducerStats) (*RelatedData, 
 		metricsBuilder:      metricBuilder.(*MetricBuilder),
 		sumNDPBuilder:       sumNDPBuilder.(*NumberDataPointBuilder),
 		gaugeNDPBuilder:     gaugeNDPBuilder.(*NumberDataPointBuilder),
+		summaryDPBuilder:    summaryDPBuilder.(*SummaryDataPointBuilder),
 		histogramDPBuilder:  histogramDPBuilder.(*HistogramDataPointBuilder),
 		ehistogramDPBuilder: ehistogramDPBuilder.(*EHistogramDataPointBuilder),
 	}, nil

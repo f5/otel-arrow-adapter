@@ -21,7 +21,6 @@ import (
 	"sort"
 
 	"github.com/apache/arrow/go/v12/arrow"
-	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 
 	acommon "github.com/f5/otel-arrow-adapter/pkg/otel/common/arrow"
@@ -42,7 +41,6 @@ var (
 		{Name: constants.ParentID, Type: arrow.PrimitiveTypes.Uint16},
 		{Name: constants.StartTimeUnixNano, Type: arrow.FixedWidthTypes.Timestamp_ns, Metadata: schema.Metadata(schema.Optional)},
 		{Name: constants.TimeUnixNano, Type: arrow.FixedWidthTypes.Timestamp_ns, Metadata: schema.Metadata(schema.Optional)},
-		{Name: constants.AttributesID, Type: arrow.PrimitiveTypes.Uint32, Metadata: schema.Metadata(schema.Optional, schema.DeltaEncoding)},
 		{Name: constants.MetricValue, Type: MetricValueDT, Metadata: schema.Metadata(schema.Optional)},
 		{Name: constants.Exemplars, Type: arrow.ListOf(ExemplarDT), Metadata: schema.Metadata(schema.Optional)},
 		{Name: constants.Flags, Type: arrow.PrimitiveTypes.Uint32, Metadata: schema.Metadata(schema.Optional)},
@@ -75,15 +73,8 @@ type (
 	// NDP is an internal representation of a number data point used by the
 	// NDPAccumulator.
 	NDP struct {
-		ParentID          uint16
-		Attributes        pcommon.Map
-		SMData            *ScopeMetricsSharedData
-		MData             *MetricSharedData
-		StartTimeUnixNano pcommon.Timestamp
-		TimeUnixNano      pcommon.Timestamp
-		Orig              pmetric.NumberDataPoint
-		Exemplars         pmetric.ExemplarSlice
-		Flags             pmetric.DataPointFlags
+		ParentID uint16
+		Orig     *pmetric.NumberDataPoint
 	}
 
 	// NDPAccumulator is an accumulator for number data points.
@@ -178,31 +169,24 @@ func (b *NumberDataPointBuilder) TryBuild(attrsAccu *acommon.Attributes32Accumul
 		b.pib.Append(ndp.ParentID)
 
 		// Attributes
-		err = attrsAccu.AppendUniqueAttributesWithID(uint32(ID), ndp.Attributes, ndp.SMData.Attributes, ndp.MData.Attributes)
+		err = attrsAccu.AppendUniqueAttributesWithID(uint32(ID), ndp.Orig.Attributes(), nil, nil)
 		if err != nil {
 			return nil, werror.Wrap(err)
 		}
 
-		if ndp.SMData.StartTime == nil && ndp.MData.StartTime == nil {
-			b.stunb.Append(arrow.Timestamp(ndp.StartTimeUnixNano))
-		} else {
-			b.stunb.AppendNull()
-		}
-		if ndp.SMData.Time == nil && ndp.MData.Time == nil {
-			b.tunb.Append(arrow.Timestamp(ndp.TimeUnixNano))
-		} else {
-			b.tunb.AppendNull()
-		}
-		if err = b.mvb.AppendNumberDataPointValue(ndp.Orig); err != nil {
+		b.stunb.Append(arrow.Timestamp(ndp.Orig.StartTimestamp()))
+		b.tunb.Append(arrow.Timestamp(ndp.Orig.Timestamp()))
+		if err = b.mvb.AppendNumberDataPointValue(*ndp.Orig); err != nil {
 			return nil, werror.Wrap(err)
 		}
 
-		b.fb.Append(uint32(ndp.Flags))
+		b.fb.Append(uint32(ndp.Orig.Flags()))
 
-		ec := ndp.Exemplars.Len()
+		exemplars := ndp.Orig.Exemplars()
+		ec := exemplars.Len()
 		err = b.elb.Append(ec, func() error {
 			for i := 0; i < ec; i++ {
-				if err = b.eb.Append(ndp.Exemplars.At(i)); err != nil {
+				if err = b.eb.Append(exemplars.At(i)); err != nil {
 					return werror.Wrap(err)
 				}
 			}
@@ -253,8 +237,6 @@ func (a *NDPAccumulator) IsEmpty() bool {
 func (a *NDPAccumulator) Append(
 	metricID uint16,
 	ndps pmetric.NumberDataPointSlice,
-	smdata *ScopeMetricsSharedData,
-	mdata *MetricSharedData,
 ) error {
 	if a.groupCount == math.MaxUint32 {
 		panic("The maximum number of group of number of data points has been reached (max is uint32).")
@@ -268,15 +250,8 @@ func (a *NDPAccumulator) Append(
 		ndp := ndps.At(i)
 
 		a.ndps = append(a.ndps, NDP{
-			ParentID:          metricID,
-			Attributes:        ndp.Attributes(),
-			SMData:            smdata,
-			MData:             mdata,
-			TimeUnixNano:      ndp.Timestamp(),
-			StartTimeUnixNano: ndp.StartTimestamp(),
-			Orig:              ndp,
-			Exemplars:         ndp.Exemplars(),
-			Flags:             ndp.Flags(),
+			ParentID: metricID,
+			Orig:     &ndp,
 		})
 	}
 
@@ -284,6 +259,23 @@ func (a *NDPAccumulator) Append(
 
 	return nil
 }
+
+//func (a *NDPAccumulator) Sort() {
+//	sort.Slice(a.ndps, func(i, j int) bool {
+//		if a.ndps[i].Orig.ValueType() == a.ndps[j].Orig.ValueType() {
+//			switch a.ndps[i].Orig.ValueType() {
+//			case pmetric.NumberDataPointValueTypeInt:
+//				return a.ndps[i].Orig.IntValue() < a.ndps[j].Orig.IntValue()
+//			case pmetric.NumberDataPointValueTypeDouble:
+//				return a.ndps[i].Orig.DoubleValue() < a.ndps[j].Orig.DoubleValue()
+//			default:
+//				panic(fmt.Sprintf("unknown value type %d", a.ndps[i].Orig.ValueType()))
+//			}
+//		} else {
+//			return a.ndps[i].Orig.ValueType() < a.ndps[j].Orig.ValueType()
+//		}
+//	})
+//}
 
 func (a *NDPAccumulator) Sort() {
 	sort.Slice(a.ndps, func(i, j int) bool {

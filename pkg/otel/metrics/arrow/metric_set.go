@@ -61,6 +61,7 @@ type (
 
 		accumulator           *MetricAccumulator
 		sumAccumulator        *NDPAccumulator
+		summaryAccumulator    *SummaryAccumulator
 		gaugeAccumulator      *NDPAccumulator
 		histogramAccumulator  *HDPAccumulator
 		ehistogramAccumulator *EHDPAccumulator
@@ -115,6 +116,10 @@ func (b *MetricBuilder) SetSumAccumulator(accumulator *NDPAccumulator) {
 
 func (b *MetricBuilder) SetGaugeAccumulator(accumulator *NDPAccumulator) {
 	b.gaugeAccumulator = accumulator
+}
+
+func (b *MetricBuilder) SetSummaryAccumulator(accumulator *SummaryAccumulator) {
+	b.summaryAccumulator = accumulator
 }
 
 func (b *MetricBuilder) SetHistogramAccumulator(accumulator *HDPAccumulator) {
@@ -230,19 +235,22 @@ func (b *MetricBuilder) AppendMetric(
 
 	switch metric.Type() {
 	case pmetric.MetricTypeGauge:
-		err := b.gaugeAccumulator.Append(metricID, metric.Gauge().DataPoints(), smdata, mdata)
+		err := b.gaugeAccumulator.Append(metricID, metric.Gauge().DataPoints())
 		if err != nil {
 			return werror.Wrap(err)
 		}
 	case pmetric.MetricTypeSum:
 		// ToDo support AggregationTemporality
 		// ToDo support IsMonotonic
-		err := b.sumAccumulator.Append(metricID, metric.Sum().DataPoints(), smdata, mdata)
+		err := b.sumAccumulator.Append(metricID, metric.Sum().DataPoints())
 		if err != nil {
 			return werror.Wrap(err)
 		}
 	case pmetric.MetricTypeSummary:
-		println("summary not yet supported")
+		err := b.summaryAccumulator.Append(metricID, metric.Summary().DataPoints())
+		if err != nil {
+			return werror.Wrap(err)
+		}
 	case pmetric.MetricTypeHistogram:
 		err := b.histogramAccumulator.Append(metricID, metric.Histogram().DataPoints())
 		if err != nil {

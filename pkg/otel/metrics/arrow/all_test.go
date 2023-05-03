@@ -326,7 +326,7 @@ func TestUnivariateSummaryDataPoint(t *testing.T) {
 	var record arrow.Record
 
 	for {
-		sb := UnivariateSummaryDataPointBuilderFrom(rBuilder.StructBuilder(constants.DataPoints))
+		sb := NewSummaryDataPointBuilder(rBuilder.StructBuilder(constants.DataPoints))
 
 		smdata := &ScopeMetricsSharedData{Attributes: &common.SharedAttributes{}}
 		mdata := &MetricSharedData{Attributes: &common.SharedAttributes{}}

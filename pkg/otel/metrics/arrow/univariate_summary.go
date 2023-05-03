@@ -20,7 +20,6 @@ import (
 	"go.opentelemetry.io/collector/pdata/pmetric"
 
 	acommon "github.com/f5/otel-arrow-adapter/pkg/otel/common/arrow"
-	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/builder"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/constants"
 	"github.com/f5/otel-arrow-adapter/pkg/werror"
@@ -29,7 +28,7 @@ import (
 // UnivariateSummaryDT is the Arrow Data Type describing a univariate summary.
 var (
 	UnivariateSummaryDT = arrow.StructOf(
-		arrow.Field{Name: constants.DataPoints, Type: arrow.ListOf(UnivariateSummaryDataPointDT), Metadata: schema.Metadata(schema.Optional)},
+	//arrow.Field{Name: constants.DataPoints, Type: arrow.ListOf(UnivariateSummaryDataPointDT), Metadata: schema.Metadata(schema.Optional)},
 	)
 )
 
@@ -39,8 +38,8 @@ type UnivariateSummaryBuilder struct {
 
 	builder *builder.StructBuilder
 
-	dplb *builder.ListBuilder               // data points builder
-	dpb  *UnivariateSummaryDataPointBuilder // summary data point builder
+	dplb *builder.ListBuilder     // data points builder
+	dpb  *SummaryDataPointBuilder // summary data point builder
 }
 
 // UnivariateSummaryBuilderFrom creates a new UnivariateSummaryBuilder from an existing StructBuilder.
@@ -52,7 +51,7 @@ func UnivariateSummaryBuilderFrom(ndpb *builder.StructBuilder) *UnivariateSummar
 		builder:  ndpb,
 
 		dplb: dplb,
-		dpb:  UnivariateSummaryDataPointBuilderFrom(dplb.StructBuilder()),
+		//dpb:  NewSummaryDataPointBuilder(dplb.StructBuilder()),
 	}
 }
 
@@ -88,11 +87,11 @@ func (b *UnivariateSummaryBuilder) Append(summary pmetric.Summary, smdata *Scope
 		dps := summary.DataPoints()
 		dpc := dps.Len()
 		return b.dplb.Append(dpc, func() error {
-			for i := 0; i < dpc; i++ {
-				if err := b.dpb.Append(dps.At(i), smdata, mdata); err != nil {
-					return werror.Wrap(err)
-				}
-			}
+			//for i := 0; i < dpc; i++ {
+			//	if err := b.dpb.Append(dps.At(i), smdata, mdata); err != nil {
+			//		return werror.Wrap(err)
+			//	}
+			//}
 			return nil
 		})
 	})

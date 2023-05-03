@@ -60,6 +60,8 @@ type (
 		GaugeAttrs        *PayloadType
 		Sum               *PayloadType
 		SumAttrs          *PayloadType
+		Summary           *PayloadType
+		SummaryAttrs      *PayloadType
 		Histogram         *PayloadType
 		HistogramAttrs    *PayloadType
 		ExpHistogram      *PayloadType
@@ -102,6 +104,14 @@ var (
 		SumAttrs: &PayloadType{
 			prefix:      "sum-attrs",
 			payloadType: colarspb.OtlpArrowPayloadType_SUM_ATTRS,
+		},
+		Summary: &PayloadType{
+			prefix:      "summary",
+			payloadType: colarspb.OtlpArrowPayloadType_SUMMARIES,
+		},
+		SummaryAttrs: &PayloadType{
+			prefix:      "summary-attrs",
+			payloadType: colarspb.OtlpArrowPayloadType_SUMMARY_ATTRS,
 		},
 		Histogram: &PayloadType{
 			prefix:      "histogram",
