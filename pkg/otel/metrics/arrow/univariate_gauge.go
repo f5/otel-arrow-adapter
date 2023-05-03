@@ -20,16 +20,16 @@ import (
 	"go.opentelemetry.io/collector/pdata/pmetric"
 
 	acommon "github.com/f5/otel-arrow-adapter/pkg/otel/common/arrow"
-	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/builder"
-	"github.com/f5/otel-arrow-adapter/pkg/otel/constants"
 	"github.com/f5/otel-arrow-adapter/pkg/werror"
 )
+
+// ToDo we probably don't need this file anymore
 
 var (
 	// UnivariateGaugeDT is the Arrow Data Type describing a univariate gauge.
 	UnivariateGaugeDT = arrow.StructOf(
-		arrow.Field{Name: constants.DataPoints, Type: arrow.ListOf(UnivariateNumberDataPointDT), Metadata: schema.Metadata(schema.Optional)},
+	//arrow.Field{Name: constants.DataPoints, Type: arrow.ListOf(UnivariateNumberDataPointDT), Metadata: schema.Metadata(schema.Optional)},
 	)
 )
 
@@ -45,14 +45,14 @@ type UnivariateGaugeBuilder struct {
 
 // UnivariateGaugeBuilderFrom creates a new UnivariateMetricBuilder from an existing StructBuilder.
 func UnivariateGaugeBuilderFrom(ndpb *builder.StructBuilder) *UnivariateGaugeBuilder {
-	dplb := ndpb.ListBuilder(constants.DataPoints)
+	//dplb := ndpb.ListBuilder(constants.DataPoints)
 
 	return &UnivariateGaugeBuilder{
 		released: false,
 		builder:  ndpb,
 
-		dplb: dplb,
-		dpb:  NumberDataPointBuilderFrom(dplb.StructBuilder()),
+		//dplb: dplb,
+		//dpb:  NumberDataPointBuilderFrom(dplb.StructBuilder()),
 	}
 }
 
@@ -94,10 +94,10 @@ func (b *UnivariateGaugeBuilder) Append(
 		dpc := dps.Len()
 		return b.dplb.Append(dpc, func() error {
 			for i := 0; i < dpc; i++ {
-				ID := relatedData.NextGaugeID()
-				if err := b.dpb.Append(dps.At(i), smdata, mdata, ID, relatedData.AttrsBuilders().Gauge()); err != nil {
-					return werror.Wrap(err)
-				}
+				//ID := relatedData.NextGaugeID()
+				//if err := b.dpb.Append(dps.At(i), smdata, mdata, ID, relatedData.AttrsBuilders().Gauge()); err != nil {
+				//	return werror.Wrap(err)
+				//}
 			}
 			return nil
 		})

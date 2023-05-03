@@ -117,18 +117,14 @@ func (b *UnivariateMetricBuilder) Append(
 	switch metric.Type() {
 	case pmetric.MetricTypeGauge:
 		b.builder.Append(GaugeCode)
-		if err := b.gb.Append(metric.Gauge(), smdata, mdata, relatedData); err != nil {
-			return werror.Wrap(err)
-		}
+		b.gb.AppendNull()
 		b.sb.AppendNull()
 		b.syb.AppendNull()
 		b.hb.AppendNull()
 		b.ehb.AppendNull()
 	case pmetric.MetricTypeSum:
 		b.builder.Append(SumCode)
-		if err := b.sb.Append(metric.Sum(), smdata, mdata, relatedData); err != nil {
-			return werror.Wrap(err)
-		}
+		b.sb.AppendNull()
 		b.gb.AppendNull()
 		b.syb.AppendNull()
 		b.hb.AppendNull()

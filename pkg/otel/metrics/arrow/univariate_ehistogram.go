@@ -29,7 +29,7 @@ import (
 var (
 	// UnivariateEHistogramDT is the Arrow Data Type describing a univariate exponential histogram.
 	UnivariateEHistogramDT = arrow.StructOf(
-		arrow.Field{Name: constants.DataPoints, Type: arrow.ListOf(UnivariateEHistogramDataPointDT), Metadata: schema.Metadata(schema.Optional)},
+		//arrow.Field{Name: constants.DataPoints, Type: arrow.ListOf(UnivariateEHistogramDataPointDT), Metadata: schema.Metadata(schema.Optional)},
 		arrow.Field{Name: constants.AggregationTemporality, Type: arrow.PrimitiveTypes.Int32, Metadata: schema.Metadata(schema.Optional, schema.Dictionary8)},
 	)
 )
@@ -54,8 +54,8 @@ func UnivariateEHistogramBuilderFrom(b *builder.StructBuilder) *UnivariateEHisto
 		builder:  b,
 
 		hdplb: hdplb,
-		hdpb:  EHistogramDataPointBuilderFrom(hdplb.StructBuilder()),
-		atb:   b.Int32Builder(constants.AggregationTemporality),
+		//hdpb:  EHistogramDataPointBuilderFrom(hdplb.StructBuilder()),
+		atb: b.Int32Builder(constants.AggregationTemporality),
 	}
 }
 
@@ -91,11 +91,11 @@ func (b *UnivariateEHistogramBuilder) Append(eh pmetric.ExponentialHistogram, sm
 		dps := eh.DataPoints()
 		dpc := dps.Len()
 		if err := b.hdplb.Append(dpc, func() error {
-			for i := 0; i < dpc; i++ {
-				if err := b.hdpb.Append(dps.At(i), smdata, mdata); err != nil {
-					return werror.Wrap(err)
-				}
-			}
+			//for i := 0; i < dpc; i++ {
+			//	if err := b.hdpb.Append(dps.At(i), smdata, mdata); err != nil {
+			//		return werror.Wrap(err)
+			//	}
+			//}
 			return nil
 		}); err != nil {
 			return werror.Wrap(err)

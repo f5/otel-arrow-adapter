@@ -15,93 +15,170 @@
 package arrow
 
 import (
+	"errors"
+	"math"
+	"sort"
+
 	"github.com/apache/arrow/go/v12/arrow"
-	"github.com/apache/arrow/go/v12/arrow/array"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 
-	acommon "github.com/f5/otel-arrow-adapter/pkg/otel/common/arrow_old"
+	carrow "github.com/f5/otel-arrow-adapter/pkg/otel/common/arrow"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/builder"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/constants"
 	"github.com/f5/otel-arrow-adapter/pkg/werror"
 )
 
-// UnivariateEHistogramDataPointDT is the Arrow Data Type describing a univariate exponential histogram number data point.
 var (
-	UnivariateEHistogramDataPointDT = arrow.StructOf(
-		arrow.Field{Name: constants.Attributes, Type: acommon.AttributesDT, Metadata: schema.Metadata(schema.Optional)},
-		arrow.Field{Name: constants.StartTimeUnixNano, Type: arrow.FixedWidthTypes.Timestamp_ns, Metadata: schema.Metadata(schema.Optional)},
-		arrow.Field{Name: constants.TimeUnixNano, Type: arrow.FixedWidthTypes.Timestamp_ns, Metadata: schema.Metadata(schema.Optional)},
-		arrow.Field{Name: constants.HistogramCount, Type: arrow.PrimitiveTypes.Uint64, Metadata: schema.Metadata(schema.Optional)},
-		arrow.Field{Name: constants.HistogramSum, Type: arrow.PrimitiveTypes.Float64, Metadata: schema.Metadata(schema.Optional)},
-		arrow.Field{Name: constants.ExpHistogramScale, Type: arrow.PrimitiveTypes.Int32, Metadata: schema.Metadata(schema.Optional)},
-		arrow.Field{Name: constants.ExpHistogramZeroCount, Type: arrow.PrimitiveTypes.Uint64, Metadata: schema.Metadata(schema.Optional)},
-		arrow.Field{Name: constants.ExpHistogramPositive, Type: EHistogramDataPointBucketsDT, Metadata: schema.Metadata(schema.Optional)},
-		arrow.Field{Name: constants.ExpHistogramNegative, Type: EHistogramDataPointBucketsDT, Metadata: schema.Metadata(schema.Optional)},
-		arrow.Field{Name: constants.Exemplars, Type: arrow.ListOf(ExemplarDT), Metadata: schema.Metadata(schema.Optional)},
-		arrow.Field{Name: constants.Flags, Type: arrow.PrimitiveTypes.Uint32, Metadata: schema.Metadata(schema.Optional)},
-		arrow.Field{Name: constants.HistogramMin, Type: arrow.PrimitiveTypes.Float64, Metadata: schema.Metadata(schema.Optional)},
-		arrow.Field{Name: constants.HistogramMax, Type: arrow.PrimitiveTypes.Float64, Metadata: schema.Metadata(schema.Optional)},
-	)
+	// EHistogramDataPointSchema is the Arrow schema describing a
+	// histogram data point.
+	// Related record.
+	EHistogramDataPointSchema = arrow.NewSchema([]arrow.Field{
+		// Unique identifier of the EHDP. This ID is used to identify the
+		// relationship between the EHDP, its attributes and exemplars.
+		{Name: constants.ID, Type: arrow.PrimitiveTypes.Uint32, Metadata: schema.Metadata(schema.Optional, schema.DeltaEncoding)},
+		// The ID of the parent metric.
+		{Name: constants.ParentID, Type: arrow.PrimitiveTypes.Uint16},
+		{Name: constants.StartTimeUnixNano, Type: arrow.FixedWidthTypes.Timestamp_ns, Metadata: schema.Metadata(schema.Optional)},
+		{Name: constants.TimeUnixNano, Type: arrow.FixedWidthTypes.Timestamp_ns, Metadata: schema.Metadata(schema.Optional)},
+		{Name: constants.HistogramCount, Type: arrow.PrimitiveTypes.Uint64, Metadata: schema.Metadata(schema.Optional)},
+		{Name: constants.HistogramSum, Type: arrow.PrimitiveTypes.Float64, Metadata: schema.Metadata(schema.Optional)},
+		{Name: constants.ExpHistogramScale, Type: arrow.PrimitiveTypes.Int32, Metadata: schema.Metadata(schema.Optional)},
+		{Name: constants.ExpHistogramZeroCount, Type: arrow.PrimitiveTypes.Uint64, Metadata: schema.Metadata(schema.Optional)},
+		{Name: constants.ExpHistogramPositive, Type: EHistogramDataPointBucketsDT, Metadata: schema.Metadata(schema.Optional)},
+		{Name: constants.ExpHistogramNegative, Type: EHistogramDataPointBucketsDT, Metadata: schema.Metadata(schema.Optional)},
+		{Name: constants.Exemplars, Type: arrow.ListOf(ExemplarDT), Metadata: schema.Metadata(schema.Optional)},
+		{Name: constants.Flags, Type: arrow.PrimitiveTypes.Uint32, Metadata: schema.Metadata(schema.Optional)},
+		{Name: constants.HistogramMin, Type: arrow.PrimitiveTypes.Float64, Metadata: schema.Metadata(schema.Optional)},
+		{Name: constants.HistogramMax, Type: arrow.PrimitiveTypes.Float64, Metadata: schema.Metadata(schema.Optional)},
+	}, nil)
 )
 
-// EHistogramDataPointBuilder is a builder for exponential histogram data points.
-type EHistogramDataPointBuilder struct {
-	released bool
+type (
+	// EHistogramDataPointBuilder is a builder for exponential histogram data points.
+	EHistogramDataPointBuilder struct {
+		released bool
 
-	builder *builder.StructBuilder
+		builder *builder.RecordBuilderExt
 
-	ab    *acommon.AttributesBuilder         // attributes builder
-	stunb *builder.TimestampBuilder          // start_time_unix_nano builder
-	tunb  *builder.TimestampBuilder          // time_unix_nano builder
-	hcb   *builder.Uint64Builder             // histogram_count builder
-	hsb   *builder.Float64Builder            // histogram_sum builder
-	sb    *builder.Int32Builder              // scale builder
-	zcb   *builder.Uint64Builder             // zero_count builder
-	pb    *EHistogramDataPointBucketsBuilder // positive buckets builder
-	nb    *EHistogramDataPointBucketsBuilder // negative buckets builder
-	elb   *builder.ListBuilder               // exemplars builder
-	eb    *ExemplarBuilder                   // exemplar builder
-	fb    *builder.Uint32Builder             // flags builder
-	hmib  *builder.Float64Builder            // histogram_min builder
-	hmab  *builder.Float64Builder            // histogram_max builder
-}
+		ib  *builder.Uint32DeltaBuilder // id builder
+		pib *builder.Uint16Builder      // parent_id builder
+
+		stunb *builder.TimestampBuilder          // start_time_unix_nano builder
+		tunb  *builder.TimestampBuilder          // time_unix_nano builder
+		hcb   *builder.Uint64Builder             // histogram_count builder
+		hsb   *builder.Float64Builder            // histogram_sum builder
+		sb    *builder.Int32Builder              // scale builder
+		zcb   *builder.Uint64Builder             // zero_count builder
+		pb    *EHistogramDataPointBucketsBuilder // positive buckets builder
+		nb    *EHistogramDataPointBucketsBuilder // negative buckets builder
+		elb   *builder.ListBuilder               // exemplars builder
+		eb    *ExemplarBuilder                   // exemplar builder
+		fb    *builder.Uint32Builder             // flags builder
+		hmib  *builder.Float64Builder            // histogram_min builder
+		hmab  *builder.Float64Builder            // histogram_max builder
+
+		accumulator *EHDPAccumulator
+		attrsAccu   *carrow.Attributes32Accumulator
+	}
+
+	EHDP struct {
+		ParentID uint16
+		ehdp     *pmetric.ExponentialHistogramDataPoint
+	}
+
+	EHDPAccumulator struct {
+		groupCount uint32
+		ehdps      []EHDP
+	}
+)
 
 // EHistogramDataPointBuilderFrom creates a new EHistogramDataPointBuilder from an existing StructBuilder.
-func EHistogramDataPointBuilderFrom(b *builder.StructBuilder) *EHistogramDataPointBuilder {
-	elb := b.ListBuilder(constants.Exemplars)
-
-	return &EHistogramDataPointBuilder{
-		released: false,
-		builder:  b,
-
-		ab:    acommon.AttributesBuilderFrom(b.MapBuilder(constants.Attributes)),
-		stunb: b.TimestampBuilder(constants.StartTimeUnixNano),
-		tunb:  b.TimestampBuilder(constants.TimeUnixNano),
-		hcb:   b.Uint64Builder(constants.HistogramCount),
-		hsb:   b.Float64Builder(constants.HistogramSum),
-		sb:    b.Int32Builder(constants.ExpHistogramScale),
-		zcb:   b.Uint64Builder(constants.ExpHistogramZeroCount),
-		pb:    EHistogramDataPointBucketsBuilderFrom(b.StructBuilder(constants.ExpHistogramPositive)),
-		nb:    EHistogramDataPointBucketsBuilderFrom(b.StructBuilder(constants.ExpHistogramNegative)),
-		elb:   elb,
-		eb:    ExemplarBuilderFrom(elb.StructBuilder()),
-		fb:    b.Uint32Builder(constants.Flags),
-		hmib:  b.Float64Builder(constants.HistogramMin),
-		hmab:  b.Float64Builder(constants.HistogramMax),
+func NewEHistogramDataPointBuilder(rBuilder *builder.RecordBuilderExt) *EHistogramDataPointBuilder {
+	b := &EHistogramDataPointBuilder{
+		released:    false,
+		builder:     rBuilder,
+		accumulator: NewEHDPAccumulator(),
 	}
+
+	b.init()
+	return b
+}
+
+func (b *EHistogramDataPointBuilder) init() {
+	b.ib = b.builder.Uint32DeltaBuilder(constants.ID)
+	b.ib.SetMaxDelta(1)
+	b.pib = b.builder.Uint16Builder(constants.ParentID)
+
+	b.stunb = b.builder.TimestampBuilder(constants.StartTimeUnixNano)
+	b.tunb = b.builder.TimestampBuilder(constants.TimeUnixNano)
+	b.hcb = b.builder.Uint64Builder(constants.HistogramCount)
+	b.hsb = b.builder.Float64Builder(constants.HistogramSum)
+	b.sb = b.builder.Int32Builder(constants.ExpHistogramScale)
+	b.zcb = b.builder.Uint64Builder(constants.ExpHistogramZeroCount)
+	b.pb = EHistogramDataPointBucketsBuilderFrom(b.builder.StructBuilder(constants.ExpHistogramPositive))
+	b.nb = EHistogramDataPointBucketsBuilderFrom(b.builder.StructBuilder(constants.ExpHistogramNegative))
+	b.elb = b.builder.ListBuilder(constants.Exemplars)
+	b.eb = ExemplarBuilderFrom(b.elb.StructBuilder())
+	b.fb = b.builder.Uint32Builder(constants.Flags)
+	b.hmib = b.builder.Float64Builder(constants.HistogramMin)
+	b.hmab = b.builder.Float64Builder(constants.HistogramMax)
+}
+
+func (b *EHistogramDataPointBuilder) SetAttributesAccumulator(accu *carrow.Attributes32Accumulator) {
+	b.attrsAccu = accu
+}
+
+func (b *EHistogramDataPointBuilder) SchemaID() string {
+	return b.builder.SchemaID()
+}
+
+func (b *EHistogramDataPointBuilder) IsEmpty() bool {
+	return b.accumulator.IsEmpty()
+}
+
+func (b *EHistogramDataPointBuilder) Accumulator() *EHDPAccumulator {
+	return b.accumulator
 }
 
 // Build builds the underlying array.
 //
 // Once the array is no longer needed, Release() should be called to free the memory.
-func (b *EHistogramDataPointBuilder) Build() (*array.Struct, error) {
-	if b.released {
-		return nil, werror.Wrap(acommon.ErrBuilderAlreadyReleased)
-	}
+func (b *EHistogramDataPointBuilder) Build() (record arrow.Record, err error) {
+	schemaNotUpToDateCount := 0
 
-	defer b.Release()
-	return b.builder.NewStructArray(), nil
+	// Loop until the record is built successfully.
+	// Intermediaries steps may be required to update the schema.
+	for {
+		b.attrsAccu.Reset()
+		record, err = b.TryBuild(b.attrsAccu)
+		if err != nil {
+			if record != nil {
+				record.Release()
+			}
+
+			switch {
+			case errors.Is(err, schema.ErrSchemaNotUpToDate):
+				schemaNotUpToDateCount++
+				if schemaNotUpToDateCount > 5 {
+					panic("Too many consecutive schema updates. This shouldn't happen.")
+				}
+			default:
+				return nil, werror.Wrap(err)
+			}
+		} else {
+			break
+		}
+	}
+	return record, werror.Wrap(err)
+}
+
+func (b *EHistogramDataPointBuilder) Reset() {
+	b.accumulator.Reset()
+}
+
+func (b *EHistogramDataPointBuilder) PayloadType() *carrow.PayloadType {
+	return carrow.PayloadTypes.ExpHistogram
 }
 
 // Release releases the underlying memory.
@@ -114,46 +191,51 @@ func (b *EHistogramDataPointBuilder) Release() {
 	b.builder.Release()
 }
 
-// Append appends a new histogram data point to the builder.
-func (b *EHistogramDataPointBuilder) Append(hdp pmetric.ExponentialHistogramDataPoint, smdata *ScopeMetricsSharedData, mdata *MetricSharedData) error {
+func (b *EHistogramDataPointBuilder) TryBuild(attrsAccu *carrow.Attributes32Accumulator) (record arrow.Record, err error) {
 	if b.released {
-		return werror.Wrap(acommon.ErrBuilderAlreadyReleased)
+		return nil, werror.Wrap(carrow.ErrBuilderAlreadyReleased)
 	}
 
-	return b.builder.Append(hdp, func() error {
-		if err := b.ab.AppendUniqueAttributes(hdp.Attributes(), smdata.Attributes, mdata.Attributes); err != nil {
-			return werror.Wrap(err)
-		}
-		if smdata.StartTime == nil && mdata.StartTime == nil {
-			b.stunb.Append(arrow.Timestamp(hdp.StartTimestamp()))
-		} else {
-			b.stunb.AppendNull()
-		}
-		if smdata.Time == nil && mdata.Time == nil {
-			b.tunb.Append(arrow.Timestamp(hdp.Timestamp()))
-		} else {
-			b.tunb.AppendNull()
-		}
-		b.AppendCountSum(hdp)
-		b.sb.AppendNonZero(hdp.Scale())
-		b.zcb.Append(hdp.ZeroCount())
-		if err := b.pb.Append(hdp.Positive()); err != nil {
-			return werror.Wrap(err)
-		}
-		if err := b.nb.Append(hdp.Negative()); err != nil {
-			return werror.Wrap(err)
-		}
+	b.accumulator.Sort()
 
-		err := b.AppendExemplars(hdp)
+	for ID, ehdpRec := range b.accumulator.ehdps {
+		ehdp := ehdpRec.ehdp
+		b.ib.Append(uint32(ID))
+		b.pib.Append(ehdpRec.ParentID)
+
+		// Attributes
+		err = attrsAccu.AppendUniqueAttributesWithID(uint32(ID), ehdp.Attributes(), nil, nil)
 		if err != nil {
-			return werror.Wrap(err)
+			return nil, werror.Wrap(err)
 		}
-		b.fb.Append(uint32(hdp.Flags()))
 
-		b.AppendMinMax(hdp)
+		b.stunb.Append(arrow.Timestamp(ehdp.StartTimestamp()))
+		b.tunb.Append(arrow.Timestamp(ehdp.Timestamp()))
 
-		return nil
-	})
+		b.AppendCountSum(*ehdp)
+		b.sb.AppendNonZero(ehdp.Scale())
+		b.zcb.Append(ehdp.ZeroCount())
+		if err := b.pb.Append(ehdp.Positive()); err != nil {
+			return nil, werror.Wrap(err)
+		}
+		if err := b.nb.Append(ehdp.Negative()); err != nil {
+			return nil, werror.Wrap(err)
+		}
+
+		err := b.AppendExemplars(*ehdp)
+		if err != nil {
+			return nil, werror.Wrap(err)
+		}
+		b.fb.Append(uint32(ehdp.Flags()))
+
+		b.AppendMinMax(*ehdp)
+	}
+
+	record, err = b.builder.NewRecord()
+	if err != nil {
+		b.init()
+	}
+	return
 }
 
 func (b *EHistogramDataPointBuilder) AppendExemplars(hdp pmetric.ExponentialHistogramDataPoint) error {
@@ -189,4 +271,52 @@ func (b *EHistogramDataPointBuilder) AppendMinMax(hdp pmetric.ExponentialHistogr
 	} else {
 		b.hmab.AppendNull()
 	}
+}
+
+func NewEHDPAccumulator() *EHDPAccumulator {
+	return &EHDPAccumulator{
+		groupCount: 0,
+		ehdps:      make([]EHDP, 0),
+	}
+}
+
+func (a *EHDPAccumulator) IsEmpty() bool {
+	return len(a.ehdps) == 0
+}
+
+func (a *EHDPAccumulator) Append(
+	metricID uint16,
+	ehdps pmetric.ExponentialHistogramDataPointSlice,
+) error {
+	if a.groupCount == math.MaxUint32 {
+		panic("The maximum number of group of exponential histogram data points has been reached (max is uint32).")
+	}
+
+	if ehdps.Len() == 0 {
+		return nil
+	}
+
+	for i := 0; i < ehdps.Len(); i++ {
+		ehdp := ehdps.At(i)
+
+		a.ehdps = append(a.ehdps, EHDP{
+			ParentID: metricID,
+			ehdp:     &ehdp,
+		})
+	}
+
+	a.groupCount++
+
+	return nil
+}
+
+func (a *EHDPAccumulator) Sort() {
+	sort.Slice(a.ehdps, func(i, j int) bool {
+		return a.ehdps[i].ehdp.StartTimestamp() < a.ehdps[j].ehdp.StartTimestamp()
+	})
+}
+
+func (a *EHDPAccumulator) Reset() {
+	a.groupCount = 0
+	a.ehdps = a.ehdps[:0]
 }

@@ -53,16 +53,23 @@ type (
 	}
 
 	payloadTypes struct {
-		ResourceAttrs  *PayloadType
-		ScopeAttrs     *PayloadType
-		GaugeAttrs     *PayloadType
-		SumAttrs       *PayloadType
-		LogRecordAttrs *PayloadType
-		SpanAttrs      *PayloadType
-		Event          *PayloadType
-		EventAttrs     *PayloadType
-		Link           *PayloadType
-		LinkAttrs      *PayloadType
+		ResourceAttrs     *PayloadType
+		ScopeAttrs        *PayloadType
+		Metric            *PayloadType
+		Gauge             *PayloadType
+		GaugeAttrs        *PayloadType
+		Sum               *PayloadType
+		SumAttrs          *PayloadType
+		Histogram         *PayloadType
+		HistogramAttrs    *PayloadType
+		ExpHistogram      *PayloadType
+		ExpHistogramAttrs *PayloadType
+		LogRecordAttrs    *PayloadType
+		SpanAttrs         *PayloadType
+		Event             *PayloadType
+		EventAttrs        *PayloadType
+		Link              *PayloadType
+		LinkAttrs         *PayloadType
 	}
 )
 
@@ -76,13 +83,41 @@ var (
 			prefix:      "scope-attrs",
 			payloadType: colarspb.OtlpArrowPayloadType_SCOPE_ATTRS,
 		},
+		Metric: &PayloadType{
+			prefix:      "metric",
+			payloadType: colarspb.OtlpArrowPayloadType_METRIC,
+		},
+		Gauge: &PayloadType{
+			prefix:      "gauge",
+			payloadType: colarspb.OtlpArrowPayloadType_GAUGES,
+		},
 		GaugeAttrs: &PayloadType{
 			prefix:      "gauge-attrs",
 			payloadType: colarspb.OtlpArrowPayloadType_GAUGE_ATTRS,
 		},
+		Sum: &PayloadType{
+			prefix:      "sum",
+			payloadType: colarspb.OtlpArrowPayloadType_SUMS,
+		},
 		SumAttrs: &PayloadType{
 			prefix:      "sum-attrs",
 			payloadType: colarspb.OtlpArrowPayloadType_SUM_ATTRS,
+		},
+		Histogram: &PayloadType{
+			prefix:      "histogram",
+			payloadType: colarspb.OtlpArrowPayloadType_HISTOGRAMS,
+		},
+		HistogramAttrs: &PayloadType{
+			prefix:      "histogram-attrs",
+			payloadType: colarspb.OtlpArrowPayloadType_HISTOGRAM_ATTRS,
+		},
+		ExpHistogram: &PayloadType{
+			prefix:      "exp-histogram",
+			payloadType: colarspb.OtlpArrowPayloadType_EXP_HISTOGRAMS,
+		},
+		ExpHistogramAttrs: &PayloadType{
+			prefix:      "exp-histogram-attrs",
+			payloadType: colarspb.OtlpArrowPayloadType_EXP_HISTOGRAM_ATTRS,
 		},
 		LogRecordAttrs: &PayloadType{
 			prefix:      "logs-attrs",

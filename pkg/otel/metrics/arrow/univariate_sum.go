@@ -26,10 +26,12 @@ import (
 	"github.com/f5/otel-arrow-adapter/pkg/werror"
 )
 
+// ToDo we need to reintegrate AggregationTemporality and IsMonotonic
+
 // UnivariateSumDT is the Arrow Data Type describing a univariate sum.
 var (
 	UnivariateSumDT = arrow.StructOf(
-		arrow.Field{Name: constants.DataPoints, Type: arrow.ListOf(UnivariateNumberDataPointDT), Metadata: schema.Metadata(schema.Optional)},
+		//arrow.Field{Name: constants.DataPoints, Type: arrow.ListOf(UnivariateNumberDataPointDT), Metadata: schema.Metadata(schema.Optional)},
 		arrow.Field{Name: constants.AggregationTemporality, Type: arrow.PrimitiveTypes.Int32, Metadata: schema.Metadata(schema.Optional, schema.Dictionary8)},
 		arrow.Field{Name: constants.IsMonotonic, Type: arrow.FixedWidthTypes.Boolean, Metadata: schema.Metadata(schema.Optional)},
 	)
@@ -49,16 +51,16 @@ type UnivariateSumBuilder struct {
 
 // UnivariateSumBuilderFrom creates a new UnivariateSumBuilder from an existing StructBuilder.
 func UnivariateSumBuilderFrom(ndpb *builder.StructBuilder) *UnivariateSumBuilder {
-	dplb := ndpb.ListBuilder(constants.DataPoints)
+	//dplb := ndpb.ListBuilder(constants.DataPoints)
 
 	return &UnivariateSumBuilder{
 		released: false,
 		builder:  ndpb,
 
-		dplb: dplb,
-		dpb:  NumberDataPointBuilderFrom(dplb.StructBuilder()),
-		atb:  ndpb.Int32Builder(constants.AggregationTemporality),
-		imb:  ndpb.BooleanBuilder(constants.IsMonotonic),
+		//dplb: dplb,
+		//dpb:  NumberDataPointBuilderFrom(dplb.StructBuilder()),
+		atb: ndpb.Int32Builder(constants.AggregationTemporality),
+		imb: ndpb.BooleanBuilder(constants.IsMonotonic),
 	}
 }
 
@@ -100,10 +102,10 @@ func (b *UnivariateSumBuilder) Append(
 		dpc := dps.Len()
 		if err := b.dplb.Append(dpc, func() error {
 			for i := 0; i < dpc; i++ {
-				ID := relatedData.NextSumID()
-				if err := b.dpb.Append(dps.At(i), smdata, mdata, ID, relatedData.AttrsBuilders().Sum()); err != nil {
-					return werror.Wrap(err)
-				}
+				//ID := relatedData.NextSumID()
+				//if err := b.dpb.Append(dps.At(i), smdata, mdata, ID, relatedData.AttrsBuilders().Sum()); err != nil {
+				//	return werror.Wrap(err)
+				//}
 			}
 			return nil
 		}); err != nil {

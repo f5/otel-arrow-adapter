@@ -60,7 +60,9 @@ func main() {
 		ds := dataset.NewRealMetricsDataset(inputFiles[i])
 		profiler.Printf("Dataset '%s' (%s) loaded\n", inputFiles[i], humanize.Bytes(uint64(ds.SizeInBytes())))
 		otlpMetrics := otlp.NewMetricsProfileable(ds, compressionAlgo)
-		otlpArrowMetrics := arrow.NewMetricsProfileable([]string{"stream mode"}, ds, &benchmark.Config{})
+		otlpArrowMetrics := arrow.NewMetricsProfileable([]string{"stream mode"}, ds, &benchmark.Config{
+			//Compression: true,
+		})
 
 		if err := profiler.Profile(otlpMetrics, maxIter); err != nil {
 			panic(fmt.Errorf("expected no error, got %v", err))

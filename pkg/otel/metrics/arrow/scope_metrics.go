@@ -31,9 +31,9 @@ import (
 // ScopeMetricsDT is the Arrow Data Type describing a scope span.
 var (
 	ScopeMetricsDT = arrow.StructOf([]arrow.Field{
+		{Name: constants.ID, Type: arrow.PrimitiveTypes.Uint16, Metadata: schema.Metadata(schema.Optional, schema.DeltaEncoding)},
 		{Name: constants.Scope, Type: acommon.ScopeDT, Metadata: schema.Metadata(schema.Optional)},
 		{Name: constants.SchemaUrl, Type: arrow.BinaryTypes.String, Metadata: schema.Metadata(schema.Optional, schema.Dictionary8)},
-		{Name: constants.UnivariateMetrics, Type: arrow.ListOf(UnivariateMetricSetDT), Metadata: schema.Metadata(schema.Optional)},
 		{Name: constants.SharedAttributes, Type: acommon.AttributesDT, Metadata: schema.Metadata(schema.Optional)},
 		{Name: constants.SharedStartTimeUnixNano, Type: arrow.FixedWidthTypes.Timestamp_ns, Metadata: schema.Metadata(schema.Optional)},
 		{Name: constants.SharedTimeUnixNano, Type: arrow.FixedWidthTypes.Timestamp_ns, Metadata: schema.Metadata(schema.Optional)},
@@ -46,13 +46,12 @@ type ScopeMetricsBuilder struct {
 
 	builder *builder.StructBuilder
 
-	scb    *acommon.ScopeBuilder      // scope builder
-	schb   *builder.StringBuilder     // schema url builder
-	smb    *builder.ListBuilder       // metrics list builder
-	mb     *MetricSetBuilder          // metrics builder
-	sab    *acommon.AttributesBuilder // shared attributes builder
-	sstunb *builder.TimestampBuilder  // shared start time unix nano builder
-	stunb  *builder.TimestampBuilder  // shared time unix nano builder
+	ib     *builder.Uint16DeltaBuilder // id builder
+	scb    *acommon.ScopeBuilder       // scope builder
+	schb   *builder.StringBuilder      // schema url builder
+	sab    *acommon.AttributesBuilder  // shared attributes builder
+	sstunb *builder.TimestampBuilder   // shared start time unix nano builder
+	stunb  *builder.TimestampBuilder   // shared time unix nano builder
 }
 
 type DataPoint interface {
@@ -62,14 +61,15 @@ type DataPoint interface {
 }
 
 func ScopeMetricsBuilderFrom(builder *builder.StructBuilder) *ScopeMetricsBuilder {
-	smb := builder.ListBuilder(constants.UnivariateMetrics)
+	ib := builder.Uint16DeltaBuilder(constants.ID)
+	ib.SetMaxDelta(1)
+
 	return &ScopeMetricsBuilder{
 		released: false,
 		builder:  builder,
+		ib:       ib,
 		scb:      acommon.ScopeBuilderFrom(builder.StructBuilder(constants.Scope)),
 		schb:     builder.StringBuilder(constants.SchemaUrl),
-		smb:      smb,
-		mb:       MetricSetBuilderFrom(smb.StructBuilder()),
 		sab:      acommon.AttributesBuilderFrom(builder.MapBuilder(constants.SharedAttributes)),
 		sstunb:   builder.TimestampBuilder(constants.SharedStartTimeUnixNano),
 		stunb:    builder.TimestampBuilder(constants.SharedTimeUnixNano),
@@ -96,6 +96,9 @@ func (b *ScopeMetricsBuilder) Append(smg *ScopeMetricsGroup, relatedData *Relate
 	}
 
 	return b.builder.Append(smg, func() error {
+		ID := relatedData.NextMetricScopeID()
+
+		b.ib.Append(ID)
 		if err := b.scb.Append(smg.Scope, relatedData.AttrsBuilders().scope.Accumulator()); err != nil {
 			return werror.Wrap(err)
 		}
@@ -105,16 +108,11 @@ func (b *ScopeMetricsBuilder) Append(smg *ScopeMetricsGroup, relatedData *Relate
 		if err != nil {
 			return werror.Wrap(err)
 		}
-		mc := len(smg.Metrics)
-		if err = b.smb.Append(mc, func() error {
-			for i, metric := range smg.Metrics {
-				if err := b.mb.Append(metric, sharedData, sharedData.Metrics[i], relatedData); err != nil {
-					return werror.Wrap(err)
-				}
+
+		for i, metric := range smg.Metrics {
+			if err := relatedData.MetricsBuilder().Accumulator().Append(ID, metric, sharedData, sharedData.Metrics[i]); err != nil {
+				return werror.Wrap(err)
 			}
-			return nil
-		}); err != nil {
-			return werror.Wrap(err)
 		}
 
 		if sharedData.Attributes != nil && sharedData.Attributes.Len() > 0 {
@@ -268,11 +266,11 @@ func NewMetricSharedData(metric *pmetric.Metric) (sharedData *MetricSharedData, 
 }
 
 func initSharedDataFrom(sharedData *MetricSharedData, initDataPoint DataPoint) {
-	startTime := initDataPoint.StartTimestamp()
-	sharedData.StartTime = &startTime
-	time := initDataPoint.Timestamp()
-	sharedData.Time = &time
-	sharedData.Attributes = common.NewSharedAttributesFrom(initDataPoint.Attributes())
+	//startTime := initDataPoint.StartTimestamp()
+	sharedData.StartTime = nil // &startTime
+	//time := initDataPoint.Timestamp()
+	sharedData.Time = nil // &time
+	sharedData.Attributes = common.NewSharedAttributesFrom( /*initDataPoint.Attributes()*/ pcommon.NewMap())
 }
 
 func updateSharedDataWith(sharedData *MetricSharedData, dp DataPoint) int {

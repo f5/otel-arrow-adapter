@@ -103,9 +103,10 @@ func NewEventBuilder(rBuilder *builder.RecordBuilderExt) *EventBuilder {
 func (b *EventBuilder) init() {
 	b.ib = b.builder.Uint32DeltaBuilder(constants.ID)
 	// As the events are sorted before insertion, the delta between two
-	// consecutive attributes ID should always be <=1.
+	// consecutive ID should always be <=1.
 	b.ib.SetMaxDelta(1)
 	b.pib = b.builder.Uint16Builder(constants.ParentID)
+
 	b.tunb = b.builder.TimestampBuilder(constants.TimeUnixNano)
 	b.nb = b.builder.StringBuilder(constants.Name)
 	b.dacb = b.builder.Uint32Builder(constants.DroppedAttributesCount)
