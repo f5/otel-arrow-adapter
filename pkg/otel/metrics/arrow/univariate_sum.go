@@ -44,7 +44,7 @@ type UnivariateSumBuilder struct {
 	builder *builder.StructBuilder
 
 	dplb *builder.ListBuilder    // data_points builder
-	dpb  *NumberDataPointBuilder // number data point builder
+	dpb  *IntDataPointBuilder    // number data point builder
 	atb  *builder.Int32Builder   // aggregation_temporality builder
 	imb  *builder.BooleanBuilder // is_monotonic builder
 }

@@ -387,6 +387,21 @@ func (rb *RecordBuilderExt) TimestampBuilder(name string) *TimestampBuilder {
 	}
 }
 
+// DurationBuilder returns a DurationBuilder wrapper for the field with the
+// given name. If the underlying builder doesn't exist, an empty wrapper is
+// returned, so that the feeding process can continue without panicking. This
+// is useful to handle optional fields.
+func (rb *RecordBuilderExt) DurationBuilder(name string) *DurationBuilder {
+	_, transformNode := rb.protoDataTypeAndTransformNode(name)
+	b := rb.builder(name)
+
+	if b != nil {
+		return &DurationBuilder{builder: b, transformNode: transformNode, updateRequest: rb.updateRequest}
+	} else {
+		return &DurationBuilder{builder: nil, transformNode: transformNode, updateRequest: rb.updateRequest}
+	}
+}
+
 // FixedSizeBinaryBuilder returns a FixedSizeBinaryBuilder wrapper for the
 // field with the given name. If the underlying builder doesn't exist, an empty
 // wrapper is returned, so that the feeding process can continue without

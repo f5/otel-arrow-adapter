@@ -29,25 +29,26 @@ import (
 )
 
 var (
-	// IntDataPointSchema is the Arrow schema representing int data points.
+	// DoubleDataPointSchema is the Arrow schema representing double data
+	// points.
 	// Related record.
-	IntDataPointSchema = arrow.NewSchema([]arrow.Field{
-		// Unique identifier of the IDP. This ID is used to identify the
-		// relationship between the IDP, its attributes and exemplars.
+	DoubleDataPointSchema = arrow.NewSchema([]arrow.Field{
+		// This unique identifier is used to identify the relationship between
+		// the double data point, its attributes and exemplars.
 		{Name: constants.ID, Type: arrow.PrimitiveTypes.Uint32, Metadata: schema.Metadata(schema.DeltaEncoding)},
 		// The ID of the parent metric.
 		{Name: constants.ParentID, Type: arrow.PrimitiveTypes.Uint16},
 		{Name: constants.StartTimeUnixNano, Type: arrow.FixedWidthTypes.Timestamp_ns, Metadata: schema.Metadata(schema.Optional)},
 		{Name: constants.TimeUnixNano, Type: arrow.FixedWidthTypes.Timestamp_ns},
-		{Name: constants.MetricValue, Type: arrow.PrimitiveTypes.Int64},
+		{Name: constants.MetricValue, Type: arrow.PrimitiveTypes.Float64},
 		{Name: constants.Exemplars, Type: arrow.ListOf(ExemplarDT), Metadata: schema.Metadata(schema.Optional)},
 		{Name: constants.Flags, Type: arrow.PrimitiveTypes.Uint32, Metadata: schema.Metadata(schema.Optional)},
 	}, nil)
 )
 
 type (
-	// IntDataPointBuilder is a builder for int data points.
-	IntDataPointBuilder struct {
+	// DoubleDataPointBuilder is a builder for number data points.
+	DoubleDataPointBuilder struct {
 		released bool
 
 		builder *builder.RecordBuilderExt
@@ -57,36 +58,36 @@ type (
 
 		stunb *builder.TimestampBuilder // start_time_unix_nano builder
 		tunb  *builder.TimestampBuilder // time_unix_nano builder
-		mvb   *builder.Int64Builder     // metric_value builder
+		mvb   *builder.Float64Builder   // metric_value builder
 		elb   *builder.ListBuilder      // exemplars builder
 		eb    *ExemplarBuilder          // exemplar builder
 		fb    *builder.Uint32Builder    // flags builder
 
-		accumulator *IDPAccumulator
+		accumulator *DDPAccumulator
 		attrsAccu   *acommon.Attributes32Accumulator
 
 		payloadType *acommon.PayloadType
 	}
 
-	// IDP is an internal representation of an int data point used by the
-	// IDPAccumulator.
-	IDP struct {
+	// DDP is an internal representation of a double data point used by the
+	// DDPAccumulator.
+	DDP struct {
 		ParentID uint16
 		Orig     *pmetric.NumberDataPoint
 	}
 
-	// IDPAccumulator is an accumulator for int data points.
-	IDPAccumulator struct {
+	// DDPAccumulator is an accumulator for double data points.
+	DDPAccumulator struct {
 		dps []IDP
 	}
 )
 
-// NewIntDataPointBuilder creates a new IntDataPointBuilder.
-func NewIntDataPointBuilder(rBuilder *builder.RecordBuilderExt, payloadType *acommon.PayloadType) *IntDataPointBuilder {
-	b := &IntDataPointBuilder{
+// NewDoubleDataPointBuilder creates a new DoubleDataPointBuilder.
+func NewDoubleDataPointBuilder(rBuilder *builder.RecordBuilderExt, payloadType *acommon.PayloadType) *DoubleDataPointBuilder {
+	b := &DoubleDataPointBuilder{
 		released:    false,
 		builder:     rBuilder,
-		accumulator: NewIDPAccumulator(),
+		accumulator: NewDDPAccumulator(),
 		payloadType: payloadType,
 	}
 
@@ -94,7 +95,7 @@ func NewIntDataPointBuilder(rBuilder *builder.RecordBuilderExt, payloadType *aco
 	return b
 }
 
-func (b *IntDataPointBuilder) init() {
+func (b *DoubleDataPointBuilder) init() {
 	b.ib = b.builder.Uint32DeltaBuilder(constants.ID)
 	// As the attributes are sorted before insertion, the delta between two
 	// consecutive attributes ID should always be <=1.
@@ -103,29 +104,29 @@ func (b *IntDataPointBuilder) init() {
 
 	b.stunb = b.builder.TimestampBuilder(constants.StartTimeUnixNano)
 	b.tunb = b.builder.TimestampBuilder(constants.TimeUnixNano)
-	b.mvb = b.builder.Int64Builder(constants.MetricValue)
+	b.mvb = b.builder.Float64Builder(constants.MetricValue)
 	b.elb = b.builder.ListBuilder(constants.Exemplars)
 	b.eb = ExemplarBuilderFrom(b.elb.StructBuilder())
 	b.fb = b.builder.Uint32Builder(constants.Flags)
 }
 
-func (b *IntDataPointBuilder) SetAttributesAccumulator(accu *acommon.Attributes32Accumulator) {
+func (b *DoubleDataPointBuilder) SetAttributesAccumulator(accu *acommon.Attributes32Accumulator) {
 	b.attrsAccu = accu
 }
 
-func (b *IntDataPointBuilder) SchemaID() string {
+func (b *DoubleDataPointBuilder) SchemaID() string {
 	return b.builder.SchemaID()
 }
 
-func (b *IntDataPointBuilder) IsEmpty() bool {
+func (b *DoubleDataPointBuilder) IsEmpty() bool {
 	return b.accumulator.IsEmpty()
 }
 
-func (b *IntDataPointBuilder) Accumulator() *IDPAccumulator {
+func (b *DoubleDataPointBuilder) Accumulator() *DDPAccumulator {
 	return b.accumulator
 }
 
-func (b *IntDataPointBuilder) Build() (record arrow.Record, err error) {
+func (b *DoubleDataPointBuilder) Build() (record arrow.Record, err error) {
 	schemaNotUpToDateCount := 0
 
 	// Loop until the record is built successfully.
@@ -154,7 +155,7 @@ func (b *IntDataPointBuilder) Build() (record arrow.Record, err error) {
 	return record, werror.Wrap(err)
 }
 
-func (b *IntDataPointBuilder) TryBuild(attrsAccu *acommon.Attributes32Accumulator) (record arrow.Record, err error) {
+func (b *DoubleDataPointBuilder) TryBuild(attrsAccu *acommon.Attributes32Accumulator) (record arrow.Record, err error) {
 	if b.released {
 		return nil, werror.Wrap(acommon.ErrBuilderAlreadyReleased)
 	}
@@ -178,7 +179,7 @@ func (b *IntDataPointBuilder) TryBuild(attrsAccu *acommon.Attributes32Accumulato
 			b.stunb.Append(arrow.Timestamp(startTime))
 		}
 		b.tunb.Append(arrow.Timestamp(ndp.Orig.Timestamp()))
-		b.mvb.Append(ndp.Orig.IntValue())
+		b.mvb.Append(ndp.Orig.DoubleValue())
 		b.fb.Append(uint32(ndp.Orig.Flags()))
 
 		exemplars := ndp.Orig.Exemplars()
@@ -203,16 +204,16 @@ func (b *IntDataPointBuilder) TryBuild(attrsAccu *acommon.Attributes32Accumulato
 	return
 }
 
-func (b *IntDataPointBuilder) Reset() {
+func (b *DoubleDataPointBuilder) Reset() {
 	b.accumulator.Reset()
 }
 
-func (b *IntDataPointBuilder) PayloadType() *acommon.PayloadType {
+func (b *DoubleDataPointBuilder) PayloadType() *acommon.PayloadType {
 	return b.payloadType
 }
 
 // Release releases the underlying memory.
-func (b *IntDataPointBuilder) Release() {
+func (b *DoubleDataPointBuilder) Release() {
 	if b.released {
 		return
 	}
@@ -220,19 +221,19 @@ func (b *IntDataPointBuilder) Release() {
 	b.released = true
 }
 
-// NewIDPAccumulator creates a new IDPAccumulator.
-func NewIDPAccumulator() *IDPAccumulator {
-	return &IDPAccumulator{
+// NewDDPAccumulator creates a new DDPAccumulator.
+func NewDDPAccumulator() *DDPAccumulator {
+	return &DDPAccumulator{
 		dps: make([]IDP, 0),
 	}
 }
 
-func (a *IDPAccumulator) IsEmpty() bool {
+func (a *DDPAccumulator) IsEmpty() bool {
 	return len(a.dps) == 0
 }
 
 // Append appends a slice of number data points to the accumulator.
-func (a *IDPAccumulator) Append(
+func (a *DDPAccumulator) Append(
 	metricID uint16,
 	dp pmetric.NumberDataPoint,
 ) {
@@ -242,16 +243,16 @@ func (a *IDPAccumulator) Append(
 	})
 }
 
-func (a *IDPAccumulator) Sort() {
+func (a *DDPAccumulator) Sort() {
 	sort.Slice(a.dps, func(i, j int) bool {
 		if a.dps[i].Orig.Timestamp() == a.dps[j].Orig.Timestamp() {
-			return a.dps[i].Orig.IntValue() < a.dps[j].Orig.IntValue()
+			return a.dps[i].Orig.DoubleValue() < a.dps[j].Orig.DoubleValue()
 		} else {
 			return a.dps[i].Orig.Timestamp() < a.dps[j].Orig.Timestamp()
 		}
 	})
 }
 
-func (a *IDPAccumulator) Reset() {
+func (a *DDPAccumulator) Reset() {
 	a.dps = a.dps[:0]
 }

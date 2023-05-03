@@ -56,10 +56,14 @@ type (
 		ResourceAttrs     *PayloadType
 		ScopeAttrs        *PayloadType
 		Metric            *PayloadType
-		Gauge             *PayloadType
-		GaugeAttrs        *PayloadType
-		Sum               *PayloadType
-		SumAttrs          *PayloadType
+		IntGauge          *PayloadType
+		IntGaugeAttrs     *PayloadType
+		DoubleGauge       *PayloadType
+		DoubleGaugeAttrs  *PayloadType
+		IntSum            *PayloadType
+		IntSumAttrs       *PayloadType
+		DoubleSum         *PayloadType
+		DoubleSumAttrs    *PayloadType
 		Summary           *PayloadType
 		SummaryAttrs      *PayloadType
 		Histogram         *PayloadType
@@ -89,21 +93,37 @@ var (
 			prefix:      "metric",
 			payloadType: colarspb.OtlpArrowPayloadType_METRIC,
 		},
-		Gauge: &PayloadType{
-			prefix:      "gauge",
-			payloadType: colarspb.OtlpArrowPayloadType_GAUGES,
+		IntGauge: &PayloadType{
+			prefix:      "int_gauge",
+			payloadType: colarspb.OtlpArrowPayloadType_INT_GAUGE,
 		},
-		GaugeAttrs: &PayloadType{
-			prefix:      "gauge-attrs",
-			payloadType: colarspb.OtlpArrowPayloadType_GAUGE_ATTRS,
+		IntGaugeAttrs: &PayloadType{
+			prefix:      "int_gauge-attrs",
+			payloadType: colarspb.OtlpArrowPayloadType_INT_GAUGE_ATTRS,
 		},
-		Sum: &PayloadType{
-			prefix:      "sum",
-			payloadType: colarspb.OtlpArrowPayloadType_SUMS,
+		DoubleGauge: &PayloadType{
+			prefix:      "double_gauge",
+			payloadType: colarspb.OtlpArrowPayloadType_DOUBLE_GAUGE,
 		},
-		SumAttrs: &PayloadType{
-			prefix:      "sum-attrs",
-			payloadType: colarspb.OtlpArrowPayloadType_SUM_ATTRS,
+		DoubleGaugeAttrs: &PayloadType{
+			prefix:      "double_gauge-attrs",
+			payloadType: colarspb.OtlpArrowPayloadType_DOUBLE_GAUGE_ATTRS,
+		},
+		IntSum: &PayloadType{
+			prefix:      "int_sum",
+			payloadType: colarspb.OtlpArrowPayloadType_INT_SUM,
+		},
+		IntSumAttrs: &PayloadType{
+			prefix:      "int_sum-attrs",
+			payloadType: colarspb.OtlpArrowPayloadType_INT_SUM_ATTRS,
+		},
+		DoubleSum: &PayloadType{
+			prefix:      "double_sum",
+			payloadType: colarspb.OtlpArrowPayloadType_DOUBLE_SUM,
+		},
+		DoubleSumAttrs: &PayloadType{
+			prefix:      "double_sum-attrs",
+			payloadType: colarspb.OtlpArrowPayloadType_DOUBLE_SUM_ATTRS,
 		},
 		Summary: &PayloadType{
 			prefix:      "summary",

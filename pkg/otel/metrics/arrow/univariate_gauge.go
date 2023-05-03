@@ -39,8 +39,8 @@ type UnivariateGaugeBuilder struct {
 
 	builder *builder.StructBuilder
 
-	dplb *builder.ListBuilder    // data_points builder
-	dpb  *NumberDataPointBuilder // number data point builder
+	dplb *builder.ListBuilder // data_points builder
+	dpb  *IntDataPointBuilder // number data point builder
 }
 
 // UnivariateGaugeBuilderFrom creates a new UnivariateMetricBuilder from an existing StructBuilder.

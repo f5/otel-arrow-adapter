@@ -16,6 +16,7 @@ package arrow
 
 import (
 	"errors"
+	"fmt"
 	"math"
 	"sort"
 
@@ -59,12 +60,14 @@ type (
 		sstunb *builder.TimestampBuilder   // shared start time unix nano builder
 		stunb  *builder.TimestampBuilder   // shared time unix nano builder
 
-		accumulator           *MetricAccumulator
-		sumAccumulator        *NDPAccumulator
-		summaryAccumulator    *SummaryAccumulator
-		gaugeAccumulator      *NDPAccumulator
-		histogramAccumulator  *HDPAccumulator
-		ehistogramAccumulator *EHDPAccumulator
+		accumulator            *MetricAccumulator
+		intSumAccumulator      *IDPAccumulator
+		doubleSumAccumulator   *DDPAccumulator
+		summaryAccumulator     *SummaryAccumulator
+		intGaugeAccumulator    *IDPAccumulator
+		doubleGaugeAccumulator *DDPAccumulator
+		histogramAccumulator   *HDPAccumulator
+		ehistogramAccumulator  *EHDPAccumulator
 	}
 
 	Metric struct {
@@ -110,12 +113,20 @@ func (b *MetricBuilder) init() {
 	b.stunb = b.builder.TimestampBuilder(constants.SharedTimeUnixNano)
 }
 
-func (b *MetricBuilder) SetSumAccumulator(accumulator *NDPAccumulator) {
-	b.sumAccumulator = accumulator
+func (b *MetricBuilder) SetIntSumAccumulator(accumulator *IDPAccumulator) {
+	b.intSumAccumulator = accumulator
 }
 
-func (b *MetricBuilder) SetGaugeAccumulator(accumulator *NDPAccumulator) {
-	b.gaugeAccumulator = accumulator
+func (b *MetricBuilder) SetDoubleSumAccumulator(accumulator *DDPAccumulator) {
+	b.doubleSumAccumulator = accumulator
+}
+
+func (b *MetricBuilder) SetIntGaugeAccumulator(accumulator *IDPAccumulator) {
+	b.intGaugeAccumulator = accumulator
+}
+
+func (b *MetricBuilder) SetDoubleGaugeAccumulator(accumulator *DDPAccumulator) {
+	b.doubleGaugeAccumulator = accumulator
 }
 
 func (b *MetricBuilder) SetSummaryAccumulator(accumulator *SummaryAccumulator) {
@@ -152,8 +163,8 @@ func (b *MetricBuilder) Build() (record arrow.Record, err error) {
 	// Loop until the record is built successfully.
 	// Intermediaries steps may be required to update the schema.
 	for {
-		b.sumAccumulator.Reset()
-		b.gaugeAccumulator.Reset()
+		b.intSumAccumulator.Reset()
+		b.intGaugeAccumulator.Reset()
 		record, err = b.TryBuild()
 		if err != nil {
 			if record != nil {
@@ -235,16 +246,32 @@ func (b *MetricBuilder) AppendMetric(
 
 	switch metric.Type() {
 	case pmetric.MetricTypeGauge:
-		err := b.gaugeAccumulator.Append(metricID, metric.Gauge().DataPoints())
-		if err != nil {
-			return werror.Wrap(err)
+		dps := metric.Gauge().DataPoints()
+		for i := 0; i < dps.Len(); i++ {
+			dp := dps.At(i)
+			switch dp.ValueType() {
+			case pmetric.NumberDataPointValueTypeInt:
+				b.intGaugeAccumulator.Append(metricID, dp)
+			case pmetric.NumberDataPointValueTypeDouble:
+				b.doubleGaugeAccumulator.Append(metricID, dp)
+			default:
+				panic(fmt.Sprintf("unknown value type %d", dp.ValueType()))
+			}
 		}
 	case pmetric.MetricTypeSum:
 		// ToDo support AggregationTemporality
 		// ToDo support IsMonotonic
-		err := b.sumAccumulator.Append(metricID, metric.Sum().DataPoints())
-		if err != nil {
-			return werror.Wrap(err)
+		dps := metric.Sum().DataPoints()
+		for i := 0; i < dps.Len(); i++ {
+			dp := dps.At(i)
+			switch dp.ValueType() {
+			case pmetric.NumberDataPointValueTypeInt:
+				b.intSumAccumulator.Append(metricID, dp)
+			case pmetric.NumberDataPointValueTypeDouble:
+				b.doubleSumAccumulator.Append(metricID, dp)
+			default:
+				panic(fmt.Sprintf("unknown value type %d", dp.ValueType()))
+			}
 		}
 	case pmetric.MetricTypeSummary:
 		err := b.summaryAccumulator.Append(metricID, metric.Summary().DataPoints())
