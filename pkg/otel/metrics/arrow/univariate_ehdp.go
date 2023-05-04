@@ -312,7 +312,10 @@ func (a *EHDPAccumulator) Append(
 
 func (a *EHDPAccumulator) Sort() {
 	sort.Slice(a.ehdps, func(i, j int) bool {
-		return a.ehdps[i].ehdp.StartTimestamp() < a.ehdps[j].ehdp.StartTimestamp()
+		ehdpI := a.ehdps[i].ehdp
+		ehdpJ := a.ehdps[j].ehdp
+
+		return ehdpI.Timestamp() < ehdpJ.Timestamp()
 	})
 }
 

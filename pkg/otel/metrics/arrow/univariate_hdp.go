@@ -311,7 +311,14 @@ func (a *HDPAccumulator) Append(
 
 func (a *HDPAccumulator) Sort() {
 	sort.Slice(a.hdps, func(i, j int) bool {
-		return a.hdps[i].hdp.StartTimestamp() < a.hdps[j].hdp.StartTimestamp()
+		hdpI := a.hdps[i].hdp
+		hdpJ := a.hdps[j].hdp
+
+		if hdpI.Timestamp() == hdpJ.Timestamp() {
+			return hdpI.Count() < hdpJ.Count()
+		} else {
+			return hdpI.Timestamp() < hdpJ.Timestamp()
+		}
 	})
 }
 

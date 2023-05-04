@@ -38,6 +38,8 @@ var (
 		{Name: constants.Name, Type: arrow.BinaryTypes.String, Metadata: schema.Metadata(schema.Optional, schema.Dictionary8)},
 		{Name: constants.Description, Type: arrow.BinaryTypes.String, Metadata: schema.Metadata(schema.Optional, schema.Dictionary8)},
 		{Name: constants.Unit, Type: arrow.BinaryTypes.String, Metadata: schema.Metadata(schema.Optional, schema.Dictionary8)},
+		{Name: constants.AggregationTemporality, Type: arrow.PrimitiveTypes.Int32, Metadata: schema.Metadata(schema.Optional, schema.Dictionary8)},
+		{Name: constants.IsMonotonic, Type: arrow.FixedWidthTypes.Boolean, Metadata: schema.Metadata(schema.Optional)},
 		{Name: constants.SharedAttributes, Type: acommon.AttributesDT, Metadata: schema.Metadata(schema.Optional)},
 		{Name: constants.SharedStartTimeUnixNano, Type: arrow.FixedWidthTypes.Timestamp_ns, Metadata: schema.Metadata(schema.Optional)},
 		{Name: constants.SharedTimeUnixNano, Type: arrow.FixedWidthTypes.Timestamp_ns, Metadata: schema.Metadata(schema.Optional)},
@@ -56,6 +58,8 @@ type (
 		nb     *builder.StringBuilder      // metric name builder
 		db     *builder.StringBuilder      // metric description builder
 		ub     *builder.StringBuilder      // metric unit builder
+		atb    *builder.Int32Builder       // aggregation temporality builder
+		imb    *builder.BooleanBuilder     // is monotonic builder
 		sab    *acommon.AttributesBuilder  // shared attributes builder
 		sstunb *builder.TimestampBuilder   // shared start time unix nano builder
 		stunb  *builder.TimestampBuilder   // shared time unix nano builder
@@ -108,6 +112,8 @@ func (b *MetricBuilder) init() {
 	b.nb = b.builder.StringBuilder(constants.Name)
 	b.db = b.builder.StringBuilder(constants.Description)
 	b.ub = b.builder.StringBuilder(constants.Unit)
+	b.atb = b.builder.Int32Builder(constants.AggregationTemporality)
+	b.imb = b.builder.BooleanBuilder(constants.IsMonotonic)
 	b.sab = acommon.AttributesBuilderFrom(b.builder.MapBuilder(constants.SharedAttributes))
 	b.sstunb = b.builder.TimestampBuilder(constants.SharedStartTimeUnixNano)
 	b.stunb = b.builder.TimestampBuilder(constants.SharedTimeUnixNano)
@@ -201,15 +207,20 @@ func (b *MetricBuilder) TryBuild() (record arrow.Record, err error) {
 		b.nb.AppendNonEmpty(metric.Name)
 		b.db.AppendNonEmpty(metric.Description)
 		b.ub.AppendNonEmpty(metric.Unit)
-		if err := b.AppendMetric(uint16(ID), metric.Metric, metric.SMData, metric.MData); err != nil {
+
+		aggrTempo, monotonic, err := b.AppendMetric(uint16(ID), metric.Metric, metric.SMData, metric.MData)
+		if err != nil {
 			return nil, werror.Wrap(err)
 		}
+
+		b.atb.Append(int32(aggrTempo))
+		b.imb.Append(monotonic)
 
 		attrs := pcommon.NewMap()
 		if metric.MData.Attributes != nil && metric.MData.Attributes.Len() > 0 {
 			metric.MData.Attributes.CopyTo(attrs)
 		}
-		err := b.sab.Append(attrs)
+		err = b.sab.Append(attrs)
 		if err != nil {
 			return nil, werror.Wrap(err)
 		}
@@ -239,9 +250,9 @@ func (b *MetricBuilder) AppendMetric(
 	metric *pmetric.Metric,
 	smdata *ScopeMetricsSharedData,
 	mdata *MetricSharedData,
-) error {
+) (aggrTempo pmetric.AggregationTemporality, monotonic bool, err error) {
 	if b.released {
-		return werror.Wrap(acommon.ErrBuilderAlreadyReleased)
+		return 0, false, werror.Wrap(acommon.ErrBuilderAlreadyReleased)
 	}
 
 	switch metric.Type() {
@@ -259,9 +270,12 @@ func (b *MetricBuilder) AppendMetric(
 			}
 		}
 	case pmetric.MetricTypeSum:
-		// ToDo support AggregationTemporality
-		// ToDo support IsMonotonic
-		dps := metric.Sum().DataPoints()
+		sum := metric.Sum()
+
+		aggrTempo = sum.AggregationTemporality()
+		monotonic = sum.IsMonotonic()
+
+		dps := sum.DataPoints()
 		for i := 0; i < dps.Len(); i++ {
 			dp := dps.At(i)
 			switch dp.ValueType() {
@@ -274,25 +288,31 @@ func (b *MetricBuilder) AppendMetric(
 			}
 		}
 	case pmetric.MetricTypeSummary:
-		err := b.summaryAccumulator.Append(metricID, metric.Summary().DataPoints())
+		err = b.summaryAccumulator.Append(metricID, metric.Summary().DataPoints())
 		if err != nil {
-			return werror.Wrap(err)
+			return
 		}
 	case pmetric.MetricTypeHistogram:
-		err := b.histogramAccumulator.Append(metricID, metric.Histogram().DataPoints())
+		histogram := metric.Histogram()
+		aggrTempo = histogram.AggregationTemporality()
+
+		err = b.histogramAccumulator.Append(metricID, histogram.DataPoints())
 		if err != nil {
-			return werror.Wrap(err)
+			return
 		}
 	case pmetric.MetricTypeExponentialHistogram:
-		err := b.ehistogramAccumulator.Append(metricID, metric.ExponentialHistogram().DataPoints())
+		histogram := metric.ExponentialHistogram()
+		aggrTempo = histogram.AggregationTemporality()
+
+		err = b.ehistogramAccumulator.Append(metricID, histogram.DataPoints())
 		if err != nil {
-			return werror.Wrap(err)
+			return
 		}
 	case pmetric.MetricTypeEmpty:
 		// ignore empty metric
 	}
 
-	return nil
+	return
 }
 
 func (b *MetricBuilder) Reset() {
