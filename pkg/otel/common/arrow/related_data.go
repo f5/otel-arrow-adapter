@@ -185,8 +185,9 @@ func NewRelatedRecordsManager(cfg *cfg.Config, stats *stats.ProducerStats) *Rela
 	}
 }
 
-func (m *RelatedRecordsManager) Declare(schema *arrow.Schema, rrBuilder func(b *builder.RecordBuilderExt) RelatedRecordBuilder) RelatedRecordBuilder {
+func (m *RelatedRecordsManager) Declare(payloadType *PayloadType, schema *arrow.Schema, rrBuilder func(b *builder.RecordBuilderExt) RelatedRecordBuilder) RelatedRecordBuilder {
 	builderExt := builder.NewRecordBuilderExt(m.cfg.Pool, schema, config.NewDictionary(m.cfg.LimitIndexSize), m.stats)
+	builderExt.SetLabel(payloadType.SchemaPrefix())
 	rBuilder := rrBuilder(builderExt)
 	m.builders = append(m.builders, rBuilder)
 	m.builderExts = append(m.builderExts, builderExt)

@@ -20,7 +20,6 @@ import (
 
 	"github.com/f5/otel-arrow-adapter/pkg/config"
 	carrow "github.com/f5/otel-arrow-adapter/pkg/otel/common/arrow"
-	acommon "github.com/f5/otel-arrow-adapter/pkg/otel/common/schema"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/builder"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/constants"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/stats"
@@ -30,7 +29,7 @@ import (
 // Schema is the Arrow schema for the OTLP Arrow Metrics record.
 var (
 	Schema = arrow.NewSchema([]arrow.Field{
-		{Name: constants.ResourceMetrics, Type: arrow.ListOf(ResourceMetricsDT), Metadata: acommon.Metadata(acommon.Optional)},
+		{Name: constants.ResourceMetrics, Type: arrow.ListOf(ResourceMetricsDT)},
 	}, nil)
 )
 

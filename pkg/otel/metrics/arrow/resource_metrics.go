@@ -29,7 +29,7 @@ var (
 	ResourceMetricsDT = arrow.StructOf([]arrow.Field{
 		{Name: constants.Resource, Type: acommon.ResourceDT, Metadata: schema.Metadata(schema.Optional)},
 		{Name: constants.SchemaUrl, Type: arrow.BinaryTypes.String, Metadata: schema.Metadata(schema.Optional, schema.Dictionary8)},
-		{Name: constants.ScopeMetrics, Type: arrow.ListOf(ScopeMetricsDT), Metadata: schema.Metadata(schema.Optional)},
+		{Name: constants.ScopeMetrics, Type: arrow.ListOf(ScopeMetricsDT)},
 	}...)
 )
 

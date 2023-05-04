@@ -68,97 +68,97 @@ type (
 func NewRelatedData(cfg *cfg.Config, stats *stats.ProducerStats) (*RelatedData, error) {
 	rrManager := carrow.NewRelatedRecordsManager(cfg, stats)
 
-	resourceAttrsBuilder := rrManager.Declare(carrow.AttrsSchema16, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
+	resourceAttrsBuilder := rrManager.Declare(carrow.PayloadTypes.ResourceAttrs, carrow.AttrsSchema16, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
 		return carrow.NewAttrs16Builder(b, carrow.PayloadTypes.ResourceAttrs)
 	})
 
-	scopeAttrsBuilder := rrManager.Declare(carrow.AttrsSchema16, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
+	scopeAttrsBuilder := rrManager.Declare(carrow.PayloadTypes.ScopeAttrs, carrow.AttrsSchema16, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
 		return carrow.NewAttrs16Builder(b, carrow.PayloadTypes.ScopeAttrs)
 	})
 
-	metricBuilder := rrManager.Declare(MetricSchema, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
+	metricBuilder := rrManager.Declare(carrow.PayloadTypes.Metric, MetricSchema, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
 		return NewMetricBuilder(b)
 	})
 
-	sumIDPBuilder := rrManager.Declare(IntDataPointSchema, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
+	sumIDPBuilder := rrManager.Declare(carrow.PayloadTypes.IntSum, IntDataPointSchema, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
 		sumBuilder := NewIntDataPointBuilder(b, carrow.PayloadTypes.IntSum)
 		metricBuilder.(*MetricBuilder).SetIntSumAccumulator(sumBuilder.Accumulator())
 		return sumBuilder
 	})
 
-	intSumAttrsBuilder := rrManager.Declare(carrow.AttrsSchema32, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
+	intSumAttrsBuilder := rrManager.Declare(carrow.PayloadTypes.IntSumAttrs, carrow.AttrsSchema32, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
 		sab := carrow.NewAttrs32Builder(b, carrow.PayloadTypes.IntSumAttrs)
 		sumIDPBuilder.(*IntDataPointBuilder).SetAttributesAccumulator(sab.Accumulator())
 		return sab
 	})
 
-	sumDDPBuilder := rrManager.Declare(DoubleDataPointSchema, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
+	sumDDPBuilder := rrManager.Declare(carrow.PayloadTypes.DoubleSum, DoubleDataPointSchema, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
 		sumBuilder := NewDoubleDataPointBuilder(b, carrow.PayloadTypes.DoubleSum)
 		metricBuilder.(*MetricBuilder).SetDoubleSumAccumulator(sumBuilder.Accumulator())
 		return sumBuilder
 	})
 
-	doubleSumAttrsBuilder := rrManager.Declare(carrow.AttrsSchema32, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
+	doubleSumAttrsBuilder := rrManager.Declare(carrow.PayloadTypes.DoubleSumAttrs, carrow.AttrsSchema32, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
 		sab := carrow.NewAttrs32Builder(b, carrow.PayloadTypes.DoubleSumAttrs)
 		sumDDPBuilder.(*DoubleDataPointBuilder).SetAttributesAccumulator(sab.Accumulator())
 		return sab
 	})
 
-	gaugeNDPBuilder := rrManager.Declare(IntDataPointSchema, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
+	gaugeNDPBuilder := rrManager.Declare(carrow.PayloadTypes.IntGauge, IntDataPointSchema, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
 		gaugeBuilder := NewIntDataPointBuilder(b, carrow.PayloadTypes.IntGauge)
 		metricBuilder.(*MetricBuilder).SetIntGaugeAccumulator(gaugeBuilder.Accumulator())
 		return gaugeBuilder
 	})
 
-	intGaugeAttrsBuilder := rrManager.Declare(carrow.AttrsSchema32, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
+	intGaugeAttrsBuilder := rrManager.Declare(carrow.PayloadTypes.IntGaugeAttrs, carrow.AttrsSchema32, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
 		gab := carrow.NewAttrs32Builder(b, carrow.PayloadTypes.IntGaugeAttrs)
 		gaugeNDPBuilder.(*IntDataPointBuilder).SetAttributesAccumulator(gab.Accumulator())
 		return gab
 	})
 
-	gaugeDDPBuilder := rrManager.Declare(DoubleDataPointSchema, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
+	gaugeDDPBuilder := rrManager.Declare(carrow.PayloadTypes.DoubleGauge, DoubleDataPointSchema, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
 		gaugeBuilder := NewDoubleDataPointBuilder(b, carrow.PayloadTypes.DoubleGauge)
 		metricBuilder.(*MetricBuilder).SetDoubleGaugeAccumulator(gaugeBuilder.Accumulator())
 		return gaugeBuilder
 	})
 
-	doubleGaugeAttrsBuilder := rrManager.Declare(carrow.AttrsSchema32, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
+	doubleGaugeAttrsBuilder := rrManager.Declare(carrow.PayloadTypes.DoubleGaugeAttrs, carrow.AttrsSchema32, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
 		gab := carrow.NewAttrs32Builder(b, carrow.PayloadTypes.DoubleGaugeAttrs)
 		gaugeDDPBuilder.(*DoubleDataPointBuilder).SetAttributesAccumulator(gab.Accumulator())
 		return gab
 	})
 
-	summaryDPBuilder := rrManager.Declare(SummaryDataPointSchema, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
+	summaryDPBuilder := rrManager.Declare(carrow.PayloadTypes.Summary, SummaryDataPointSchema, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
 		summaryBuilder := NewSummaryDataPointBuilder(b)
 		metricBuilder.(*MetricBuilder).SetSummaryAccumulator(summaryBuilder.Accumulator())
 		return summaryBuilder
 	})
 
-	summaryAttrsBuilder := rrManager.Declare(carrow.AttrsSchema32, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
+	summaryAttrsBuilder := rrManager.Declare(carrow.PayloadTypes.SummaryAttrs, carrow.AttrsSchema32, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
 		sab := carrow.NewAttrs32Builder(b, carrow.PayloadTypes.SummaryAttrs)
 		summaryDPBuilder.(*SummaryDataPointBuilder).SetAttributesAccumulator(sab.Accumulator())
 		return sab
 	})
 
-	histogramDPBuilder := rrManager.Declare(HistogramDataPointSchema, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
+	histogramDPBuilder := rrManager.Declare(carrow.PayloadTypes.Histogram, HistogramDataPointSchema, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
 		histoBuilder := NewHistogramDataPointBuilder(b)
 		metricBuilder.(*MetricBuilder).SetHistogramAccumulator(histoBuilder.Accumulator())
 		return histoBuilder
 	})
 
-	histogramAttrsBuilder := rrManager.Declare(carrow.AttrsSchema32, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
+	histogramAttrsBuilder := rrManager.Declare(carrow.PayloadTypes.HistogramAttrs, carrow.AttrsSchema32, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
 		hab := carrow.NewAttrs32Builder(b, carrow.PayloadTypes.HistogramAttrs)
 		histogramDPBuilder.(*HistogramDataPointBuilder).SetAttributesAccumulator(hab.Accumulator())
 		return hab
 	})
 
-	ehistogramDPBuilder := rrManager.Declare(EHistogramDataPointSchema, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
+	ehistogramDPBuilder := rrManager.Declare(carrow.PayloadTypes.ExpHistogram, EHistogramDataPointSchema, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
 		ehistoBuilder := NewEHistogramDataPointBuilder(b)
 		metricBuilder.(*MetricBuilder).SetEHistogramAccumulator(ehistoBuilder.Accumulator())
 		return ehistoBuilder
 	})
 
-	ehistogramAttrsBuilder := rrManager.Declare(carrow.AttrsSchema32, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
+	ehistogramAttrsBuilder := rrManager.Declare(carrow.PayloadTypes.ExpHistogramAttrs, carrow.AttrsSchema32, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
 		hab := carrow.NewAttrs32Builder(b, carrow.PayloadTypes.ExpHistogramAttrs)
 		ehistogramDPBuilder.(*EHistogramDataPointBuilder).SetAttributesAccumulator(hab.Accumulator())
 		return hab

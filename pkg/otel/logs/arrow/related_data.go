@@ -53,15 +53,15 @@ type (
 func NewRelatedData(cfg *cfg.Config, stats *stats.ProducerStats) (*RelatedData, error) {
 	rrManager := carrow.NewRelatedRecordsManager(cfg, stats)
 
-	attrsResourceBuilder := rrManager.Declare(carrow.AttrsSchema16, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
+	attrsResourceBuilder := rrManager.Declare(carrow.PayloadTypes.ResourceAttrs, carrow.AttrsSchema16, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
 		return carrow.NewAttrs16Builder(b, carrow.PayloadTypes.ResourceAttrs)
 	})
 
-	attrsScopeBuilder := rrManager.Declare(carrow.AttrsSchema16, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
+	attrsScopeBuilder := rrManager.Declare(carrow.PayloadTypes.ScopeAttrs, carrow.AttrsSchema16, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
 		return carrow.NewAttrs16Builder(b, carrow.PayloadTypes.ScopeAttrs)
 	})
 
-	attrsLogRecordBuilder := rrManager.Declare(carrow.AttrsSchema16, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
+	attrsLogRecordBuilder := rrManager.Declare(carrow.PayloadTypes.LogRecordAttrs, carrow.AttrsSchema16, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
 		return carrow.NewAttrs16Builder(b, carrow.PayloadTypes.LogRecordAttrs)
 	})
 
