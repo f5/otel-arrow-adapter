@@ -39,6 +39,11 @@ var (
 		{Name: constants.ID, Type: arrow.PrimitiveTypes.Uint32, Metadata: schema.Metadata(schema.Optional, schema.DeltaEncoding)},
 		// The ID of the parent metric.
 		{Name: constants.ParentID, Type: arrow.PrimitiveTypes.Uint16},
+		{Name: constants.Name, Type: arrow.BinaryTypes.String, Metadata: schema.Metadata(schema.Dictionary8)},
+		{Name: constants.Description, Type: arrow.BinaryTypes.String, Metadata: schema.Metadata(schema.Optional, schema.Dictionary8)},
+		{Name: constants.Unit, Type: arrow.BinaryTypes.String, Metadata: schema.Metadata(schema.Optional, schema.Dictionary8)},
+		{Name: constants.AggregationTemporality, Type: arrow.PrimitiveTypes.Int32, Metadata: schema.Metadata(schema.Optional, schema.Dictionary8)},
+		{Name: constants.IsMonotonic, Type: arrow.FixedWidthTypes.Boolean, Metadata: schema.Metadata(schema.Optional)},
 		{Name: constants.StartTimeUnixNano, Type: arrow.FixedWidthTypes.Timestamp_ns, Metadata: schema.Metadata(schema.Optional)},
 		{Name: constants.TimeUnixNano, Type: arrow.FixedWidthTypes.Timestamp_ns, Metadata: schema.Metadata(schema.Optional)},
 		{Name: constants.HistogramCount, Type: arrow.PrimitiveTypes.Uint64, Metadata: schema.Metadata(schema.Optional)},
@@ -64,6 +69,12 @@ type (
 		ib  *builder.Uint32DeltaBuilder // id builder
 		pib *builder.Uint16Builder      // parent_id builder
 
+		nb  *builder.StringBuilder  // metric name builder
+		db  *builder.StringBuilder  // metric description builder
+		ub  *builder.StringBuilder  // metric unit builder
+		atb *builder.Int32Builder   // aggregation temporality builder
+		imb *builder.BooleanBuilder // is monotonic builder
+
 		stunb *builder.TimestampBuilder          // start_time_unix_nano builder
 		tunb  *builder.TimestampBuilder          // time_unix_nano builder
 		hcb   *builder.Uint64Builder             // histogram_count builder
@@ -71,7 +82,7 @@ type (
 		sb    *builder.Int32Builder              // scale builder
 		zcb   *builder.Uint64Builder             // zero_count builder
 		pb    *EHistogramDataPointBucketsBuilder // positive buckets builder
-		nb    *EHistogramDataPointBucketsBuilder // negative buckets builder
+		nbb   *EHistogramDataPointBucketsBuilder // negative buckets builder
 		elb   *builder.ListBuilder               // exemplars builder
 		eb    *ExemplarBuilder                   // exemplar builder
 		fb    *builder.Uint32Builder             // flags builder
@@ -83,8 +94,11 @@ type (
 	}
 
 	EHDP struct {
-		ParentID uint16
-		ehdp     *pmetric.ExponentialHistogramDataPoint
+		ParentID               uint16
+		Metric                 *pmetric.Metric
+		AggregationTemporality pmetric.AggregationTemporality
+		IsMonotonic            bool
+		Orig                   *pmetric.ExponentialHistogramDataPoint
 	}
 
 	EHDPAccumulator struct {
@@ -110,6 +124,12 @@ func (b *EHistogramDataPointBuilder) init() {
 	b.ib.SetMaxDelta(1)
 	b.pib = b.builder.Uint16Builder(constants.ParentID)
 
+	b.nb = b.builder.StringBuilder(constants.Name)
+	b.db = b.builder.StringBuilder(constants.Description)
+	b.ub = b.builder.StringBuilder(constants.Unit)
+	b.atb = b.builder.Int32Builder(constants.AggregationTemporality)
+	b.imb = b.builder.BooleanBuilder(constants.IsMonotonic)
+
 	b.stunb = b.builder.TimestampBuilder(constants.StartTimeUnixNano)
 	b.tunb = b.builder.TimestampBuilder(constants.TimeUnixNano)
 	b.hcb = b.builder.Uint64Builder(constants.HistogramCount)
@@ -117,7 +137,7 @@ func (b *EHistogramDataPointBuilder) init() {
 	b.sb = b.builder.Int32Builder(constants.ExpHistogramScale)
 	b.zcb = b.builder.Uint64Builder(constants.ExpHistogramZeroCount)
 	b.pb = EHistogramDataPointBucketsBuilderFrom(b.builder.StructBuilder(constants.ExpHistogramPositive))
-	b.nb = EHistogramDataPointBucketsBuilderFrom(b.builder.StructBuilder(constants.ExpHistogramNegative))
+	b.nbb = EHistogramDataPointBucketsBuilderFrom(b.builder.StructBuilder(constants.ExpHistogramNegative))
 	b.elb = b.builder.ListBuilder(constants.Exemplars)
 	b.eb = ExemplarBuilderFrom(b.elb.StructBuilder())
 	b.fb = b.builder.Uint32Builder(constants.Flags)
@@ -199,7 +219,7 @@ func (b *EHistogramDataPointBuilder) TryBuild(attrsAccu *carrow.Attributes32Accu
 	b.accumulator.Sort()
 
 	for ID, ehdpRec := range b.accumulator.ehdps {
-		ehdp := ehdpRec.ehdp
+		ehdp := ehdpRec.Orig
 		b.ib.Append(uint32(ID))
 		b.pib.Append(ehdpRec.ParentID)
 
@@ -208,6 +228,12 @@ func (b *EHistogramDataPointBuilder) TryBuild(attrsAccu *carrow.Attributes32Accu
 		if err != nil {
 			return nil, werror.Wrap(err)
 		}
+
+		b.nb.AppendNonEmpty(ehdpRec.Metric.Name())
+		b.db.AppendNonEmpty(ehdpRec.Metric.Description())
+		b.ub.AppendNonEmpty(ehdpRec.Metric.Unit())
+		b.atb.Append(int32(ehdpRec.AggregationTemporality))
+		b.imb.Append(ehdpRec.IsMonotonic)
 
 		b.stunb.Append(arrow.Timestamp(ehdp.StartTimestamp()))
 		b.tunb.Append(arrow.Timestamp(ehdp.Timestamp()))
@@ -218,7 +244,7 @@ func (b *EHistogramDataPointBuilder) TryBuild(attrsAccu *carrow.Attributes32Accu
 		if err := b.pb.Append(ehdp.Positive()); err != nil {
 			return nil, werror.Wrap(err)
 		}
-		if err := b.nb.Append(ehdp.Negative()); err != nil {
+		if err := b.nbb.Append(ehdp.Negative()); err != nil {
 			return nil, werror.Wrap(err)
 		}
 
@@ -286,34 +312,38 @@ func (a *EHDPAccumulator) IsEmpty() bool {
 
 func (a *EHDPAccumulator) Append(
 	metricID uint16,
+	metric *pmetric.Metric,
+	aggregationTemporality pmetric.AggregationTemporality,
+	isMonotonic bool,
 	ehdps pmetric.ExponentialHistogramDataPointSlice,
-) error {
+) {
 	if a.groupCount == math.MaxUint32 {
 		panic("The maximum number of group of exponential histogram data points has been reached (max is uint32).")
 	}
 
 	if ehdps.Len() == 0 {
-		return nil
+		return
 	}
 
 	for i := 0; i < ehdps.Len(); i++ {
 		ehdp := ehdps.At(i)
 
 		a.ehdps = append(a.ehdps, EHDP{
-			ParentID: metricID,
-			ehdp:     &ehdp,
+			ParentID:               metricID,
+			Metric:                 metric,
+			AggregationTemporality: aggregationTemporality,
+			IsMonotonic:            isMonotonic,
+			Orig:                   &ehdp,
 		})
 	}
 
 	a.groupCount++
-
-	return nil
 }
 
 func (a *EHDPAccumulator) Sort() {
 	sort.Slice(a.ehdps, func(i, j int) bool {
-		ehdpI := a.ehdps[i].ehdp
-		ehdpJ := a.ehdps[j].ehdp
+		ehdpI := a.ehdps[i].Orig
+		ehdpJ := a.ehdps[j].Orig
 
 		return ehdpI.Timestamp() < ehdpJ.Timestamp()
 	})

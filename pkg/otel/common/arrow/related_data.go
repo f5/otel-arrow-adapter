@@ -89,10 +89,6 @@ var (
 			prefix:      "scope-attrs",
 			payloadType: colarspb.OtlpArrowPayloadType_SCOPE_ATTRS,
 		},
-		Metric: &PayloadType{
-			prefix:      "metric",
-			payloadType: colarspb.OtlpArrowPayloadType_METRIC,
-		},
 		IntGauge: &PayloadType{
 			prefix:      "int_gauge",
 			payloadType: colarspb.OtlpArrowPayloadType_INT_GAUGE,

@@ -64,7 +64,7 @@ func TestBackAndForthConversion(t *testing.T) {
 	pool := memory.NewCheckedAllocator(memory.NewGoAllocator())
 	defer pool.AssertSize(t, 0)
 
-	rBuilder := builder.NewRecordBuilderExt(pool, ametrics.Schema, DefaultDictConfig, stats.NewProducerStats())
+	rBuilder := builder.NewRecordBuilderExt(pool, ametrics.MetricsSchema, DefaultDictConfig, stats.NewProducerStats())
 	defer rBuilder.Release()
 
 	var record arrow.Record

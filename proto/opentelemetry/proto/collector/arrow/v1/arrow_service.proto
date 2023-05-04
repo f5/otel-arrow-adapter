@@ -49,7 +49,6 @@ enum OtlpArrowPayloadType {
   // Main OTel entities
   // A payload representing a collection of metrics.
   METRICS = 0;
-  METRIC = 1;
   INT_GAUGE = 2;
   DOUBLE_GAUGE = 3;
   INT_SUM = 4;

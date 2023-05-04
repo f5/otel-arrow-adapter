@@ -38,6 +38,11 @@ var (
 		{Name: constants.ID, Type: arrow.PrimitiveTypes.Uint32, Metadata: schema.Metadata(schema.DeltaEncoding)},
 		// The ID of the parent metric.
 		{Name: constants.ParentID, Type: arrow.PrimitiveTypes.Uint16},
+		{Name: constants.Name, Type: arrow.BinaryTypes.String, Metadata: schema.Metadata(schema.Dictionary8)},
+		{Name: constants.Description, Type: arrow.BinaryTypes.String, Metadata: schema.Metadata(schema.Optional, schema.Dictionary8)},
+		{Name: constants.Unit, Type: arrow.BinaryTypes.String, Metadata: schema.Metadata(schema.Optional, schema.Dictionary8)},
+		{Name: constants.AggregationTemporality, Type: arrow.PrimitiveTypes.Int32, Metadata: schema.Metadata(schema.Optional, schema.Dictionary8)},
+		{Name: constants.IsMonotonic, Type: arrow.FixedWidthTypes.Boolean, Metadata: schema.Metadata(schema.Optional)},
 		{Name: constants.StartTimeUnixNano, Type: arrow.FixedWidthTypes.Timestamp_ns},
 		{Name: constants.TimeUnixNano, Type: arrow.FixedWidthTypes.Timestamp_ns},
 		{Name: constants.MetricValue, Type: arrow.PrimitiveTypes.Float64},
@@ -56,6 +61,12 @@ type (
 		ib  *builder.Uint32DeltaBuilder // id builder
 		pib *builder.Uint16Builder      // parent_id builder
 
+		nb  *builder.StringBuilder  // metric name builder
+		db  *builder.StringBuilder  // metric description builder
+		ub  *builder.StringBuilder  // metric unit builder
+		atb *builder.Int32Builder   // aggregation temporality builder
+		imb *builder.BooleanBuilder // is monotonic builder
+
 		stunb *builder.TimestampBuilder // start_time_unix_nano builder
 		tunb  *builder.TimestampBuilder // time_unix_nano builder
 		mvb   *builder.Float64Builder   // metric_value builder
@@ -72,13 +83,16 @@ type (
 	// DDP is an internal representation of a double data point used by the
 	// DDPAccumulator.
 	DDP struct {
-		ParentID uint16
-		Orig     *pmetric.NumberDataPoint
+		ParentID               uint16
+		Metric                 *pmetric.Metric
+		AggregationTemporality pmetric.AggregationTemporality
+		IsMonotonic            bool
+		Orig                   *pmetric.NumberDataPoint
 	}
 
 	// DDPAccumulator is an accumulator for double data points.
 	DDPAccumulator struct {
-		dps []IDP
+		dps []DDP
 	}
 )
 
@@ -101,6 +115,12 @@ func (b *DoubleDataPointBuilder) init() {
 	// consecutive attributes ID should always be <=1.
 	b.ib.SetMaxDelta(1)
 	b.pib = b.builder.Uint16Builder(constants.ParentID)
+
+	b.nb = b.builder.StringBuilder(constants.Name)
+	b.db = b.builder.StringBuilder(constants.Description)
+	b.ub = b.builder.StringBuilder(constants.Unit)
+	b.atb = b.builder.Int32Builder(constants.AggregationTemporality)
+	b.imb = b.builder.BooleanBuilder(constants.IsMonotonic)
 
 	b.stunb = b.builder.TimestampBuilder(constants.StartTimeUnixNano)
 	b.tunb = b.builder.TimestampBuilder(constants.TimeUnixNano)
@@ -172,6 +192,12 @@ func (b *DoubleDataPointBuilder) TryBuild(attrsAccu *acommon.Attributes32Accumul
 			return nil, werror.Wrap(err)
 		}
 
+		b.nb.AppendNonEmpty(ndp.Metric.Name())
+		b.db.AppendNonEmpty(ndp.Metric.Description())
+		b.ub.AppendNonEmpty(ndp.Metric.Unit())
+		b.atb.Append(int32(ndp.AggregationTemporality))
+		b.imb.Append(ndp.IsMonotonic)
+
 		startTime := ndp.Orig.StartTimestamp()
 		if startTime == 0 {
 			b.stunb.AppendNull()
@@ -224,7 +250,7 @@ func (b *DoubleDataPointBuilder) Release() {
 // NewDDPAccumulator creates a new DDPAccumulator.
 func NewDDPAccumulator() *DDPAccumulator {
 	return &DDPAccumulator{
-		dps: make([]IDP, 0),
+		dps: make([]DDP, 0),
 	}
 }
 
@@ -234,21 +260,33 @@ func (a *DDPAccumulator) IsEmpty() bool {
 
 // Append appends a slice of number data points to the accumulator.
 func (a *DDPAccumulator) Append(
-	metricID uint16,
-	dp pmetric.NumberDataPoint,
+	parentID uint16,
+	metric *pmetric.Metric,
+	aggregationTemporality pmetric.AggregationTemporality,
+	isMonotonic bool,
+	dp *pmetric.NumberDataPoint,
 ) {
-	a.dps = append(a.dps, IDP{
-		ParentID: metricID,
-		Orig:     &dp,
+	a.dps = append(a.dps, DDP{
+		ParentID:               parentID,
+		Metric:                 metric,
+		AggregationTemporality: aggregationTemporality,
+		IsMonotonic:            isMonotonic,
+		Orig:                   dp,
 	})
 }
 
 func (a *DDPAccumulator) Sort() {
 	sort.Slice(a.dps, func(i, j int) bool {
-		if a.dps[i].Orig.Timestamp() == a.dps[j].Orig.Timestamp() {
-			return a.dps[i].Orig.DoubleValue() < a.dps[j].Orig.DoubleValue()
+		dpsI := a.dps[i]
+		dpsJ := a.dps[j]
+		if dpsI.Metric.Name() == dpsJ.Metric.Name() {
+			if dpsI.ParentID == dpsJ.ParentID {
+				return dpsI.Orig.Timestamp() < dpsJ.Orig.Timestamp()
+			} else {
+				return dpsI.ParentID < dpsJ.ParentID
+			}
 		} else {
-			return a.dps[i].Orig.Timestamp() < a.dps[j].Orig.Timestamp()
+			return dpsI.Metric.Name() < dpsJ.Metric.Name()
 		}
 	})
 }

@@ -112,7 +112,7 @@ func NewProducerWithOptions(options ...config2.Option) *Producer {
 	}
 
 	// Record builders
-	metricsRecordBuilder := builder.NewRecordBuilderExt(cfg.Pool, metricsarrow.Schema, config.NewDictionary(cfg.LimitIndexSize), stats)
+	metricsRecordBuilder := builder.NewRecordBuilderExt(cfg.Pool, metricsarrow.MetricsSchema, config.NewDictionary(cfg.LimitIndexSize), stats)
 	metricsRecordBuilder.SetLabel("metrics")
 	logsRecordBuilder := builder.NewRecordBuilderExt(cfg.Pool, logsarrow.Schema, config.NewDictionary(cfg.LimitIndexSize), stats)
 	logsRecordBuilder.SetLabel("logs")

@@ -26,9 +26,18 @@ import (
 	"github.com/f5/otel-arrow-adapter/pkg/werror"
 )
 
-// Schema is the Arrow schema for the OTLP Arrow Metrics record.
+// Constants used to identify the type of univariate metric in the union.
+const (
+	GaugeCode        int8 = 0
+	SumCode          int8 = 1
+	SummaryCode      int8 = 2
+	HistogramCode    int8 = 3
+	ExpHistogramCode int8 = 4
+)
+
+// MetricsSchema is the Arrow schema for the OTLP Arrow Metrics record.
 var (
-	Schema = arrow.NewSchema([]arrow.Field{
+	MetricsSchema = arrow.NewSchema([]arrow.Field{
 		{Name: constants.ResourceMetrics, Type: arrow.ListOf(ResourceMetricsDT)},
 	}, nil)
 )
@@ -120,15 +129,15 @@ func (b *MetricsBuilder) Append(metrics pmetric.Metrics) error {
 		return werror.Wrap(carrow.ErrBuilderAlreadyReleased)
 	}
 
-	optimMetrics := b.optimizer.Optimize(metrics)
+	optimizedMetrics := b.optimizer.Optimize(metrics)
 	if b.analyzer != nil {
-		b.analyzer.Analyze(optimMetrics)
+		b.analyzer.Analyze(optimizedMetrics)
 		b.analyzer.ShowStats("")
 	}
 
-	rc := len(optimMetrics.ResourceMetrics)
+	rc := len(optimizedMetrics.ResourceMetrics)
 	return b.rmb.Append(rc, func() error {
-		for _, resMetricsGroup := range optimMetrics.ResourceMetrics {
+		for _, resMetricsGroup := range optimizedMetrics.ResourceMetrics {
 			if err := b.rmp.Append(resMetricsGroup, b.relatedData); err != nil {
 				return werror.Wrap(err)
 			}

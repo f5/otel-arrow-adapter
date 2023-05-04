@@ -37,7 +37,6 @@ type (
 		relatedRecordsManager *carrow.RelatedRecordsManager
 
 		attrsBuilders       *AttrsBuilders
-		metricsBuilder      *MetricBuilder
 		sumIDPBuilder       *IntDataPointBuilder
 		sumDDPBuilder       *DoubleDataPointBuilder
 		gaugeIDPBuilder     *IntDataPointBuilder
@@ -76,14 +75,8 @@ func NewRelatedData(cfg *cfg.Config, stats *stats.ProducerStats) (*RelatedData, 
 		return carrow.NewAttrs16Builder(b, carrow.PayloadTypes.ScopeAttrs)
 	})
 
-	metricBuilder := rrManager.Declare(carrow.PayloadTypes.Metric, MetricSchema, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
-		return NewMetricBuilder(b)
-	})
-
 	sumIDPBuilder := rrManager.Declare(carrow.PayloadTypes.IntSum, IntDataPointSchema, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
-		sumBuilder := NewIntDataPointBuilder(b, carrow.PayloadTypes.IntSum)
-		metricBuilder.(*MetricBuilder).SetIntSumAccumulator(sumBuilder.Accumulator())
-		return sumBuilder
+		return NewIntDataPointBuilder(b, carrow.PayloadTypes.IntSum)
 	})
 
 	intSumAttrsBuilder := rrManager.Declare(carrow.PayloadTypes.IntSumAttrs, carrow.AttrsSchema32, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
@@ -93,9 +86,7 @@ func NewRelatedData(cfg *cfg.Config, stats *stats.ProducerStats) (*RelatedData, 
 	})
 
 	sumDDPBuilder := rrManager.Declare(carrow.PayloadTypes.DoubleSum, DoubleDataPointSchema, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
-		sumBuilder := NewDoubleDataPointBuilder(b, carrow.PayloadTypes.DoubleSum)
-		metricBuilder.(*MetricBuilder).SetDoubleSumAccumulator(sumBuilder.Accumulator())
-		return sumBuilder
+		return NewDoubleDataPointBuilder(b, carrow.PayloadTypes.DoubleSum)
 	})
 
 	doubleSumAttrsBuilder := rrManager.Declare(carrow.PayloadTypes.DoubleSumAttrs, carrow.AttrsSchema32, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
@@ -104,22 +95,18 @@ func NewRelatedData(cfg *cfg.Config, stats *stats.ProducerStats) (*RelatedData, 
 		return sab
 	})
 
-	gaugeNDPBuilder := rrManager.Declare(carrow.PayloadTypes.IntGauge, IntDataPointSchema, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
-		gaugeBuilder := NewIntDataPointBuilder(b, carrow.PayloadTypes.IntGauge)
-		metricBuilder.(*MetricBuilder).SetIntGaugeAccumulator(gaugeBuilder.Accumulator())
-		return gaugeBuilder
+	gaugeIDPBuilder := rrManager.Declare(carrow.PayloadTypes.IntGauge, IntDataPointSchema, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
+		return NewIntDataPointBuilder(b, carrow.PayloadTypes.IntGauge)
 	})
 
 	intGaugeAttrsBuilder := rrManager.Declare(carrow.PayloadTypes.IntGaugeAttrs, carrow.AttrsSchema32, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
 		gab := carrow.NewAttrs32Builder(b, carrow.PayloadTypes.IntGaugeAttrs)
-		gaugeNDPBuilder.(*IntDataPointBuilder).SetAttributesAccumulator(gab.Accumulator())
+		gaugeIDPBuilder.(*IntDataPointBuilder).SetAttributesAccumulator(gab.Accumulator())
 		return gab
 	})
 
 	gaugeDDPBuilder := rrManager.Declare(carrow.PayloadTypes.DoubleGauge, DoubleDataPointSchema, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
-		gaugeBuilder := NewDoubleDataPointBuilder(b, carrow.PayloadTypes.DoubleGauge)
-		metricBuilder.(*MetricBuilder).SetDoubleGaugeAccumulator(gaugeBuilder.Accumulator())
-		return gaugeBuilder
+		return NewDoubleDataPointBuilder(b, carrow.PayloadTypes.DoubleGauge)
 	})
 
 	doubleGaugeAttrsBuilder := rrManager.Declare(carrow.PayloadTypes.DoubleGaugeAttrs, carrow.AttrsSchema32, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
@@ -129,9 +116,7 @@ func NewRelatedData(cfg *cfg.Config, stats *stats.ProducerStats) (*RelatedData, 
 	})
 
 	summaryDPBuilder := rrManager.Declare(carrow.PayloadTypes.Summary, SummaryDataPointSchema, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
-		summaryBuilder := NewSummaryDataPointBuilder(b)
-		metricBuilder.(*MetricBuilder).SetSummaryAccumulator(summaryBuilder.Accumulator())
-		return summaryBuilder
+		return NewSummaryDataPointBuilder(b)
 	})
 
 	summaryAttrsBuilder := rrManager.Declare(carrow.PayloadTypes.SummaryAttrs, carrow.AttrsSchema32, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
@@ -141,9 +126,7 @@ func NewRelatedData(cfg *cfg.Config, stats *stats.ProducerStats) (*RelatedData, 
 	})
 
 	histogramDPBuilder := rrManager.Declare(carrow.PayloadTypes.Histogram, HistogramDataPointSchema, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
-		histoBuilder := NewHistogramDataPointBuilder(b)
-		metricBuilder.(*MetricBuilder).SetHistogramAccumulator(histoBuilder.Accumulator())
-		return histoBuilder
+		return NewHistogramDataPointBuilder(b)
 	})
 
 	histogramAttrsBuilder := rrManager.Declare(carrow.PayloadTypes.HistogramAttrs, carrow.AttrsSchema32, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
@@ -153,9 +136,7 @@ func NewRelatedData(cfg *cfg.Config, stats *stats.ProducerStats) (*RelatedData, 
 	})
 
 	ehistogramDPBuilder := rrManager.Declare(carrow.PayloadTypes.ExpHistogram, EHistogramDataPointSchema, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
-		ehistoBuilder := NewEHistogramDataPointBuilder(b)
-		metricBuilder.(*MetricBuilder).SetEHistogramAccumulator(ehistoBuilder.Accumulator())
-		return ehistoBuilder
+		return NewEHistogramDataPointBuilder(b)
 	})
 
 	ehistogramAttrsBuilder := rrManager.Declare(carrow.PayloadTypes.ExpHistogramAttrs, carrow.AttrsSchema32, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
@@ -177,10 +158,10 @@ func NewRelatedData(cfg *cfg.Config, stats *stats.ProducerStats) (*RelatedData, 
 			histogram:   histogramAttrsBuilder.(*carrow.Attrs32Builder),
 			ehistogram:  ehistogramAttrsBuilder.(*carrow.Attrs32Builder),
 		},
-		metricsBuilder:      metricBuilder.(*MetricBuilder),
 		sumIDPBuilder:       sumIDPBuilder.(*IntDataPointBuilder),
 		sumDDPBuilder:       sumDDPBuilder.(*DoubleDataPointBuilder),
-		gaugeIDPBuilder:     gaugeNDPBuilder.(*IntDataPointBuilder),
+		gaugeIDPBuilder:     gaugeIDPBuilder.(*IntDataPointBuilder),
+		gaugeDDPBuilder:     gaugeDDPBuilder.(*DoubleDataPointBuilder),
 		summaryDPBuilder:    summaryDPBuilder.(*SummaryDataPointBuilder),
 		histogramDPBuilder:  histogramDPBuilder.(*HistogramDataPointBuilder),
 		ehistogramDPBuilder: ehistogramDPBuilder.(*EHistogramDataPointBuilder),
@@ -195,16 +176,32 @@ func (r *RelatedData) AttrsBuilders() *AttrsBuilders {
 	return r.attrsBuilders
 }
 
-func (r *RelatedData) MetricsBuilder() *MetricBuilder {
-	return r.metricsBuilder
-}
-
-func (r *RelatedData) SumNDPBuilder() *IntDataPointBuilder {
+func (r *RelatedData) SumIDPBuilder() *IntDataPointBuilder {
 	return r.sumIDPBuilder
 }
 
-func (r *RelatedData) GaugeNDPBuilder() *IntDataPointBuilder {
+func (r *RelatedData) SumDDPBuilder() *DoubleDataPointBuilder {
+	return r.sumDDPBuilder
+}
+
+func (r *RelatedData) GaugeIDPBuilder() *IntDataPointBuilder {
 	return r.gaugeIDPBuilder
+}
+
+func (r *RelatedData) GaugeDDPBuilder() *DoubleDataPointBuilder {
+	return r.gaugeDDPBuilder
+}
+
+func (r *RelatedData) SummaryDPBuilder() *SummaryDataPointBuilder {
+	return r.summaryDPBuilder
+}
+
+func (r *RelatedData) HistogramDPBuilder() *HistogramDataPointBuilder {
+	return r.histogramDPBuilder
+}
+
+func (r *RelatedData) EHistogramDPBuilder() *EHistogramDataPointBuilder {
+	return r.ehistogramDPBuilder
 }
 
 func (r *RelatedData) Reset() {
