@@ -60,7 +60,7 @@ type (
 		intGauge    *carrow.Attrs32Builder
 		doubleGauge *carrow.Attrs32Builder
 		histogram   *carrow.Attrs32Builder
-		ehistogram  *carrow.Attrs32Builder
+		eHistogram  *carrow.Attrs32Builder
 	}
 )
 
@@ -156,7 +156,7 @@ func NewRelatedData(cfg *cfg.Config, stats *stats.ProducerStats) (*RelatedData, 
 			intGauge:    intGaugeAttrsBuilder.(*carrow.Attrs32Builder),
 			doubleGauge: doubleGaugeAttrsBuilder.(*carrow.Attrs32Builder),
 			histogram:   histogramAttrsBuilder.(*carrow.Attrs32Builder),
-			ehistogram:  ehistogramAttrsBuilder.(*carrow.Attrs32Builder),
+			eHistogram:  ehistogramAttrsBuilder.(*carrow.Attrs32Builder),
 		},
 		sumIDPBuilder:       sumIDPBuilder.(*IntDataPointBuilder),
 		sumDDPBuilder:       sumDDPBuilder.(*DoubleDataPointBuilder),

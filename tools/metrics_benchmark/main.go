@@ -66,7 +66,7 @@ func main() {
 	// Performance comparison for each input file
 	for i := range inputFiles {
 		// Compare the performance between the standard OTLP representation and the OTLP Arrow representation.
-		profiler := benchmark.NewProfiler([]int{100, 2000, 5000}, "output/metrics_benchmark.log", warmUpIter)
+		profiler := benchmark.NewProfiler([]int{5000}, "output/metrics_benchmark.log", warmUpIter)
 		compressionAlgo := benchmark.Zstd()
 		maxIter := uint64(3)
 		ds := dataset.NewRealMetricsDataset(inputFiles[i])

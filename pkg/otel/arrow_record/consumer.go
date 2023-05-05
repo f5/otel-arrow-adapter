@@ -78,19 +78,21 @@ func (c *Consumer) MetricsFrom(bar *colarspb.BatchArrowRecords) ([]pmetric.Metri
 		return nil, werror.Wrap(err)
 	}
 
-	record2Metrics := func(record *record_message.RecordMessage) (pmetric.Metrics, error) {
-		defer record.Record().Release()
-		return metricsotlp.MetricsFrom(record.Record())
-	}
-
 	result := make([]pmetric.Metrics, 0, len(records))
-	for _, record := range records {
-		metrics, err := record2Metrics(record)
+
+	// Compute all related records (i.e. Attributes)
+	relatedData, metricsRecord, err := metricsotlp.RelatedDataFrom(records)
+
+	if metricsRecord != nil {
+		// Decode OTLP metrics from the combination of the main record and the
+		// related records.
+		metrics, err := metricsotlp.MetricsFrom(metricsRecord.Record(), relatedData)
 		if err != nil {
 			return nil, werror.Wrap(err)
 		}
 		result = append(result, metrics)
 	}
+
 	return result, nil
 }
 

@@ -37,6 +37,9 @@ type ListOfStructs struct {
 
 // ListOfStructsFromRecord returns the struct type and an array of structs for a given field id.
 func ListOfStructsFromRecord(record arrow.Record, fieldID int, row int) (*ListOfStructs, error) {
+	if fieldID == -1 {
+		return nil, nil
+	}
 	arr := record.Column(fieldID)
 	switch listArr := arr.(type) {
 	case *array.List:

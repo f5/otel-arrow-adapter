@@ -75,6 +75,30 @@ func U32FromRecord(record arrow.Record, fieldID int, row int) (uint32, error) {
 	}
 }
 
+// U64FromRecord returns the uint64 value for a specific row and column in an
+// Arrow record. If the value is null, it returns 0.
+func U64FromRecord(record arrow.Record, fieldID int, row int) (uint64, error) {
+	if fieldID == -1 {
+		return 0, nil
+	}
+
+	arr := record.Column(fieldID)
+	if arr == nil {
+		return 0, nil
+	}
+
+	switch arr := arr.(type) {
+	case *array.Uint64:
+		if arr.IsNull(row) {
+			return 0, nil
+		} else {
+			return arr.Value(row), nil
+		}
+	default:
+		return 0, werror.WrapWithMsg(ErrInvalidArrayType, "not a uint32 array")
+	}
+}
+
 // NullableU32FromRecord returns the uint32 value for a specific row and column in an
 // Arrow record. If the value is null, it returns nil.
 func NullableU32FromRecord(record arrow.Record, fieldID int, row int) (*uint32, error) {
@@ -101,6 +125,134 @@ func NullableU32FromRecord(record arrow.Record, fieldID int, row int) (*uint32, 
 		}
 	default:
 		return nil, werror.WrapWithMsg(ErrInvalidArrayType, "not a uint32 array")
+	}
+}
+
+// I32FromRecord returns the int32 value for a specific row and column in an
+// Arrow record. If the value is null, it returns 0.
+func I32FromRecord(record arrow.Record, fieldID int, row int) (int32, error) {
+	if fieldID == -1 {
+		return 0, nil
+	}
+
+	arr := record.Column(fieldID)
+	if arr == nil {
+		return 0, nil
+	}
+
+	switch arr := arr.(type) {
+	case *array.Int32:
+		if arr.IsNull(row) {
+			return 0, nil
+		} else {
+			return arr.Value(row), nil
+		}
+	case *array.Dictionary:
+		i32Arr := arr.Dictionary().(*array.Int32)
+		if arr.IsNull(row) {
+			return 0, nil
+		} else {
+			return i32Arr.Value(arr.GetValueIndex(row)), nil
+		}
+	default:
+		return 0, werror.WrapWithMsg(ErrInvalidArrayType, "not a int32 array")
+	}
+}
+
+// I64FromRecord returns the int64 value for a specific row and column in an
+// Arrow record. If the value is null, it returns 0.
+func I64FromRecord(record arrow.Record, fieldID int, row int) (int64, error) {
+	if fieldID == -1 {
+		return 0, nil
+	}
+
+	arr := record.Column(fieldID)
+	if arr == nil {
+		return 0, nil
+	}
+
+	switch arr := arr.(type) {
+	case *array.Int64:
+		if arr.IsNull(row) {
+			return 0, nil
+		} else {
+			return arr.Value(row), nil
+		}
+	default:
+		return 0, werror.WrapWithMsg(ErrInvalidArrayType, "not a int64 array")
+	}
+}
+
+// F64FromRecord returns the float64 value for a specific row and column in an
+// Arrow record. If the value is null, it returns 0.
+func F64FromRecord(record arrow.Record, fieldID int, row int) (float64, error) {
+	if fieldID == -1 {
+		return 0, nil
+	}
+
+	arr := record.Column(fieldID)
+	if arr == nil {
+		return 0, nil
+	}
+
+	switch arr := arr.(type) {
+	case *array.Float64:
+		if arr.IsNull(row) {
+			return 0, nil
+		} else {
+			return arr.Value(row), nil
+		}
+	default:
+		return 0, werror.WrapWithMsg(ErrInvalidArrayType, "not a float64 array")
+	}
+}
+
+// F64OrNilFromRecord returns the float64 value for a specific row and column in an
+// Arrow record. Returns nil if the value is null
+func F64OrNilFromRecord(record arrow.Record, fieldID int, row int) (*float64, error) {
+	if fieldID == -1 {
+		return nil, nil
+	}
+
+	arr := record.Column(fieldID)
+	if arr == nil {
+		return nil, nil
+	}
+
+	switch arr := arr.(type) {
+	case *array.Float64:
+		if arr.IsNull(row) {
+			return nil, nil
+		} else {
+			v := arr.Value(row)
+			return &v, nil
+		}
+	default:
+		return nil, werror.WrapWithMsg(ErrInvalidArrayType, "not a float64 array")
+	}
+}
+
+// BoolFromRecord returns the bool value for a specific row and column in an
+// Arrow record. If the value is null, it returns 0.
+func BoolFromRecord(record arrow.Record, fieldID int, row int) (bool, error) {
+	if fieldID == -1 {
+		return false, nil
+	}
+
+	arr := record.Column(fieldID)
+	if arr == nil {
+		return false, nil
+	}
+
+	switch arr := arr.(type) {
+	case *array.Boolean:
+		if arr.IsNull(row) {
+			return false, nil
+		} else {
+			return arr.Value(row), nil
+		}
+	default:
+		return false, werror.WrapWithMsg(ErrInvalidArrayType, "not a boolean array")
 	}
 }
 
@@ -179,4 +331,25 @@ func FixedSizeBinaryFieldByIDFromRecord(record arrow.Record, fieldID int, row in
 	}
 
 	return FixedSizeBinaryFromArray(arr, row)
+}
+
+// ListValuesById return the list array for a field id for a specific row.
+func ListValuesByIDFromRecord(record arrow.Record, fieldID int, row int) (arr arrow.Array, start int, end int, err error) {
+	if fieldID == -1 {
+		return nil, 0, 0, nil
+	}
+
+	column := record.Column(fieldID)
+	switch listArr := column.(type) {
+	case *array.List:
+		if listArr.IsNull(row) {
+			return nil, 0, 0, nil
+		}
+		start = int(listArr.Offsets()[row])
+		end = int(listArr.Offsets()[row+1])
+		arr = listArr.ListValues()
+	default:
+		err = werror.WrapWithContext(ErrNotArrayList, map[string]interface{}{"fieldID": fieldID, "row": row})
+	}
+	return
 }

@@ -81,10 +81,11 @@ func NewUnivariateEHistogramDataPointIds(parentDT *arrow.StructType) (*Univariat
 		return nil, werror.Wrap(err)
 	}
 
-	exemplars, err := NewExemplarIds(ehdpDT)
-	if err != nil {
-		return nil, werror.Wrap(err)
-	}
+	// ToDo
+	//exemplars, err := NewExemplarIds(ehdpDT)
+	//if err != nil {
+	//	return nil, werror.Wrap(err)
+	//}
 
 	flagsID, _ := arrowutils.FieldIDFromStruct(ehdpDT, constants.Flags)
 	minID, _ := arrowutils.FieldIDFromStruct(ehdpDT, constants.HistogramMin)
@@ -101,10 +102,11 @@ func NewUnivariateEHistogramDataPointIds(parentDT *arrow.StructType) (*Univariat
 		ZeroCount:         zeroCountID,
 		Positive:          positive,
 		Negative:          negative,
-		Exemplars:         exemplars,
-		Flags:             flagsID,
-		Min:               minID,
-		Max:               maxID,
+		// ToDo
+		//Exemplars:         exemplars,
+		Flags: flagsID,
+		Min:   minID,
+		Max:   maxID,
 	}, nil
 }
 
@@ -200,11 +202,12 @@ func AppendUnivariateEHistogramDataPointInto(ehdpSlice pmetric.ExponentialHistog
 			}
 		}
 
-		exemplars, err := ehdp.ListOfStructsById(ehdpIdx, ids.Exemplars.Id)
+		exemplars, err := ehdp.ListOfStructsById(ehdpIdx, ids.Exemplars.ID)
 		if exemplars != nil && err == nil {
-			if err := AppendExemplarsInto(ehdpVal.Exemplars(), exemplars, ehdpIdx, ids.Exemplars); err != nil {
-				return werror.Wrap(err)
-			}
+			// ToDo
+			//if err := AppendExemplarsInto(ehdpVal.Exemplars(), exemplars, ehdpIdx, ids.Exemplars); err != nil {
+			//	return werror.Wrap(err)
+			//}
 		} else if err != nil {
 			return werror.Wrap(err)
 		}
