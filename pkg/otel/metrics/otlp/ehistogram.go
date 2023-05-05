@@ -18,7 +18,6 @@ import (
 	"strconv"
 
 	"github.com/apache/arrow/go/v12/arrow"
-	"github.com/apache/arrow/go/v12/arrow/array"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 
@@ -29,7 +28,7 @@ import (
 )
 
 type (
-	HistogramDataPointIDs struct {
+	EHistogramDataPointIDs struct {
 		ID                     int
 		ParentID               int
 		Name                   int
@@ -40,27 +39,29 @@ type (
 		TimeUnixNano           int
 		Count                  int
 		Sum                    int
-		BucketCounts           int // List of uint64
-		ExplicitBounds         int // List of float64
+		Scale                  int
+		ZeroCount              int
+		Positive               *EHistogramDataPointBucketsIds
+		Negative               *EHistogramDataPointBucketsIds
 		Exemplars              *ExemplarIds
 		Flags                  int
 		Min                    int
 		Max                    int
 	}
 
-	HistogramDataPointsStore struct {
+	EHistogramDataPointsStore struct {
 		nextID      uint16
 		metricByIDs map[uint16]map[string]*pmetric.Metric
 	}
 )
 
-func NewHistogramDataPointsStore() *HistogramDataPointsStore {
-	return &HistogramDataPointsStore{
+func NewEHistogramDataPointsStore() *EHistogramDataPointsStore {
+	return &EHistogramDataPointsStore{
 		metricByIDs: make(map[uint16]map[string]*pmetric.Metric),
 	}
 }
 
-func (s *HistogramDataPointsStore) HistogramMetricsByID(ID uint16) []*pmetric.Metric {
+func (s *EHistogramDataPointsStore) EHistogramMetricsByID(ID uint16) []*pmetric.Metric {
 	histograms, ok := s.metricByIDs[ID]
 	if !ok {
 		return make([]*pmetric.Metric, 0)
@@ -72,7 +73,7 @@ func (s *HistogramDataPointsStore) HistogramMetricsByID(ID uint16) []*pmetric.Me
 	return metrics
 }
 
-func SchemaToHistogramIDs(schema *arrow.Schema) (*HistogramDataPointIDs, error) {
+func SchemaToEHistogramIDs(schema *arrow.Schema) (*EHistogramDataPointIDs, error) {
 	ID, err := arrowutils.FieldIDFromSchema(schema, constants.ID)
 	if err != nil {
 		return nil, werror.Wrap(err)
@@ -123,12 +124,22 @@ func SchemaToHistogramIDs(schema *arrow.Schema) (*HistogramDataPointIDs, error) 
 		return nil, werror.Wrap(err)
 	}
 
-	bucketCounts, err := arrowutils.FieldIDFromSchema(schema, constants.HistogramBucketCounts)
+	scale, err := arrowutils.FieldIDFromSchema(schema, constants.ExpHistogramScale)
 	if err != nil {
 		return nil, werror.Wrap(err)
 	}
 
-	explicitBounds, err := arrowutils.FieldIDFromSchema(schema, constants.HistogramExplicitBounds)
+	zeroCount, err := arrowutils.FieldIDFromSchema(schema, constants.ExpHistogramZeroCount)
+	if err != nil {
+		return nil, werror.Wrap(err)
+	}
+
+	positive, err := NewEHistogramDataPointBucketsIds(schema, constants.ExpHistogramPositive)
+	if err != nil {
+		return nil, werror.Wrap(err)
+	}
+
+	negative, err := NewEHistogramDataPointBucketsIds(schema, constants.ExpHistogramNegative)
 	if err != nil {
 		return nil, werror.Wrap(err)
 	}
@@ -153,7 +164,7 @@ func SchemaToHistogramIDs(schema *arrow.Schema) (*HistogramDataPointIDs, error) 
 		return nil, werror.Wrap(err)
 	}
 
-	return &HistogramDataPointIDs{
+	return &EHistogramDataPointIDs{
 		ID:                     ID,
 		ParentID:               parentID,
 		Name:                   name,
@@ -164,8 +175,10 @@ func SchemaToHistogramIDs(schema *arrow.Schema) (*HistogramDataPointIDs, error) 
 		TimeUnixNano:           timeUnixNano,
 		Count:                  count,
 		Sum:                    sum,
-		BucketCounts:           bucketCounts,
-		ExplicitBounds:         explicitBounds,
+		Scale:                  scale,
+		ZeroCount:              zeroCount,
+		Positive:               positive,
+		Negative:               negative,
 		Exemplars:              exemplars,
 		Flags:                  flags,
 		Min:                    min,
@@ -173,14 +186,14 @@ func SchemaToHistogramIDs(schema *arrow.Schema) (*HistogramDataPointIDs, error) 
 	}, nil
 }
 
-func HistogramDataPointsStoreFrom(record arrow.Record, attrsStore *otlp.Attributes32Store) (*HistogramDataPointsStore, error) {
+func EHistogramDataPointsStoreFrom(record arrow.Record, attrsStore *otlp.Attributes32Store) (*EHistogramDataPointsStore, error) {
 	defer record.Release()
 
-	store := &HistogramDataPointsStore{
+	store := &EHistogramDataPointsStore{
 		metricByIDs: make(map[uint16]map[string]*pmetric.Metric),
 	}
 
-	fieldIDs, err := SchemaToHistogramIDs(record.Schema())
+	fieldIDs, err := SchemaToEHistogramIDs(record.Schema())
 	if err != nil {
 		return nil, werror.Wrap(err)
 	}
@@ -228,7 +241,7 @@ func HistogramDataPointsStoreFrom(record arrow.Record, attrsStore *otlp.Attribut
 
 		metricSig := name + ":" + description + ":" + unit + ":" + strconv.Itoa(int(aggregationTemporality))
 		metric := metrics[metricSig]
-		var histogram pmetric.Histogram
+		var histogram pmetric.ExponentialHistogram
 
 		if metric == nil {
 			metricObj := pmetric.NewMetric()
@@ -236,11 +249,11 @@ func HistogramDataPointsStoreFrom(record arrow.Record, attrsStore *otlp.Attribut
 			metric.SetName(name)
 			metric.SetDescription(description)
 			metric.SetUnit(unit)
-			histogram = metric.SetEmptyHistogram()
+			histogram = metric.SetEmptyExponentialHistogram()
 			histogram.SetAggregationTemporality(pmetric.AggregationTemporality(aggregationTemporality))
 			metrics[metricSig] = metric
 		} else {
-			histogram = metric.Histogram()
+			histogram = metric.ExponentialHistogram()
 		}
 		hdp := histogram.DataPoints().AppendEmpty()
 
@@ -270,32 +283,36 @@ func HistogramDataPointsStoreFrom(record arrow.Record, attrsStore *otlp.Attribut
 			hdp.SetSum(*sum)
 		}
 
-		bucketCounts, start, end, err := arrowutils.ListValuesByIDFromRecord(record, fieldIDs.BucketCounts, row)
+		scale, err := arrowutils.I32FromRecord(record, fieldIDs.Scale, row)
 		if err != nil {
 			return nil, werror.Wrap(err)
 		}
-		if values, ok := bucketCounts.(*array.Uint64); ok {
-			bucketCountsSlice := hdp.BucketCounts()
-			bucketCountsSlice.EnsureCapacity(end - start)
-			for i := start; i < end; i++ {
-				bucketCountsSlice.Append(values.Value(i))
+		hdp.SetScale(scale)
+
+		zeroCount, err := arrowutils.U64FromRecord(record, fieldIDs.ZeroCount, row)
+		if err != nil {
+			return nil, werror.Wrap(err)
+		}
+		hdp.SetZeroCount(zeroCount)
+
+		positive, err := arrowutils.StructFromRecord(record, fieldIDs.Positive.ID, row)
+		if err != nil {
+			return nil, werror.Wrap(err)
+		}
+		if positive != nil {
+			if err := AppendUnivariateEHistogramDataPointBucketsInto(hdp.Positive(), positive, fieldIDs.Positive, row); err != nil {
+				return nil, werror.Wrap(err)
 			}
-		} else {
-			return nil, werror.Wrap(ErrNotArrayUint64)
 		}
 
-		explicitBounds, start, end, err := arrowutils.ListValuesByIDFromRecord(record, fieldIDs.ExplicitBounds, row)
+		negative, err := arrowutils.StructFromRecord(record, fieldIDs.Negative.ID, row)
 		if err != nil {
 			return nil, werror.Wrap(err)
 		}
-		if values, ok := explicitBounds.(*array.Float64); ok {
-			explicitBoundsSlice := hdp.ExplicitBounds()
-			explicitBoundsSlice.EnsureCapacity(end - start)
-			for i := start; i < end; i++ {
-				explicitBoundsSlice.Append(values.Value(i))
+		if negative != nil {
+			if err := AppendUnivariateEHistogramDataPointBucketsInto(hdp.Negative(), negative, fieldIDs.Negative, row); err != nil {
+				return nil, werror.Wrap(err)
 			}
-		} else {
-			return nil, werror.Wrap(ErrNotArrayFloat64)
 		}
 
 		exemplars, err := arrowutils.ListOfStructsFromRecord(record, fieldIDs.Exemplars.ID, row)

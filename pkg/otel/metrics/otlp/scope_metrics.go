@@ -75,6 +75,7 @@ func UpdateScopeMetricsFrom(
 		dGauges := relatedData.GaugeDoubleDataPointsStore.GaugeMetricsByID(ID)
 		summaries := relatedData.SummaryDataPointsStore.SummaryMetricsByID(ID)
 		histogram := relatedData.HistogramDataPointsStore.HistogramMetricsByID(ID)
+		eHistogram := relatedData.EHistogramDataPointsStore.EHistogramMetricsByID(ID)
 
 		metrics := scopeMetrics.Metrics()
 		metrics.EnsureCapacity(len(iSums) + len(dSums) + len(iGauges) + len(dGauges) + len(summaries))
@@ -94,6 +95,9 @@ func UpdateScopeMetricsFrom(
 			sum.MoveTo(metrics.AppendEmpty())
 		}
 		for _, hist := range histogram {
+			hist.MoveTo(metrics.AppendEmpty())
+		}
+		for _, hist := range eHistogram {
 			hist.MoveTo(metrics.AppendEmpty())
 		}
 	}

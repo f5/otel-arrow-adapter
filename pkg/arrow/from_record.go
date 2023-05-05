@@ -271,7 +271,28 @@ func StringFromRecord(record arrow.Record, fieldID int, row int) (string, error)
 	return StringFromArray(arr, row)
 }
 
-// SparseUnionFromRecord returns the sparse union value for a specific row and
+// StructFromRecord returns the struct array for a specific row and
+// column in an Arrow record. If the value is null, it returns nil.
+func StructFromRecord(record arrow.Record, fieldID int, row int) (sarr *array.Struct, err error) {
+	if fieldID == -1 {
+		return nil, nil
+	}
+
+	column := record.Column(fieldID)
+	switch arr := column.(type) {
+	case *array.Struct:
+		if arr.IsNull(row) {
+			return
+		}
+
+		sarr = arr
+	default:
+		err = werror.WrapWithContext(common.ErrNotArrayMap, map[string]interface{}{"row": row, "fieldID": fieldID})
+	}
+	return
+}
+
+// SparseUnionFromRecord returns the sparse union array for a specific row and
 // column in an Arrow record. If the value is null, it returns nil.
 func SparseUnionFromRecord(record arrow.Record, fieldID int, row int) (marr *array.SparseUnion, err error) {
 	if fieldID == -1 {

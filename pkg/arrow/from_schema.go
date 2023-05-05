@@ -40,6 +40,26 @@ func FieldIDFromSchema(schema *arrow.Schema, fieldName string) (int, error) {
 	return ids[0], nil
 }
 
+// StructFieldIDFromSchema returns the field id of a struct
+// field from an Arrow schema or -1 for an unknown field.
+//
+// An error is returned if the field is not a struct.
+func StructFieldIDFromSchema(schema *arrow.Schema, fieldName string) (int, *arrow.StructType, error) {
+	ids := schema.FieldIndices(fieldName)
+	if len(ids) == 0 {
+		return -1, nil, nil
+	}
+	if len(ids) > 1 {
+		return 0, nil, werror.WrapWithContext(ErrDuplicateFieldName, map[string]interface{}{"fieldName": fieldName})
+	}
+
+	if st, ok := schema.Field(ids[0]).Type.(*arrow.StructType); ok {
+		return ids[0], st, nil
+	} else {
+		return 0, nil, werror.WrapWithContext(ErrNotArrayStruct, map[string]interface{}{"fieldName": fieldName})
+	}
+}
+
 // ListOfStructsFieldIDFromSchema returns the field id of a list of structs
 // field from an Arrow schema or -1 for an unknown field.
 //

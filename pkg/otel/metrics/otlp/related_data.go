@@ -47,7 +47,7 @@ type (
 		GaugeDoubleDataPointsStore *GaugeDoubleDataPointsStore
 		SummaryDataPointsStore     *SummaryDataPointsStore
 		HistogramDataPointsStore   *HistogramDataPointsStore
-		//ExpHistogramDataPointsStore *ExpHistogramDataPointsStore
+		EHistogramDataPointsStore  *EHistogramDataPointsStore
 	}
 )
 
@@ -69,7 +69,7 @@ func NewRelatedData() *RelatedData {
 		GaugeDoubleDataPointsStore: NewGaugeDoubleDataPointsStore(),
 		SummaryDataPointsStore:     NewSummaryDataPointsStore(),
 		HistogramDataPointsStore:   NewHistogramDataPointsStore(),
-		//ExpHistogramDataPointsStore: NewExpHistogramDataPointsStore(),
+		EHistogramDataPointsStore:  NewEHistogramDataPointsStore(),
 	}
 }
 
@@ -223,12 +223,12 @@ func RelatedDataFrom(records []*record_message.RecordMessage) (relatedData *Rela
 		}
 	}
 
-	//if expHistogramDPRec != nil {
-	//	relatedData.ExpHistogramDataPointsStore, err = ExpHistogramStoreFrom(expHistogramDPRec.Record(), relatedData.ExpHistogramAttrsStore)
-	//	if err != nil {
-	//		return nil, nil, werror.Wrap(err)
-	//	}
-	//}
+	if expHistogramDPRec != nil {
+		relatedData.EHistogramDataPointsStore, err = EHistogramDataPointsStoreFrom(expHistogramDPRec.Record(), relatedData.ExpHistogramAttrsStore)
+		if err != nil {
+			return nil, nil, werror.Wrap(err)
+		}
+	}
 
 	return
 }
