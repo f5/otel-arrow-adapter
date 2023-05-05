@@ -172,6 +172,10 @@ func (r *RelatedData) Release() {
 	r.relatedRecordsManager.Release()
 }
 
+func (r *RelatedData) RecordBuilderExt(payloadType *carrow.PayloadType) *builder.RecordBuilderExt {
+	return r.relatedRecordsManager.RecordBuilderExt(payloadType)
+}
+
 func (r *RelatedData) AttrsBuilders() *AttrsBuilders {
 	return r.attrsBuilders
 }

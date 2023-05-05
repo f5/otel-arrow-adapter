@@ -115,6 +115,30 @@ func Resource2() pcommon.Resource {
 	return resource
 }
 
+// IntDP1 returns a pmetric.NumberDataPoint (sample 1).
+func IntDP1() pmetric.NumberDataPoint {
+	dp := pmetric.NewNumberDataPoint()
+	Attrs1().CopyTo(dp.Attributes())
+	dp.SetStartTimestamp(1)
+	dp.SetTimestamp(2)
+	dp.SetIntValue(1)
+	exs := dp.Exemplars()
+	exs.EnsureCapacity(2)
+	Exemplar1().CopyTo(exs.AppendEmpty())
+	Exemplar2().CopyTo(exs.AppendEmpty())
+	dp.SetFlags(1)
+	return dp
+}
+
+// IntDP2 returns a pmetric.NumberDataPoint (sample 1).
+func IntDP2() pmetric.NumberDataPoint {
+	dp := pmetric.NewNumberDataPoint()
+	Attrs1().CopyTo(dp.Attributes())
+	dp.SetTimestamp(2)
+	dp.SetIntValue(1)
+	return dp
+}
+
 // NDP1 returns a pmetric.NumberDataPoint (sample 1).
 func NDP1() pmetric.NumberDataPoint {
 	dp := pmetric.NewNumberDataPoint()
@@ -195,6 +219,22 @@ func Gauge2() pmetric.Gauge {
 func Gauge3() pmetric.Gauge {
 	g := pmetric.NewGauge()
 	NDP1().CopyTo(g.DataPoints().AppendEmpty())
+	return g
+}
+
+func IntSum1() pmetric.Sum {
+	g := pmetric.NewSum()
+	IntDP1().CopyTo(g.DataPoints().AppendEmpty())
+	IntDP2().CopyTo(g.DataPoints().AppendEmpty())
+	g.SetAggregationTemporality(pmetric.AggregationTemporalityDelta)
+	g.SetIsMonotonic(true)
+	return g
+}
+
+func IntSum2() pmetric.Sum {
+	g := pmetric.NewSum()
+	IntDP1().CopyTo(g.DataPoints().AppendEmpty())
+	IntDP2().CopyTo(g.DataPoints().AppendEmpty())
 	return g
 }
 
