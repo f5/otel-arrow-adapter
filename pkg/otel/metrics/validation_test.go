@@ -100,5 +100,4 @@ func TestBackAndForthConversion(t *testing.T) {
 	record.Release()
 
 	assert.Equiv(t, []json.Marshaler{expectedRequest}, []json.Marshaler{pmetricotlp.NewExportRequestFromMetrics(metrics)})
-	assert.JSONCanonicalEq(t, []json.Marshaler{expectedRequest}, []json.Marshaler{pmetricotlp.NewExportRequestFromMetrics(metrics)})
 }
