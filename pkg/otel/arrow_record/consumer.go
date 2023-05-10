@@ -82,6 +82,9 @@ func (c *Consumer) MetricsFrom(bar *colarspb.BatchArrowRecords) ([]pmetric.Metri
 
 	// Compute all related records (i.e. Attributes)
 	relatedData, metricsRecord, err := metricsotlp.RelatedDataFrom(records)
+	if err != nil {
+		return nil, werror.Wrap(err)
+	}
 
 	if metricsRecord != nil {
 		// Decode OTLP metrics from the combination of the main record and the

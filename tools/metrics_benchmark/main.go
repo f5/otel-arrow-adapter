@@ -25,6 +25,7 @@ import (
 	"github.com/f5/otel-arrow-adapter/pkg/benchmark/dataset"
 	"github.com/f5/otel-arrow-adapter/pkg/benchmark/profileable/arrow"
 	"github.com/f5/otel-arrow-adapter/pkg/benchmark/profileable/otlp"
+	"github.com/f5/otel-arrow-adapter/pkg/benchmark/profileable/otlpdict"
 )
 
 var help = flag.Bool("help", false, "Show help")
@@ -65,22 +66,22 @@ func main() {
 	// Performance comparison for each input file
 	for i := range inputFiles {
 		// Compare the performance between the standard OTLP representation and the OTLP Arrow representation.
-		profiler := benchmark.NewProfiler([]int{5000}, "output/metrics_benchmark.log", warmUpIter)
+		profiler := benchmark.NewProfiler([]int{10, 100, 500, 1000, 2000, 4000, 5000}, "output/metrics_benchmark.log", warmUpIter)
 		compressionAlgo := benchmark.Zstd()
 		maxIter := uint64(3)
 		ds := dataset.NewRealMetricsDataset(inputFiles[i])
 		profiler.Printf("Dataset '%s' (%s) loaded\n", inputFiles[i], humanize.Bytes(uint64(ds.SizeInBytes())))
 		otlpMetrics := otlp.NewMetricsProfileable(ds, compressionAlgo)
-		//otlpDictMetrics := otlpdict.NewMetricsProfileable(ds, compressionAlgo)
+		otlpDictMetrics := otlpdict.NewMetricsProfileable(ds, compressionAlgo)
 		otlpArrowMetrics := arrow.NewMetricsProfileable([]string{"stream mode"}, ds, conf)
 
 		if err := profiler.Profile(otlpMetrics, maxIter); err != nil {
 			panic(fmt.Errorf("expected no error, got %v", err))
 		}
 
-		//if err := profiler.Profile(otlpDictMetrics, maxIter); err != nil {
-		//	panic(fmt.Errorf("expected no error, got %v", err))
-		//}
+		if err := profiler.Profile(otlpDictMetrics, maxIter); err != nil {
+			panic(fmt.Errorf("expected no error, got %v", err))
+		}
 
 		if err := profiler.Profile(otlpArrowMetrics, maxIter); err != nil {
 			panic(fmt.Errorf("expected no error, got %v", err))
@@ -89,11 +90,11 @@ func main() {
 		// If the unary RPC mode is enabled,
 		// run the OTLP Arrow benchmark in unary RPC mode.
 		if *unaryRpcPtr {
-			//otlpDictMetrics := otlpdict.NewMetricsProfileable(ds, compressionAlgo)
-			//otlpDictMetrics.EnableUnaryRpcMode()
-			//if err := profiler.Profile(otlpDictMetrics, maxIter); err != nil {
-			//	panic(fmt.Errorf("expected no error, got %v", err))
-			//}
+			otlpDictMetrics := otlpdict.NewMetricsProfileable(ds, compressionAlgo)
+			otlpDictMetrics.EnableUnaryRpcMode()
+			if err := profiler.Profile(otlpDictMetrics, maxIter); err != nil {
+				panic(fmt.Errorf("expected no error, got %v", err))
+			}
 
 			otlpArrowMetrics = arrow.NewMetricsProfileable([]string{"unary rpc mode"}, ds, conf)
 			otlpArrowMetrics.EnableUnaryRpcMode()

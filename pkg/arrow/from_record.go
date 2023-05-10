@@ -70,6 +70,13 @@ func U32FromRecord(record arrow.Record, fieldID int, row int) (uint32, error) {
 		} else {
 			return arr.Value(row), nil
 		}
+	case *array.Dictionary:
+		u32Arr := arr.Dictionary().(*array.Uint32)
+		if arr.IsNull(row) {
+			return 0, nil
+		} else {
+			return u32Arr.Value(arr.GetValueIndex(row)), nil
+		}
 	default:
 		return 0, werror.WrapWithMsg(ErrInvalidArrayType, "not a uint32 array")
 	}
@@ -178,6 +185,13 @@ func I64FromRecord(record arrow.Record, fieldID int, row int) (int64, error) {
 		} else {
 			return arr.Value(row), nil
 		}
+	case *array.Dictionary:
+		i64Arr := arr.Dictionary().(*array.Int64)
+		if arr.IsNull(row) {
+			return 0, nil
+		} else {
+			return i64Arr.Value(arr.GetValueIndex(row)), nil
+		}
 	default:
 		return 0, werror.WrapWithMsg(ErrInvalidArrayType, "not a int64 array")
 	}
@@ -269,6 +283,21 @@ func StringFromRecord(record arrow.Record, fieldID int, row int) (string, error)
 	}
 
 	return StringFromArray(arr, row)
+}
+
+// BinaryFromRecord returns the []byte value for a specific row and column in
+// an Arrow record. If the value is null, it returns nil.
+func BinaryFromRecord(record arrow.Record, fieldID int, row int) ([]byte, error) {
+	if fieldID == -1 {
+		return nil, nil
+	}
+
+	arr := record.Column(fieldID)
+	if arr == nil {
+		return nil, nil
+	}
+
+	return BinaryFromArray(arr, row)
 }
 
 // StructFromRecord returns the struct array for a specific row and

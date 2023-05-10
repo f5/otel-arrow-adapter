@@ -15,9 +15,43 @@
 package internal
 
 import (
+	"github.com/brianvoe/gofakeit/v6"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/pmetric"
+	"golang.org/x/exp/rand"
 )
+
+func RandAttrs(names []string) pcommon.Map {
+	attrs := pcommon.NewMap()
+
+	rand.Shuffle(len(names), func(i, j int) {
+		names[i], names[j] = names[j], names[i]
+	})
+
+	attrCount := rand.Intn(len(names))
+	if attrCount == 0 {
+		attrCount = 1
+	}
+	names = names[:attrCount]
+
+	for _, name := range names {
+		attrType := rand.Intn(5)
+		switch attrType {
+		case 0:
+			attrs.PutStr(name, gofakeit.AppName())
+		case 1:
+			attrs.PutInt(name, rand.Int63())
+		case 2:
+			attrs.PutDouble(name, rand.Float64())
+		case 3:
+			attrs.PutBool(name, rand.Intn(2) == 1)
+		case 4:
+			bytes := attrs.PutEmptyBytes(name)
+			bytes.Append([]byte(gofakeit.UUID())...)
+		}
+	}
+	return attrs
+}
 
 func Attrs1() pcommon.Map {
 	attrs := pcommon.NewMap()

@@ -222,7 +222,7 @@ func (b *HistogramDataPointBuilder) TryBuild(attrsAccu *carrow.Attributes32Accum
 		b.pib.Append(hdpRec.ParentID)
 
 		// Attributes
-		err = attrsAccu.AppendUniqueAttributesWithID(uint32(ID), hdp.Attributes(), nil, nil)
+		err = attrsAccu.AppendWithID(uint32(ID), hdp.Attributes())
 		if err != nil {
 			return nil, werror.Wrap(err)
 		}

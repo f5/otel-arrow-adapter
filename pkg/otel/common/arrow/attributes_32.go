@@ -33,7 +33,13 @@ import (
 // Schema is the Arrow schema for the OTLP Arrow Traces record.
 var (
 	AttrsSchema32 = arrow.NewSchema([]arrow.Field{
-		{Name: constants.ParentID, Type: arrow.PrimitiveTypes.Uint32},
+		{Name: constants.ParentID, Type: arrow.PrimitiveTypes.Uint32, Metadata: schema.Metadata(schema.Dictionary8)},
+		{Name: constants.AttrsRecordKey, Type: arrow.BinaryTypes.String, Metadata: schema.Metadata(schema.Dictionary8)},
+		{Name: constants.AttrsRecordValue, Type: AnyValueDT},
+	}, nil)
+
+	DeltaEncodedAttrsSchema32 = arrow.NewSchema([]arrow.Field{
+		{Name: constants.ParentID, Type: arrow.PrimitiveTypes.Uint32, Metadata: schema.Metadata(schema.Dictionary8, schema.DeltaEncoding)},
 		{Name: constants.AttrsRecordKey, Type: arrow.BinaryTypes.String, Metadata: schema.Metadata(schema.Dictionary8)},
 		{Name: constants.AttrsRecordValue, Type: AnyValueDT},
 	}, nil)
@@ -51,6 +57,8 @@ type (
 
 		accumulator *Attributes32Accumulator
 		payloadType *PayloadType
+
+		deltaEncoded bool // flag to indicate if the parentID is delta encoded
 	}
 )
 
@@ -61,6 +69,19 @@ func NewAttrs32Builder(rBuilder *builder.RecordBuilderExt, payloadType *PayloadT
 		accumulator: NewAttributes32Accumulator(),
 		payloadType: payloadType,
 	}
+	b.init()
+	return b
+}
+
+func NewDeltaEncodedAttrs32Builder(rBuilder *builder.RecordBuilderExt, payloadType *PayloadType) *Attrs32Builder {
+	b := &Attrs32Builder{
+		released:     false,
+		builder:      rBuilder,
+		accumulator:  NewAttributes32Accumulator(),
+		payloadType:  payloadType,
+		deltaEncoded: true,
+	}
+
 	b.init()
 	return b
 }
@@ -80,8 +101,15 @@ func (b *Attrs32Builder) TryBuild() (record arrow.Record, err error) {
 		return nil, werror.Wrap(ErrBuilderAlreadyReleased)
 	}
 
+	prevParentID := uint32(0)
 	for _, attr := range b.accumulator.SortedAttrs() {
-		b.ib.Append(attr.ParentID)
+		if b.deltaEncoded {
+			delta := attr.ParentID - prevParentID
+			prevParentID = attr.ParentID
+			b.ib.Append(delta)
+		} else {
+			b.ib.Append(attr.ParentID)
+		}
 		b.kb.Append(attr.Key)
 		if err := b.ab.Append(attr.Value); err != nil {
 			return nil, werror.Wrap(err)

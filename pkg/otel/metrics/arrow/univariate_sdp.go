@@ -209,7 +209,7 @@ func (b *SummaryDataPointBuilder) TryBuild(attrsAccu *carrow.Attributes32Accumul
 		b.pib.Append(summary.ParentID)
 
 		// Attributes
-		err = attrsAccu.AppendUniqueAttributesWithID(uint32(ID), summary.Orig.Attributes(), nil, nil)
+		err = attrsAccu.AppendWithID(uint32(ID), summary.Orig.Attributes())
 		if err != nil {
 			return nil, werror.Wrap(err)
 		}

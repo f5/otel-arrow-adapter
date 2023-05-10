@@ -241,6 +241,35 @@ func (c *Attributes16Accumulator) Append(attrs pcommon.Map) (int64, error) {
 	return int64(ID), nil
 }
 
+func (c *Attributes16Accumulator) AppendWithID(parentID uint16, attrs pcommon.Map) error {
+	if attrs.Len() == 0 {
+		return nil
+	}
+
+	if c.attrsMapCount == math.MaxUint16 {
+		panic("The maximum number of group of attributes has been reached (max is uint16).")
+	}
+
+	attrs.Range(func(key string, v pcommon.Value) bool {
+		if key == "" {
+			// Skip entries with empty keys
+			return true
+		}
+
+		c.attrs = append(c.attrs, Attr16{
+			ParentID: parentID,
+			Key:      key,
+			Value:    v,
+		})
+
+		return true
+	})
+
+	c.attrsMapCount++
+
+	return nil
+}
+
 func (c *Attributes16Accumulator) AppendUniqueAttributesWithID(parentID uint16, attrs pcommon.Map, smattrs *common.SharedAttributes, mattrs *common.SharedAttributes) error {
 	uniqueAttrsCount := attrs.Len()
 	if smattrs != nil {
@@ -403,6 +432,35 @@ func (c *Attributes32Accumulator) AppendUniqueAttributes(attrs pcommon.Map, smat
 	c.attrsMapCount++
 
 	return int64(ID), nil
+}
+
+func (c *Attributes32Accumulator) AppendWithID(ID uint32, attrs pcommon.Map) error {
+	if attrs.Len() == 0 {
+		return nil
+	}
+
+	if c.attrsMapCount == math.MaxUint32 {
+		panic("The maximum number of group of attributes has been reached (max is uint32).")
+	}
+
+	attrs.Range(func(key string, v pcommon.Value) bool {
+		if key == "" {
+			// Skip entries with empty keys
+			return true
+		}
+
+		c.attrs = append(c.attrs, Attr32{
+			ParentID: ID,
+			Key:      key,
+			Value:    v,
+		})
+
+		return true
+	})
+
+	c.attrsMapCount++
+
+	return nil
 }
 
 func (c *Attributes32Accumulator) AppendUniqueAttributesWithID(ID uint32, attrs pcommon.Map, smattrs *common.SharedAttributes, mattrs *common.SharedAttributes) error {
@@ -667,4 +725,5 @@ func PrintRecord(record arrow.Record) {
 		}
 		print("\n")
 	}
+	println()
 }

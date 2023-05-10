@@ -224,7 +224,7 @@ func (b *EHistogramDataPointBuilder) TryBuild(attrsAccu *carrow.Attributes32Accu
 		b.pib.Append(ehdpRec.ParentID)
 
 		// Attributes
-		err = attrsAccu.AppendUniqueAttributesWithID(uint32(ID), ehdp.Attributes(), nil, nil)
+		err = attrsAccu.AppendWithID(uint32(ID), ehdp.Attributes())
 		if err != nil {
 			return nil, werror.Wrap(err)
 		}
@@ -342,10 +342,11 @@ func (a *EHDPAccumulator) Append(
 
 func (a *EHDPAccumulator) Sort() {
 	sort.Slice(a.ehdps, func(i, j int) bool {
-		ehdpI := a.ehdps[i].Orig
-		ehdpJ := a.ehdps[j].Orig
-
-		return ehdpI.Timestamp() < ehdpJ.Timestamp()
+		if a.ehdps[i].Metric.Name() == a.ehdps[j].Metric.Name() {
+			return a.ehdps[i].Orig.Timestamp() < a.ehdps[j].Orig.Timestamp()
+		} else {
+			return a.ehdps[i].Metric.Name() < a.ehdps[j].Metric.Name()
+		}
 	})
 }
 

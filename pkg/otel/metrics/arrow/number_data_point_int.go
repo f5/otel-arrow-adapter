@@ -186,7 +186,7 @@ func (b *IntDataPointBuilder) TryBuild(attrsAccu *acommon.Attributes32Accumulato
 		b.pib.Append(ndp.ParentID)
 
 		// Attributes
-		err = attrsAccu.AppendUniqueAttributesWithID(uint32(ID), ndp.Orig.Attributes(), nil, nil)
+		err = attrsAccu.AppendWithID(uint32(ID), ndp.Orig.Attributes())
 		if err != nil {
 			return nil, werror.Wrap(err)
 		}
