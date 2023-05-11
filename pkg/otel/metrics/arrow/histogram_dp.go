@@ -14,18 +14,31 @@
 
 package arrow
 
+// This file contains the Arrow schema and encoding logic for histogram metrics
+// and associated data points. Our Arrow schema employs a flattened structure,
+// optimally utilizing Arrow's columnar format. This denormalization obviates
+// the need for an auxiliary pair of ID and ParentID, which would otherwise be
+// necessary to denote the relationship between a metric and its data points.
+// Consequently, the metric fields `Name`, `Description`, `Unit`,
+// `AggregationTemporality`, and `IsMonotonic` will appear duplicated across
+// each data point. However, due to the high compressibility of these fields,
+// this redundancy isn't a concern. The corresponding Arrow records are sorted
+// by the metric name, further enhancing the schema's efficiency and accessibility.
+
 import (
+	"github.com/apache/arrow/go/v12/arrow"
+
+	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema"
+	"github.com/f5/otel-arrow-adapter/pkg/otel/constants"
+
 	"errors"
 	"math"
 	"sort"
 
-	"github.com/apache/arrow/go/v12/arrow"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 
 	carrow "github.com/f5/otel-arrow-adapter/pkg/otel/common/arrow"
-	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/builder"
-	"github.com/f5/otel-arrow-adapter/pkg/otel/constants"
 	"github.com/f5/otel-arrow-adapter/pkg/werror"
 )
 
