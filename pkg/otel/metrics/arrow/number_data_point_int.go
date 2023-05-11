@@ -14,6 +14,8 @@
 
 package arrow
 
+// INtDataPointBuilder is used to build IntSum and IntGauge data points.
+
 import (
 	"errors"
 	"sort"
@@ -35,7 +37,7 @@ var (
 		// Unique identifier of the IDP. This ID is used to identify the
 		// relationship between the IDP, its attributes and exemplars.
 		{Name: constants.ID, Type: arrow.PrimitiveTypes.Uint32, Metadata: schema.Metadata(schema.DeltaEncoding)},
-		// The ID of the parent metric.
+		// The ID of the parent scope metric.
 		{Name: constants.ParentID, Type: arrow.PrimitiveTypes.Uint16},
 		{Name: constants.Name, Type: arrow.BinaryTypes.String, Metadata: schema.Metadata(schema.Dictionary8)},
 		{Name: constants.Description, Type: arrow.BinaryTypes.String, Metadata: schema.Metadata(schema.Optional, schema.Dictionary8)},
@@ -186,7 +188,7 @@ func (b *IntDataPointBuilder) TryBuild(attrsAccu *acommon.Attributes32Accumulato
 		b.pib.Append(ndp.ParentID)
 
 		// Attributes
-		err = attrsAccu.AppendWithID(uint32(ID), ndp.Orig.Attributes())
+		err = attrsAccu.Append(uint32(ID), ndp.Orig.Attributes())
 		if err != nil {
 			return nil, werror.Wrap(err)
 		}

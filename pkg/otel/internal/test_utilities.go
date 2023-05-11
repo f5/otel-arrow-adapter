@@ -21,6 +21,9 @@ import (
 	"golang.org/x/exp/rand"
 )
 
+// RandAttrs generates a randon set of attributes with the given names.
+// The number of attributes is random between 1 and the number of names.
+// The type of each attribute is random.
 func RandAttrs(names []string) pcommon.Map {
 	attrs := pcommon.NewMap()
 

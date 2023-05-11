@@ -256,6 +256,10 @@ func JSONCanonicalEq(t *testing.T, expected interface{}, actual interface{}) {
 
 // CanonicalObjectID computes a unique ID for an object.
 func CanonicalObjectID(object interface{}) string {
+	if object == nil {
+		return "null"
+	}
+
 	switch obj := object.(type) {
 	case map[string]interface{}:
 		return CanonicalMapID(obj)
@@ -272,7 +276,7 @@ func CanonicalObjectID(object interface{}) string {
 	case bool:
 		return strconv.FormatBool(obj)
 	default:
-		println("unknown type")
+		fmt.Printf("canonical id: unknown type (object: %v)\n", object)
 		return fmt.Sprintf("%v", object)
 	}
 }
@@ -322,7 +326,7 @@ func CanonicalSliceID(slice []interface{}) string {
 	return ID.String()
 }
 
-// CanonicalSliceMapID computes a unique ID for a slice.
+// CanonicalSliceMapID computes a unique ID for a slice of maps.
 func CanonicalSliceMapID(slice []map[string]interface{}) string {
 	var itemIDs []string
 

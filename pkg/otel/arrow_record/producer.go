@@ -159,6 +159,8 @@ func (p *Producer) BatchArrowRecordsFromMetrics(metrics pmetric.Metrics) (*colar
 	// parameter. All these Arrow records are wrapped into a BatchArrowRecords
 	// and will be released by the Producer.Produce method.
 	record, err := recordBuilder[pmetric.Metrics](func() (acommon.EntityBuilder[pmetric.Metrics], error) {
+		// Related entity builder must be reset before each use.
+		// This is especially important after a schema update.
 		p.metricsBuilder.RelatedData().Reset()
 		return p.metricsBuilder, nil
 	}, metrics)
@@ -166,12 +168,14 @@ func (p *Producer) BatchArrowRecordsFromMetrics(metrics pmetric.Metrics) (*colar
 		return nil, werror.Wrap(err)
 	}
 
+	// builds the related records (e.g. INT_SUM, INT_GAUGE, INT_GAUGE_ATTRS, ...)
 	rms, err := p.metricsBuilder.RelatedData().BuildRecordMessages()
 	if err != nil {
 		return nil, werror.Wrap(err)
 	}
 
 	schemaID := p.metricsRecordBuilder.SchemaID()
+
 	// The main record must be the first one to simplify the decoding
 	// in the collector.
 	rms = append([]*record_message.RecordMessage{record_message.NewMetricsMessage(schemaID, record)}, rms...)

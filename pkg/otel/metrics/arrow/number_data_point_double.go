@@ -14,6 +14,8 @@
 
 package arrow
 
+// DoubleDataPointBuilder is used to build DoubleSum and DoubleGauge data points.
+
 import (
 	"errors"
 	"sort"
@@ -36,7 +38,7 @@ var (
 		// This unique identifier is used to identify the relationship between
 		// the double data point, its attributes and exemplars.
 		{Name: constants.ID, Type: arrow.PrimitiveTypes.Uint32, Metadata: schema.Metadata(schema.DeltaEncoding)},
-		// The ID of the parent metric.
+		// The ID of the parent scope metric.
 		{Name: constants.ParentID, Type: arrow.PrimitiveTypes.Uint16},
 		{Name: constants.Name, Type: arrow.BinaryTypes.String, Metadata: schema.Metadata(schema.Dictionary8)},
 		{Name: constants.Description, Type: arrow.BinaryTypes.String, Metadata: schema.Metadata(schema.Optional, schema.Dictionary8)},
@@ -187,7 +189,7 @@ func (b *DoubleDataPointBuilder) TryBuild(attrsAccu *acommon.Attributes32Accumul
 		b.pib.Append(ndp.ParentID)
 
 		// Attributes
-		err = attrsAccu.AppendWithID(uint32(ID), ndp.Orig.Attributes())
+		err = attrsAccu.Append(uint32(ID), ndp.Orig.Attributes())
 		if err != nil {
 			return nil, werror.Wrap(err)
 		}

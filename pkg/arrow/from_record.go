@@ -247,7 +247,7 @@ func F64OrNilFromRecord(record arrow.Record, fieldID int, row int) (*float64, er
 }
 
 // BoolFromRecord returns the bool value for a specific row and column in an
-// Arrow record. If the value is null, it returns 0.
+// Arrow record. If the value is null, it returns false.
 func BoolFromRecord(record arrow.Record, fieldID int, row int) (bool, error) {
 	if fieldID == -1 {
 		return false, nil
@@ -383,7 +383,7 @@ func FixedSizeBinaryFieldByIDFromRecord(record arrow.Record, fieldID int, row in
 	return FixedSizeBinaryFromArray(arr, row)
 }
 
-// ListValuesById return the list array for a field id for a specific row.
+// ListValuesByIDFromRecord return the list array for a field id for a specific row.
 func ListValuesByIDFromRecord(record arrow.Record, fieldID int, row int) (arr arrow.Array, start int, end int, err error) {
 	if fieldID == -1 {
 		return nil, 0, 0, nil

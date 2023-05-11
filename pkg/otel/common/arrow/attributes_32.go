@@ -30,14 +30,17 @@ import (
 	"github.com/f5/otel-arrow-adapter/pkg/werror"
 )
 
-// Schema is the Arrow schema for the OTLP Arrow Traces record.
 var (
+	// AttrsSchema32 is the Arrow schema for Attributes records with 32-bit
+	// Parent IDs.
 	AttrsSchema32 = arrow.NewSchema([]arrow.Field{
 		{Name: constants.ParentID, Type: arrow.PrimitiveTypes.Uint32, Metadata: schema.Metadata(schema.Dictionary8)},
 		{Name: constants.AttrsRecordKey, Type: arrow.BinaryTypes.String, Metadata: schema.Metadata(schema.Dictionary8)},
 		{Name: constants.AttrsRecordValue, Type: AnyValueDT},
 	}, nil)
 
+	// DeltaEncodedAttrsSchema32 is the Arrow schema for Attributes records with
+	// 32-bit Parent IDs that are delta encoded.
 	DeltaEncodedAttrsSchema32 = arrow.NewSchema([]arrow.Field{
 		{Name: constants.ParentID, Type: arrow.PrimitiveTypes.Uint32, Metadata: schema.Metadata(schema.Dictionary8, schema.DeltaEncoding)},
 		{Name: constants.AttrsRecordKey, Type: arrow.BinaryTypes.String, Metadata: schema.Metadata(schema.Dictionary8)},

@@ -17,6 +17,8 @@
 
 package arrow
 
+// The definition of all the related data for metrics,
+
 import (
 	"math"
 

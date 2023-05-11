@@ -17,8 +17,7 @@
 
 package otlp
 
-// Note: This file will replace pkg/otel/common/otlp/attributes.go once all OTel
-// entities will be migrated to the hybrid model.
+// ToDo This file will replace pkg/otel/common/otlp/attributes.go once all OTel entities will be migrated to the hybrid model.
 
 import (
 	"github.com/apache/arrow/go/v12/arrow"

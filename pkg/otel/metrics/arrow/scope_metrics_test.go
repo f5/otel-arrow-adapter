@@ -14,6 +14,8 @@
 
 package arrow
 
+// ToDo this test will be remove in a future PR once the shared attributes will be removed from the logs and traces.
+
 import (
 	"testing"
 

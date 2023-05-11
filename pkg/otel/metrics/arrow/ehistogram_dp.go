@@ -224,7 +224,7 @@ func (b *EHistogramDataPointBuilder) TryBuild(attrsAccu *carrow.Attributes32Accu
 		b.pib.Append(ehdpRec.ParentID)
 
 		// Attributes
-		err = attrsAccu.AppendWithID(uint32(ID), ehdp.Attributes())
+		err = attrsAccu.Append(uint32(ID), ehdp.Attributes())
 		if err != nil {
 			return nil, werror.Wrap(err)
 		}

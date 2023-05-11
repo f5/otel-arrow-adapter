@@ -17,6 +17,9 @@
 
 package arrow
 
+// A `related data` is an entity that is attached or related to a another entity.
+// For example, `attributes` are related to `resource`, `span`, ...
+
 import (
 	"github.com/apache/arrow/go/v12/arrow"
 
@@ -30,6 +33,8 @@ import (
 )
 
 type (
+	// RelatedRecordBuilder is the common interface for all related record
+	// builders.
 	RelatedRecordBuilder interface {
 		IsEmpty() bool
 		Build() (arrow.Record, error)
@@ -39,6 +44,8 @@ type (
 		Release()
 	}
 
+	// RelatedRecordsManager manages all related record builders for a given
+	// main OTel entity.
 	RelatedRecordsManager struct {
 		cfg   *cfg.Config
 		stats *stats.ProducerStats
@@ -47,11 +54,14 @@ type (
 		builderExts []*builder.RecordBuilderExt
 	}
 
+	// PayloadType wraps the protobuf payload type generated from the protobuf
+	// definition and adds a prefix to it.
 	PayloadType struct {
 		prefix      string
 		payloadType record_message.PayloadType
 	}
 
+	// All the payload types currently supported by the adapter.
 	payloadTypes struct {
 		ResourceAttrs     *PayloadType
 		ScopeAttrs        *PayloadType
@@ -78,6 +88,9 @@ type (
 		LinkAttrs         *PayloadType
 	}
 )
+
+// All the payload types currently supported by the adapter and their specific
+// prefix and protobuf payload type.
 
 var (
 	PayloadTypes = payloadTypes{

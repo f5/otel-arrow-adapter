@@ -24,6 +24,7 @@ import (
 	"github.com/apache/arrow/go/v12/arrow/array"
 )
 
+// PrintRecord prints the contents of an Arrow record to stdout.
 func PrintRecord(record arrow.Record) {
 	println()
 	schema := record.Schema()

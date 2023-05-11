@@ -17,6 +17,8 @@
 
 package arrow
 
+// ToDo the metrics analyzer is not complete yet. It is a work in progress and will be completed in a future PRs. The analyzer is only used for troubleshooting and debugging purposes.
+
 import (
 	"fmt"
 
