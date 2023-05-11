@@ -30,7 +30,7 @@ import (
 // U16FromRecord returns the uint16 value for a specific row and column in an
 // Arrow record. If the value is null, it returns 0.
 func U16FromRecord(record arrow.Record, fieldID int, row int) (uint16, error) {
-	if fieldID == -1 {
+	if fieldID == AbsentFieldID {
 		return 0, nil
 	}
 
@@ -54,7 +54,7 @@ func U16FromRecord(record arrow.Record, fieldID int, row int) (uint16, error) {
 // U32FromRecord returns the uint32 value for a specific row and column in an
 // Arrow record. If the value is null, it returns 0.
 func U32FromRecord(record arrow.Record, fieldID int, row int) (uint32, error) {
-	if fieldID == -1 {
+	if fieldID == AbsentFieldID {
 		return 0, nil
 	}
 
@@ -85,7 +85,7 @@ func U32FromRecord(record arrow.Record, fieldID int, row int) (uint32, error) {
 // U64FromRecord returns the uint64 value for a specific row and column in an
 // Arrow record. If the value is null, it returns 0.
 func U64FromRecord(record arrow.Record, fieldID int, row int) (uint64, error) {
-	if fieldID == -1 {
+	if fieldID == AbsentFieldID {
 		return 0, nil
 	}
 
@@ -109,7 +109,7 @@ func U64FromRecord(record arrow.Record, fieldID int, row int) (uint64, error) {
 // NullableU32FromRecord returns the uint32 value for a specific row and column in an
 // Arrow record. If the value is null, it returns nil.
 func NullableU32FromRecord(record arrow.Record, fieldID int, row int) (*uint32, error) {
-	if fieldID == -1 {
+	if fieldID == AbsentFieldID {
 		return nil, nil
 	}
 
@@ -138,7 +138,7 @@ func NullableU32FromRecord(record arrow.Record, fieldID int, row int) (*uint32, 
 // I32FromRecord returns the int32 value for a specific row and column in an
 // Arrow record. If the value is null, it returns 0.
 func I32FromRecord(record arrow.Record, fieldID int, row int) (int32, error) {
-	if fieldID == -1 {
+	if fieldID == AbsentFieldID {
 		return 0, nil
 	}
 
@@ -169,7 +169,7 @@ func I32FromRecord(record arrow.Record, fieldID int, row int) (int32, error) {
 // I64FromRecord returns the int64 value for a specific row and column in an
 // Arrow record. If the value is null, it returns 0.
 func I64FromRecord(record arrow.Record, fieldID int, row int) (int64, error) {
-	if fieldID == -1 {
+	if fieldID == AbsentFieldID {
 		return 0, nil
 	}
 
@@ -200,7 +200,7 @@ func I64FromRecord(record arrow.Record, fieldID int, row int) (int64, error) {
 // F64FromRecord returns the float64 value for a specific row and column in an
 // Arrow record. If the value is null, it returns 0.
 func F64FromRecord(record arrow.Record, fieldID int, row int) (float64, error) {
-	if fieldID == -1 {
+	if fieldID == AbsentFieldID {
 		return 0, nil
 	}
 
@@ -224,7 +224,7 @@ func F64FromRecord(record arrow.Record, fieldID int, row int) (float64, error) {
 // F64OrNilFromRecord returns the float64 value for a specific row and column in an
 // Arrow record. Returns nil if the value is null
 func F64OrNilFromRecord(record arrow.Record, fieldID int, row int) (*float64, error) {
-	if fieldID == -1 {
+	if fieldID == AbsentFieldID {
 		return nil, nil
 	}
 
@@ -249,7 +249,7 @@ func F64OrNilFromRecord(record arrow.Record, fieldID int, row int) (*float64, er
 // BoolFromRecord returns the bool value for a specific row and column in an
 // Arrow record. If the value is null, it returns false.
 func BoolFromRecord(record arrow.Record, fieldID int, row int) (bool, error) {
-	if fieldID == -1 {
+	if fieldID == AbsentFieldID {
 		return false, nil
 	}
 
@@ -273,7 +273,7 @@ func BoolFromRecord(record arrow.Record, fieldID int, row int) (bool, error) {
 // StringFromRecord returns the string value for a specific row and column in
 // an Arrow record. If the value is null, it returns an empty string.
 func StringFromRecord(record arrow.Record, fieldID int, row int) (string, error) {
-	if fieldID == -1 {
+	if fieldID == AbsentFieldID {
 		return "", nil
 	}
 
@@ -288,7 +288,7 @@ func StringFromRecord(record arrow.Record, fieldID int, row int) (string, error)
 // BinaryFromRecord returns the []byte value for a specific row and column in
 // an Arrow record. If the value is null, it returns nil.
 func BinaryFromRecord(record arrow.Record, fieldID int, row int) ([]byte, error) {
-	if fieldID == -1 {
+	if fieldID == AbsentFieldID {
 		return nil, nil
 	}
 
@@ -303,7 +303,7 @@ func BinaryFromRecord(record arrow.Record, fieldID int, row int) ([]byte, error)
 // StructFromRecord returns the struct array for a specific row and
 // column in an Arrow record. If the value is null, it returns nil.
 func StructFromRecord(record arrow.Record, fieldID int, row int) (sarr *array.Struct, err error) {
-	if fieldID == -1 {
+	if fieldID == AbsentFieldID {
 		return nil, nil
 	}
 
@@ -324,7 +324,7 @@ func StructFromRecord(record arrow.Record, fieldID int, row int) (sarr *array.St
 // SparseUnionFromRecord returns the sparse union array for a specific row and
 // column in an Arrow record. If the value is null, it returns nil.
 func SparseUnionFromRecord(record arrow.Record, fieldID int, row int) (marr *array.SparseUnion, err error) {
-	if fieldID == -1 {
+	if fieldID == AbsentFieldID {
 		return nil, nil
 	}
 
@@ -345,7 +345,7 @@ func SparseUnionFromRecord(record arrow.Record, fieldID int, row int) (marr *arr
 // TimestampFromRecord returns the timestamp value for a specific row and column
 // in an Arrow record. If the value is null, it returns 0.
 func TimestampFromRecord(record arrow.Record, fieldID int, row int) (arrow.Timestamp, error) {
-	if fieldID == -1 {
+	if fieldID == AbsentFieldID {
 		return 0, nil
 	}
 
@@ -370,7 +370,7 @@ func TimestampFromRecord(record arrow.Record, fieldID int, row int) (arrow.Times
 // FixedSizeBinaryFieldByIDFromRecord returns the fixed size binary value of a field id for a specific row.
 // If the value is null, it returns nil.
 func FixedSizeBinaryFieldByIDFromRecord(record arrow.Record, fieldID int, row int) ([]byte, error) {
-	if fieldID == -1 {
+	if fieldID == AbsentFieldID {
 		return nil, nil
 	}
 
@@ -385,7 +385,7 @@ func FixedSizeBinaryFieldByIDFromRecord(record arrow.Record, fieldID int, row in
 
 // ListValuesByIDFromRecord return the list array for a field id for a specific row.
 func ListValuesByIDFromRecord(record arrow.Record, fieldID int, row int) (arr arrow.Array, start int, end int, err error) {
-	if fieldID == -1 {
+	if fieldID == AbsentFieldID {
 		return nil, 0, 0, nil
 	}
 
