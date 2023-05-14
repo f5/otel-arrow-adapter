@@ -120,6 +120,10 @@ func (b *EventBuilder) SchemaID() string {
 	return b.builder.SchemaID()
 }
 
+func (b *EventBuilder) Schema() *arrow.Schema {
+	return b.builder.Schema()
+}
+
 func (b *EventBuilder) IsEmpty() bool {
 	return b.accumulator.IsEmpty()
 }

@@ -125,6 +125,10 @@ func (b *LinkBuilder) SchemaID() string {
 	return b.builder.SchemaID()
 }
 
+func (b *LinkBuilder) Schema() *arrow.Schema {
+	return b.builder.Schema()
+}
+
 func (b *LinkBuilder) IsEmpty() bool {
 	return b.accumulator.IsEmpty()
 }

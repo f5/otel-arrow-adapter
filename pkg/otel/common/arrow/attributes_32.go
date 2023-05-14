@@ -168,6 +168,10 @@ func (b *Attrs32Builder) SchemaID() string {
 	return b.builder.SchemaID()
 }
 
+func (b *Attrs32Builder) Schema() *arrow.Schema {
+	return b.builder.Schema()
+}
+
 func (b *Attrs32Builder) PayloadType() *PayloadType {
 	return b.payloadType
 }

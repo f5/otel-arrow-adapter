@@ -56,33 +56,33 @@ type (
 func NewRelatedData(cfg *cfg.Config, stats *stats.ProducerStats) (*RelatedData, error) {
 	rrManager := carrow.NewRelatedRecordsManager(cfg, stats)
 
-	attrsResourceBuilder := rrManager.Declare(carrow.PayloadTypes.ResourceAttrs, carrow.AttrsSchema16, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
+	attrsResourceBuilder := rrManager.Declare(carrow.PayloadTypes.ResourceAttrs, carrow.PayloadTypes.Spans, carrow.AttrsSchema16, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
 		return carrow.NewAttrs16Builder(b, carrow.PayloadTypes.ResourceAttrs)
 	})
 
-	attrsScopeBuilder := rrManager.Declare(carrow.PayloadTypes.ScopeAttrs, carrow.AttrsSchema16, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
+	attrsScopeBuilder := rrManager.Declare(carrow.PayloadTypes.ScopeAttrs, carrow.PayloadTypes.Spans, carrow.AttrsSchema16, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
 		return carrow.NewAttrs16Builder(b, carrow.PayloadTypes.ScopeAttrs)
 	})
 
-	attrsSpanBuilder := rrManager.Declare(carrow.PayloadTypes.SpanAttrs, carrow.AttrsSchema16, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
+	attrsSpanBuilder := rrManager.Declare(carrow.PayloadTypes.SpanAttrs, carrow.PayloadTypes.Spans, carrow.AttrsSchema16, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
 		return carrow.NewAttrs16Builder(b, carrow.PayloadTypes.SpanAttrs)
 	})
 
-	eventBuilder := rrManager.Declare(carrow.PayloadTypes.Event, EventSchema, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
+	eventBuilder := rrManager.Declare(carrow.PayloadTypes.Event, carrow.PayloadTypes.Spans, EventSchema, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
 		return NewEventBuilder(b)
 	})
 
-	linkBuilder := rrManager.Declare(carrow.PayloadTypes.Link, LinkSchema, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
+	linkBuilder := rrManager.Declare(carrow.PayloadTypes.Link, carrow.PayloadTypes.Spans, LinkSchema, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
 		return NewLinkBuilder(b)
 	})
 
-	attrsEventBuilder := rrManager.Declare(carrow.PayloadTypes.EventAttrs, carrow.AttrsSchema32, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
+	attrsEventBuilder := rrManager.Declare(carrow.PayloadTypes.EventAttrs, carrow.PayloadTypes.Event, carrow.AttrsSchema32, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
 		ab := carrow.NewAttrs32Builder(b, carrow.PayloadTypes.EventAttrs)
 		eventBuilder.(*EventBuilder).SetAttributesAccumulator(ab.Accumulator())
 		return ab
 	})
 
-	attrsLinkBuilder := rrManager.Declare(carrow.PayloadTypes.LinkAttrs, carrow.AttrsSchema32, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
+	attrsLinkBuilder := rrManager.Declare(carrow.PayloadTypes.LinkAttrs, carrow.PayloadTypes.Link, carrow.AttrsSchema32, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
 		ab := carrow.NewAttrs32Builder(b, carrow.PayloadTypes.LinkAttrs)
 		linkBuilder.(*LinkBuilder).SetAttributesAccumulator(ab.Accumulator())
 		return ab
@@ -100,6 +100,10 @@ func NewRelatedData(cfg *cfg.Config, stats *stats.ProducerStats) (*RelatedData, 
 		eventBuilder: eventBuilder.(*EventBuilder),
 		linkBuilder:  linkBuilder.(*LinkBuilder),
 	}, nil
+}
+
+func (r *RelatedData) Schemas() []carrow.SchemaWithPayload {
+	return r.relatedRecordsManager.Schemas()
 }
 
 func (r *RelatedData) Release() {

@@ -750,7 +750,7 @@ func TestTraces(t *testing.T) {
 	pool := memory.NewCheckedAllocator(memory.NewGoAllocator())
 	defer pool.AssertSize(t, 0)
 
-	rBuilder := builder.NewRecordBuilderExt(pool, Schema, DefaultDictConfig, producerStats)
+	rBuilder := builder.NewRecordBuilderExt(pool, TracesSchema, DefaultDictConfig, producerStats)
 	defer rBuilder.Release()
 
 	var record arrow.Record

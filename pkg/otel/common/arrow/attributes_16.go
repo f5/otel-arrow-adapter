@@ -137,6 +137,10 @@ func (b *Attrs16Builder) SchemaID() string {
 	return b.builder.SchemaID()
 }
 
+func (b *Attrs16Builder) Schema() *arrow.Schema {
+	return b.builder.Schema()
+}
+
 func (b *Attrs16Builder) PayloadType() *PayloadType {
 	return b.payloadType
 }
