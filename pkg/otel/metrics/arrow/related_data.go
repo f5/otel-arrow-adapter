@@ -70,11 +70,11 @@ func NewRelatedData(cfg *cfg.Config, stats *stats.ProducerStats) (*RelatedData, 
 	rrManager := carrow.NewRelatedRecordsManager(cfg, stats)
 
 	resourceAttrsBuilder := rrManager.Declare(carrow.PayloadTypes.ResourceAttrs, carrow.PayloadTypes.Metrics, carrow.AttrsSchema16, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
-		return carrow.NewAttrs16Builder(b, carrow.PayloadTypes.ResourceAttrs)
+		return carrow.NewAttrs16Builder(b, carrow.PayloadTypes.ResourceAttrs, carrow.SortAttrs16ByKeyValueParentId())
 	})
 
 	scopeAttrsBuilder := rrManager.Declare(carrow.PayloadTypes.ScopeAttrs, carrow.PayloadTypes.Metrics, carrow.AttrsSchema16, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
-		return carrow.NewAttrs16Builder(b, carrow.PayloadTypes.ScopeAttrs)
+		return carrow.NewAttrs16Builder(b, carrow.PayloadTypes.ScopeAttrs, carrow.SortAttrs16ByKeyValueParentId())
 	})
 
 	sumIDPBuilder := rrManager.Declare(carrow.PayloadTypes.IntSum, carrow.PayloadTypes.Metrics, IntDataPointSchema, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
@@ -82,7 +82,7 @@ func NewRelatedData(cfg *cfg.Config, stats *stats.ProducerStats) (*RelatedData, 
 	})
 
 	intSumAttrsBuilder := rrManager.Declare(carrow.PayloadTypes.IntSumAttrs, carrow.PayloadTypes.IntSum, carrow.DeltaEncodedAttrsSchema32, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
-		sab := carrow.NewDeltaEncodedAttrs32Builder(b, carrow.PayloadTypes.IntSumAttrs)
+		sab := carrow.NewDeltaEncodedAttrs32Builder(carrow.PayloadTypes.IntSumAttrs, b, carrow.SortAttrs32ByParentIdKeyValue())
 		sumIDPBuilder.(*IntDataPointBuilder).SetAttributesAccumulator(sab.Accumulator())
 		return sab
 	})
@@ -92,7 +92,7 @@ func NewRelatedData(cfg *cfg.Config, stats *stats.ProducerStats) (*RelatedData, 
 	})
 
 	doubleSumAttrsBuilder := rrManager.Declare(carrow.PayloadTypes.DoubleSumAttrs, carrow.PayloadTypes.DoubleSum, carrow.DeltaEncodedAttrsSchema32, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
-		sab := carrow.NewDeltaEncodedAttrs32Builder(b, carrow.PayloadTypes.DoubleSumAttrs)
+		sab := carrow.NewDeltaEncodedAttrs32Builder(carrow.PayloadTypes.DoubleSumAttrs, b, carrow.SortAttrs32ByParentIdKeyValue())
 		sumDDPBuilder.(*DoubleDataPointBuilder).SetAttributesAccumulator(sab.Accumulator())
 		return sab
 	})
@@ -102,7 +102,7 @@ func NewRelatedData(cfg *cfg.Config, stats *stats.ProducerStats) (*RelatedData, 
 	})
 
 	intGaugeAttrsBuilder := rrManager.Declare(carrow.PayloadTypes.IntGaugeAttrs, carrow.PayloadTypes.IntGauge, carrow.DeltaEncodedAttrsSchema32, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
-		gab := carrow.NewDeltaEncodedAttrs32Builder(b, carrow.PayloadTypes.IntGaugeAttrs)
+		gab := carrow.NewDeltaEncodedAttrs32Builder(carrow.PayloadTypes.IntGaugeAttrs, b, carrow.SortAttrs32ByParentIdKeyValue())
 		gaugeIDPBuilder.(*IntDataPointBuilder).SetAttributesAccumulator(gab.Accumulator())
 		return gab
 	})
@@ -112,7 +112,7 @@ func NewRelatedData(cfg *cfg.Config, stats *stats.ProducerStats) (*RelatedData, 
 	})
 
 	doubleGaugeAttrsBuilder := rrManager.Declare(carrow.PayloadTypes.DoubleGaugeAttrs, carrow.PayloadTypes.DoubleGauge, carrow.DeltaEncodedAttrsSchema32, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
-		gab := carrow.NewDeltaEncodedAttrs32Builder(b, carrow.PayloadTypes.DoubleGaugeAttrs)
+		gab := carrow.NewDeltaEncodedAttrs32Builder(carrow.PayloadTypes.DoubleGaugeAttrs, b, carrow.SortAttrs32ByParentIdKeyValue())
 		gaugeDDPBuilder.(*DoubleDataPointBuilder).SetAttributesAccumulator(gab.Accumulator())
 		return gab
 	})
@@ -122,7 +122,7 @@ func NewRelatedData(cfg *cfg.Config, stats *stats.ProducerStats) (*RelatedData, 
 	})
 
 	summaryAttrsBuilder := rrManager.Declare(carrow.PayloadTypes.SummaryAttrs, carrow.PayloadTypes.Summary, carrow.DeltaEncodedAttrsSchema32, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
-		sab := carrow.NewDeltaEncodedAttrs32Builder(b, carrow.PayloadTypes.SummaryAttrs)
+		sab := carrow.NewDeltaEncodedAttrs32Builder(carrow.PayloadTypes.SummaryAttrs, b, carrow.SortAttrs32ByParentIdKeyValue())
 		summaryDPBuilder.(*SummaryDataPointBuilder).SetAttributesAccumulator(sab.Accumulator())
 		return sab
 	})
@@ -132,7 +132,7 @@ func NewRelatedData(cfg *cfg.Config, stats *stats.ProducerStats) (*RelatedData, 
 	})
 
 	histogramAttrsBuilder := rrManager.Declare(carrow.PayloadTypes.HistogramAttrs, carrow.PayloadTypes.Histogram, carrow.DeltaEncodedAttrsSchema32, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
-		hab := carrow.NewDeltaEncodedAttrs32Builder(b, carrow.PayloadTypes.HistogramAttrs)
+		hab := carrow.NewDeltaEncodedAttrs32Builder(carrow.PayloadTypes.HistogramAttrs, b, carrow.SortAttrs32ByParentIdKeyValue())
 		histogramDPBuilder.(*HistogramDataPointBuilder).SetAttributesAccumulator(hab.Accumulator())
 		return hab
 	})
@@ -142,7 +142,7 @@ func NewRelatedData(cfg *cfg.Config, stats *stats.ProducerStats) (*RelatedData, 
 	})
 
 	ehistogramAttrsBuilder := rrManager.Declare(carrow.PayloadTypes.ExpHistogramAttrs, carrow.PayloadTypes.ExpHistogram, carrow.DeltaEncodedAttrsSchema32, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
-		hab := carrow.NewDeltaEncodedAttrs32Builder(b, carrow.PayloadTypes.ExpHistogramAttrs)
+		hab := carrow.NewDeltaEncodedAttrs32Builder(carrow.PayloadTypes.ExpHistogramAttrs, b, carrow.SortAttrs32ByParentIdKeyValue())
 		ehistogramDPBuilder.(*EHistogramDataPointBuilder).SetAttributesAccumulator(hab.Accumulator())
 		return hab
 	})

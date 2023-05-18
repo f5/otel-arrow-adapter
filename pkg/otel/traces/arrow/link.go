@@ -34,6 +34,7 @@ import (
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/ptrace"
 
+	arrow2 "github.com/f5/otel-arrow-adapter/pkg/arrow"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common"
 	acommon "github.com/f5/otel-arrow-adapter/pkg/otel/common/arrow"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema"
@@ -90,14 +91,22 @@ type (
 	LinkAccumulator struct {
 		groupCount uint16
 		links      []Link
+		sorter     LinkSorter
 	}
+
+	LinkSorter interface {
+		Sort(links []Link)
+	}
+
+	LinksByNothing         struct{}
+	LinksByTraceIdParentId struct{}
 )
 
-func NewLinkBuilder(rBuilder *builder.RecordBuilderExt) *LinkBuilder {
+func NewLinkBuilder(rBuilder *builder.RecordBuilderExt, sorter LinkSorter) *LinkBuilder {
 	b := &LinkBuilder{
 		released:    false,
 		builder:     rBuilder,
-		accumulator: NewLinkAccumulator(),
+		accumulator: NewLinkAccumulator(sorter),
 	}
 
 	b.init()
@@ -171,15 +180,25 @@ func (b *LinkBuilder) Build() (record arrow.Record, err error) {
 			break
 		}
 	}
+
+	// ToDo TMP
+	if err == nil && linkcount == 0 {
+		println(acommon.PayloadTypes.Link.PayloadType().String())
+		arrow2.PrintRecord(record)
+		linkcount = linkcount + 1
+	}
+
 	return record, werror.Wrap(err)
 }
+
+var linkcount = 0
 
 func (b *LinkBuilder) TryBuild(attrsAccu *acommon.Attributes32Accumulator) (record arrow.Record, err error) {
 	if b.released {
 		return nil, werror.Wrap(acommon.ErrBuilderAlreadyReleased)
 	}
 
-	b.accumulator.Sort()
+	b.accumulator.sorter.Sort(b.accumulator.links)
 
 	for ID, link := range b.accumulator.links {
 		b.ib.Append(uint32(ID))
@@ -214,10 +233,11 @@ func (b *LinkBuilder) Release() {
 }
 
 // NewLinkAccumulator creates a new LinkAccumulator.
-func NewLinkAccumulator() *LinkAccumulator {
+func NewLinkAccumulator(sorter LinkSorter) *LinkAccumulator {
 	return &LinkAccumulator{
 		groupCount: 0,
 		links:      make([]Link, 0),
+		sorter:     sorter,
 	}
 }
 
@@ -253,10 +273,32 @@ func (a *LinkAccumulator) Append(spanID uint16, links ptrace.SpanLinkSlice, shar
 	return nil
 }
 
-func (a *LinkAccumulator) Sort() {
-	sort.Slice(a.links, func(i, j int) bool {
-		linkI := a.links[i]
-		linkJ := a.links[j]
+func (a *LinkAccumulator) Reset() {
+	a.groupCount = 0
+	a.links = a.links[:0]
+}
+
+// No sorting
+// ==========
+
+func UnsortedLinks() *LinksByNothing {
+	return &LinksByNothing{}
+}
+
+func (s *LinksByNothing) Sort(links []Link) {
+}
+
+// Sorts by TraceID, ParentID
+// ==========================
+
+func SortLinksByTraceIdParentId() *LinksByTraceIdParentId {
+	return &LinksByTraceIdParentId{}
+}
+
+func (s *LinksByTraceIdParentId) Sort(links []Link) {
+	sort.Slice(links, func(i, j int) bool {
+		linkI := links[i]
+		linkJ := links[j]
 
 		cmp := bytes.Compare(linkI.TraceID[:], linkJ.TraceID[:])
 		if cmp == 0 {
@@ -265,9 +307,4 @@ func (a *LinkAccumulator) Sort() {
 			return cmp == -1
 		}
 	})
-}
-
-func (a *LinkAccumulator) Reset() {
-	a.groupCount = 0
-	a.links = a.links[:0]
 }

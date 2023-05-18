@@ -33,6 +33,7 @@ import (
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/ptrace"
 
+	arrow2 "github.com/f5/otel-arrow-adapter/pkg/arrow"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common"
 	acommon "github.com/f5/otel-arrow-adapter/pkg/otel/common/arrow"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema"
@@ -86,14 +87,23 @@ type (
 	EventAccumulator struct {
 		groupCount uint16
 		events     []Event
+		sorter     EventSorter
 	}
+
+	EventSorter interface {
+		Sort(events []Event)
+	}
+
+	EventsByNothing          struct{}
+	EventsByNameTimeUnixNano struct{}
+	EventsByNameParentId     struct{}
 )
 
-func NewEventBuilder(rBuilder *builder.RecordBuilderExt) *EventBuilder {
+func NewEventBuilder(rBuilder *builder.RecordBuilderExt, sorter EventSorter) *EventBuilder {
 	b := &EventBuilder{
 		released:    false,
 		builder:     rBuilder,
-		accumulator: NewEventAccumulator(),
+		accumulator: NewEventAccumulator(sorter),
 	}
 
 	b.init()
@@ -158,24 +168,51 @@ func (b *EventBuilder) Build() (record arrow.Record, err error) {
 			break
 		}
 	}
+
+	// ToDo TMP
+	if err == nil && eventcount == 0 {
+		println(acommon.PayloadTypes.Event.PayloadType().String())
+		arrow2.PrintRecord(record)
+		eventcount = eventcount + 1
+	}
+
 	return record, werror.Wrap(err)
 }
+
+var eventcount = 0
 
 func (b *EventBuilder) TryBuild(attrsAccu *acommon.Attributes32Accumulator) (record arrow.Record, err error) {
 	if b.released {
 		return nil, werror.Wrap(acommon.ErrBuilderAlreadyReleased)
 	}
 
-	b.accumulator.Sort()
+	b.accumulator.sorter.Sort(b.accumulator.events)
 
-	for ID, event := range b.accumulator.events {
-		b.ib.Append(uint32(ID))
-		b.pib.Append(event.ParentID)
+	prevName := ""
+	prevParentID := uint16(0)
+
+	eventID := uint32(0)
+	for _, event := range b.accumulator.events {
+		if event.Attributes.Len() == 0 {
+			b.ib.AppendNull()
+		} else {
+			b.ib.Append(eventID)
+			eventID++
+		}
+		if prevName == event.Name {
+			parentID := event.ParentID - prevParentID
+			prevParentID = event.ParentID
+			b.pib.Append(parentID)
+		} else {
+			prevName = event.Name
+			prevParentID = event.ParentID
+			b.pib.Append(event.ParentID)
+		}
 		b.tunb.Append(arrow.Timestamp(event.TimeUnixNano.AsTime().UnixNano()))
 		b.nb.AppendNonEmpty(event.Name)
 
 		// Attributes
-		err = attrsAccu.AppendUniqueAttributesWithID(uint32(ID), event.Attributes, event.SharedAttributes, nil)
+		err = attrsAccu.AppendUniqueAttributesWithID(eventID, event.Attributes, event.SharedAttributes, nil)
 		if err != nil {
 			return
 		}
@@ -208,10 +245,11 @@ func (b *EventBuilder) Release() {
 }
 
 // NewEventAccumulator creates a new EventAccumulator.
-func NewEventAccumulator() *EventAccumulator {
+func NewEventAccumulator(sorter EventSorter) *EventAccumulator {
 	return &EventAccumulator{
 		groupCount: 0,
 		events:     make([]Event, 0),
+		sorter:     sorter,
 	}
 }
 
@@ -246,17 +284,51 @@ func (a *EventAccumulator) Append(spanID uint16, events ptrace.SpanEventSlice, s
 	return nil
 }
 
-func (a *EventAccumulator) Sort() {
-	sort.Slice(a.events, func(i, j int) bool {
-		if a.events[i].Name == a.events[j].Name {
-			return a.events[i].TimeUnixNano < a.events[j].TimeUnixNano
+func (a *EventAccumulator) Reset() {
+	a.groupCount = 0
+	a.events = a.events[:0]
+}
+
+// No sorting
+// ==========
+
+func UnsortedEvents() *EventsByNothing {
+	return &EventsByNothing{}
+}
+
+func (s *EventsByNothing) Sort(events []Event) {
+}
+
+// Sorts events by name and time.
+// ==============================
+
+func SortEventsByNameTimeUnixNano() *EventsByNameTimeUnixNano {
+	return &EventsByNameTimeUnixNano{}
+}
+
+func (s *EventsByNameTimeUnixNano) Sort(events []Event) {
+	sort.Slice(events, func(i, j int) bool {
+		if events[i].Name == events[j].Name {
+			return events[i].TimeUnixNano < events[j].TimeUnixNano
 		} else {
-			return a.events[i].Name < a.events[j].Name
+			return events[i].Name < events[j].Name
 		}
 	})
 }
 
-func (a *EventAccumulator) Reset() {
-	a.groupCount = 0
-	a.events = a.events[:0]
+// Sorts events by name and parentID.
+// ==================================
+
+func SortEventsByNameParentId() *EventsByNameParentId {
+	return &EventsByNameParentId{}
+}
+
+func (s *EventsByNameParentId) Sort(events []Event) {
+	sort.Slice(events, func(i, j int) bool {
+		if events[i].Name == events[j].Name {
+			return events[i].ParentID < events[j].ParentID
+		} else {
+			return events[i].Name < events[j].Name
+		}
+	})
 }

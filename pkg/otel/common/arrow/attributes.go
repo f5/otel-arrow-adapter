@@ -19,17 +19,13 @@ package arrow
 
 import (
 	"bytes"
-	"fmt"
 	"math"
-	"sort"
 	"strings"
 
 	"github.com/apache/arrow/go/v12/arrow"
 	"github.com/apache/arrow/go/v12/arrow/array"
 	"go.opentelemetry.io/collector/pdata/pcommon"
-	"golang.org/x/exp/rand"
 
-	arrowutils "github.com/f5/otel-arrow-adapter/pkg/arrow"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/builder"
@@ -38,6 +34,12 @@ import (
 
 // ToDo Standard attributes (i.e. AttributesDT) will be removed in the future. They are still used as shared attributes in the span.
 // ToDo this file must be redistributed into `attributes_16.go` and `attributes_32.go` files.
+
+const (
+	ParentIdNoEncoding = iota
+	ParentIdDeltaEncoding
+	ParentIdDeltaGroupEncoding
+)
 
 // Arrow data types used to build the attribute map.
 var (
@@ -67,10 +69,18 @@ type (
 		Value    pcommon.Value
 	}
 
+	Attrs16Sorter interface {
+		Sort(attrs []Attr16)
+	}
+
 	Attr32 struct {
 		ParentID uint32
 		Key      string
 		Value    pcommon.Value
+	}
+
+	Attrs32Sorter interface {
+		Sort(attrs []Attr32)
 	}
 
 	// Attributes16Accumulator accumulates attributes for the scope of an entire
@@ -79,6 +89,7 @@ type (
 	Attributes16Accumulator struct {
 		attrsMapCount uint16
 		attrs         []Attr16
+		sorter        Attrs16Sorter
 	}
 
 	// Attributes32Accumulator accumulates attributes for the scope of an entire
@@ -87,6 +98,7 @@ type (
 	Attributes32Accumulator struct {
 		attrsMapCount uint32
 		attrs         []Attr32
+		sorter        Attrs32Sorter
 	}
 )
 
@@ -209,9 +221,10 @@ func (b *AttributesBuilder) Release() {
 	}
 }
 
-func NewAttributes16Accumulator() *Attributes16Accumulator {
+func NewAttributes16Accumulator(sorter Attrs16Sorter) *Attributes16Accumulator {
 	return &Attributes16Accumulator{
-		attrs: make([]Attr16, 0),
+		attrs:  make([]Attr16, 0),
+		sorter: sorter,
 	}
 }
 
@@ -329,23 +342,8 @@ func (c *Attributes16Accumulator) AppendUniqueAttributesWithID(parentID uint16, 
 	return nil
 }
 
-func (c *Attributes16Accumulator) SortedAttrs() []Attr16 {
-	sort.Slice(c.attrs, func(i, j int) bool {
-		attrsI := c.attrs[i]
-		attrsJ := c.attrs[j]
-		if attrsI.Key == attrsJ.Key {
-			cmp := Compare(attrsI.Value, attrsJ.Value)
-			if cmp == 0 {
-				return attrsI.ParentID < attrsJ.ParentID
-			} else {
-				return cmp == -1
-			}
-		} else {
-			return attrsI.Key < attrsJ.Key
-		}
-	})
-
-	return c.attrs
+func (c *Attributes16Accumulator) Sort() {
+	c.sorter.Sort(c.attrs)
 }
 
 func (c *Attributes16Accumulator) Reset() {
@@ -353,9 +351,10 @@ func (c *Attributes16Accumulator) Reset() {
 	c.attrs = c.attrs[:0]
 }
 
-func NewAttributes32Accumulator() *Attributes32Accumulator {
+func NewAttributes32Accumulator(sorter Attrs32Sorter) *Attributes32Accumulator {
 	return &Attributes32Accumulator{
-		attrs: make([]Attr32, 0),
+		attrs:  make([]Attr32, 0),
+		sorter: sorter,
 	}
 }
 
@@ -444,27 +443,56 @@ func (c *Attributes32Accumulator) AppendUniqueAttributesWithID(ID uint32, attrs 
 	return nil
 }
 
-func (c *Attributes32Accumulator) SortedAttrs() []Attr32 {
-	sort.Slice(c.attrs, func(i, j int) bool {
-		attrsI := c.attrs[i]
-		attrsJ := c.attrs[j]
-		if attrsI.ParentID == attrsJ.ParentID {
-			if attrsI.Key == attrsJ.Key {
-				return IsLess(attrsI.Value, attrsJ.Value)
-			} else {
-				return attrsI.Key < attrsJ.Key
-			}
-		} else {
-			return attrsI.ParentID < attrsJ.ParentID
-		}
-	})
-
-	return c.attrs
+func (c *Attributes32Accumulator) Sort() {
+	c.sorter.Sort(c.attrs)
 }
 
 func (c *Attributes32Accumulator) Reset() {
 	c.attrsMapCount = 0
 	c.attrs = c.attrs[:0]
+}
+
+func Equal(a, b pcommon.Value) bool {
+	switch a.Type() {
+	case pcommon.ValueTypeInt:
+		if b.Type() == pcommon.ValueTypeInt {
+			return a.Int() == b.Int()
+		} else {
+			return false
+		}
+	case pcommon.ValueTypeDouble:
+		if b.Type() == pcommon.ValueTypeDouble {
+			return a.Double() == b.Double()
+		} else {
+			return false
+		}
+	case pcommon.ValueTypeBool:
+		if b.Type() == pcommon.ValueTypeBool {
+			return a.Bool() == b.Bool()
+		} else {
+			return false
+		}
+	case pcommon.ValueTypeStr:
+		if b.Type() == pcommon.ValueTypeStr {
+			return a.Str() == b.Str()
+		} else {
+			return false
+		}
+	case pcommon.ValueTypeBytes:
+		if a.Type() == pcommon.ValueTypeBytes && b.Type() == pcommon.ValueTypeBytes {
+			return bytes.Equal(a.Bytes().AsRaw(), b.Bytes().AsRaw())
+		} else {
+			return false
+		}
+	case pcommon.ValueTypeMap:
+		return false
+	case pcommon.ValueTypeSlice:
+		return false
+	case pcommon.ValueTypeEmpty:
+		return false
+	default:
+		return false
+	}
 }
 
 func IsLess(a, b pcommon.Value) bool {
@@ -567,92 +595,4 @@ func Compare(a, b pcommon.Value) int {
 	default:
 		return 1
 	}
-}
-
-func PrintRecord(record arrow.Record) {
-	print("\n")
-	for _, field := range record.Schema().Fields() {
-		print(field.Name + "\t\t")
-	}
-	print("\n")
-
-	// Select a window of 1000 consecutive rows randomly from the record
-	row := rand.Intn(int(record.NumRows()) - 1000)
-
-	record = record.NewSlice(int64(row), int64(row+1000))
-	numRows := int(record.NumRows())
-	numCols := int(record.NumCols())
-
-	for row := 0; row < numRows; row++ {
-		for col := 0; col < numCols; col++ {
-			col := record.Column(col)
-			if col.IsNull(row) {
-				print("null")
-			} else {
-				switch c := col.(type) {
-				case *array.Uint32:
-					print(c.Value(row))
-				case *array.Uint16:
-					print(c.Value(row))
-				case *array.Int64:
-					print(c.Value(row))
-				case *array.String:
-					print(c.Value(row))
-				case *array.Float64:
-					print(c.Value(row))
-				case *array.Boolean:
-					print(c.Value(row))
-				case *array.Binary:
-					print(fmt.Sprintf("%x", c.Value(row)))
-				case *array.Dictionary:
-					switch d := c.Dictionary().(type) {
-					case *array.String:
-						print(d.Value(c.GetValueIndex(row)))
-					case *array.Binary:
-						print(fmt.Sprintf("%x", d.Value(c.GetValueIndex(row))))
-					default:
-						print("unknown dict type")
-					}
-				case *array.SparseUnion:
-					tcode := c.TypeCode(row)
-					fieldID := c.ChildID(row)
-					switch tcode {
-					case StrCode:
-						strArr := c.Field(fieldID)
-						val, err := arrowutils.StringFromArray(strArr, row)
-						if err != nil {
-							panic(err)
-						}
-						print(val)
-					case I64Code:
-						i64Arr := c.Field(fieldID)
-						val := i64Arr.(*array.Int64).Value(row)
-						print(val)
-					case F64Code:
-						f64Arr := c.Field(fieldID)
-						val := f64Arr.(*array.Float64).Value(row)
-						print(val)
-					case BoolCode:
-						boolArr := c.Field(fieldID)
-						val := boolArr.(*array.Boolean).Value(row)
-						print(val)
-					case BinaryCode:
-						binArr := c.Field(fieldID)
-						val, err := arrowutils.BinaryFromArray(binArr, row)
-						if err != nil {
-							panic(err)
-						}
-						print(fmt.Sprintf("%x", val))
-					default:
-						fmt.Print("unknown type")
-					}
-				default:
-					fmt.Print("unknown type")
-				}
-			}
-			print("\t\t")
-		}
-		print("\n")
-	}
-	println()
 }

@@ -112,7 +112,7 @@ func VisitLogsDataModel(domain *Domain) {
 
 func VisitTracesDataModel(domain *Domain) {
 	mainSchema := traces.TracesSchema
-	relatedData, err := traces.NewRelatedData(Conf, stats.NewProducerStats())
+	relatedData, err := traces.NewRelatedData(traces.DefaultConfig(), stats.NewProducerStats())
 	if err != nil {
 		panic(err)
 	}

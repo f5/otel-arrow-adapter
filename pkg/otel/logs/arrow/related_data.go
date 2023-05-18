@@ -54,15 +54,15 @@ func NewRelatedData(cfg *cfg.Config, stats *stats.ProducerStats) (*RelatedData, 
 	rrManager := carrow.NewRelatedRecordsManager(cfg, stats)
 
 	attrsResourceBuilder := rrManager.Declare(carrow.PayloadTypes.ResourceAttrs, carrow.PayloadTypes.Logs, carrow.AttrsSchema16, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
-		return carrow.NewAttrs16Builder(b, carrow.PayloadTypes.ResourceAttrs)
+		return carrow.NewAttrs16Builder(b, carrow.PayloadTypes.ResourceAttrs, carrow.SortAttrs16ByKeyValueParentId())
 	})
 
 	attrsScopeBuilder := rrManager.Declare(carrow.PayloadTypes.ScopeAttrs, carrow.PayloadTypes.Logs, carrow.AttrsSchema16, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
-		return carrow.NewAttrs16Builder(b, carrow.PayloadTypes.ScopeAttrs)
+		return carrow.NewAttrs16Builder(b, carrow.PayloadTypes.ScopeAttrs, carrow.SortAttrs16ByKeyValueParentId())
 	})
 
 	attrsLogRecordBuilder := rrManager.Declare(carrow.PayloadTypes.LogRecordAttrs, carrow.PayloadTypes.Logs, carrow.AttrsSchema16, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
-		return carrow.NewAttrs16Builder(b, carrow.PayloadTypes.LogRecordAttrs)
+		return carrow.NewAttrs16Builder(b, carrow.PayloadTypes.LogRecordAttrs, carrow.SortAttrs16ByKeyValueParentId())
 	})
 
 	return &RelatedData{

@@ -100,6 +100,23 @@ func (b *ResourceBuilder) Append(resource *pcommon.Resource, attrsAccu *Attribut
 	})
 }
 
+func (b *ResourceBuilder) AppendWithAttrsID(attrsID int64, resource *pcommon.Resource) error {
+	if b.released {
+		return werror.Wrap(ErrBuilderAlreadyReleased)
+	}
+
+	return b.builder.Append(resource, func() error {
+		if attrsID >= 0 {
+			b.aib.Append(uint16(attrsID))
+		} else {
+			// ID == -1 when the attributes are empty.
+			b.aib.AppendNull()
+		}
+		b.dacb.AppendNonZero(resource.DroppedAttributesCount())
+		return nil
+	})
+}
+
 // Build builds the resource array struct.
 //
 // Once the array is no longer needed, Release() must be called to free the

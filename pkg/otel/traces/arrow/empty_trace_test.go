@@ -23,7 +23,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/pdata/ptrace"
 
-	"github.com/f5/otel-arrow-adapter/pkg/config"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/builder"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/stats"
@@ -42,7 +41,7 @@ func TestEmptyTrace(t *testing.T) {
 	var record arrow.Record
 
 	for {
-		b, err := NewTracesBuilder(rBuilder, config.DefaultConfig(), stats.NewProducerStats())
+		b, err := NewTracesBuilder(rBuilder, DefaultConfig(), stats.NewProducerStats())
 		require.NoError(t, err)
 		defer b.Release()
 
@@ -74,7 +73,7 @@ func TestEmptyResource(t *testing.T) {
 	var record arrow.Record
 
 	for {
-		b, err := NewTracesBuilder(rBuilder, config.DefaultConfig(), stats.NewProducerStats())
+		b, err := NewTracesBuilder(rBuilder, DefaultConfig(), stats.NewProducerStats())
 		require.NoError(t, err)
 		defer b.Release()
 
@@ -109,7 +108,7 @@ func TestEmptyResourceAttribute(t *testing.T) {
 	var record arrow.Record
 
 	for {
-		b, err := NewTracesBuilder(rBuilder, config.DefaultConfig(), stats.NewProducerStats())
+		b, err := NewTracesBuilder(rBuilder, DefaultConfig(), stats.NewProducerStats())
 		require.NoError(t, err)
 		defer b.Release()
 
@@ -145,7 +144,7 @@ func TestEmptyScopeSpan(t *testing.T) {
 	var record arrow.Record
 
 	for {
-		b, err := NewTracesBuilder(rBuilder, config.DefaultConfig(), stats.NewProducerStats())
+		b, err := NewTracesBuilder(rBuilder, DefaultConfig(), stats.NewProducerStats())
 		require.NoError(t, err)
 		defer b.Release()
 
@@ -181,7 +180,7 @@ func TestEmptyScope(t *testing.T) {
 	var record arrow.Record
 
 	for {
-		b, err := NewTracesBuilder(rBuilder, config.DefaultConfig(), stats.NewProducerStats())
+		b, err := NewTracesBuilder(rBuilder, DefaultConfig(), stats.NewProducerStats())
 		require.NoError(t, err)
 		defer b.Release()
 
@@ -218,7 +217,7 @@ func TestEmptyScopeAttribute(t *testing.T) {
 	var record arrow.Record
 
 	for {
-		b, err := NewTracesBuilder(rBuilder, config.DefaultConfig(), stats.NewProducerStats())
+		b, err := NewTracesBuilder(rBuilder, DefaultConfig(), stats.NewProducerStats())
 		require.NoError(t, err)
 		defer b.Release()
 
@@ -256,7 +255,7 @@ func TestEmptySpans(t *testing.T) {
 	var record arrow.Record
 
 	for {
-		b, err := NewTracesBuilder(rBuilder, config.DefaultConfig(), stats.NewProducerStats())
+		b, err := NewTracesBuilder(rBuilder, DefaultConfig(), stats.NewProducerStats())
 		require.NoError(t, err)
 		defer b.Release()
 
@@ -292,7 +291,7 @@ func TestEmptySpanAttribute(t *testing.T) {
 	var record arrow.Record
 
 	for {
-		b, err := NewTracesBuilder(rBuilder, config.DefaultConfig(), stats.NewProducerStats())
+		b, err := NewTracesBuilder(rBuilder, DefaultConfig(), stats.NewProducerStats())
 		require.NoError(t, err)
 		defer b.Release()
 
@@ -330,7 +329,7 @@ func TestEmptySpanStatus(t *testing.T) {
 	var record arrow.Record
 
 	for {
-		b, err := NewTracesBuilder(rBuilder, config.DefaultConfig(), stats.NewProducerStats())
+		b, err := NewTracesBuilder(rBuilder, DefaultConfig(), stats.NewProducerStats())
 		require.NoError(t, err)
 		defer b.Release()
 
@@ -368,7 +367,7 @@ func TestEmptySpanLink(t *testing.T) {
 	var record arrow.Record
 
 	for {
-		b, err := NewTracesBuilder(rBuilder, config.DefaultConfig(), stats.NewProducerStats())
+		b, err := NewTracesBuilder(rBuilder, DefaultConfig(), stats.NewProducerStats())
 		require.NoError(t, err)
 		defer b.Release()
 
@@ -406,7 +405,7 @@ func TestEmptySpanEvent(t *testing.T) {
 	var record arrow.Record
 
 	for {
-		b, err := NewTracesBuilder(rBuilder, config.DefaultConfig(), stats.NewProducerStats())
+		b, err := NewTracesBuilder(rBuilder, DefaultConfig(), stats.NewProducerStats())
 		require.NoError(t, err)
 		defer b.Release()
 

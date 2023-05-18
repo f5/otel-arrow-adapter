@@ -142,20 +142,22 @@ func (t *TracesAnalyzer) ShowStats(indent string) {
 }
 
 func (r *ResourceSpansStats) UpdateWith(traces *TracesOptimized) {
-	resSpan := traces.ResourceSpans
+	// ToDo
 
-	for ID := range traces.ResourceSpansIdx {
-		r.ResSpansIDsDistinct.Insert([]byte(ID))
-	}
-
-	r.TotalCount += int64(len(resSpan))
-	carrow.RequireNoError(r.Distribution.RecordValue(int64(len(resSpan))))
-
-	for _, rs := range resSpan {
-		r.ResourceStats.UpdateWith(rs.Resource)
-		r.ScopeSpansStats.UpdateWith(rs.ScopeSpans, rs.ScopeSpansIdx)
-		r.SchemaUrlStats.UpdateWith(rs.ResourceSchemaUrl)
-	}
+	//resSpan := traces.ResourceSpans
+	//
+	//for ID := range traces.ResourceSpansIdx {
+	//	r.ResSpansIDsDistinct.Insert([]byte(ID))
+	//}
+	//
+	//r.TotalCount += int64(len(resSpan))
+	//carrow.RequireNoError(r.Distribution.RecordValue(int64(len(resSpan))))
+	//
+	//for _, rs := range traces.Spans {
+	//	r.ResourceStats.UpdateWith(rs.Resource)
+	//	r.ScopeSpansStats.UpdateWith(rs.ScopeSpans, rs.ScopeSpansIdx)
+	//	r.SchemaUrlStats.UpdateWith(rs.ResourceSchemaUrl)
+	//}
 }
 
 func (r *ResourceSpansStats) ShowStats(indent string) {

@@ -21,9 +21,12 @@ package arrow
 
 import (
 	"errors"
+	"sort"
 
 	"github.com/apache/arrow/go/v12/arrow"
+	"go.opentelemetry.io/collector/pdata/pcommon"
 
+	arrow2 "github.com/f5/otel-arrow-adapter/pkg/arrow"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/builder"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/constants"
@@ -54,35 +57,53 @@ type (
 
 		builder *builder.RecordBuilderExt // Record builder
 
-		ib *builder.Uint32Builder
-		kb *builder.StringBuilder
-		ab *AnyValueBuilder
+		pib *builder.Uint32Builder
+		kb  *builder.StringBuilder
+		ab  *AnyValueBuilder
 
 		accumulator *Attributes32Accumulator
 		payloadType *PayloadType
 
-		deltaEncoded bool // flag to indicate if the parentID is delta encoded
+		parentIdEncoding int
 	}
+
+	Attrs32ByNothing          struct{}
+	Attrs32ByParentIdKeyValue struct{}
+	Attrs32ByKeyParentIdValue struct{}
+	Attrs32ByKeyValueParentId struct{}
 )
 
-func NewAttrs32Builder(rBuilder *builder.RecordBuilderExt, payloadType *PayloadType) *Attrs32Builder {
+func NewAttrs32Builder(rBuilder *builder.RecordBuilderExt, payloadType *PayloadType, sorter Attrs32Sorter) *Attrs32Builder {
 	b := &Attrs32Builder{
 		released:    false,
 		builder:     rBuilder,
-		accumulator: NewAttributes32Accumulator(),
+		accumulator: NewAttributes32Accumulator(sorter),
 		payloadType: payloadType,
 	}
 	b.init()
 	return b
 }
 
-func NewDeltaEncodedAttrs32Builder(rBuilder *builder.RecordBuilderExt, payloadType *PayloadType) *Attrs32Builder {
+func NewDeltaEncodedAttrs32Builder(payloadType *PayloadType, rBuilder *builder.RecordBuilderExt, sorter Attrs32Sorter) *Attrs32Builder {
 	b := &Attrs32Builder{
-		released:     false,
-		builder:      rBuilder,
-		accumulator:  NewAttributes32Accumulator(),
-		payloadType:  payloadType,
-		deltaEncoded: true,
+		released:         false,
+		builder:          rBuilder,
+		accumulator:      NewAttributes32Accumulator(sorter),
+		payloadType:      payloadType,
+		parentIdEncoding: ParentIdDeltaEncoding,
+	}
+
+	b.init()
+	return b
+}
+
+func NewAttrs32BuilderWithEncoding(rBuilder *builder.RecordBuilderExt, payloadType *PayloadType, conf *Attrs32Config) *Attrs32Builder {
+	b := &Attrs32Builder{
+		released:         false,
+		builder:          rBuilder,
+		accumulator:      NewAttributes32Accumulator(conf.Sorter),
+		payloadType:      payloadType,
+		parentIdEncoding: conf.ParentIdEncoding,
 	}
 
 	b.init()
@@ -90,7 +111,7 @@ func NewDeltaEncodedAttrs32Builder(rBuilder *builder.RecordBuilderExt, payloadTy
 }
 
 func (b *Attrs32Builder) init() {
-	b.ib = b.builder.Uint32Builder(constants.ParentID)
+	b.pib = b.builder.Uint32Builder(constants.ParentID)
 	b.kb = b.builder.StringBuilder(constants.AttrsRecordKey)
 	b.ab = AnyValueBuilderFrom(b.builder.SparseUnionBuilder(constants.AttrsRecordValue))
 }
@@ -105,14 +126,31 @@ func (b *Attrs32Builder) TryBuild() (record arrow.Record, err error) {
 	}
 
 	prevParentID := uint32(0)
-	for _, attr := range b.accumulator.SortedAttrs() {
-		if b.deltaEncoded {
+	prevKey := ""
+	prevValue := pcommon.NewValueEmpty()
+	b.accumulator.Sort()
+
+	for _, attr := range b.accumulator.attrs {
+		switch b.parentIdEncoding {
+		case ParentIdNoEncoding:
+			b.pib.Append(attr.ParentID)
+		case ParentIdDeltaEncoding:
 			delta := attr.ParentID - prevParentID
 			prevParentID = attr.ParentID
-			b.ib.Append(delta)
-		} else {
-			b.ib.Append(attr.ParentID)
+			b.pib.Append(delta)
+		case ParentIdDeltaGroupEncoding:
+			if prevKey == attr.Key && Equal(prevValue, attr.Value) {
+				delta := attr.ParentID - prevParentID
+				prevParentID = attr.ParentID
+				b.pib.Append(delta)
+			} else {
+				prevKey = attr.Key
+				prevValue = attr.Value
+				prevParentID = attr.ParentID
+				b.pib.Append(attr.ParentID)
+			}
 		}
+
 		b.kb.Append(attr.Key)
 		if err := b.ab.Append(attr.Value); err != nil {
 			return nil, werror.Wrap(err)
@@ -122,8 +160,6 @@ func (b *Attrs32Builder) TryBuild() (record arrow.Record, err error) {
 	record, err = b.builder.NewRecord()
 	if err != nil {
 		b.init()
-	} else {
-		//PrintRecord(record)
 	}
 
 	return
@@ -161,8 +197,19 @@ func (b *Attrs32Builder) Build() (arrow.Record, error) {
 			break
 		}
 	}
+
+	// ToDo TMP
+	if err == nil && attrs32Counters[b.payloadType.PayloadType().String()] == 0 {
+		println(b.payloadType.PayloadType().String())
+		arrow2.PrintRecord(record)
+		attrs32Counters[b.payloadType.PayloadType().String()] += 1
+	}
+
 	return record, werror.Wrap(err)
 }
+
+// ToDo TMP
+var attrs32Counters map[string]int = make(map[string]int)
 
 func (b *Attrs32Builder) SchemaID() string {
 	return b.builder.SchemaID()
@@ -190,4 +237,85 @@ func (b *Attrs32Builder) Release() {
 
 func (b *Attrs32Builder) ShowSchema() {
 	b.builder.ShowSchema()
+}
+
+// No sorting
+// ==========
+
+func UnsortedAttrs32() *Attrs32ByNothing {
+	return &Attrs32ByNothing{}
+}
+
+func (s Attrs32ByNothing) Sort(attrs []Attr32) {
+	// Do nothing
+}
+
+// Sorts the attributes by parentID, key, and value
+// ================================================
+
+func SortAttrs32ByParentIdKeyValue() *Attrs32ByParentIdKeyValue {
+	return &Attrs32ByParentIdKeyValue{}
+}
+
+func (s Attrs32ByParentIdKeyValue) Sort(attrs []Attr32) {
+	sort.Slice(attrs, func(i, j int) bool {
+		attrsI := attrs[i]
+		attrsJ := attrs[j]
+		if attrsI.ParentID == attrsJ.ParentID {
+			if attrsI.Key == attrsJ.Key {
+				return IsLess(attrsI.Value, attrsJ.Value)
+			} else {
+				return attrsI.Key < attrsJ.Key
+			}
+		} else {
+			return attrsI.ParentID < attrsJ.ParentID
+		}
+	})
+}
+
+// Sorts the attributes by key, parentID, and value
+// ================================================
+
+func SortAttrs32ByKeyParentIdValue() *Attrs32ByKeyParentIdValue {
+	return &Attrs32ByKeyParentIdValue{}
+}
+
+func (s Attrs32ByKeyParentIdValue) Sort(attrs []Attr32) {
+	sort.Slice(attrs, func(i, j int) bool {
+		attrsI := attrs[i]
+		attrsJ := attrs[j]
+		if attrsI.Key == attrsJ.Key {
+			if attrsI.ParentID == attrsJ.ParentID {
+				return IsLess(attrsI.Value, attrsJ.Value)
+			} else {
+				return attrsI.ParentID < attrsJ.ParentID
+			}
+		} else {
+			return attrsI.Key < attrsJ.Key
+		}
+	})
+}
+
+// Sorts the attributes by key, value, and parentID
+// ================================================
+
+func SortAttrs32ByKeyValueParentId() *Attrs32ByKeyValueParentId {
+	return &Attrs32ByKeyValueParentId{}
+}
+
+func (s Attrs32ByKeyValueParentId) Sort(attrs []Attr32) {
+	sort.Slice(attrs, func(i, j int) bool {
+		attrsI := attrs[i]
+		attrsJ := attrs[j]
+		if attrsI.Key == attrsJ.Key {
+			cmp := Compare(attrsI.Value, attrsJ.Value)
+			if cmp == 0 {
+				return attrsI.ParentID < attrsJ.ParentID
+			} else {
+				return cmp < 0
+			}
+		} else {
+			return attrsI.Key < attrsJ.Key
+		}
+	})
 }

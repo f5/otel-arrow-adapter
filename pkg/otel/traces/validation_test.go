@@ -68,7 +68,7 @@ func TestConversionFromSyntheticData(t *testing.T) {
 	conf := config.DefaultConfig()
 
 	for {
-		tb, err := tracesarrow.NewTracesBuilder(rBuilder, conf, stats.NewProducerStats())
+		tb, err := tracesarrow.NewTracesBuilder(rBuilder, tracesarrow.NewConfig(conf), stats.NewProducerStats())
 		require.NoError(t, err)
 		defer tb.Release()
 
@@ -132,7 +132,7 @@ func checkTracesConversion(t *testing.T, expectedRequest ptraceotlp.ExportReques
 	cfg := config.DefaultConfig()
 
 	for {
-		tb, err := tracesarrow.NewTracesBuilder(rBuilder, cfg, stats.NewProducerStats())
+		tb, err := tracesarrow.NewTracesBuilder(rBuilder, tracesarrow.NewConfig(cfg), stats.NewProducerStats())
 		require.NoError(t, err)
 		err = tb.Append(expectedRequest.Traces())
 		require.NoError(t, err)

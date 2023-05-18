@@ -118,8 +118,8 @@ func TestEvent(t *testing.T) {
 			attrsRecord.Release()
 		}
 
-		ab := arrow2.NewAttrs32Builder(attrsRBuilder, arrow2.PayloadTypes.EventAttrs)
-		eb := NewEventBuilder(eventRBuilder)
+		ab := arrow2.NewAttrs32Builder(attrsRBuilder, arrow2.PayloadTypes.EventAttrs, arrow2.SortAttrs32ByParentIdKeyValue())
+		eb := NewEventBuilder(eventRBuilder, SortEventsByNameTimeUnixNano())
 		eb.SetAttributesAccumulator(ab.Accumulator())
 
 		events := ptrace.NewSpanEventSlice()
@@ -192,8 +192,8 @@ func TestLink(t *testing.T) {
 			attrsRecord.Release()
 		}
 
-		ab := arrow2.NewAttrs32Builder(attrsRBuilder, arrow2.PayloadTypes.LinkAttrs)
-		lb := NewLinkBuilder(linkRBuilder)
+		ab := arrow2.NewAttrs32Builder(attrsRBuilder, arrow2.PayloadTypes.LinkAttrs, arrow2.SortAttrs32ByParentIdKeyValue())
+		lb := NewLinkBuilder(linkRBuilder, SortLinksByTraceIdParentId())
 		lb.SetAttributesAccumulator(ab.Accumulator())
 
 		links := ptrace.NewSpanLinkSlice()
@@ -259,7 +259,7 @@ func TestSpan(t *testing.T) {
 
 	var record arrow.Record
 	var relatedRecords []*record_message.RecordMessage
-	relatedData, err := NewRelatedData(config.DefaultConfig(), stats.NewProducerStats())
+	relatedData, err := NewRelatedData(DefaultConfig(), stats.NewProducerStats())
 	require.NoError(t, err)
 
 	for {
@@ -381,7 +381,7 @@ func TestScopeSpans(t *testing.T) {
 
 	var record arrow.Record
 	var relatedRecords []*record_message.RecordMessage
-	relatedData, err := NewRelatedData(config.DefaultConfig(), stats.NewProducerStats())
+	relatedData, err := NewRelatedData(DefaultConfig(), stats.NewProducerStats())
 	require.NoError(t, err)
 
 	for {
@@ -555,7 +555,7 @@ func TestResourceSpans(t *testing.T) {
 
 	var record arrow.Record
 	var relatedRecords []*record_message.RecordMessage
-	relatedData, err := NewRelatedData(config.DefaultConfig(), stats.NewProducerStats())
+	relatedData, err := NewRelatedData(DefaultConfig(), stats.NewProducerStats())
 	require.NoError(t, err)
 
 	for {
@@ -760,7 +760,7 @@ func TestTraces(t *testing.T) {
 	stats := stats.NewProducerStats()
 
 	for {
-		tb, err := NewTracesBuilder(rBuilder, conf, stats)
+		tb, err := NewTracesBuilder(rBuilder, NewConfig(conf), stats)
 		require.NoError(t, err)
 		defer tb.Release()
 

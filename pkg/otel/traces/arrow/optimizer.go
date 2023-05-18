@@ -28,19 +28,17 @@ import (
 	"golang.org/x/exp/maps"
 
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common"
-	carrow "github.com/f5/otel-arrow-adapter/pkg/otel/common/arrow"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/otlp"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/pdata"
 )
 
 type (
 	TracesOptimizer struct {
-		sort bool
+		sorter SpanSorter
 	}
 
 	TracesOptimized struct {
-		ResourceSpansIdx map[string]int // resource span id -> resource span group
-		ResourceSpans    []*ResourceSpanGroup
+		Spans []*FlattenedSpan
 	}
 
 	ResourceSpanGroup struct {
@@ -58,6 +56,33 @@ type (
 		Spans      []*ptrace.Span
 	}
 
+	FlattenedSpan struct {
+		// Resource span section.
+		ResourceSpanID    string
+		Resource          *pcommon.Resource
+		ResourceSchemaUrl string
+
+		// Scope span section.
+		ScopeSpanID    string
+		Scope          *pcommon.InstrumentationScope
+		ScopeSchemaUrl string
+
+		// Span section.
+		Span *ptrace.Span
+	}
+
+	SpanSorter interface {
+		Sort(spans []*FlattenedSpan)
+	}
+
+	SpansByNothing                                            struct{}
+	SpansByResourceSpanIdScopeSpanIdStartTimestampTraceIdName struct{}
+	SpansByResourceSpanIdScopeSpanIdStartTimestampNameTraceId struct{}
+	SpansByResourceSpanIdScopeSpanIdNameStartTimestamp        struct{}
+	SpansByResourceSpanIdScopeSpanIdNameTraceId               struct{}
+	SpansByResourceSpanIdScopeSpanIdTraceIdName               struct{}
+	SpansByResourceSpanIdScopeSpanIdNameTraceIdStartTimestamp struct{}
+
 	// SharedData contains all the shared attributes between spans, events, and links.
 	SharedData struct {
 		sharedAttributes      *common.SharedAttributes
@@ -66,86 +91,51 @@ type (
 	}
 )
 
-func NewTracesOptimizer(cfg ...func(*carrow.Options)) *TracesOptimizer {
-	options := carrow.Options{
-		Sort:  false,
-		Stats: false,
-	}
-	for _, c := range cfg {
-		c(&options)
-	}
-
+func NewTracesOptimizer(sorter SpanSorter) *TracesOptimizer {
 	return &TracesOptimizer{
-		sort: options.Sort,
+		sorter: sorter,
 	}
 }
 
 func (t *TracesOptimizer) Optimize(traces ptrace.Traces) *TracesOptimized {
 	tracesOptimized := &TracesOptimized{
-		ResourceSpansIdx: make(map[string]int),
-		ResourceSpans:    make([]*ResourceSpanGroup, 0),
+		Spans: make([]*FlattenedSpan, 0),
 	}
 
 	resSpans := traces.ResourceSpans()
 	for i := 0; i < resSpans.Len(); i++ {
 		resSpan := resSpans.At(i)
-		tracesOptimized.AddResourceSpan(&resSpan)
-	}
+		resource := resSpan.Resource()
+		resourceSchemaUrl := resSpan.SchemaUrl()
+		resSpanId := otlp.ResourceID(resource, resourceSchemaUrl)
 
-	for _, resSpanGroup := range tracesOptimized.ResourceSpans {
-		// Compute shared attributes for all spans in the resource span group.
-		for _, spg := range resSpanGroup.ScopeSpans {
-			spg.SharedData = collectAllSharedAttributes(spg.Spans)
+		scopeSpans := resSpan.ScopeSpans()
+		for j := 0; j < scopeSpans.Len(); j++ {
+			scopeSpan := scopeSpans.At(j)
+			scope := scopeSpan.Scope()
+			scopeSchemaUrl := scopeSpan.SchemaUrl()
+			scopeSpanId := otlp.ScopeID(scope, scopeSchemaUrl)
+
+			spans := scopeSpan.Spans()
+			for k := 0; k < spans.Len(); k++ {
+				span := spans.At(k)
+
+				tracesOptimized.Spans = append(tracesOptimized.Spans, &FlattenedSpan{
+					ResourceSpanID:    resSpanId,
+					Resource:          &resource,
+					ResourceSchemaUrl: resourceSchemaUrl,
+					ScopeSpanID:       scopeSpanId,
+					Scope:             &scope,
+					ScopeSchemaUrl:    scopeSchemaUrl,
+					Span:              &span,
+				})
+			}
 		}
-
-		resSpanGroup.Sort()
 	}
+
+	t.sorter.Sort(tracesOptimized.Spans)
 
 	return tracesOptimized
-}
-
-func (t *TracesOptimized) AddResourceSpan(resSpan *ptrace.ResourceSpans) {
-	resSpanId := otlp.ResourceID(resSpan.Resource(), resSpan.SchemaUrl())
-	resSpanGroupIdx, found := t.ResourceSpansIdx[resSpanId]
-	if !found {
-		res := resSpan.Resource()
-		resSpanGroup := &ResourceSpanGroup{
-			Resource:          &res,
-			ResourceSchemaUrl: resSpan.SchemaUrl(),
-			ScopeSpansIdx:     make(map[string]int),
-			ScopeSpans:        make([]*ScopeSpanGroup, 0),
-		}
-		t.ResourceSpans = append(t.ResourceSpans, resSpanGroup)
-		resSpanGroupIdx = len(t.ResourceSpans) - 1
-		t.ResourceSpansIdx[resSpanId] = resSpanGroupIdx
-	}
-	scopeSpans := resSpan.ScopeSpans()
-	for i := 0; i < scopeSpans.Len(); i++ {
-		scopeSpan := scopeSpans.At(i)
-		t.ResourceSpans[resSpanGroupIdx].AddScopeSpan(&scopeSpan)
-	}
-}
-
-func (r *ResourceSpanGroup) AddScopeSpan(scopeSpan *ptrace.ScopeSpans) {
-	scopeSpanId := otlp.ScopeID(scopeSpan.Scope(), scopeSpan.SchemaUrl())
-	scopeSpanGroupIdx, found := r.ScopeSpansIdx[scopeSpanId]
-	if !found {
-		scope := scopeSpan.Scope()
-		scopeSpanGroup := &ScopeSpanGroup{
-			Scope:          &scope,
-			ScopeSchemaUrl: scopeSpan.SchemaUrl(),
-			Spans:          make([]*ptrace.Span, 0),
-		}
-		r.ScopeSpans = append(r.ScopeSpans, scopeSpanGroup)
-		scopeSpanGroupIdx = len(r.ScopeSpans) - 1
-		r.ScopeSpansIdx[scopeSpanId] = scopeSpanGroupIdx
-	}
-	spansSlice := scopeSpan.Spans()
-	for i := 0; i < spansSlice.Len(); i++ {
-		spans := spansSlice.At(i)
-		scopeSpans := r.ScopeSpans[scopeSpanGroupIdx]
-		scopeSpans.Spans = append(scopeSpans.Spans, &spans)
-	}
 }
 
 func (r *ResourceSpanGroup) Sort() {
@@ -261,3 +251,241 @@ func collectSharedAttributes(attrs *pcommon.Map, first bool, sharedAttrs map[str
 	}
 	return first
 }
+
+// No sorting
+// ==========
+
+func UnsortedSpans() *SpansByNothing {
+	return &SpansByNothing{}
+}
+
+func (s *SpansByNothing) Sort(spans []*FlattenedSpan) {
+}
+
+// Sorts spans by resource span id, scope span id, start timestamp, trace id, name
+// ===============================================================================
+
+func SortSpansByResourceSpanIdScopeSpanIdStartTimestampTraceIdName() *SpansByResourceSpanIdScopeSpanIdStartTimestampTraceIdName {
+	return &SpansByResourceSpanIdScopeSpanIdStartTimestampTraceIdName{}
+}
+
+func (s *SpansByResourceSpanIdScopeSpanIdStartTimestampTraceIdName) Sort(spans []*FlattenedSpan) {
+	sort.Slice(spans, func(i, j int) bool {
+		spanI := spans[i]
+		spanJ := spans[j]
+
+		if spanI.ResourceSpanID == spanJ.ResourceSpanID {
+			if spanI.ScopeSpanID == spanJ.ScopeSpanID {
+				if spanI.Span.StartTimestamp() == spanJ.Span.StartTimestamp() {
+					var traceI [16]byte
+					var traceJ [16]byte
+
+					traceI = spanI.Span.TraceID()
+					traceJ = spanJ.Span.TraceID()
+					cmp := bytes.Compare(traceI[:], traceJ[:])
+
+					if cmp == 0 {
+						return spanI.Span.Name() < spanJ.Span.Name()
+					} else {
+						return cmp < 0
+					}
+				} else {
+					return spanI.Span.StartTimestamp() < spanJ.Span.StartTimestamp()
+				}
+			} else {
+				return spanI.ScopeSpanID < spanJ.ScopeSpanID
+			}
+		} else {
+			return spanI.ResourceSpanID < spanJ.ResourceSpanID
+		}
+	})
+}
+
+func SortSpansByResourceSpanIdScopeSpanIdStartTimestampNameTraceId() *SpansByResourceSpanIdScopeSpanIdStartTimestampNameTraceId {
+	return &SpansByResourceSpanIdScopeSpanIdStartTimestampNameTraceId{}
+}
+
+func (s *SpansByResourceSpanIdScopeSpanIdStartTimestampNameTraceId) Sort(spans []*FlattenedSpan) {
+	sort.Slice(spans, func(i, j int) bool {
+		spanI := spans[i]
+		spanJ := spans[j]
+
+		if spanI.ResourceSpanID == spanJ.ResourceSpanID {
+			if spanI.ScopeSpanID == spanJ.ScopeSpanID {
+				if spanI.Span.StartTimestamp() == spanJ.Span.StartTimestamp() {
+					if spanI.Span.Name() == spanJ.Span.Name() {
+						var traceI [16]byte
+						var traceJ [16]byte
+
+						traceI = spanI.Span.TraceID()
+						traceJ = spanJ.Span.TraceID()
+						cmp := bytes.Compare(traceI[:], traceJ[:])
+						return cmp < 0
+					} else {
+						return spanI.Span.Name() < spanJ.Span.Name()
+					}
+				} else {
+					return spanI.Span.StartTimestamp() < spanJ.Span.StartTimestamp()
+				}
+			} else {
+				return spanI.ScopeSpanID < spanJ.ScopeSpanID
+			}
+		} else {
+			return spanI.ResourceSpanID < spanJ.ResourceSpanID
+		}
+	})
+}
+
+func SortSpansByResourceSpanIdScopeSpanIdNameStartTimestamp() *SpansByResourceSpanIdScopeSpanIdNameStartTimestamp {
+	return &SpansByResourceSpanIdScopeSpanIdNameStartTimestamp{}
+}
+
+func (s *SpansByResourceSpanIdScopeSpanIdNameStartTimestamp) Sort(spans []*FlattenedSpan) {
+	sort.Slice(spans, func(i, j int) bool {
+		spanI := spans[i]
+		spanJ := spans[j]
+
+		if spanI.ResourceSpanID == spanJ.ResourceSpanID {
+			if spanI.ScopeSpanID == spanJ.ScopeSpanID {
+				if spanI.Span.Name() == spanJ.Span.Name() {
+					return spanI.Span.StartTimestamp() < spanJ.Span.StartTimestamp()
+				} else {
+					return spanI.Span.Name() < spanJ.Span.Name()
+				}
+			} else {
+				return spanI.ScopeSpanID < spanJ.ScopeSpanID
+			}
+		} else {
+			return spanI.ResourceSpanID < spanJ.ResourceSpanID
+		}
+	})
+}
+
+func SortSpansByResourceSpanIdScopeSpanIdNameTraceId() *SpansByResourceSpanIdScopeSpanIdNameTraceId {
+	return &SpansByResourceSpanIdScopeSpanIdNameTraceId{}
+}
+
+func (s *SpansByResourceSpanIdScopeSpanIdNameTraceId) Sort(spans []*FlattenedSpan) {
+	sort.Slice(spans, func(i, j int) bool {
+		spanI := spans[i]
+		spanJ := spans[j]
+
+		if spanI.ResourceSpanID == spanJ.ResourceSpanID {
+			if spanI.ScopeSpanID == spanJ.ScopeSpanID {
+				if spanI.Span.Name() == spanJ.Span.Name() {
+					var traceI [16]byte
+					var traceJ [16]byte
+
+					traceI = spanI.Span.TraceID()
+					traceJ = spanJ.Span.TraceID()
+					cmp := bytes.Compare(traceI[:], traceJ[:])
+					return cmp < 0
+				} else {
+					return spanI.Span.Name() < spanJ.Span.Name()
+				}
+			} else {
+				return spanI.ScopeSpanID < spanJ.ScopeSpanID
+			}
+		} else {
+			return spanI.ResourceSpanID < spanJ.ResourceSpanID
+		}
+	})
+}
+
+func SortSpansByResourceSpanIdScopeSpanIdTraceIdName() *SpansByResourceSpanIdScopeSpanIdTraceIdName {
+	return &SpansByResourceSpanIdScopeSpanIdTraceIdName{}
+}
+
+func (s *SpansByResourceSpanIdScopeSpanIdTraceIdName) Sort(spans []*FlattenedSpan) {
+	sort.Slice(spans, func(i, j int) bool {
+		spanI := spans[i]
+		spanJ := spans[j]
+
+		if spanI.ResourceSpanID == spanJ.ResourceSpanID {
+			if spanI.ScopeSpanID == spanJ.ScopeSpanID {
+				var traceI [16]byte
+				var traceJ [16]byte
+
+				traceI = spanI.Span.TraceID()
+				traceJ = spanJ.Span.TraceID()
+				cmp := bytes.Compare(traceI[:], traceJ[:])
+
+				if cmp == 0 {
+					return spanI.Span.Name() < spanJ.Span.Name()
+				} else {
+					return cmp < 0
+				}
+			} else {
+				return spanI.ScopeSpanID < spanJ.ScopeSpanID
+			}
+		} else {
+			return spanI.ResourceSpanID < spanJ.ResourceSpanID
+		}
+	})
+}
+
+func SortSpansByResourceSpanIdScopeSpanIdNameTraceIdStartTimestamp() *SpansByResourceSpanIdScopeSpanIdNameTraceIdStartTimestamp {
+	return &SpansByResourceSpanIdScopeSpanIdNameTraceIdStartTimestamp{}
+}
+
+func (s *SpansByResourceSpanIdScopeSpanIdNameTraceIdStartTimestamp) Sort(spans []*FlattenedSpan) {
+	sort.Slice(spans, func(i, j int) bool {
+		spanI := spans[i]
+		spanJ := spans[j]
+
+		if spanI.ResourceSpanID == spanJ.ResourceSpanID {
+			if spanI.ScopeSpanID == spanJ.ScopeSpanID {
+				if spanI.Span.Name() == spanJ.Span.Name() {
+					var traceI [16]byte
+					var traceJ [16]byte
+
+					traceI = spanI.Span.TraceID()
+					traceJ = spanJ.Span.TraceID()
+					cmp := bytes.Compare(traceI[:], traceJ[:])
+					if cmp == 0 {
+						return spanI.Span.StartTimestamp() < spanJ.Span.StartTimestamp()
+					} else {
+						return cmp < 0
+					}
+				} else {
+					return spanI.Span.Name() < spanJ.Span.Name()
+				}
+			} else {
+				return spanI.ScopeSpanID < spanJ.ScopeSpanID
+			}
+		} else {
+			return spanI.ResourceSpanID < spanJ.ResourceSpanID
+		}
+	})
+}
+
+// ToDo TMP
+// TraceId, StartTimestamp       -> 1.45 and 1.37
+// Name, StartTimestamp          -> 1.52 and 1.50
+// Name, TraceId, StartTimestamp -> 1.51 and 1.48
+// Name, ResSpanID               -> 1.38 and 1.38
+// Name, ResSpanID, ScopeSpanID  -> 1.38 and 1.38
+
+// TraceID					     		-> 1.36 and 1.29
+// Name                          		-> 1.38 and 1.38
+// StartTimestamp                		-> 1.46 and 1.39
+// ResSpanID                     		-> 1.46 and 1.42
+// ScopeSpanID                   		-> 1.48 and 1.44
+
+// ScopeSpanID, StartTimestamp   		-> 1.47 and 1.40
+// ScopeSpanID, Name			 		-> 1.39 and 1.38
+// ScopeSpanID, TraceID          		-> 1.37 and 1.30
+
+// ResSpanID, ScopeSpanID 	     			-> 1.46 and 1.42
+// ResSpanID, ScopeSpanID, TraceID 			-> 1.47 and 1.43
+// ResSpanID, ScopeSpanID, Name 			-> 1.38 and 1.38
+// ResSpanID, ScopeSpanID, StartTimestamp   -> 1.56 and 1.52
+
+// ResSpanID, ScopeSpanID, StartTimestamp, Name		-> 1.56 and 1.52
+// ResSpanID, ScopeSpanID, StartTimestamp, TraceId  -> 1.56 and 1.52
+// ResSpanID, ScopeSpanID, TraceID, StartTimestamp  -> 1.53 and 1.48
+// ResSpanID, ScopeSpanID, Name, StartTimestamp  	-> 1.54 and 1.52
+
+// ResSpanID, ScopeSpanID, StartTimestamp, Name, TraceID	-> 1.56 and 1.52
+// ResSpanID, ScopeSpanID, StartTimestamp, TraceId, Name  	-> 1.56 and 1.52
+// ResSpanID, ScopeSpanID, StartTimestamp, TraceId, Name  	-> 1.59 and 1.52  (only one group of attrs per resource and scope span)
