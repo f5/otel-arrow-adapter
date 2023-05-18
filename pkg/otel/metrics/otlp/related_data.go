@@ -91,87 +91,87 @@ func RelatedDataFrom(records []*record_message.RecordMessage) (relatedData *Rela
 
 	for _, record := range records {
 		switch record.PayloadType() {
-		case colarspb.OtlpArrowPayloadType_RESOURCE_ATTRS:
+		case colarspb.ArrowPayloadType_RESOURCE_ATTRS:
 			err = otlp.Attributes16StoreFrom(record.Record(), relatedData.ResAttrMapStore)
 			if err != nil {
 				return nil, nil, werror.Wrap(err)
 			}
-		case colarspb.OtlpArrowPayloadType_SCOPE_ATTRS:
+		case colarspb.ArrowPayloadType_SCOPE_ATTRS:
 			err = otlp.Attributes16StoreFrom(record.Record(), relatedData.ScopeAttrMapStore)
 			if err != nil {
 				return nil, nil, werror.Wrap(err)
 			}
-		case colarspb.OtlpArrowPayloadType_INT_SUM_ATTRS:
+		case colarspb.ArrowPayloadType_INT_SUM_ATTRS:
 			err = otlp.Attributes32StoreFrom(record.Record(), relatedData.SumIntAttrsStore)
 			if err != nil {
 				return nil, nil, werror.Wrap(err)
 			}
-		case colarspb.OtlpArrowPayloadType_DOUBLE_SUM_ATTRS:
+		case colarspb.ArrowPayloadType_DOUBLE_SUM_ATTRS:
 			err = otlp.Attributes32StoreFrom(record.Record(), relatedData.SumDoubleAttrsStore)
 			if err != nil {
 				return nil, nil, werror.Wrap(err)
 			}
-		case colarspb.OtlpArrowPayloadType_INT_GAUGE_ATTRS:
+		case colarspb.ArrowPayloadType_INT_GAUGE_ATTRS:
 			err = otlp.Attributes32StoreFrom(record.Record(), relatedData.GaugeIntAttrsStore)
 			if err != nil {
 				return nil, nil, werror.Wrap(err)
 			}
-		case colarspb.OtlpArrowPayloadType_DOUBLE_GAUGE_ATTRS:
+		case colarspb.ArrowPayloadType_DOUBLE_GAUGE_ATTRS:
 			err = otlp.Attributes32StoreFrom(record.Record(), relatedData.GaugeDoubleAttrsStore)
 			if err != nil {
 				return nil, nil, werror.Wrap(err)
 			}
-		case colarspb.OtlpArrowPayloadType_SUMMARY_ATTRS:
+		case colarspb.ArrowPayloadType_SUMMARY_ATTRS:
 			err = otlp.Attributes32StoreFrom(record.Record(), relatedData.SummaryAttrsStore)
 			if err != nil {
 				return nil, nil, werror.Wrap(err)
 			}
-		case colarspb.OtlpArrowPayloadType_HISTOGRAM_ATTRS:
+		case colarspb.ArrowPayloadType_HISTOGRAM_ATTRS:
 			err = otlp.Attributes32StoreFrom(record.Record(), relatedData.HistogramAttrsStore)
 			if err != nil {
 				return nil, nil, werror.Wrap(err)
 			}
-		case colarspb.OtlpArrowPayloadType_EXP_HISTOGRAM_ATTRS:
+		case colarspb.ArrowPayloadType_EXP_HISTOGRAM_ATTRS:
 			err = otlp.Attributes32StoreFrom(record.Record(), relatedData.ExpHistogramAttrsStore)
 			if err != nil {
 				return nil, nil, werror.Wrap(err)
 			}
-		case colarspb.OtlpArrowPayloadType_INT_SUM:
+		case colarspb.ArrowPayloadType_INT_SUM:
 			if sumIntDPRec != nil {
 				return nil, nil, werror.Wrap(otel.ErrDuplicatePayloadType)
 			}
 			sumIntDPRec = record
-		case colarspb.OtlpArrowPayloadType_DOUBLE_SUM:
+		case colarspb.ArrowPayloadType_DOUBLE_SUM:
 			if sumDoubleDPRec != nil {
 				return nil, nil, werror.Wrap(otel.ErrDuplicatePayloadType)
 			}
 			sumDoubleDPRec = record
-		case colarspb.OtlpArrowPayloadType_INT_GAUGE:
+		case colarspb.ArrowPayloadType_INT_GAUGE:
 			if gaugeIntDPRec != nil {
 				return nil, nil, werror.Wrap(otel.ErrDuplicatePayloadType)
 			}
 			gaugeIntDPRec = record
-		case colarspb.OtlpArrowPayloadType_DOUBLE_GAUGE:
+		case colarspb.ArrowPayloadType_DOUBLE_GAUGE:
 			if gaugeDoubleDPRec != nil {
 				return nil, nil, werror.Wrap(otel.ErrDuplicatePayloadType)
 			}
 			gaugeDoubleDPRec = record
-		case colarspb.OtlpArrowPayloadType_SUMMARIES:
+		case colarspb.ArrowPayloadType_SUMMARIES:
 			if summaryDPRec != nil {
 				return nil, nil, werror.Wrap(otel.ErrDuplicatePayloadType)
 			}
 			summaryDPRec = record
-		case colarspb.OtlpArrowPayloadType_HISTOGRAMS:
+		case colarspb.ArrowPayloadType_HISTOGRAMS:
 			if histogramDPRec != nil {
 				return nil, nil, werror.Wrap(otel.ErrDuplicatePayloadType)
 			}
 			histogramDPRec = record
-		case colarspb.OtlpArrowPayloadType_EXP_HISTOGRAMS:
+		case colarspb.ArrowPayloadType_EXP_HISTOGRAMS:
 			if expHistogramDPRec != nil {
 				return nil, nil, werror.Wrap(otel.ErrDuplicatePayloadType)
 			}
 			expHistogramDPRec = record
-		case colarspb.OtlpArrowPayloadType_METRICS:
+		case colarspb.ArrowPayloadType_METRICS:
 			if metricsRecord != nil {
 				return nil, nil, werror.Wrap(otel.ErrDuplicatePayloadType)
 			}

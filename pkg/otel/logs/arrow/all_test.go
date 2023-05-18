@@ -103,7 +103,7 @@ func TestLogRecord(t *testing.T) {
 
 	for _, relatedRecord := range relatedRecords {
 		switch relatedRecord.PayloadType() {
-		case v1.OtlpArrowPayloadType_LOG_ATTRS:
+		case v1.ArrowPayloadType_LOG_ATTRS:
 			expected = `[{"parent_id":0,"key":"double","value":[2,1]}
 ,{"parent_id":1,"key":"double","value":[2,2]}
 ,{"parent_id":0,"key":"int","value":[1,1]}
@@ -187,7 +187,7 @@ func TestScopeLogs(t *testing.T) {
 
 	for _, relatedRecord := range relatedRecords {
 		switch relatedRecord.PayloadType() {
-		case v1.OtlpArrowPayloadType_SCOPE_ATTRS:
+		case v1.ArrowPayloadType_SCOPE_ATTRS:
 			expected = `[{"parent_id":0,"key":"bool","value":[3,true]}
 ,{"parent_id":0,"key":"bytes","value":[4,"Ynl0ZXMx"]}
 ,{"parent_id":1,"key":"bytes","value":[4,"Ynl0ZXMy"]}
@@ -199,7 +199,7 @@ func TestScopeLogs(t *testing.T) {
 ,{"parent_id":1,"key":"str","value":[0,"string2"]}
 ]`
 
-		case v1.OtlpArrowPayloadType_LOG_ATTRS:
+		case v1.ArrowPayloadType_LOG_ATTRS:
 			expected = `[{"parent_id":0,"key":"double","value":[2,1]}
 ,{"parent_id":1,"key":"double","value":[2,2]}
 ,{"parent_id":2,"key":"double","value":[2,2]}
@@ -301,7 +301,7 @@ func TestResourceLogs(t *testing.T) {
 
 	for _, relatedRecord := range relatedRecords {
 		switch relatedRecord.PayloadType() {
-		case v1.OtlpArrowPayloadType_RESOURCE_ATTRS:
+		case v1.ArrowPayloadType_RESOURCE_ATTRS:
 			expected = `[{"parent_id":0,"key":"bool","value":[3,true]}
 ,{"parent_id":0,"key":"bytes","value":[4,"Ynl0ZXMx"]}
 ,{"parent_id":1,"key":"bytes","value":[4,"Ynl0ZXMy"]}
@@ -313,7 +313,7 @@ func TestResourceLogs(t *testing.T) {
 ,{"parent_id":1,"key":"str","value":[0,"string2"]}
 ]`
 
-		case v1.OtlpArrowPayloadType_SCOPE_ATTRS:
+		case v1.ArrowPayloadType_SCOPE_ATTRS:
 			expected = `[{"parent_id":0,"key":"bool","value":[3,true]}
 ,{"parent_id":0,"key":"bytes","value":[4,"Ynl0ZXMx"]}
 ,{"parent_id":1,"key":"bytes","value":[4,"Ynl0ZXMy"]}
@@ -329,7 +329,7 @@ func TestResourceLogs(t *testing.T) {
 ,{"parent_id":2,"key":"str","value":[0,"string2"]}
 ]`
 
-		case v1.OtlpArrowPayloadType_LOG_ATTRS:
+		case v1.ArrowPayloadType_LOG_ATTRS:
 			expected = `[{"parent_id":0,"key":"double","value":[2,1]}
 ,{"parent_id":1,"key":"double","value":[2,2]}
 ,{"parent_id":2,"key":"double","value":[2,2]}
@@ -421,7 +421,7 @@ func TestLogs(t *testing.T) {
 
 	for _, relatedRecord := range relatedRecords {
 		switch relatedRecord.PayloadType() {
-		case v1.OtlpArrowPayloadType_RESOURCE_ATTRS:
+		case v1.ArrowPayloadType_RESOURCE_ATTRS:
 			expected = `[{"parent_id":0,"key":"bool","value":[3,true]}
 ,{"parent_id":0,"key":"bytes","value":[4,"Ynl0ZXMx"]}
 ,{"parent_id":1,"key":"bytes","value":[4,"Ynl0ZXMy"]}
@@ -433,7 +433,7 @@ func TestLogs(t *testing.T) {
 ,{"parent_id":1,"key":"str","value":[0,"string2"]}
 ]`
 
-		case v1.OtlpArrowPayloadType_SCOPE_ATTRS:
+		case v1.ArrowPayloadType_SCOPE_ATTRS:
 			expected = `[{"parent_id":0,"key":"bool","value":[3,true]}
 ,{"parent_id":0,"key":"bytes","value":[4,"Ynl0ZXMx"]}
 ,{"parent_id":1,"key":"bytes","value":[4,"Ynl0ZXMy"]}
@@ -449,7 +449,7 @@ func TestLogs(t *testing.T) {
 ,{"parent_id":2,"key":"str","value":[0,"string2"]}
 ]`
 
-		case v1.OtlpArrowPayloadType_LOG_ATTRS:
+		case v1.ArrowPayloadType_LOG_ATTRS:
 			expected = `[{"parent_id":0,"key":"double","value":[2,1]}
 ,{"parent_id":1,"key":"double","value":[2,2]}
 ,{"parent_id":2,"key":"double","value":[2,2]}

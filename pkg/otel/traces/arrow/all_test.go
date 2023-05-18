@@ -305,7 +305,7 @@ func TestSpan(t *testing.T) {
 
 	for _, relatedRecord := range relatedRecords {
 		switch relatedRecord.PayloadType() {
-		case v1.OtlpArrowPayloadType_SPAN_ATTRS:
+		case v1.ArrowPayloadType_SPAN_ATTRS:
 			expected = `[{"parent_id":0,"key":"double","value":[2,1]}
 ,{"parent_id":1,"key":"double","value":[2,2]}
 ,{"parent_id":0,"key":"int","value":[1,1]}
@@ -313,12 +313,12 @@ func TestSpan(t *testing.T) {
 ,{"parent_id":0,"key":"str","value":[0,"string1"]}
 ,{"parent_id":1,"key":"str","value":[0,"string2"]}
 ]`
-		case v1.OtlpArrowPayloadType_SPAN_EVENTS:
+		case v1.ArrowPayloadType_SPAN_EVENTS:
 			expected = `[{"dropped_attributes_count":null,"id":0,"name":"event1","parent_id":0,"time_unix_nano":"1970-01-01 00:00:00.000000001"}
 ,{"dropped_attributes_count":null,"id":1,"name":"event1","parent_id":1,"time_unix_nano":"1970-01-01 00:00:00.000000001"}
 ,{"dropped_attributes_count":1,"id":1,"name":"event2","parent_id":0,"time_unix_nano":"1970-01-01 00:00:00.000000002"}
 ]`
-		case v1.OtlpArrowPayloadType_SPAN_EVENT_ATTRS:
+		case v1.ArrowPayloadType_SPAN_EVENT_ATTRS:
 			expected = `[{"parent_id":0,"key":"bool","value":[3,true]}
 ,{"parent_id":0,"key":"double","value":[2,1]}
 ,{"parent_id":0,"key":"int","value":[1,1]}
@@ -332,13 +332,13 @@ func TestSpan(t *testing.T) {
 ,{"parent_id":2,"key":"str","value":[0,"string2"]}
 ]`
 
-		case v1.OtlpArrowPayloadType_SPAN_LINKS:
+		case v1.ArrowPayloadType_SPAN_LINKS:
 			expected = `[{"id":0,"dropped_attributes_count":null,"parent_id":0,"span_id":"qgAAAAAAAAA=","trace_id":"qgAAAAAAAAAAAAAAAAAAAA==","trace_state":"key1=value1"}
 ,{"id":1,"dropped_attributes_count":1,"parent_id":0,"span_id":"qgAAAAAAAAA=","trace_id":"qgAAAAAAAAAAAAAAAAAAAA==","trace_state":"key2=value2"}
 ,{"id":1,"dropped_attributes_count":1,"parent_id":1,"span_id":"qgAAAAAAAAA=","trace_id":"qgAAAAAAAAAAAAAAAAAAAA==","trace_state":"key2=value2"}
 ]`
 
-		case v1.OtlpArrowPayloadType_SPAN_LINK_ATTRS:
+		case v1.ArrowPayloadType_SPAN_LINK_ATTRS:
 			expected = `[{"parent_id":0,"key":"bool","value":[3,true]}
 ,{"parent_id":0,"key":"double","value":[2,1]}
 ,{"parent_id":0,"key":"int","value":[1,1]}
@@ -427,7 +427,7 @@ func TestScopeSpans(t *testing.T) {
 
 	for _, relatedRecord := range relatedRecords {
 		switch relatedRecord.PayloadType() {
-		case v1.OtlpArrowPayloadType_SCOPE_ATTRS:
+		case v1.ArrowPayloadType_SCOPE_ATTRS:
 			expected = `[{"key":"bool","parent_id":0,"value":[3,true]}
 ,{"key":"bytes","parent_id":0,"value":[4,"Ynl0ZXMx"]}
 ,{"key":"bytes","parent_id":1,"value":[4,"Ynl0ZXMy"]}
@@ -439,7 +439,7 @@ func TestScopeSpans(t *testing.T) {
 ,{"key":"str","parent_id":1,"value":[0,"string2"]}
 ]`
 
-		case v1.OtlpArrowPayloadType_SPAN_ATTRS:
+		case v1.ArrowPayloadType_SPAN_ATTRS:
 			expected = `[{"parent_id":0,"key":"double","value":[2,1]}
 ,{"parent_id":1,"key":"double","value":[2,2]}
 ,{"parent_id":2,"key":"double","value":[2,2]}
@@ -450,13 +450,13 @@ func TestScopeSpans(t *testing.T) {
 ,{"parent_id":1,"key":"str","value":[0,"string2"]}
 ,{"parent_id":2,"key":"str","value":[0,"string2"]}
 ]`
-		case v1.OtlpArrowPayloadType_SPAN_EVENTS:
+		case v1.ArrowPayloadType_SPAN_EVENTS:
 			expected = `[{"dropped_attributes_count":null,"id":0,"name":"event1","parent_id":0,"time_unix_nano":"1970-01-01 00:00:00.000000001"}
 ,{"dropped_attributes_count":null,"id":1,"name":"event1","parent_id":1,"time_unix_nano":"1970-01-01 00:00:00.000000001"}
 ,{"dropped_attributes_count":null,"id":1,"name":"event1","parent_id":2,"time_unix_nano":"1970-01-01 00:00:00.000000001"}
 ,{"dropped_attributes_count":1,"id":1,"name":"event2","parent_id":0,"time_unix_nano":"1970-01-01 00:00:00.000000002"}
 ]`
-		case v1.OtlpArrowPayloadType_SPAN_EVENT_ATTRS:
+		case v1.ArrowPayloadType_SPAN_EVENT_ATTRS:
 			expected = `[{"parent_id":0,"key":"bool","value":[3,true]}
 ,{"parent_id":0,"key":"double","value":[2,1]}
 ,{"parent_id":0,"key":"int","value":[1,1]}
@@ -474,14 +474,14 @@ func TestScopeSpans(t *testing.T) {
 ,{"parent_id":3,"key":"str","value":[0,"string2"]}
 ]`
 
-		case v1.OtlpArrowPayloadType_SPAN_LINKS:
+		case v1.ArrowPayloadType_SPAN_LINKS:
 			expected = `[{"id":0,"dropped_attributes_count":null,"parent_id":0,"span_id":"qgAAAAAAAAA=","trace_id":"qgAAAAAAAAAAAAAAAAAAAA==","trace_state":"key1=value1"}
 ,{"id":1,"dropped_attributes_count":1,"parent_id":0,"span_id":"qgAAAAAAAAA=","trace_id":"qgAAAAAAAAAAAAAAAAAAAA==","trace_state":"key2=value2"}
 ,{"id":1,"dropped_attributes_count":1,"parent_id":1,"span_id":"qgAAAAAAAAA=","trace_id":"qgAAAAAAAAAAAAAAAAAAAA==","trace_state":"key2=value2"}
 ,{"id":1,"dropped_attributes_count":1,"parent_id":2,"span_id":"qgAAAAAAAAA=","trace_id":"qgAAAAAAAAAAAAAAAAAAAA==","trace_state":"key2=value2"}
 ]`
 
-		case v1.OtlpArrowPayloadType_SPAN_LINK_ATTRS:
+		case v1.ArrowPayloadType_SPAN_LINK_ATTRS:
 			expected = `[{"parent_id":0,"key":"bool","value":[3,true]}
 ,{"parent_id":0,"key":"double","value":[2,1]}
 ,{"parent_id":0,"key":"int","value":[1,1]}
@@ -601,7 +601,7 @@ func TestResourceSpans(t *testing.T) {
 
 	for _, relatedRecord := range relatedRecords {
 		switch relatedRecord.PayloadType() {
-		case v1.OtlpArrowPayloadType_RESOURCE_ATTRS:
+		case v1.ArrowPayloadType_RESOURCE_ATTRS:
 			expected = `[{"parent_id":0,"key":"bool","value":[3,true]}
 ,{"parent_id":0,"key":"bytes","value":[4,"Ynl0ZXMx"]}
 ,{"parent_id":1,"key":"bytes","value":[4,"Ynl0ZXMy"]}
@@ -613,7 +613,7 @@ func TestResourceSpans(t *testing.T) {
 ,{"parent_id":1,"key":"str","value":[0,"string2"]}
 ]`
 
-		case v1.OtlpArrowPayloadType_SCOPE_ATTRS:
+		case v1.ArrowPayloadType_SCOPE_ATTRS:
 			expected = `[{"parent_id":0,"key":"bool","value":[3,true]}
 ,{"parent_id":0,"key":"bytes","value":[4,"Ynl0ZXMx"]}
 ,{"parent_id":1,"key":"bytes","value":[4,"Ynl0ZXMy"]}
@@ -629,7 +629,7 @@ func TestResourceSpans(t *testing.T) {
 ,{"parent_id":2,"key":"str","value":[0,"string2"]}
 ]`
 
-		case v1.OtlpArrowPayloadType_SPAN_ATTRS:
+		case v1.ArrowPayloadType_SPAN_ATTRS:
 			expected = `[{"parent_id":0,"key":"double","value":[2,1]}
 ,{"parent_id":1,"key":"double","value":[2,2]}
 ,{"parent_id":2,"key":"double","value":[2,2]}
@@ -643,14 +643,14 @@ func TestResourceSpans(t *testing.T) {
 ,{"parent_id":2,"key":"str","value":[0,"string2"]}
 ,{"parent_id":3,"key":"str","value":[0,"string2"]}
 ]`
-		case v1.OtlpArrowPayloadType_SPAN_EVENTS:
+		case v1.ArrowPayloadType_SPAN_EVENTS:
 			expected = `[{"id":0,"dropped_attributes_count":null,"parent_id":0,"name":"event1","time_unix_nano":"1970-01-01 00:00:00.000000001"}
 ,{"id":1,"dropped_attributes_count":null,"parent_id":1,"name":"event1","time_unix_nano":"1970-01-01 00:00:00.000000001"}
 ,{"id":1,"dropped_attributes_count":null,"parent_id":2,"name":"event1","time_unix_nano":"1970-01-01 00:00:00.000000001"}
 ,{"id":1,"dropped_attributes_count":null,"parent_id":3,"name":"event1","time_unix_nano":"1970-01-01 00:00:00.000000001"}
 ,{"id":1,"dropped_attributes_count":1,"parent_id":0,"name":"event2","time_unix_nano":"1970-01-01 00:00:00.000000002"}
 ]`
-		case v1.OtlpArrowPayloadType_SPAN_EVENT_ATTRS:
+		case v1.ArrowPayloadType_SPAN_EVENT_ATTRS:
 			expected = `[{"parent_id":0,"key":"bool","value":[3,true]}
 ,{"parent_id":0,"key":"double","value":[2,1]}
 ,{"parent_id":0,"key":"int","value":[1,1]}
@@ -672,7 +672,7 @@ func TestResourceSpans(t *testing.T) {
 ,{"parent_id":4,"key":"str","value":[0,"string2"]}
 ]`
 
-		case v1.OtlpArrowPayloadType_SPAN_LINKS:
+		case v1.ArrowPayloadType_SPAN_LINKS:
 			expected = `[{"id":0,"dropped_attributes_count":null,"parent_id":0,"span_id":"qgAAAAAAAAA=","trace_id":"qgAAAAAAAAAAAAAAAAAAAA==","trace_state":"key1=value1"}
 ,{"id":1,"dropped_attributes_count":1,"parent_id":0,"span_id":"qgAAAAAAAAA=","trace_id":"qgAAAAAAAAAAAAAAAAAAAA==","trace_state":"key2=value2"}
 ,{"id":1,"dropped_attributes_count":1,"parent_id":1,"span_id":"qgAAAAAAAAA=","trace_id":"qgAAAAAAAAAAAAAAAAAAAA==","trace_state":"key2=value2"}
@@ -680,7 +680,7 @@ func TestResourceSpans(t *testing.T) {
 ,{"id":1,"dropped_attributes_count":1,"parent_id":3,"span_id":"qgAAAAAAAAA=","trace_id":"qgAAAAAAAAAAAAAAAAAAAA==","trace_state":"key2=value2"}
 ]`
 
-		case v1.OtlpArrowPayloadType_SPAN_LINK_ATTRS:
+		case v1.ArrowPayloadType_SPAN_LINK_ATTRS:
 			expected = `[{"parent_id":0,"key":"bool","value":[3,true]}
 ,{"parent_id":0,"key":"double","value":[2,1]}
 ,{"parent_id":0,"key":"int","value":[1,1]}
@@ -794,7 +794,7 @@ func TestTraces(t *testing.T) {
 
 	for _, relatedRecord := range relatedRecords {
 		switch relatedRecord.PayloadType() {
-		case v1.OtlpArrowPayloadType_RESOURCE_ATTRS:
+		case v1.ArrowPayloadType_RESOURCE_ATTRS:
 			expected = `[{"parent_id":0,"key":"bool","value":[3,true]}
 ,{"parent_id":0,"key":"bytes","value":[4,"Ynl0ZXMx"]}
 ,{"parent_id":1,"key":"bytes","value":[4,"Ynl0ZXMy"]}
@@ -806,7 +806,7 @@ func TestTraces(t *testing.T) {
 ,{"parent_id":1,"key":"str","value":[0,"string2"]}
 ]`
 
-		case v1.OtlpArrowPayloadType_SCOPE_ATTRS:
+		case v1.ArrowPayloadType_SCOPE_ATTRS:
 			expected = `[{"parent_id":0,"key":"bool","value":[3,true]}
 ,{"parent_id":0,"key":"bytes","value":[4,"Ynl0ZXMx"]}
 ,{"parent_id":1,"key":"bytes","value":[4,"Ynl0ZXMy"]}
@@ -822,7 +822,7 @@ func TestTraces(t *testing.T) {
 ,{"parent_id":2,"key":"str","value":[0,"string2"]}
 ]`
 
-		case v1.OtlpArrowPayloadType_SPAN_ATTRS:
+		case v1.ArrowPayloadType_SPAN_ATTRS:
 			expected = `[{"parent_id":0,"key":"double","value":[2,1]}
 ,{"parent_id":1,"key":"double","value":[2,2]}
 ,{"parent_id":2,"key":"double","value":[2,2]}
@@ -836,14 +836,14 @@ func TestTraces(t *testing.T) {
 ,{"parent_id":2,"key":"str","value":[0,"string2"]}
 ,{"parent_id":3,"key":"str","value":[0,"string2"]}
 ]`
-		case v1.OtlpArrowPayloadType_SPAN_EVENTS:
+		case v1.ArrowPayloadType_SPAN_EVENTS:
 			expected = `[{"id":0,"dropped_attributes_count":null,"parent_id":0,"name":"event1","time_unix_nano":"1970-01-01 00:00:00.000000001"}
 ,{"id":1,"dropped_attributes_count":null,"parent_id":1,"name":"event1","time_unix_nano":"1970-01-01 00:00:00.000000001"}
 ,{"id":1,"dropped_attributes_count":null,"parent_id":2,"name":"event1","time_unix_nano":"1970-01-01 00:00:00.000000001"}
 ,{"id":1,"dropped_attributes_count":null,"parent_id":3,"name":"event1","time_unix_nano":"1970-01-01 00:00:00.000000001"}
 ,{"id":1,"dropped_attributes_count":1,"parent_id":0,"name":"event2","time_unix_nano":"1970-01-01 00:00:00.000000002"}
 ]`
-		case v1.OtlpArrowPayloadType_SPAN_EVENT_ATTRS:
+		case v1.ArrowPayloadType_SPAN_EVENT_ATTRS:
 			expected = `[{"parent_id":0,"key":"bool","value":[3,true]}
 ,{"parent_id":0,"key":"double","value":[2,1]}
 ,{"parent_id":0,"key":"int","value":[1,1]}
@@ -865,7 +865,7 @@ func TestTraces(t *testing.T) {
 ,{"parent_id":4,"key":"str","value":[0,"string2"]}
 ]`
 
-		case v1.OtlpArrowPayloadType_SPAN_LINKS:
+		case v1.ArrowPayloadType_SPAN_LINKS:
 			expected = `[{"id":0,"dropped_attributes_count":null,"parent_id":0,"span_id":"qgAAAAAAAAA=","trace_id":"qgAAAAAAAAAAAAAAAAAAAA==","trace_state":"key1=value1"}
 ,{"id":1,"dropped_attributes_count":1,"parent_id":0,"span_id":"qgAAAAAAAAA=","trace_id":"qgAAAAAAAAAAAAAAAAAAAA==","trace_state":"key2=value2"}
 ,{"id":1,"dropped_attributes_count":1,"parent_id":1,"span_id":"qgAAAAAAAAA=","trace_id":"qgAAAAAAAAAAAAAAAAAAAA==","trace_state":"key2=value2"}
@@ -873,7 +873,7 @@ func TestTraces(t *testing.T) {
 ,{"id":1,"dropped_attributes_count":1,"parent_id":3,"span_id":"qgAAAAAAAAA=","trace_id":"qgAAAAAAAAAAAAAAAAAAAA==","trace_state":"key2=value2"}
 ]`
 
-		case v1.OtlpArrowPayloadType_SPAN_LINK_ATTRS:
+		case v1.ArrowPayloadType_SPAN_LINK_ATTRS:
 			expected = `[{"parent_id":0,"key":"bool","value":[3,true]}
 ,{"parent_id":0,"key":"double","value":[2,1]}
 ,{"parent_id":0,"key":"int","value":[1,1]}

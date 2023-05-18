@@ -38,14 +38,14 @@ message BatchArrowRecords {
   string batch_id = 1;
 
   // [mandatory] A collection of payloads containing the data of the batch.
-  repeated OtlpArrowPayload otlp_arrow_payloads = 2;
+  repeated ArrowPayload arrow_payloads = 2;
 
   // [optional] Headers associated with this batch, encoded using hpack.
   bytes headers = 3;
 }
 
 // Enumeration of all the OTLP Arrow payload types currently supported by the OTLP Arrow protocol.
-enum OtlpArrowPayloadType {
+enum ArrowPayloadType {
   // Main OTel entities
   // A payload representing a collection of metrics.
   METRICS = 0;
@@ -90,12 +90,12 @@ enum OtlpArrowPayloadType {
 }
 
 // Represents a batch of OTLP Arrow entities.
-message OtlpArrowPayload {
+message ArrowPayload {
   // [mandatory] A unique id assigned to a sub-stream of the batch sharing the same schema, and dictionaries.
   string sub_stream_id = 1;
 
   // [mandatory] Type of the OTLP Arrow payload.
-  OtlpArrowPayloadType type = 2;
+  ArrowPayloadType type = 2;
 
   // [mandatory] Serialized Arrow Record Batch
   // For a description of the Arrow IPC format see:
@@ -113,7 +113,6 @@ message StatusMessage {
   StatusCode status_code = 2;
   ErrorCode error_code = 3;
   string error_message = 4;
-  RetryInfo retry_info = 5;
 }
 
 enum StatusCode {
@@ -124,8 +123,4 @@ enum StatusCode {
 enum ErrorCode {
   UNAVAILABLE = 0;
   INVALID_ARGUMENT = 1;
-}
-
-message RetryInfo {
-  int64 retry_delay = 1;
 }

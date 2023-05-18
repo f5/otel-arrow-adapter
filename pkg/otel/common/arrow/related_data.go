@@ -96,91 +96,91 @@ var (
 	PayloadTypes = payloadTypes{
 		ResourceAttrs: &PayloadType{
 			prefix:      "resource-attrs",
-			payloadType: colarspb.OtlpArrowPayloadType_RESOURCE_ATTRS,
+			payloadType: colarspb.ArrowPayloadType_RESOURCE_ATTRS,
 		},
 		ScopeAttrs: &PayloadType{
 			prefix:      "scope-attrs",
-			payloadType: colarspb.OtlpArrowPayloadType_SCOPE_ATTRS,
+			payloadType: colarspb.ArrowPayloadType_SCOPE_ATTRS,
 		},
 		IntGauge: &PayloadType{
 			prefix:      "int_gauge",
-			payloadType: colarspb.OtlpArrowPayloadType_INT_GAUGE,
+			payloadType: colarspb.ArrowPayloadType_INT_GAUGE,
 		},
 		IntGaugeAttrs: &PayloadType{
 			prefix:      "int_gauge-attrs",
-			payloadType: colarspb.OtlpArrowPayloadType_INT_GAUGE_ATTRS,
+			payloadType: colarspb.ArrowPayloadType_INT_GAUGE_ATTRS,
 		},
 		DoubleGauge: &PayloadType{
 			prefix:      "double_gauge",
-			payloadType: colarspb.OtlpArrowPayloadType_DOUBLE_GAUGE,
+			payloadType: colarspb.ArrowPayloadType_DOUBLE_GAUGE,
 		},
 		DoubleGaugeAttrs: &PayloadType{
 			prefix:      "double_gauge-attrs",
-			payloadType: colarspb.OtlpArrowPayloadType_DOUBLE_GAUGE_ATTRS,
+			payloadType: colarspb.ArrowPayloadType_DOUBLE_GAUGE_ATTRS,
 		},
 		IntSum: &PayloadType{
 			prefix:      "int_sum",
-			payloadType: colarspb.OtlpArrowPayloadType_INT_SUM,
+			payloadType: colarspb.ArrowPayloadType_INT_SUM,
 		},
 		IntSumAttrs: &PayloadType{
 			prefix:      "int_sum-attrs",
-			payloadType: colarspb.OtlpArrowPayloadType_INT_SUM_ATTRS,
+			payloadType: colarspb.ArrowPayloadType_INT_SUM_ATTRS,
 		},
 		DoubleSum: &PayloadType{
 			prefix:      "double_sum",
-			payloadType: colarspb.OtlpArrowPayloadType_DOUBLE_SUM,
+			payloadType: colarspb.ArrowPayloadType_DOUBLE_SUM,
 		},
 		DoubleSumAttrs: &PayloadType{
 			prefix:      "double_sum-attrs",
-			payloadType: colarspb.OtlpArrowPayloadType_DOUBLE_SUM_ATTRS,
+			payloadType: colarspb.ArrowPayloadType_DOUBLE_SUM_ATTRS,
 		},
 		Summary: &PayloadType{
 			prefix:      "summary",
-			payloadType: colarspb.OtlpArrowPayloadType_SUMMARIES,
+			payloadType: colarspb.ArrowPayloadType_SUMMARIES,
 		},
 		SummaryAttrs: &PayloadType{
 			prefix:      "summary-attrs",
-			payloadType: colarspb.OtlpArrowPayloadType_SUMMARY_ATTRS,
+			payloadType: colarspb.ArrowPayloadType_SUMMARY_ATTRS,
 		},
 		Histogram: &PayloadType{
 			prefix:      "histogram",
-			payloadType: colarspb.OtlpArrowPayloadType_HISTOGRAMS,
+			payloadType: colarspb.ArrowPayloadType_HISTOGRAMS,
 		},
 		HistogramAttrs: &PayloadType{
 			prefix:      "histogram-attrs",
-			payloadType: colarspb.OtlpArrowPayloadType_HISTOGRAM_ATTRS,
+			payloadType: colarspb.ArrowPayloadType_HISTOGRAM_ATTRS,
 		},
 		ExpHistogram: &PayloadType{
 			prefix:      "exp-histogram",
-			payloadType: colarspb.OtlpArrowPayloadType_EXP_HISTOGRAMS,
+			payloadType: colarspb.ArrowPayloadType_EXP_HISTOGRAMS,
 		},
 		ExpHistogramAttrs: &PayloadType{
 			prefix:      "exp-histogram-attrs",
-			payloadType: colarspb.OtlpArrowPayloadType_EXP_HISTOGRAM_ATTRS,
+			payloadType: colarspb.ArrowPayloadType_EXP_HISTOGRAM_ATTRS,
 		},
 		LogRecordAttrs: &PayloadType{
 			prefix:      "logs-attrs",
-			payloadType: colarspb.OtlpArrowPayloadType_LOG_ATTRS,
+			payloadType: colarspb.ArrowPayloadType_LOG_ATTRS,
 		},
 		SpanAttrs: &PayloadType{
 			prefix:      "span-attrs",
-			payloadType: colarspb.OtlpArrowPayloadType_SPAN_ATTRS,
+			payloadType: colarspb.ArrowPayloadType_SPAN_ATTRS,
 		},
 		Event: &PayloadType{
 			prefix:      "span-event",
-			payloadType: colarspb.OtlpArrowPayloadType_SPAN_EVENTS,
+			payloadType: colarspb.ArrowPayloadType_SPAN_EVENTS,
 		},
 		EventAttrs: &PayloadType{
 			prefix:      "span-event-attrs",
-			payloadType: colarspb.OtlpArrowPayloadType_SPAN_EVENT_ATTRS,
+			payloadType: colarspb.ArrowPayloadType_SPAN_EVENT_ATTRS,
 		},
 		Link: &PayloadType{
 			prefix:      "span-link",
-			payloadType: colarspb.OtlpArrowPayloadType_SPAN_LINKS,
+			payloadType: colarspb.ArrowPayloadType_SPAN_LINKS,
 		},
 		LinkAttrs: &PayloadType{
 			prefix:      "span-link-attrs",
-			payloadType: colarspb.OtlpArrowPayloadType_SPAN_LINK_ATTRS,
+			payloadType: colarspb.ArrowPayloadType_SPAN_LINK_ATTRS,
 		},
 	}
 )
