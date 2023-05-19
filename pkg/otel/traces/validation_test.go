@@ -84,7 +84,7 @@ func TestConversionFromSyntheticData(t *testing.T) {
 		require.Error(t, acommon.ErrSchemaNotUpToDate)
 	}
 
-	relatedData, _, err := tracesotlp.RelatedDataFrom(relatedRecords)
+	relatedData, _, err := tracesotlp.RelatedDataFrom(relatedRecords, tracesarrow.NewConfig(conf))
 	require.NoError(t, err)
 
 	// Convert the Arrow record back to OTLP.
@@ -145,7 +145,7 @@ func checkTracesConversion(t *testing.T, expectedRequest ptraceotlp.ExportReques
 		require.Error(t, acommon.ErrSchemaNotUpToDate)
 	}
 
-	relatedData, _, err := tracesotlp.RelatedDataFrom(relatedRecords)
+	relatedData, _, err := tracesotlp.RelatedDataFrom(relatedRecords, tracesarrow.NewConfig(cfg))
 	require.NoError(t, err)
 
 	// Convert the Arrow records back to OTLP.

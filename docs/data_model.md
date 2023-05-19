@@ -1,8 +1,3 @@
-GOROOT=/opt/homebrew/Cellar/go/1.20.3/libexec #gosetup
-GOPATH=/Users/L.Querel/go #gosetup
-/opt/homebrew/Cellar/go/1.20.3/libexec/bin/go build -o /Users/L.Querel/Library/Caches/JetBrains/GoLand2023.1/tmp/GoLand/___go_build_github_com_f5_otel_arrow_adapter_tools_data_model_gen github.com/f5/otel-arrow-adapter/tools/data_model_gen #gosetup
-/Users/L.Querel/Library/Caches/JetBrains/GoLand2023.1/tmp/GoLand/___go_build_github_com_f5_otel_arrow_adapter_tools_data_model_gen
-
 # Arrow Data Model
 
 ## Metrics Arrow Records
@@ -34,15 +29,79 @@ erDiagram
     METRICS ||--o{ EXP_HISTOGRAMS : exp-histogram
     EXP_HISTOGRAMS ||--o{ exemplars : exemplars
     EXP_HISTOGRAMS ||--o{ EXP_HISTOGRAM_ATTRS : exp-histogram-attrs
+    DOUBLE_GAUGE{
+        id u32
+        parent_id u16
+        name string
+        description string "optional"
+        unit string "optional"
+        aggregation_temporality i32 "optional"
+        is_monotonic bool "optional"
+        start_time_unix_nano timestamp
+        time_unix_nano timestamp
+        value f64
+        flags u32 "optional"
+    }
+    HISTOGRAM_ATTRS{
+        parent_id u32
+        key string
+        value union "str|i64|f64|bool|binary|cbor"
+    }
+    METRICS{
+    }
+    INT_SUM{
+        id u32
+        parent_id u16
+        name string
+        description string "optional"
+        unit string "optional"
+        aggregation_temporality i32 "optional"
+        is_monotonic bool "optional"
+        start_time_unix_nano timestamp
+        time_unix_nano timestamp
+        value i64
+        flags u32 "optional"
+    }
+    INT_GAUGE{
+        id u32
+        parent_id u16
+        name string
+        description string "optional"
+        unit string "optional"
+        aggregation_temporality i32 "optional"
+        is_monotonic bool "optional"
+        start_time_unix_nano timestamp
+        time_unix_nano timestamp
+        value i64
+        flags u32 "optional"
+    }
+    DOUBLE_SUM{
+        id u32
+        parent_id u16
+        name string
+        description string "optional"
+        unit string "optional"
+        aggregation_temporality i32 "optional"
+        is_monotonic bool "optional"
+        start_time_unix_nano timestamp
+        time_unix_nano timestamp
+        value f64
+        flags u32 "optional"
+    }
+    INT_GAUGE_ATTRS{
+        parent_id u32
+        key string
+        value union "str|i64|f64|bool|binary|cbor"
+    }
     DOUBLE_GAUGE_ATTRS{
-        parent_id u32 
-        key string 
+        parent_id u32
+        key string
         value union "str|i64|f64|bool|binary|cbor"
     }
     SUMMARIES{
         id u32 "optional"
-        parent_id u16 
-        name string 
+        parent_id u16
+        name string
         description string "optional"
         unit string "optional"
         aggregation_temporality i32 "optional"
@@ -53,47 +112,37 @@ erDiagram
         sum f64 "optional"
         flags u32 "optional"
     }
-    SUMMARY_ATTRS{
-        parent_id u32 
-        key string 
-        value union "str|i64|f64|bool|binary|cbor"
-    }
-    resource_metrics{
-        resource_id u16 "optional"
-        resource_dropped_attributes_count u32 "optional"
-        schema_url string "optional"
-    }
-    RESOURCE_ATTRS{
-        parent_id u16 
-        key string 
-        value union "str|i64|f64|bool|binary|cbor"
-    }
-    DOUBLE_SUM{
-        id u32 
-        parent_id u16 
-        name string 
-        description string "optional"
-        unit string "optional"
-        aggregation_temporality i32 "optional"
-        is_monotonic bool "optional"
-        start_time_unix_nano timestamp 
-        time_unix_nano timestamp 
-        value f64 
-        flags u32 "optional"
-    }
     quantile{
         quantile f64 "optional"
         value f64 "optional"
     }
-    HISTOGRAM_ATTRS{
-        parent_id u32 
-        key string 
+    scope_metrics{
+        id u16
+        scope_id u16 "optional"
+        scope_name string "optional"
+        scope_version string "optional"
+        scope_dropped_attributes_count u32 "optional"
+        schema_url string "optional"
+    }
+    SCOPE_ATTRS{
+        parent_id u16
+        key string
+        value union "str|i64|f64|bool|binary|cbor"
+    }
+    INT_SUM_ATTRS{
+        parent_id u32
+        key string
+        value union "str|i64|f64|bool|binary|cbor"
+    }
+    SUMMARY_ATTRS{
+        parent_id u32
+        key string
         value union "str|i64|f64|bool|binary|cbor"
     }
     EXP_HISTOGRAMS{
         id u32 "optional"
-        parent_id u16 
-        name string 
+        parent_id u16
+        name string
         description string "optional"
         unit string "optional"
         aggregation_temporality i32 "optional"
@@ -112,41 +161,38 @@ erDiagram
         min f64 "optional"
         max f64 "optional"
     }
-    scope_metrics{
-        id u16 
-        scope_id u16 "optional"
-        scope_name string "optional"
-        scope_version string "optional"
-        scope_dropped_attributes_count u32 "optional"
+    EXP_HISTOGRAM_ATTRS{
+        parent_id u32
+        key string
+        value union "str|i64|f64|bool|binary|cbor"
+    }
+    resource_metrics{
+        resource_id u16 "optional"
+        resource_schema_url string "optional"
+        resource_dropped_attributes_count u32 "optional"
         schema_url string "optional"
     }
-    INT_SUM_ATTRS{
-        parent_id u32 
-        key string 
+    RESOURCE_ATTRS{
+        parent_id u16
+        key string
         value union "str|i64|f64|bool|binary|cbor"
+    }
+    exemplars{
+        attributes map "map<utf8, sparse_union>, optional, map<utf8, sparse_union>, optional, map<utf8, sparse_union>, optional, map<utf8, sparse_union>, optional, map<utf8, sparse_union>, optional, map<utf8, sparse_union>, optional"
+        time_unix_nano timestamp "optional, optional, optional, optional, optional, optional"
+        value union "i64|f64, optional, i64|f64, optional, i64|f64, optional, i64|f64, optional, i64|f64, optional, i64|f64, optional"
+        span_id bytes[8] "optional, optional, optional, optional, optional, optional"
+        trace_id bytes[16] "optional, optional, optional, optional, optional, optional"
     }
     DOUBLE_SUM_ATTRS{
-        parent_id u32 
-        key string 
+        parent_id u32
+        key string
         value union "str|i64|f64|bool|binary|cbor"
-    }
-    INT_GAUGE{
-        id u32 
-        parent_id u16 
-        name string 
-        description string "optional"
-        unit string "optional"
-        aggregation_temporality i32 "optional"
-        is_monotonic bool "optional"
-        start_time_unix_nano timestamp 
-        time_unix_nano timestamp 
-        value i64 
-        flags u32 "optional"
     }
     HISTOGRAMS{
         id u32 "optional"
-        parent_id u16 
-        name string 
+        parent_id u16
+        name string
         description string "optional"
         unit string "optional"
         aggregation_temporality i32 "optional"
@@ -161,56 +207,6 @@ erDiagram
         min f64 "optional"
         max f64 "optional"
     }
-    METRICS{
-    }
-    INT_SUM{
-        id u32 
-        parent_id u16 
-        name string 
-        description string "optional"
-        unit string "optional"
-        aggregation_temporality i32 "optional"
-        is_monotonic bool "optional"
-        start_time_unix_nano timestamp 
-        time_unix_nano timestamp 
-        value i64 
-        flags u32 "optional"
-    }
-    INT_GAUGE_ATTRS{
-        parent_id u32 
-        key string 
-        value union "str|i64|f64|bool|binary|cbor"
-    }
-    DOUBLE_GAUGE{
-        id u32 
-        parent_id u16 
-        name string 
-        description string "optional"
-        unit string "optional"
-        aggregation_temporality i32 "optional"
-        is_monotonic bool "optional"
-        start_time_unix_nano timestamp 
-        time_unix_nano timestamp 
-        value f64 
-        flags u32 "optional"
-    }
-    EXP_HISTOGRAM_ATTRS{
-        parent_id u32 
-        key string 
-        value union "str|i64|f64|bool|binary|cbor"
-    }
-    SCOPE_ATTRS{
-        parent_id u16 
-        key string 
-        value union "str|i64|f64|bool|binary|cbor"
-    }
-    exemplars{
-        attributes map "map<utf8, sparse_union>, optional, map<utf8, sparse_union>, optional, map<utf8, sparse_union>, optional, map<utf8, sparse_union>, optional, map<utf8, sparse_union>, optional, map<utf8, sparse_union>, optional"
-        time_unix_nano timestamp "optional, optional, optional, optional, optional, optional"
-        value union "i64|f64, optional, i64|f64, optional, i64|f64, optional, i64|f64, optional, i64|f64, optional, i64|f64, optional"
-        span_id bytes[8] "optional, optional, optional, optional, optional, optional"
-        trace_id bytes[16] "optional, optional, optional, optional, optional, optional"
-    }
 ```
 
 ## Logs Arrow Records
@@ -223,18 +219,6 @@ erDiagram
     LOGS ||--o{ RESOURCE_ATTRS : resource-attrs
     LOGS ||--o{ SCOPE_ATTRS : scope-attrs
     LOGS ||--o{ LOG_ATTRS : logs-attrs
-    LOG_ATTRS{
-        parent_id u16 
-        key string 
-        value union "str|i64|f64|bool|binary|cbor"
-    }
-    LOGS{
-    }
-    resource_logs{
-        resource_id u16 "optional"
-        resource_dropped_attributes_count u32 "optional"
-        schema_url string "optional"
-    }
     scope_logs{
         scope_id u16 "optional"
         scope_name string "optional"
@@ -264,6 +248,19 @@ erDiagram
         key string 
         value union "str|i64|f64|bool|binary|cbor"
     }
+    LOG_ATTRS{
+        parent_id u16 
+        key string 
+        value union "str|i64|f64|bool|binary|cbor"
+    }
+    LOGS{
+    }
+    resource_logs{
+        resource_id u16 "optional"
+        resource_schema_url string "optional"
+        resource_dropped_attributes_count u32 "optional"
+        schema_url string "optional"
+    }
 ```
 
 ## Traces Arrow Records
@@ -277,6 +274,45 @@ erDiagram
     SPANS ||--o{ SPAN_LINKS : span-link
     SPAN_EVENTS ||--o{ SPAN_EVENT_ATTRS : span-event-attrs
     SPAN_LINKS ||--o{ SPAN_LINK_ATTRS : span-link-attrs
+    SPAN_EVENT_ATTRS{
+        parent_id u32
+        key string
+        value union "str|i64|f64|bool|binary|cbor"
+    }
+    SPAN_LINK_ATTRS{
+        parent_id u32
+        key string
+        value union "str|i64|f64|bool|binary|cbor"
+    }
+    SPANS{
+        id u16 "optional"
+        resource_id u16 "optional"
+        resource_schema_url string "optional"
+        resource_dropped_attributes_count u32 "optional"
+        scope_id u16 "optional"
+        scope_name string "optional"
+        scope_version string "optional"
+        scope_dropped_attributes_count u32 "optional"
+        schema_url string "optional"
+        start_time_unix_nano timestamp
+        duration_time_unix_nano duration
+        trace_id bytes[16]
+        span_id bytes[8]
+        trace_state string "optional"
+        parent_span_id bytes[8] "optional"
+        name string
+        kind i32 "optional"
+        dropped_attributes_count u32 "optional"
+        dropped_events_count u32 "optional"
+        dropped_links_count u32 "optional"
+        status_code i32 "optional"
+        status_status_message string "optional"
+    }
+    RESOURCE_ATTRS{
+        parent_id u16
+        key string
+        value union "str|i64|f64|bool|binary|cbor"
+    }
     SCOPE_ATTRS{
         parent_id u16
         key string
@@ -302,49 +338,4 @@ erDiagram
         trace_state string "optional"
         dropped_attributes_count u32 "optional"
     }
-    SPAN_EVENT_ATTRS{
-        parent_id u32
-        key string
-        value union "str|i64|f64|bool|binary|cbor"
-    }
-    SPAN_LINK_ATTRS{
-        parent_id u32
-        key string
-        value union "str|i64|f64|bool|binary|cbor"
-    }
-    SPANS{
-        id u16 "optional"
-        resource_id u16 "optional"
-        resource_dropped_attributes_count u32 "optional"
-        schema_url string "optional"
-        scope_id u16 "optional"
-        scope_name string "optional"
-        scope_version string "optional"
-        scope_dropped_attributes_count u32 "optional"
-        scope_schema_url string "optional"
-        start_time_unix_nano timestamp
-        duration_time_unix_nano duration
-        trace_id bytes[16]
-        span_id bytes[8]
-        trace_state string "optional"
-        parent_span_id bytes[8] "optional"
-        name string
-        kind i32 "optional"
-        dropped_attributes_count u32 "optional"
-        dropped_events_count u32 "optional"
-        dropped_links_count u32 "optional"
-        status_code i32 "optional"
-        status_status_message string "optional"
-    }
-    RESOURCE_ATTRS{
-        parent_id u16
-        key string
-        value union "str|i64|f64|bool|binary|cbor"
-    }
 ```
-
-
-
-Process finished with the exit code 0
-
-

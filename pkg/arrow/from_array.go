@@ -93,7 +93,10 @@ func StringFromArray(arr arrow.Array, row int) (string, error) {
 		case *array.Dictionary:
 			return arr.Dictionary().(*array.String).Value(arr.GetValueIndex(row)), nil
 		default:
-			return "", werror.WrapWithMsg(ErrInvalidArrayType, "not a string array")
+			return "", werror.WrapWithContext(ErrInvalidArrayType, map[string]interface{}{
+				"message":    "invalid array type",
+				"array-type": arr.DataType().Name(),
+			})
 		}
 	}
 }

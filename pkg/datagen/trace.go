@@ -135,6 +135,8 @@ func (dg *DataGenerator) Spans(spans ptrace.SpanSlice) {
 func (dg *DataGenerator) events(ses ptrace.SpanEventSlice) {
 	eventCount := dg.rng.Intn(8) + 2
 
+	// ToDo remove this
+	eventCount = 2
 	for i := 0; i < eventCount; i++ {
 		name := pick(dg.TestEntropy, EventNames)
 		attributes := dg.NewStandardSpanEventAttributes()
@@ -152,6 +154,8 @@ func (dg *DataGenerator) events(ses ptrace.SpanEventSlice) {
 func (dg *DataGenerator) links(sls ptrace.SpanLinkSlice, traceID pcommon.TraceID, spanID pcommon.SpanID) {
 	linkCount := dg.rng.Intn(8) + 2
 
+	// ToDo remove this
+	linkCount = 2
 	for i := 0; i < linkCount; i++ {
 		sl := sls.AppendEmpty()
 		sl.SetTraceID(traceID)

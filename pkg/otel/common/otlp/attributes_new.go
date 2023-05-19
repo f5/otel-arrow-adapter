@@ -24,6 +24,7 @@ import (
 	"go.opentelemetry.io/collector/pdata/pcommon"
 
 	arrowutils "github.com/f5/otel-arrow-adapter/pkg/arrow"
+	carrow "github.com/f5/otel-arrow-adapter/pkg/otel/common/arrow"
 	oschema "github.com/f5/otel-arrow-adapter/pkg/otel/common/schema"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/constants"
 	"github.com/f5/otel-arrow-adapter/pkg/werror"
@@ -57,6 +58,20 @@ type (
 	Attributes32Store struct {
 		lastID         uint32
 		attributesByID map[uint32]*pcommon.Map
+	}
+
+	Attrs16ParentIdDecoder struct {
+		prevParentID uint16
+		prevKey      string
+		prevValue    pcommon.Value
+		encodingType int
+	}
+
+	Attrs32ParentIdDecoder struct {
+		prevParentID uint32
+		prevKey      string
+		prevValue    pcommon.Value
+		encodingType int
 	}
 )
 
@@ -112,14 +127,11 @@ func Attributes16StoreFrom(record arrow.Record, store *Attributes16Store) error 
 
 	attrsCount := int(record.NumRows())
 
+	parentIdDecoder := NewAttrs16ParentIdDecoder()
+
 	// Read all key/value tuples from the record and reconstruct the attributes
 	// map by ID.
 	for i := 0; i < attrsCount; i++ {
-		ParentID, err := arrowutils.U16FromRecord(record, attrIDS.ParentID, i)
-		if err != nil {
-			return werror.Wrap(err)
-		}
-
 		key, err := arrowutils.StringFromRecord(record, attrIDS.Key, i)
 		if err != nil {
 			return werror.Wrap(err)
@@ -135,11 +147,17 @@ func Attributes16StoreFrom(record arrow.Record, store *Attributes16Store) error 
 			return werror.Wrap(err)
 		}
 
-		m, ok := store.attributesByID[ParentID]
+		deltaOrParentID, err := arrowutils.U16FromRecord(record, attrIDS.ParentID, i)
+		if err != nil {
+			return werror.Wrap(err)
+		}
+		parentID := parentIdDecoder.Decode(deltaOrParentID, key, value)
+
+		m, ok := store.attributesByID[parentID]
 		if !ok {
 			newMap := pcommon.NewMap()
 			m = &newMap
-			store.attributesByID[ParentID] = m
+			store.attributesByID[parentID] = m
 		}
 		value.CopyTo(m.PutEmpty(key))
 	}
@@ -159,24 +177,11 @@ func Attributes32StoreFrom(record arrow.Record, store *Attributes32Store) error 
 
 	attrsCount := int(record.NumRows())
 
+	parentIdDecoder := NewAttrs32ParentIdDecoder()
+
 	// Read all key/value tuples from the record and reconstruct the attributes
 	// map by ID.
-	parentID := uint32(0)
 	for i := 0; i < attrsCount; i++ {
-		if attrIDS.ParentIDDeltaEncoded {
-			delta, err := arrowutils.U32FromRecord(record, attrIDS.ParentID, i)
-			if err != nil {
-				return werror.Wrap(err)
-			}
-
-			parentID += delta
-		} else {
-			parentID, err = arrowutils.U32FromRecord(record, attrIDS.ParentID, i)
-			if err != nil {
-				return werror.Wrap(err)
-			}
-		}
-
 		key, err := arrowutils.StringFromRecord(record, attrIDS.Key, i)
 		if err != nil {
 			return werror.Wrap(err)
@@ -191,6 +196,12 @@ func Attributes32StoreFrom(record arrow.Record, store *Attributes32Store) error 
 		if err := UpdateValueFrom(value, arrValue, i); err != nil {
 			return werror.Wrap(err)
 		}
+
+		deltaOrParentID, err := arrowutils.U32FromRecord(record, attrIDS.ParentID, i)
+		if err != nil {
+			return werror.Wrap(err)
+		}
+		parentID := parentIdDecoder.Decode(deltaOrParentID, key, value)
 
 		m, ok := store.attributesByID[parentID]
 		if !ok {
@@ -233,4 +244,64 @@ func SchemaToAttributeIDs(schema *arrow.Schema) (*AttributeIDs, error) {
 		Key:                  key,
 		value:                value,
 	}, nil
+}
+
+func NewAttrs16ParentIdDecoder() *Attrs16ParentIdDecoder {
+	return &Attrs16ParentIdDecoder{
+		encodingType: carrow.ParentIdDeltaGroupEncoding,
+	}
+}
+
+func (d *Attrs16ParentIdDecoder) Decode(deltaOrParentID uint16, key string, value pcommon.Value) uint16 {
+	switch d.encodingType {
+	case carrow.ParentIdNoEncoding:
+		return deltaOrParentID
+	case carrow.ParentIdDeltaEncoding:
+		decodedParentID := d.prevParentID + deltaOrParentID
+		d.prevParentID = decodedParentID
+		return decodedParentID
+	case carrow.ParentIdDeltaGroupEncoding:
+		if d.prevKey == key && carrow.Equal(d.prevValue, value) {
+			parentID := d.prevParentID + deltaOrParentID
+			d.prevParentID = parentID
+			return parentID
+		} else {
+			d.prevKey = key
+			d.prevValue = value
+			d.prevParentID = deltaOrParentID
+			return deltaOrParentID
+		}
+	default:
+		panic("unknown attrs16 parent ID encoding type")
+	}
+}
+
+func NewAttrs32ParentIdDecoder() *Attrs32ParentIdDecoder {
+	return &Attrs32ParentIdDecoder{
+		encodingType: carrow.ParentIdDeltaGroupEncoding,
+	}
+}
+
+func (d *Attrs32ParentIdDecoder) Decode(deltaOrParentID uint32, key string, value pcommon.Value) uint32 {
+	switch d.encodingType {
+	case carrow.ParentIdNoEncoding:
+		return deltaOrParentID
+	case carrow.ParentIdDeltaEncoding:
+		decodedParentID := d.prevParentID + deltaOrParentID
+		d.prevParentID = decodedParentID
+		return decodedParentID
+	case carrow.ParentIdDeltaGroupEncoding:
+		if d.prevKey == key && carrow.Equal(d.prevValue, value) {
+			parentID := d.prevParentID + deltaOrParentID
+			d.prevParentID = parentID
+			return parentID
+		} else {
+			d.prevKey = key
+			d.prevValue = value
+			d.prevParentID = deltaOrParentID
+			return deltaOrParentID
+		}
+	default:
+		panic("unknown attrs32 parent ID encoding type")
+	}
 }

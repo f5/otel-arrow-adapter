@@ -35,9 +35,10 @@ var (
 	TracesSchema = arrow.NewSchema([]arrow.Field{
 		{Name: constants.ID, Type: arrow.PrimitiveTypes.Uint16, Metadata: schema.Metadata(schema.Optional, schema.DeltaEncoding)},
 		{Name: constants.Resource, Type: acommon.ResourceDT, Metadata: schema.Metadata(schema.Optional)},
-		{Name: constants.SchemaUrl, Type: arrow.BinaryTypes.String, Metadata: schema.Metadata(schema.Optional, schema.Dictionary8)},
 		{Name: constants.Scope, Type: acommon.ScopeDT, Metadata: schema.Metadata(schema.Optional)},
-		{Name: "scope_schema_url", Type: arrow.BinaryTypes.String, Metadata: schema.Metadata(schema.Optional, schema.Dictionary8)},
+		// This schema URL applies to the span and span events (the schema URL
+		// for the resource is in the resource struct).
+		{Name: constants.SchemaUrl, Type: arrow.BinaryTypes.String, Metadata: schema.Metadata(schema.Optional, schema.Dictionary8)},
 		{Name: constants.StartTimeUnixNano, Type: arrow.FixedWidthTypes.Timestamp_ns},
 		{Name: constants.DurationTimeUnixNano, Type: arrow.FixedWidthTypes.Duration_ms, Metadata: schema.Metadata(schema.Dictionary8)},
 		{Name: constants.TraceId, Type: &arrow.FixedSizeBinaryType{ByteWidth: 16}},
@@ -60,7 +61,6 @@ type TracesBuilder struct {
 	builder *builder.RecordBuilderExt // Record builder
 
 	rb    *acommon.ResourceBuilder        // `resource` builder
-	rschb *builder.StringBuilder          // resource `schema_url` builder
 	scb   *acommon.ScopeBuilder           // `scope` builder
 	sschb *builder.StringBuilder          // scope `schema_url` builder
 	ib    *builder.Uint16DeltaBuilder     //  id builder
@@ -127,7 +127,6 @@ func (b *TracesBuilder) init() error {
 
 	b.ib = ib
 	b.rb = acommon.ResourceBuilderFrom(b.builder.StructBuilder(constants.Resource))
-	b.rschb = b.builder.StringBuilder(constants.SchemaUrl)
 	b.scb = acommon.ScopeBuilderFrom(b.builder.StructBuilder(constants.Scope))
 	b.sschb = b.builder.StringBuilder(constants.SchemaUrl)
 
@@ -228,10 +227,9 @@ func (b *TracesBuilder) Append(traces ptrace.Traces) error {
 				return werror.Wrap(err)
 			}
 		}
-		if err = b.rb.AppendWithAttrsID(resID, span.Resource); err != nil {
+		if err = b.rb.AppendWithAttrsID(resID, span.Resource, span.ResourceSchemaUrl); err != nil {
 			return werror.Wrap(err)
 		}
-		b.rschb.AppendNonEmpty(span.ResourceSchemaUrl)
 
 		// Scope spans
 		if scopeSpanID != span.ScopeSpanID {
@@ -270,7 +268,7 @@ func (b *TracesBuilder) Append(traces ptrace.Traces) error {
 
 		// Events
 		if spanEvents.Len() > 0 {
-			err = eventsAccu.Append(ID, spanEvents, nil)
+			err = eventsAccu.Append(ID, spanEvents)
 			if err != nil {
 				return werror.Wrap(err)
 			}
@@ -279,7 +277,7 @@ func (b *TracesBuilder) Append(traces ptrace.Traces) error {
 
 		// Links
 		if spanLinks.Len() > 0 {
-			err = linksAccu.Append(ID, spanLinks, nil)
+			err = linksAccu.Append(ID, spanLinks)
 			if err != nil {
 				return werror.Wrap(err)
 			}

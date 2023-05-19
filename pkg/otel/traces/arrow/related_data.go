@@ -68,11 +68,11 @@ func NewRelatedData(cfg *Config, stats *stats.ProducerStats) (*RelatedData, erro
 	})
 
 	eventBuilder := rrManager.Declare(carrow.PayloadTypes.Event, carrow.PayloadTypes.Spans, EventSchema, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
-		return NewEventBuilder(b, cfg.Event.Sorter)
+		return NewEventBuilder(b, cfg.Event)
 	})
 
 	linkBuilder := rrManager.Declare(carrow.PayloadTypes.Link, carrow.PayloadTypes.Spans, LinkSchema, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
-		return NewLinkBuilder(b, cfg.Link.Sorter)
+		return NewLinkBuilder(b, cfg.Link)
 	})
 
 	attrsEventBuilder := rrManager.Declare(carrow.PayloadTypes.EventAttrs, carrow.PayloadTypes.Event, carrow.AttrsSchema32, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {

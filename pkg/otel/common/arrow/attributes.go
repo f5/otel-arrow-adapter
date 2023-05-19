@@ -35,9 +35,16 @@ import (
 // ToDo Standard attributes (i.e. AttributesDT) will be removed in the future. They are still used as shared attributes in the span.
 // ToDo this file must be redistributed into `attributes_16.go` and `attributes_32.go` files.
 
+// ParentID encodings
 const (
+	// ParentIdNoEncoding stores the parent ID as is.
 	ParentIdNoEncoding = iota
+	// ParentIdDeltaEncoding stores the parent ID as a delta from the previous
+	// parent ID.
 	ParentIdDeltaEncoding
+	// ParentIdDeltaGroupEncoding stores the parent ID as a delta from the
+	// previous parent ID in the same group. A group is defined by the
+	// combination Key and Value.
 	ParentIdDeltaGroupEncoding
 )
 
@@ -63,22 +70,26 @@ type (
 		ib      *AnyValueBuilder       // item any value builder
 	}
 
+	// Attr16 is an attribute with a 16-bit ParentID.
 	Attr16 struct {
 		ParentID uint16
 		Key      string
 		Value    pcommon.Value
 	}
 
+	// Attrs16Sorter is used to sort attributes with 16-bit ParentIDs.
 	Attrs16Sorter interface {
 		Sort(attrs []Attr16)
 	}
 
+	// Attr32 is an attribute with a 32-bit ParentID.
 	Attr32 struct {
 		ParentID uint32
 		Key      string
 		Value    pcommon.Value
 	}
 
+	// Attrs32Sorter is used to sort attributes with 32-bit ParentIDs.
 	Attrs32Sorter interface {
 		Sort(attrs []Attr32)
 	}
@@ -342,6 +353,9 @@ func (c *Attributes16Accumulator) AppendUniqueAttributesWithID(parentID uint16, 
 	return nil
 }
 
+// Sort sorts the attributes based on the provided sorter.
+// The sorter is part of the global configuration and can be different for
+// different payload types.
 func (c *Attributes16Accumulator) Sort() {
 	c.sorter.Sort(c.attrs)
 }
@@ -443,6 +457,9 @@ func (c *Attributes32Accumulator) AppendUniqueAttributesWithID(ID uint32, attrs 
 	return nil
 }
 
+// Sort sorts the attributes based on the provided sorter.
+// The sorter is part of the global configuration and can be different for
+// different payload types.
 func (c *Attributes32Accumulator) Sort() {
 	c.sorter.Sort(c.attrs)
 }

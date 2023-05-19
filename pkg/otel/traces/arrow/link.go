@@ -35,7 +35,6 @@ import (
 	"go.opentelemetry.io/collector/pdata/ptrace"
 
 	arrow2 "github.com/f5/otel-arrow-adapter/pkg/arrow"
-	"github.com/f5/otel-arrow-adapter/pkg/otel/common"
 	acommon "github.com/f5/otel-arrow-adapter/pkg/otel/common/arrow"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/builder"
@@ -72,6 +71,8 @@ type (
 
 		accumulator *LinkAccumulator
 		attrsAccu   *acommon.Attributes32Accumulator
+
+		config *LinkConfig
 	}
 
 	// Link is an internal representation of a link used by the
@@ -82,7 +83,6 @@ type (
 		SpanID                 [8]byte
 		TraceState             string
 		Attributes             pcommon.Map
-		SharedAttributes       *common.SharedAttributes
 		DroppedAttributesCount uint32
 	}
 
@@ -94,6 +94,12 @@ type (
 		sorter     LinkSorter
 	}
 
+	LinkParentIdEncoder struct {
+		prevTraceID  [16]byte
+		prevParentID uint16
+		encoderType  int
+	}
+
 	LinkSorter interface {
 		Sort(links []Link)
 	}
@@ -102,11 +108,12 @@ type (
 	LinksByTraceIdParentId struct{}
 )
 
-func NewLinkBuilder(rBuilder *builder.RecordBuilderExt, sorter LinkSorter) *LinkBuilder {
+func NewLinkBuilder(rBuilder *builder.RecordBuilderExt, conf *LinkConfig) *LinkBuilder {
 	b := &LinkBuilder{
 		released:    false,
 		builder:     rBuilder,
-		accumulator: NewLinkAccumulator(sorter),
+		accumulator: NewLinkAccumulator(conf.Sorter),
+		config:      conf,
 	}
 
 	b.init()
@@ -200,18 +207,29 @@ func (b *LinkBuilder) TryBuild(attrsAccu *acommon.Attributes32Accumulator) (reco
 
 	b.accumulator.sorter.Sort(b.accumulator.links)
 
-	for ID, link := range b.accumulator.links {
-		b.ib.Append(uint32(ID))
-		b.pib.Append(link.ParentID)
+	parentIdEncoder := NewLinkParentIdEncoder(b.config.ParentIdEncoding)
+
+	linkID := uint32(0)
+
+	for _, link := range b.accumulator.links {
+		if link.Attributes.Len() == 0 {
+			b.ib.AppendNull()
+		} else {
+			b.ib.Append(linkID)
+
+			// Attributes
+			err = attrsAccu.Append(linkID, link.Attributes)
+			if err != nil {
+				return
+			}
+
+			linkID++
+		}
+
+		b.pib.Append(parentIdEncoder.Encode(link.ParentID, link.TraceID))
 		b.tib.Append(link.TraceID[:])
 		b.sib.Append(link.SpanID[:])
 		b.tsb.AppendNonEmpty(link.TraceState)
-
-		// Attributes
-		err = attrsAccu.AppendUniqueAttributesWithID(uint32(ID), link.Attributes, link.SharedAttributes, nil)
-		if err != nil {
-			return
-		}
 
 		b.dacb.AppendNonZero(link.DroppedAttributesCount)
 	}
@@ -246,7 +264,7 @@ func (a *LinkAccumulator) IsEmpty() bool {
 }
 
 // Append appends a new link to the builder.
-func (a *LinkAccumulator) Append(spanID uint16, links ptrace.SpanLinkSlice, sharedAttrs *common.SharedAttributes) error {
+func (a *LinkAccumulator) Append(spanID uint16, links ptrace.SpanLinkSlice) error {
 	if a.groupCount == math.MaxUint16 {
 		panic("The maximum number of group of links has been reached (max is uint16).")
 	}
@@ -263,7 +281,6 @@ func (a *LinkAccumulator) Append(spanID uint16, links ptrace.SpanLinkSlice, shar
 			SpanID:                 link.SpanID(),
 			TraceState:             link.TraceState().AsRaw(),
 			Attributes:             link.Attributes(),
-			SharedAttributes:       sharedAttrs,
 			DroppedAttributesCount: link.DroppedAttributesCount(),
 		})
 	}
@@ -276,6 +293,36 @@ func (a *LinkAccumulator) Append(spanID uint16, links ptrace.SpanLinkSlice, shar
 func (a *LinkAccumulator) Reset() {
 	a.groupCount = 0
 	a.links = a.links[:0]
+}
+
+func NewLinkParentIdEncoder(encoderType int) *LinkParentIdEncoder {
+	return &LinkParentIdEncoder{
+		prevParentID: 0,
+		encoderType:  encoderType,
+	}
+}
+
+func (e *LinkParentIdEncoder) Encode(parentID uint16, traceID [16]byte) uint16 {
+	switch e.encoderType {
+	case acommon.ParentIdNoEncoding:
+		return parentID
+	case acommon.ParentIdDeltaEncoding:
+		delta := parentID - e.prevParentID
+		e.prevParentID = parentID
+		return delta
+	case acommon.ParentIdDeltaGroupEncoding:
+		if e.prevTraceID == traceID {
+			delta := parentID - e.prevParentID
+			e.prevParentID = parentID
+			return delta
+		} else {
+			e.prevTraceID = traceID
+			e.prevParentID = parentID
+			return parentID
+		}
+	default:
+		panic("Unknown parent ID encoding type.")
+	}
 }
 
 // No sorting

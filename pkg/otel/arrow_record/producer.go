@@ -130,7 +130,7 @@ func NewProducerWithOptions(options ...config2.Option) *Producer {
 		panic(err)
 	}
 
-	tracesBuilder, err := tracesarrow.NewTracesBuilder(tracesRecordBuilder, tracesarrow.NewConfigUnderTest(cfg), stats)
+	tracesBuilder, err := tracesarrow.NewTracesBuilder(tracesRecordBuilder, tracesarrow.NewConfig(cfg), stats)
 	if err != nil {
 		panic(err)
 	}
