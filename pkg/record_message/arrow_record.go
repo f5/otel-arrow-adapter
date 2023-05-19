@@ -51,7 +51,7 @@ func NewRecordMessage(batchId string, payloadType PayloadType, record arrow.Reco
 func NewMetricsMessage(schemaID string, record arrow.Record) *RecordMessage {
 	return &RecordMessage{
 		subStreamId: schemaID,
-		payloadType: v1.OtlpArrowPayloadType_METRICS,
+		payloadType: v1.OtlpArrowPayloadType_METRICS_DATA,
 		record:      record,
 	}
 }
@@ -62,7 +62,7 @@ func NewLogsMessage(schemaID string, record arrow.Record) *RecordMessage {
 	record.Schema()
 	return &RecordMessage{
 		subStreamId: schemaID,
-		payloadType: v1.OtlpArrowPayloadType_LOGS,
+		payloadType: v1.OtlpArrowPayloadType_LOGS_DATA,
 		record:      record,
 	}
 }
@@ -72,7 +72,7 @@ func NewLogsMessage(schemaID string, record arrow.Record) *RecordMessage {
 func NewTraceMessage(schemaID string, record arrow.Record) *RecordMessage {
 	return &RecordMessage{
 		subStreamId: schemaID,
-		payloadType: v1.OtlpArrowPayloadType_SPANS,
+		payloadType: v1.OtlpArrowPayloadType_SPANS_DATA,
 		record:      record,
 	}
 }
