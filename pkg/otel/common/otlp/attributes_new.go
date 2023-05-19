@@ -24,6 +24,7 @@ import (
 	"go.opentelemetry.io/collector/pdata/pcommon"
 
 	arrowutils "github.com/f5/otel-arrow-adapter/pkg/arrow"
+	"github.com/f5/otel-arrow-adapter/pkg/otel/common"
 	carrow "github.com/f5/otel-arrow-adapter/pkg/otel/common/arrow"
 	oschema "github.com/f5/otel-arrow-adapter/pkg/otel/common/schema"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/constants"
@@ -37,7 +38,13 @@ type (
 		ParentID             int
 		ParentIDDeltaEncoded bool
 		Key                  int
-		value                int
+		Type                 int
+		Str                  int
+		Int                  int
+		Double               int
+		Bool                 int
+		Bytes                int
+		Ser                  int
 	}
 
 	// Attributes16Store is a store for attributes.
@@ -137,14 +144,60 @@ func Attributes16StoreFrom(record arrow.Record, store *Attributes16Store) error 
 			return werror.Wrap(err)
 		}
 
-		arrValue, err := arrowutils.SparseUnionFromRecord(record, attrIDS.value, i)
+		vType, err := arrowutils.U8FromRecord(record, attrIDS.Type, i)
 		if err != nil {
 			return werror.Wrap(err)
 		}
-
 		value := pcommon.NewValueEmpty()
-		if err := UpdateValueFrom(value, arrValue, i); err != nil {
-			return werror.Wrap(err)
+		switch pcommon.ValueType(vType) {
+		case pcommon.ValueTypeStr:
+			v, err := arrowutils.StringFromRecord(record, attrIDS.Str, i)
+			if err != nil {
+				return werror.Wrap(err)
+			}
+			value.SetStr(v)
+		case pcommon.ValueTypeInt:
+			v, err := arrowutils.I64FromRecord(record, attrIDS.Int, i)
+			if err != nil {
+				return werror.Wrap(err)
+			}
+			value.SetInt(v)
+		case pcommon.ValueTypeDouble:
+			v, err := arrowutils.F64FromRecord(record, attrIDS.Double, i)
+			if err != nil {
+				return werror.Wrap(err)
+			}
+			value.SetDouble(v)
+		case pcommon.ValueTypeBool:
+			v, err := arrowutils.BoolFromRecord(record, attrIDS.Bool, i)
+			if err != nil {
+				return werror.Wrap(err)
+			}
+			value.SetBool(v)
+		case pcommon.ValueTypeBytes:
+			v, err := arrowutils.BinaryFromRecord(record, attrIDS.Bytes, i)
+			if err != nil {
+				return werror.Wrap(err)
+			}
+			value.SetEmptyBytes().FromRaw(v)
+		case pcommon.ValueTypeSlice:
+			v, err := arrowutils.BinaryFromRecord(record, attrIDS.Ser, i)
+			if err != nil {
+				return werror.Wrap(err)
+			}
+			if err = common.Deserialize(v, value); err != nil {
+				return werror.Wrap(err)
+			}
+		case pcommon.ValueTypeMap:
+			v, err := arrowutils.BinaryFromRecord(record, attrIDS.Ser, i)
+			if err != nil {
+				return werror.Wrap(err)
+			}
+			if err = common.Deserialize(v, value); err != nil {
+				return werror.Wrap(err)
+			}
+		default:
+			// silently ignore unknown types to avoid DOS attacks
 		}
 
 		deltaOrParentID, err := arrowutils.U16FromRecord(record, attrIDS.ParentID, i)
@@ -187,14 +240,60 @@ func Attributes32StoreFrom(record arrow.Record, store *Attributes32Store) error 
 			return werror.Wrap(err)
 		}
 
-		arrValue, err := arrowutils.SparseUnionFromRecord(record, attrIDS.value, i)
+		vType, err := arrowutils.U8FromRecord(record, attrIDS.Type, i)
 		if err != nil {
 			return werror.Wrap(err)
 		}
-
 		value := pcommon.NewValueEmpty()
-		if err := UpdateValueFrom(value, arrValue, i); err != nil {
-			return werror.Wrap(err)
+		switch pcommon.ValueType(vType) {
+		case pcommon.ValueTypeStr:
+			v, err := arrowutils.StringFromRecord(record, attrIDS.Str, i)
+			if err != nil {
+				return werror.Wrap(err)
+			}
+			value.SetStr(v)
+		case pcommon.ValueTypeInt:
+			v, err := arrowutils.I64FromRecord(record, attrIDS.Int, i)
+			if err != nil {
+				return werror.Wrap(err)
+			}
+			value.SetInt(v)
+		case pcommon.ValueTypeDouble:
+			v, err := arrowutils.F64FromRecord(record, attrIDS.Double, i)
+			if err != nil {
+				return werror.Wrap(err)
+			}
+			value.SetDouble(v)
+		case pcommon.ValueTypeBool:
+			v, err := arrowutils.BoolFromRecord(record, attrIDS.Bool, i)
+			if err != nil {
+				return werror.Wrap(err)
+			}
+			value.SetBool(v)
+		case pcommon.ValueTypeBytes:
+			v, err := arrowutils.BinaryFromRecord(record, attrIDS.Bytes, i)
+			if err != nil {
+				return werror.Wrap(err)
+			}
+			value.SetEmptyBytes().FromRaw(v)
+		case pcommon.ValueTypeSlice:
+			v, err := arrowutils.BinaryFromRecord(record, attrIDS.Ser, i)
+			if err != nil {
+				return werror.Wrap(err)
+			}
+			if err = common.Deserialize(v, value); err != nil {
+				return werror.Wrap(err)
+			}
+		case pcommon.ValueTypeMap:
+			v, err := arrowutils.BinaryFromRecord(record, attrIDS.Ser, i)
+			if err != nil {
+				return werror.Wrap(err)
+			}
+			if err = common.Deserialize(v, value); err != nil {
+				return werror.Wrap(err)
+			}
+		default:
+			// silently ignore unknown types to avoid DOS attacks
 		}
 
 		deltaOrParentID, err := arrowutils.U32FromRecord(record, attrIDS.ParentID, i)
@@ -228,12 +327,36 @@ func SchemaToAttributeIDs(schema *arrow.Schema) (*AttributeIDs, error) {
 		deltaEncoded = v == oschema.DeltaEncodingValue
 	}
 
-	key, err := arrowutils.FieldIDFromSchema(schema, constants.AttrsRecordKey)
+	key, err := arrowutils.FieldIDFromSchema(schema, constants.AttributeKey)
 	if err != nil {
 		return nil, werror.Wrap(err)
 	}
 
-	value, err := arrowutils.FieldIDFromSchema(schema, constants.AttrsRecordValue)
+	vType, err := arrowutils.FieldIDFromSchema(schema, constants.AttributeType)
+	if err != nil {
+		return nil, werror.Wrap(err)
+	}
+	vStr, err := arrowutils.FieldIDFromSchema(schema, constants.AttributeStr)
+	if err != nil {
+		return nil, werror.Wrap(err)
+	}
+	vInt, err := arrowutils.FieldIDFromSchema(schema, constants.AttributeInt)
+	if err != nil {
+		return nil, werror.Wrap(err)
+	}
+	vDouble, err := arrowutils.FieldIDFromSchema(schema, constants.AttributeDouble)
+	if err != nil {
+		return nil, werror.Wrap(err)
+	}
+	vBool, err := arrowutils.FieldIDFromSchema(schema, constants.AttributeBool)
+	if err != nil {
+		return nil, werror.Wrap(err)
+	}
+	vBytes, err := arrowutils.FieldIDFromSchema(schema, constants.AttributeBytes)
+	if err != nil {
+		return nil, werror.Wrap(err)
+	}
+	vSer, err := arrowutils.FieldIDFromSchema(schema, constants.AttributeSer)
 	if err != nil {
 		return nil, werror.Wrap(err)
 	}
@@ -242,7 +365,13 @@ func SchemaToAttributeIDs(schema *arrow.Schema) (*AttributeIDs, error) {
 		ParentID:             parentID,
 		ParentIDDeltaEncoded: deltaEncoded,
 		Key:                  key,
-		value:                value,
+		Type:                 vType,
+		Str:                  vStr,
+		Int:                  vInt,
+		Double:               vDouble,
+		Bool:                 vBool,
+		Bytes:                vBytes,
+		Ser:                  vSer,
 	}, nil
 }
 

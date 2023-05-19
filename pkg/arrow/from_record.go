@@ -27,6 +27,30 @@ import (
 	"github.com/f5/otel-arrow-adapter/pkg/werror"
 )
 
+// U8FromRecord returns the uint8 value for a specific row and column in an
+// Arrow record. If the value is null, it returns 0.
+func U8FromRecord(record arrow.Record, fieldID int, row int) (uint8, error) {
+	if fieldID == AbsentFieldID {
+		return 0, nil
+	}
+
+	arr := record.Column(fieldID)
+	if arr == nil {
+		return 0, nil
+	}
+
+	switch arr := arr.(type) {
+	case *array.Uint8:
+		if arr.IsNull(row) {
+			return 0, nil
+		} else {
+			return arr.Value(row), nil
+		}
+	default:
+		return 0, werror.WrapWithMsg(ErrInvalidArrayType, "not a uint8 array")
+	}
+}
+
 // U16FromRecord returns the uint16 value for a specific row and column in an
 // Arrow record. If the value is null, it returns 0.
 func U16FromRecord(record arrow.Record, fieldID int, row int) (uint16, error) {

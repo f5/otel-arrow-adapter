@@ -112,6 +112,8 @@ func arrayColValues(arr arrow.Array, row int) []string {
 	switch c := arr.(type) {
 	case *array.Boolean:
 		return []string{fmt.Sprintf(MaxValSize, c.Value(row))}
+	case *array.Uint8:
+		return []string{fmt.Sprintf(MaxValSize, c.Value(row))}
 	case *array.Uint16:
 		return []string{fmt.Sprintf(MaxValSize, c.Value(row))}
 	case *array.Uint32:
