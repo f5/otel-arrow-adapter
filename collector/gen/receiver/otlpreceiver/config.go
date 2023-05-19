@@ -39,6 +39,12 @@ type Protocols struct {
 // ArrowSettings
 type ArrowSettings struct {
 	Enabled bool `mapstructure:"enabled"`
+
+	// DisableSeparateSignals when true prevents per-signal gRPC being served.
+	DisableSeparateSignals bool `mapstructure:"disable_separate_signals"`
+
+	// DisableMixedSignals when true prevents mixed-signal gRPC being served.
+	DisableMixedSignals bool `mapstructure:"disable_mixed_signals"`
 }
 
 // Config defines configuration for OTLP receiver.

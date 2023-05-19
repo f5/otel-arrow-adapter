@@ -26,6 +26,7 @@ import (
 	"go.uber.org/multierr"
 	"go.uber.org/zap"
 	"golang.org/x/net/http2/hpack"
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
@@ -60,7 +61,11 @@ type Consumers interface {
 
 type Receiver struct {
 	Consumers
-	arrowpb.UnimplementedArrowStreamServiceServer
+
+	arrowpb.UnsafeArrowStreamServiceServer
+	arrowpb.UnsafeArrowTracesServiceServer
+	arrowpb.UnsafeArrowLogsServiceServer
+	arrowpb.UnsafeArrowMetricsServiceServer
 
 	telemetry   component.TelemetrySettings
 	obsrecv     *obsreport.Receiver
@@ -251,6 +256,28 @@ func (r *Receiver) logStreamError(err error) {
 }
 
 func (r *Receiver) ArrowStream(serverStream arrowpb.ArrowStreamService_ArrowStreamServer) error {
+	return r.anyStream(serverStream)
+}
+
+func (r *Receiver) ArrowTraces(serverStream arrowpb.ArrowTracesService_ArrowTracesServer) error {
+	return r.anyStream(serverStream)
+}
+
+func (r *Receiver) ArrowLogs(serverStream arrowpb.ArrowLogsService_ArrowLogsServer) error {
+	return r.anyStream(serverStream)
+}
+
+func (r *Receiver) ArrowMetrics(serverStream arrowpb.ArrowMetricsService_ArrowMetricsServer) error {
+	return r.anyStream(serverStream)
+}
+
+type anyStreamServer interface {
+	Send(*arrowpb.BatchStatus) error
+	Recv() (*arrowpb.BatchArrowRecords, error)
+	grpc.ServerStream
+}
+
+func (r *Receiver) anyStream(serverStream anyStreamServer) error {
 	streamCtx := serverStream.Context()
 	ac := r.newConsumer()
 	hrcv := newHeaderReceiver(serverStream.Context(), r.authServer, r.gsettings.IncludeMetadata)
@@ -337,7 +364,7 @@ func (r *Receiver) processRecords(ctx context.Context, arrowConsumer arrowRecord
 		return nil
 	}
 	switch payloads[0].Type {
-	case arrowpb.OtlpArrowPayloadType_METRICS:
+	case arrowpb.OtlpArrowPayloadType_METRICS_DATA:
 		if r.Metrics() == nil {
 			return status.Error(codes.Unimplemented, "metrics service not available")
 		}
@@ -358,7 +385,7 @@ func (r *Receiver) processRecords(ctx context.Context, arrowConsumer arrowRecord
 		r.obsrecv.EndMetricsOp(ctx, streamFormat, numPts, err)
 		return err
 
-	case arrowpb.OtlpArrowPayloadType_LOGS:
+	case arrowpb.OtlpArrowPayloadType_LOGS_DATA:
 		if r.Logs() == nil {
 			return status.Error(codes.Unimplemented, "logs service not available")
 		}
@@ -379,7 +406,7 @@ func (r *Receiver) processRecords(ctx context.Context, arrowConsumer arrowRecord
 		r.obsrecv.EndLogsOp(ctx, streamFormat, numLogs, err)
 		return err
 
-	case arrowpb.OtlpArrowPayloadType_SPANS:
+	case arrowpb.OtlpArrowPayloadType_SPANS_DATA:
 		if r.Traces() == nil {
 			return status.Error(codes.Unimplemented, "traces service not available")
 		}
