@@ -42,9 +42,9 @@ import (
 	"github.com/f5/otel-arrow-adapter/pkg/werror"
 )
 
-// LinkSchema is the Arrow Data Type describing a link (as a related record
-// to the main trace record).
 var (
+	// LinkSchema is the Arrow Data Type describing a link (as a related record
+	// to the main trace record).
 	LinkSchema = arrow.NewSchema([]arrow.Field{
 		{Name: constants.ID, Type: arrow.PrimitiveTypes.Uint32, Metadata: schema.Metadata(schema.Optional, schema.DeltaEncoding)},
 		{Name: constants.ParentID, Type: arrow.PrimitiveTypes.Uint16},
@@ -332,7 +332,7 @@ func UnsortedLinks() *LinksByNothing {
 	return &LinksByNothing{}
 }
 
-func (s *LinksByNothing) Sort(links []Link) {
+func (s *LinksByNothing) Sort(_ []Link) {
 }
 
 // Sorts by TraceID, ParentID

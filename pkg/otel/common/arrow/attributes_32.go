@@ -338,7 +338,7 @@ func UnsortedAttrs32() *Attrs32ByNothing {
 	return &Attrs32ByNothing{}
 }
 
-func (s Attrs32ByNothing) Sort(attrs []Attr32) {
+func (s Attrs32ByNothing) Sort(_ []Attr32) {
 	// Do nothing
 }
 
@@ -353,14 +353,18 @@ func (s Attrs32ByParentIdKeyValue) Sort(attrs []Attr32) {
 	sort.Slice(attrs, func(i, j int) bool {
 		attrsI := attrs[i]
 		attrsJ := attrs[j]
-		if attrsI.ParentID == attrsJ.ParentID {
-			if attrsI.Key == attrsJ.Key {
-				return IsLess(attrsI.Value, attrsJ.Value)
+		if attrsI.Value.Type() == attrsJ.Value.Type() {
+			if attrsI.ParentID == attrsJ.ParentID {
+				if attrsI.Key == attrsJ.Key {
+					return IsLess(attrsI.Value, attrsJ.Value)
+				} else {
+					return attrsI.Key < attrsJ.Key
+				}
 			} else {
-				return attrsI.Key < attrsJ.Key
+				return attrsI.ParentID < attrsJ.ParentID
 			}
 		} else {
-			return attrsI.ParentID < attrsJ.ParentID
+			return attrsI.Value.Type() < attrsJ.Value.Type()
 		}
 	})
 }
@@ -376,14 +380,18 @@ func (s Attrs32ByKeyParentIdValue) Sort(attrs []Attr32) {
 	sort.Slice(attrs, func(i, j int) bool {
 		attrsI := attrs[i]
 		attrsJ := attrs[j]
-		if attrsI.Key == attrsJ.Key {
-			if attrsI.ParentID == attrsJ.ParentID {
-				return IsLess(attrsI.Value, attrsJ.Value)
+		if attrsI.Value.Type() == attrsJ.Value.Type() {
+			if attrsI.Key == attrsJ.Key {
+				if attrsI.ParentID == attrsJ.ParentID {
+					return IsLess(attrsI.Value, attrsJ.Value)
+				} else {
+					return attrsI.ParentID < attrsJ.ParentID
+				}
 			} else {
-				return attrsI.ParentID < attrsJ.ParentID
+				return attrsI.Key < attrsJ.Key
 			}
 		} else {
-			return attrsI.Key < attrsJ.Key
+			return attrsI.Value.Type() < attrsJ.Value.Type()
 		}
 	})
 }
@@ -399,15 +407,19 @@ func (s Attrs32ByKeyValueParentId) Sort(attrs []Attr32) {
 	sort.Slice(attrs, func(i, j int) bool {
 		attrsI := attrs[i]
 		attrsJ := attrs[j]
-		if attrsI.Key == attrsJ.Key {
-			cmp := Compare(attrsI.Value, attrsJ.Value)
-			if cmp == 0 {
-				return attrsI.ParentID < attrsJ.ParentID
+		if attrsI.Value.Type() == attrsJ.Value.Type() {
+			if attrsI.Key == attrsJ.Key {
+				cmp := Compare(attrsI.Value, attrsJ.Value)
+				if cmp == 0 {
+					return attrsI.ParentID < attrsJ.ParentID
+				} else {
+					return cmp < 0
+				}
 			} else {
-				return cmp < 0
+				return attrsI.Key < attrsJ.Key
 			}
 		} else {
-			return attrsI.Key < attrsJ.Key
+			return attrsI.Value.Type() < attrsJ.Value.Type()
 		}
 	})
 }

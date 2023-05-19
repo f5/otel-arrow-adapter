@@ -41,9 +41,9 @@ import (
 	"github.com/f5/otel-arrow-adapter/pkg/werror"
 )
 
-// EventSchema is the Arrow schema representing events.
-// Related record.
 var (
+	// EventSchema is the Arrow schema representing events.
+	// Related record.
 	EventSchema = arrow.NewSchema([]arrow.Field{
 		{Name: constants.ID, Type: arrow.PrimitiveTypes.Uint32, Metadata: schema.Metadata(schema.Optional, schema.DeltaEncoding)},
 		{Name: constants.ParentID, Type: arrow.PrimitiveTypes.Uint16},
@@ -327,7 +327,7 @@ func UnsortedEvents() *EventsByNothing {
 	return &EventsByNothing{}
 }
 
-func (s *EventsByNothing) Sort(events []Event) {
+func (s *EventsByNothing) Sort(_ []Event) {
 }
 
 // Sorts events by name and time.

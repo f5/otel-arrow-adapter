@@ -331,7 +331,7 @@ func UnsortedAttrs16() *Attrs16ByNothing {
 	return &Attrs16ByNothing{}
 }
 
-func (s Attrs16ByNothing) Sort(attrs []Attr16) {
+func (s Attrs16ByNothing) Sort(_ []Attr16) {
 	// Do nothing
 }
 
@@ -346,14 +346,18 @@ func (s Attrs16ByKeyParentIdValue) Sort(attrs []Attr16) {
 	sort.Slice(attrs, func(i, j int) bool {
 		attrsI := attrs[i]
 		attrsJ := attrs[j]
-		if attrsI.Key == attrsJ.Key {
-			if attrsI.ParentID == attrsJ.ParentID {
-				return IsLess(attrsI.Value, attrsJ.Value)
+		if attrsI.Value.Type() == attrsJ.Value.Type() {
+			if attrsI.Key == attrsJ.Key {
+				if attrsI.ParentID == attrsJ.ParentID {
+					return IsLess(attrsI.Value, attrsJ.Value)
+				} else {
+					return attrsI.ParentID < attrsJ.ParentID
+				}
 			} else {
-				return attrsI.ParentID < attrsJ.ParentID
+				return attrsI.Key < attrsJ.Key
 			}
 		} else {
-			return attrsI.Key < attrsJ.Key
+			return attrsI.Value.Type() < attrsJ.Value.Type()
 		}
 	})
 }
@@ -369,15 +373,19 @@ func (s Attrs16ByKeyValueParentId) Sort(attrs []Attr16) {
 	sort.Slice(attrs, func(i, j int) bool {
 		attrsI := attrs[i]
 		attrsJ := attrs[j]
-		if attrsI.Key == attrsJ.Key {
-			cmp := Compare(attrsI.Value, attrsJ.Value)
-			if cmp == 0 {
-				return attrsI.ParentID < attrsJ.ParentID
+		if attrsI.Value.Type() == attrsJ.Value.Type() {
+			if attrsI.Key == attrsJ.Key {
+				cmp := Compare(attrsI.Value, attrsJ.Value)
+				if cmp == 0 {
+					return attrsI.ParentID < attrsJ.ParentID
+				} else {
+					return cmp < 0
+				}
 			} else {
-				return cmp < 0
+				return attrsI.Key < attrsJ.Key
 			}
 		} else {
-			return attrsI.Key < attrsJ.Key
+			return attrsI.Value.Type() < attrsJ.Value.Type()
 		}
 	})
 }
