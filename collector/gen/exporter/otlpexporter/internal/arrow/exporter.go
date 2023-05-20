@@ -28,14 +28,6 @@ import (
 	"go.opentelemetry.io/collector/component"
 )
 
-type AnyStreamClient interface {
-	Send(*arrowpb.BatchArrowRecords) error
-	Recv() (*arrowpb.BatchStatus, error)
-	grpc.ClientStream
-}
-
-type streamClientFunc func(context.Context, ...grpc.CallOption) (AnyStreamClient, error)
-
 // Exporter is 1:1 with exporter, isolates arrow-specific
 // functionality.
 type Exporter struct {
@@ -87,7 +79,20 @@ type Exporter struct {
 	wg sync.WaitGroup
 }
 
-func MakeAnyStreamClient[T AnyStreamClient](clientFunc func(ctx context.Context, opts ...grpc.CallOption) (T, error)) func(ctx context.Context, opts ...grpc.CallOption) (AnyStreamClient, error) {
+// AnyStreamClient is the interface supported by all Arrow streams,
+// mixed signals or not.
+type AnyStreamClient interface {
+	Send(*arrowpb.BatchArrowRecords) error
+	Recv() (*arrowpb.BatchStatus, error)
+	grpc.ClientStream
+}
+
+// streamClientFunc is a constructor for AnyStreamClients.
+type streamClientFunc func(context.Context, ...grpc.CallOption) (AnyStreamClient, error)
+
+// MakeAnyStreamClient accepts any Arrow-like stream (mixed signal or
+// not) and turns it into an AnyStreamClient.
+func MakeAnyStreamClient[T AnyStreamClient](clientFunc func(ctx context.Context, opts ...grpc.CallOption) (T, error)) streamClientFunc {
 	return func(ctx context.Context, opts ...grpc.CallOption) (AnyStreamClient, error) {
 		client, err := clientFunc(ctx, opts...)
 		return client, err
