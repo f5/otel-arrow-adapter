@@ -88,8 +88,9 @@ func TestUnmarshalConfig(t *testing.T) {
 				Auth:            &configauth.Authentication{AuthenticatorID: component.NewID("nop")},
 			},
 			Arrow: ArrowSettings{
-				Enabled:    true,
-				NumStreams: 2,
+				Enabled:            true,
+				NumStreams:         2,
+				EnableMixedSignals: true,
 			},
 		}, cfg)
 }

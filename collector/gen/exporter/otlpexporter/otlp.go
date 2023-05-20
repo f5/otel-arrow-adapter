@@ -22,7 +22,6 @@ import (
 	"time"
 
 	arrowPkg "github.com/apache/arrow/go/v12/arrow"
-	arrowpb "github.com/f5/otel-arrow-adapter/api/experimental/arrow/v1"
 	arrowRecord "github.com/f5/otel-arrow-adapter/pkg/otel/arrow_record"
 	"go.uber.org/multierr"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
@@ -32,12 +31,12 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 
+	"github.com/f5/otel-arrow-adapter/collector/gen/exporter/otlpexporter/internal/arrow"
+	"github.com/f5/otel-arrow-adapter/collector/gen/internal/netstats"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/consumer/consumererror"
 	"go.opentelemetry.io/collector/exporter"
 	"go.opentelemetry.io/collector/exporter/exporterhelper"
-	"github.com/f5/otel-arrow-adapter/collector/gen/exporter/otlpexporter/internal/arrow"
-	"github.com/f5/otel-arrow-adapter/collector/gen/internal/netstats"
 	"go.opentelemetry.io/collector/pdata/plog"
 	"go.opentelemetry.io/collector/pdata/plog/plogotlp"
 	"go.opentelemetry.io/collector/pdata/pmetric"
@@ -65,11 +64,15 @@ type baseExporter struct {
 
 	// OTLP+Arrow optional state
 	arrow *arrow.Exporter
+	// streamClientFunc is the stream constructor, depends on EnableMixedTelemetry.
+	streamClientFactory streamClientFactory
 }
+
+type streamClientFactory func(cfg *Config, conn *grpc.ClientConn) func(ctx context.Context, opts ...grpc.CallOption) (arrow.AnyStreamClient, error)
 
 // Crete new exporter and start it. The exporter will begin connecting but
 // this function may return before the connection is established.
-func newExporter(cfg component.Config, set exporter.CreateSettings) (*baseExporter, error) {
+func newExporter(cfg component.Config, set exporter.CreateSettings, streamClientFactory streamClientFactory) (*baseExporter, error) {
 	oCfg := cfg.(*Config)
 
 	if oCfg.Endpoint == "" {
@@ -87,7 +90,13 @@ func newExporter(cfg component.Config, set exporter.CreateSettings) (*baseExport
 		userAgent += fmt.Sprintf(" ApacheArrow/%s (NumStreams/%d)", arrowPkg.PkgVersion, oCfg.Arrow.NumStreams)
 	}
 
-	return &baseExporter{config: oCfg, settings: set, userAgent: userAgent, netStats: netStats}, nil
+	return &baseExporter{
+		config:              oCfg,
+		settings:            set,
+		userAgent:           userAgent,
+		netStats:            netStats,
+		streamClientFactory: streamClientFactory,
+	}, nil
 }
 
 // start actually creates the gRPC connection. The client construction is deferred till this point as this
@@ -134,7 +143,7 @@ func (e *baseExporter) start(ctx context.Context, host component.Host) (err erro
 
 		e.arrow = arrow.NewExporter(e.config.Arrow.NumStreams, e.config.Arrow.DisableDowngrade, e.settings.TelemetrySettings, e.callOptions, func() arrowRecord.ProducerAPI {
 			return arrowRecord.NewProducer()
-		}, arrowpb.NewArrowStreamServiceClient(e.clientConn), perRPCCreds)
+		}, e.streamClientFactory(e.config, e.clientConn), perRPCCreds)
 
 		if err := e.arrow.Start(ctx); err != nil {
 			return err
