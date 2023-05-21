@@ -68,7 +68,7 @@ func TestConversionFromSyntheticData(t *testing.T) {
 	conf := config.DefaultConfig()
 
 	for {
-		lb, err := logsarrow.NewLogsBuilder(rBuilder, conf, stats.NewProducerStats())
+		lb, err := logsarrow.NewLogsBuilder(rBuilder, logsarrow.NewConfig(conf), stats.NewProducerStats())
 		require.NoError(t, err)
 		defer lb.Release()
 

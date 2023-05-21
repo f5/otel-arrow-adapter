@@ -30,8 +30,8 @@ import (
 	"github.com/f5/otel-arrow-adapter/pkg/werror"
 )
 
-// Schema is the Arrow schema for the OTLP Arrow Traces record.
 var (
+	// TracesSchema is the Arrow schema for the OTLP Arrow Traces record.
 	TracesSchema = arrow.NewSchema([]arrow.Field{
 		{Name: constants.ID, Type: arrow.PrimitiveTypes.Uint16, Metadata: schema.Metadata(schema.Optional, schema.DeltaEncoding)},
 		{Name: constants.Resource, Type: acommon.ResourceDT, Metadata: schema.Metadata(schema.Optional)},

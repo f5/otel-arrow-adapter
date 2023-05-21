@@ -258,6 +258,24 @@ func DurationFromArray(arr arrow.Array, row int) (arrow.Duration, error) {
 	}
 }
 
+// U8FromArray returns the uint8 value for a specific row in an Arrow array.
+func U8FromArray(arr arrow.Array, row int) (uint8, error) {
+	if arr == nil {
+		return 0, nil
+	} else {
+		switch arr := arr.(type) {
+		case *array.Uint8:
+			if arr.IsNull(row) {
+				return 0, nil
+			} else {
+				return arr.Value(row), nil
+			}
+		default:
+			return 0, werror.WrapWithMsg(ErrInvalidArrayType, "not a uint8 array")
+		}
+	}
+}
+
 // U16FromArray returns the uint16 value for a specific row in an Arrow array.
 func U16FromArray(arr arrow.Array, row int) (uint16, error) {
 	if arr == nil {

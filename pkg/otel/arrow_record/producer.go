@@ -125,7 +125,7 @@ func NewProducerWithOptions(options ...config2.Option) *Producer {
 		panic(err)
 	}
 
-	logsBuidler, err := logsarrow.NewLogsBuilder(logsRecordBuilder, cfg, stats)
+	logsBuidler, err := logsarrow.NewLogsBuilder(logsRecordBuilder, logsarrow.NewConfig(cfg), stats)
 	if err != nil {
 		panic(err)
 	}

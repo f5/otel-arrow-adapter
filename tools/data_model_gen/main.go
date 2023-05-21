@@ -96,7 +96,7 @@ func VisitMetricsDataModel(domain *Domain) {
 
 func VisitLogsDataModel(domain *Domain) {
 	mainSchema := logsarrow.LogsSchema
-	relatedData, err := logsarrow.NewRelatedData(Conf, stats.NewProducerStats())
+	relatedData, err := logsarrow.NewRelatedData(logsarrow.DefaultConfig(), stats.NewProducerStats())
 	if err != nil {
 		panic(err)
 	}

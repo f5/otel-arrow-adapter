@@ -17,7 +17,6 @@ package constants
 // All constants used a column names.
 
 const ResourceMetrics = "resource_metrics"
-const ResourceLogs = "resource_logs"
 const TimeUnixNano string = "time_unix_nano"
 const StartTimeUnixNano string = "start_time_unix_nano"
 const DurationTimeUnixNano string = "duration_time_unix_nano"
@@ -35,9 +34,7 @@ const ParentSpanId string = "parent_span_id"
 const Attributes string = "attributes"
 const Resource string = "resource"
 const ScopeMetrics string = "scope_metrics"
-const ScopeLogs string = "scope_logs"
 const Scope string = "scope"
-const Logs string = "logs"
 const Name string = "name"
 const KIND string = "kind"
 const Version string = "version"
@@ -80,6 +77,8 @@ const SharedLinkAttributes string = "shared_link_attributes"
 const ID string = "id"
 const ParentID string = "parent_id"
 
+// Attributes
+
 const AttributeKey string = "key"
 const AttributeType string = "type"
 const AttributeStr string = "str"
@@ -89,4 +88,12 @@ const AttributeBool string = "bool"
 const AttributeBytes string = "bytes"
 const AttributeSer string = "ser"
 
-const AttrsRecordValue string = "value"
+// Log body
+
+const BodyType string = "type"
+const BodyStr string = "str"
+const BodyInt string = "int"
+const BodyDouble string = "double"
+const BodyBool string = "bool"
+const BodyBytes string = "bytes"
+const BodySer string = "ser"

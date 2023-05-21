@@ -26,7 +26,6 @@ import (
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/ptrace"
 
-	"github.com/f5/otel-arrow-adapter/pkg/otel/common"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/otlp"
 )
 
@@ -65,13 +64,6 @@ type (
 	SpansByResourceSpanIdScopeSpanIdNameTraceId               struct{}
 	SpansByResourceSpanIdScopeSpanIdTraceIdName               struct{}
 	SpansByResourceSpanIdScopeSpanIdNameTraceIdStartTimestamp struct{}
-
-	// SharedData contains all the shared attributes between spans, events, and links.
-	SharedData struct {
-		sharedAttributes      *common.SharedAttributes
-		sharedEventAttributes *common.SharedAttributes
-		sharedLinkAttributes  *common.SharedAttributes
-	}
 )
 
 func NewTracesOptimizer(sorter SpanSorter) *TracesOptimizer {
