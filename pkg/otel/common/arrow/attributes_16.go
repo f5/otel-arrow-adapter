@@ -26,7 +26,6 @@ import (
 	"github.com/apache/arrow/go/v12/arrow"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 
-	arrow2 "github.com/f5/otel-arrow-adapter/pkg/arrow"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/builder"
@@ -261,17 +260,18 @@ func (b *Attrs16Builder) Build() (arrow.Record, error) {
 		}
 	}
 
-	// ToDo TMP
-	if err == nil && countAttrs16[b.payloadType.PayloadType().String()] == 0 {
-		println(b.payloadType.PayloadType().String())
-		arrow2.PrintRecord(record)
-		countAttrs16[b.payloadType.PayloadType().String()] += 1
-	}
+	// ToDo Keep this code for debugging purposes.
+	//if err == nil && countAttrs16[b.payloadType.PayloadType().String()] == 0 {
+	//	println(b.payloadType.PayloadType().String())
+	//	arrow2.PrintRecord(record)
+	//	countAttrs16[b.payloadType.PayloadType().String()] += 1
+	//}
 
 	return record, werror.Wrap(err)
 }
 
-var countAttrs16 = make(map[string]int)
+// ToDo Keep this code for debugging purposes.
+//var countAttrs16 = make(map[string]int)
 
 func (b *Attrs16Builder) SchemaID() string {
 	return b.builder.SchemaID()

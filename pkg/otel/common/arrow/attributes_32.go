@@ -26,7 +26,6 @@ import (
 	"github.com/apache/arrow/go/v12/arrow"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 
-	arrow2 "github.com/f5/otel-arrow-adapter/pkg/arrow"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/builder"
@@ -113,7 +112,7 @@ func NewDeltaEncodedAttrs32Builder(payloadType *PayloadType, rBuilder *builder.R
 		builder:          rBuilder,
 		accumulator:      NewAttributes32Accumulator(sorter),
 		payloadType:      payloadType,
-		parentIdEncoding: ParentIdDeltaEncoding,
+		parentIdEncoding: ParentIdDeltaGroupEncoding,
 	}
 
 	b.init()
@@ -290,18 +289,18 @@ func (b *Attrs32Builder) Build() (arrow.Record, error) {
 		}
 	}
 
-	// ToDo TMP
-	if err == nil && attrs32Counters[b.payloadType.PayloadType().String()] == 0 {
-		println(b.payloadType.PayloadType().String())
-		arrow2.PrintRecord(record)
-		attrs32Counters[b.payloadType.PayloadType().String()] += 1
-	}
+	// ToDo Keep this code for debugging purposes.
+	//if err == nil && attrs32Counters[b.payloadType.PayloadType().String()] == 0 {
+	//	println(b.payloadType.PayloadType().String())
+	//	arrow2.PrintRecord(record)
+	//	attrs32Counters[b.payloadType.PayloadType().String()] += 1
+	//}
 
 	return record, werror.Wrap(err)
 }
 
-// ToDo TMP
-var attrs32Counters = make(map[string]int)
+// ToDo Keep this code for debugging purposes.
+//var attrs32Counters = make(map[string]int)
 
 func (b *Attrs32Builder) SchemaID() string {
 	return b.builder.SchemaID()

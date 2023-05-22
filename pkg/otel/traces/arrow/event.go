@@ -33,7 +33,6 @@ import (
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/ptrace"
 
-	arrow2 "github.com/f5/otel-arrow-adapter/pkg/arrow"
 	acommon "github.com/f5/otel-arrow-adapter/pkg/otel/common/arrow"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/builder"
@@ -176,17 +175,18 @@ func (b *EventBuilder) Build() (record arrow.Record, err error) {
 		}
 	}
 
-	// ToDo TMP
-	if err == nil && eventcount == 0 {
-		println(acommon.PayloadTypes.Event.PayloadType().String())
-		arrow2.PrintRecord(record)
-		eventcount = eventcount + 1
-	}
+	// ToDo Keep this code for debugging purposes.
+	//if err == nil && eventcount == 0 {
+	//	println(acommon.PayloadTypes.Event.PayloadType().String())
+	//	arrow2.PrintRecord(record)
+	//	eventcount = eventcount + 1
+	//}
 
 	return record, werror.Wrap(err)
 }
 
-var eventcount = 0
+// ToDo Keep this code for debugging purposes.
+//var eventcount = 0
 
 func (b *EventBuilder) TryBuild(attrsAccu *acommon.Attributes32Accumulator) (record arrow.Record, err error) {
 	if b.released {

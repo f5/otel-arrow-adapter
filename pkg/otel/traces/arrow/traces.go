@@ -21,7 +21,6 @@ import (
 	"github.com/apache/arrow/go/v12/arrow"
 	"go.opentelemetry.io/collector/pdata/ptrace"
 
-	arrow2 "github.com/f5/otel-arrow-adapter/pkg/arrow"
 	acommon "github.com/f5/otel-arrow-adapter/pkg/otel/common/arrow"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/builder"
@@ -170,18 +169,18 @@ func (b *TracesBuilder) Build() (record arrow.Record, err error) {
 		}
 	}
 
-	// ToDo TMP
-	if err == nil && count == 0 {
-		println("Traces")
-		arrow2.PrintRecord(record)
-		count = count + 1
-	}
+	// ToDo Keep this code for debugging purposes.
+	//if err == nil && count == 0 {
+	//	println("Traces")
+	//	arrow2.PrintRecord(record)
+	//	count = count + 1
+	//}
 
 	return
 }
 
-// ToDo TMP
-var count = 0
+// ToDo Keep this code for debugging purposes.
+//var count = 0
 
 // Append appends a new set of resource spans to the builder.
 func (b *TracesBuilder) Append(traces ptrace.Traces) error {

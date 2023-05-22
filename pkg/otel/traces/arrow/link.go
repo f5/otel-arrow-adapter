@@ -34,7 +34,6 @@ import (
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/ptrace"
 
-	arrow2 "github.com/f5/otel-arrow-adapter/pkg/arrow"
 	acommon "github.com/f5/otel-arrow-adapter/pkg/otel/common/arrow"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/builder"
@@ -188,17 +187,18 @@ func (b *LinkBuilder) Build() (record arrow.Record, err error) {
 		}
 	}
 
-	// ToDo TMP
-	if err == nil && linkcount == 0 {
-		println(acommon.PayloadTypes.Link.PayloadType().String())
-		arrow2.PrintRecord(record)
-		linkcount = linkcount + 1
-	}
+	// ToDo Keep this code for debugging purposes.
+	//if err == nil && linkcount == 0 {
+	//	println(acommon.PayloadTypes.Link.PayloadType().String())
+	//	arrow2.PrintRecord(record)
+	//	linkcount = linkcount + 1
+	//}
 
 	return record, werror.Wrap(err)
 }
 
-var linkcount = 0
+// ToDo Keep this code for debugging purposes.
+//var linkcount = 0
 
 func (b *LinkBuilder) TryBuild(attrsAccu *acommon.Attributes32Accumulator) (record arrow.Record, err error) {
 	if b.released {
