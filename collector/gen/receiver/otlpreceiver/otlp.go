@@ -150,7 +150,7 @@ func (r *otlpReceiver) startProtocolServers(host component.Host) error {
 			return err
 		}
 
-		if r.cfg.Arrow != nil && r.cfg.Arrow.Enabled {
+		if r.cfg.Arrow != nil && !r.cfg.Arrow.Disabled {
 			var authServer auth.Server
 			if r.cfg.GRPC.Auth != nil {
 				authServer, err = r.cfg.GRPC.Auth.GetServerAuthenticator(host.GetExtensions())

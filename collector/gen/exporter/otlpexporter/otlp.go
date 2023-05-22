@@ -86,7 +86,7 @@ func newExporter(cfg component.Config, set exporter.CreateSettings, streamClient
 	userAgent := fmt.Sprintf("%s/%s (%s/%s)",
 		set.BuildInfo.Description, set.BuildInfo.Version, runtime.GOOS, runtime.GOARCH)
 
-	if oCfg.Arrow.Enabled {
+	if !oCfg.Arrow.Disabled {
 		userAgent += fmt.Sprintf(" ApacheArrow/%s (NumStreams/%d)", arrowPkg.PkgVersion, oCfg.Arrow.NumStreams)
 	}
 
@@ -123,7 +123,7 @@ func (e *baseExporter) start(ctx context.Context, host component.Host) (err erro
 		grpc.WaitForReady(e.config.GRPCClientSettings.WaitForReady),
 	}
 
-	if e.config.Arrow.Enabled {
+	if !e.config.Arrow.Disabled {
 		// Note this sets static outgoing context for all future stream requests.
 		ctx := e.enhanceContext(context.Background())
 

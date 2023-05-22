@@ -16,6 +16,7 @@ package otlpexporter // import "github.com/f5/otel-arrow-adapter/collector/gen/e
 
 import (
 	"context"
+	"runtime"
 
 	arrowpb "github.com/f5/otel-arrow-adapter/api/experimental/arrow/v1"
 	"github.com/f5/otel-arrow-adapter/collector/gen/exporter/otlpexporter/internal/arrow"
@@ -58,8 +59,7 @@ func createDefaultConfig() component.Config {
 			WriteBufferSize: 512 * 1024,
 		},
 		Arrow: ArrowSettings{
-			NumStreams: 1,
-			Enabled:    false,
+			NumStreams: runtime.NumCPU(),
 		},
 	}
 }

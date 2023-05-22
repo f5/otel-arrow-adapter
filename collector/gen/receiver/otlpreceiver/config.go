@@ -36,9 +36,9 @@ type Protocols struct {
 	Arrow *ArrowSettings                 `mapstructure:"arrow"`
 }
 
-// ArrowSettings
+// ArrowSettings support disabling the Arrow receiver.
 type ArrowSettings struct {
-	Enabled bool `mapstructure:"enabled"`
+	Disabled bool `mapstructure:"disabled"`
 
 	// DisableSeparateSignals when true prevents per-signal gRPC being served.
 	DisableSeparateSignals bool `mapstructure:"disable_separate_signals"`
@@ -61,7 +61,7 @@ func (cfg *Config) Validate() error {
 	if cfg.GRPC == nil && cfg.HTTP == nil {
 		return errors.New("must specify at least one protocol when using the OTLP receiver")
 	}
-	if cfg.Arrow != nil && cfg.Arrow.Enabled && cfg.GRPC == nil {
+	if cfg.Arrow != nil && !cfg.Arrow.Disabled && cfg.GRPC == nil {
 		return errors.New("must specify at gRPC protocol when using the OTLP+Arrow receiver")
 	}
 	return nil

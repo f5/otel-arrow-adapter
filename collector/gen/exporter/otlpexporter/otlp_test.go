@@ -26,8 +26,8 @@ import (
 	"testing"
 	"time"
 
-	arrowpbMock "github.com/f5/otel-arrow-adapter/api/experimental/arrow/v1/mock"
 	arrowpb "github.com/f5/otel-arrow-adapter/api/experimental/arrow/v1"
+	arrowpbMock "github.com/f5/otel-arrow-adapter/api/experimental/arrow/v1/mock"
 	arrowRecord "github.com/f5/otel-arrow-adapter/pkg/otel/arrow_record"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
@@ -297,6 +297,11 @@ func TestSendTraces(t *testing.T) {
 			AuthenticatorID: authID,
 		},
 	}
+	// This test fails w/ Arrow enabled because the function
+	// passed to newTestAuthExtension() below requires it the
+	// caller's context, and the newStream doesn't have it.
+	cfg.Arrow.Disabled = true
+
 	set := exportertest.NewNopCreateSettings()
 	set.BuildInfo.Description = "Collector"
 	set.BuildInfo.Version = "1.2.3test"
@@ -823,7 +828,6 @@ func testSendArrowTraces(t *testing.T, mixedSignals, clientWaitForReady, streamS
 	}
 	// Arrow client is enabled, but the server doesn't support it.
 	cfg.Arrow = ArrowSettings{
-		Enabled:            true,
 		NumStreams:         1,
 		EnableMixedSignals: mixedSignals,
 	}
@@ -976,7 +980,7 @@ func (r *mockTracesReceiver) startStreamMockArrowTraces(t *testing.T, mixedSigna
 		*arrowpbMock.MockArrowTracesServiceServer
 	}
 	svc := arrowpbMock.NewMockArrowTracesServiceServer(ctrl)
-	
+
 	arrowpb.RegisterArrowTracesServiceServer(r.srv, singleBinding{
 		MockArrowTracesServiceServer: svc,
 	})
@@ -1001,7 +1005,6 @@ func TestSendArrowFailedTraces(t *testing.T) {
 	}
 	// Arrow client is enabled, but the server doesn't support it.
 	cfg.Arrow = ArrowSettings{
-		Enabled:            true,
 		NumStreams:         1,
 		EnableMixedSignals: true,
 	}
