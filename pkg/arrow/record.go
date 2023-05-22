@@ -17,6 +17,9 @@
 
 package arrow
 
+// This package contains functions for printing Arrow records to stdout.
+// This is mostly used for debugging purposes.
+
 import (
 	"fmt"
 	"math"

@@ -17,6 +17,10 @@
 
 package arrow
 
+// General configuration for traces. This configuration defines the different
+// sorters used for attributes, spans, events, links, ... and the encoding used
+// for parent IDs.
+
 import (
 	cfg "github.com/f5/otel-arrow-adapter/pkg/config"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/arrow"

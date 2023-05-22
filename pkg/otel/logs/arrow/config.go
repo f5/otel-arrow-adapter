@@ -17,6 +17,10 @@
 
 package arrow
 
+// General configuration for logs. This configuration defines the different
+// sorters used for attributes, log records, ... and the encoding used for
+// parent IDs.
+
 import (
 	cfg "github.com/f5/otel-arrow-adapter/pkg/config"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/arrow"

@@ -31,7 +31,7 @@ type ScopeIds struct {
 	DroppedAttributesCount int
 }
 
-// ToDo remove this function once logs and metrics have been converted to the model v1
+// ToDo remove this function once metrics have been converted to the model v1
 func NewScopeIds(resSpansDT *arrow.StructType) (*ScopeIds, error) {
 	scopeID, scopeDT, err := arrowutils.StructFieldIDFromStruct(resSpansDT, constants.Scope)
 	if err != nil {
@@ -70,7 +70,7 @@ func NewScopeIdsFromSchema(schema *arrow.Schema) (*ScopeIds, error) {
 	}, nil
 }
 
-// ToDo remove this function once logs and metrics have been converted to the model v1
+// ToDo remove this function once metrics have been converted to the model v1
 
 // UpdateScopeWith appends a scope into a given scope spans from an Arrow list of structs.
 func UpdateScopeWith(

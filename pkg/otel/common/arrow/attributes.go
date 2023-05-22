@@ -32,7 +32,7 @@ import (
 	"github.com/f5/otel-arrow-adapter/pkg/werror"
 )
 
-// ToDo Standard attributes (i.e. AttributesDT) will be removed in the future. They are still used as shared attributes in the span.
+// ToDo Standard attributes (i.e. AttributesDT) will be removed in the future. They are still used as shared attributes in the metrics.
 // ToDo this file must be redistributed into `attributes_16.go` and `attributes_32.go` files.
 
 // ParentID encodings

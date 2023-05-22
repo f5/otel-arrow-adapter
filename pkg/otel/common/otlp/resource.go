@@ -30,7 +30,7 @@ type ResourceIds struct {
 	SchemaUrl              int
 }
 
-// ToDo remove this function once logs and metrics have been converted to the model v1
+// ToDo remove this function once metrics have been converted to the model v1
 func NewResourceIds(resSpansDT *arrow.StructType) (*ResourceIds, error) {
 	resId, resDT, err := arrowutils.StructFieldIDFromStruct(resSpansDT, constants.Resource)
 	if err != nil {
@@ -65,7 +65,7 @@ func NewResourceIdsFromSchema(schema *arrow.Schema) (*ResourceIds, error) {
 	}, nil
 }
 
-// ToDo remove this function once logs and metrics have been converted to the model v1
+// ToDo remove this function once metrics have been converted to the model v1
 
 // UpdateResourceWith updates a resource with the content of an Arrow array.
 func UpdateResourceWith(r pcommon.Resource, resList *arrowutils.ListOfStructs, row int, resIds *ResourceIds, attrsStore *Attributes16Store) error {

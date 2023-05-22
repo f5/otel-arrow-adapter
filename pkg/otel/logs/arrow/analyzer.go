@@ -112,7 +112,7 @@ func (t *LogsAnalyzer) ShowStats(indent string) {
 }
 
 func (r *ResourceLogsStats) UpdateWith(logs *LogsOptimized) {
-	// ToDo !!!
+	// ToDo I will update this in a future PR. Only used for troubleshooting compression ratio issues.
 	//resLogs := logs.ResourceLogs
 	//
 	//for ID := range logs.ResourceLogsIdx {
