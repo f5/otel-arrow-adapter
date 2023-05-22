@@ -28,7 +28,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/pdata/ptrace"
 
-	v1 "github.com/f5/otel-arrow-adapter/api/collector/arrow/v1"
+	v1 "github.com/f5/otel-arrow-adapter/api/experimental/arrow/v1"
 	"github.com/f5/otel-arrow-adapter/pkg/config"
 	jsonassert "github.com/f5/otel-arrow-adapter/pkg/otel/assert"
 	carrow "github.com/f5/otel-arrow-adapter/pkg/otel/common/arrow"
