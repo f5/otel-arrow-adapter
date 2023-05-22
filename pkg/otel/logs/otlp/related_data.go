@@ -70,7 +70,7 @@ func RelatedDataFrom(records []*record_message.RecordMessage) (relatedData *Rela
 			if err != nil {
 				return nil, nil, werror.Wrap(err)
 			}
-		case colarspb.OtlpArrowPayloadType_LOGS_DATA:
+		case colarspb.OtlpArrowPayloadType_LOGS:
 			if logsRecord != nil {
 				return nil, nil, werror.Wrap(otel.ErrMultipleTracesRecords)
 			}

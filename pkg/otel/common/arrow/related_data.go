@@ -109,15 +109,15 @@ var (
 	PayloadTypes = payloadTypes{
 		Metrics: &PayloadType{
 			prefix:      "metrics",
-			payloadType: colarspb.OtlpArrowPayloadType_METRICS_DATA,
+			payloadType: colarspb.OtlpArrowPayloadType_METRICS,
 		},
 		Logs: &PayloadType{
 			prefix:      "logs",
-			payloadType: colarspb.OtlpArrowPayloadType_LOGS_DATA,
+			payloadType: colarspb.OtlpArrowPayloadType_LOGS,
 		},
 		Spans: &PayloadType{
 			prefix:      "spans",
-			payloadType: colarspb.OtlpArrowPayloadType_SPANS_DATA,
+			payloadType: colarspb.OtlpArrowPayloadType_SPANS,
 		},
 		ResourceAttrs: &PayloadType{
 			prefix:      "resource-attrs",

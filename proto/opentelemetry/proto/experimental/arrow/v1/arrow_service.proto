@@ -61,26 +61,21 @@ message BatchArrowRecords {
 
 // Enumeration of all the OTLP Arrow payload types currently supported by the OTLP Arrow protocol.
 enum OtlpArrowPayloadType {
-  // Protobuf requires a zero value for enums, but we skip it to avoid accidental use.
-  UNSPECIFIED = 0;
-
   // Main OTel entities
   // A payload representing a collection of metrics.
-  METRICS_DATA = 1;
+  METRICS = 0;
+  INT_GAUGE = 2;
+  DOUBLE_GAUGE = 3;
+  INT_SUM = 4;
+  DOUBLE_SUM = 5;
+  SUMMARIES = 6;
+  HISTOGRAMS = 7;
+  EXP_HISTOGRAMS = 8;
 
   // A payload representing a collection of logs.
-  LOGS_DATA = 2;
-
+  LOGS = 9;
   // A payload representing a collection of traces.
-  SPANS_DATA = 3;
-
-  INT_GAUGE = 4;
-  DOUBLE_GAUGE = 5;
-  INT_SUM = 6;
-  DOUBLE_SUM = 7;
-  SUMMARIES = 8;
-  HISTOGRAMS = 9;
-  EXP_HISTOGRAMS = 10;
+  SPANS = 10;
 
   // Related OTel entities
   // A payload representing a collection of resource attributes.
