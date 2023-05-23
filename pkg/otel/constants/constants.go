@@ -77,6 +77,8 @@ const SharedLinkAttributes string = "shared_link_attributes"
 const ID string = "id"
 const ParentID string = "parent_id"
 
+const MetricType string = "metric_type"
+
 // Attributes
 
 const AttributeKey string = "key"
