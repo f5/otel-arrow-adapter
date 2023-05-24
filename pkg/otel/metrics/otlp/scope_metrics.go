@@ -69,35 +69,27 @@ func UpdateScopeMetricsFrom(
 		}
 		scopeMetrics.SetSchemaUrl(schemaUrl)
 
-		iSums := relatedData.SumIntDataPointsStore.SumMetricsByID(ID)
-		dSums := relatedData.SumDoubleDataPointsStore.SumMetricsByID(ID)
-		iGauges := relatedData.GaugeIntDataPointsStore.GaugeMetricsByID(ID)
-		dGauges := relatedData.GaugeDoubleDataPointsStore.GaugeMetricsByID(ID)
+		sums := relatedData.SumDataPointsStore.SumMetricsByID(ID)
+		gauges := relatedData.GaugeDataPointsStore.GaugeMetricsByID(ID)
 		summaries := relatedData.SummaryDataPointsStore.SummaryMetricsByID(ID)
-		histogram := relatedData.HistogramDataPointsStore.HistogramMetricsByID(ID)
-		eHistogram := relatedData.EHistogramDataPointsStore.EHistogramMetricsByID(ID)
+		histograms := relatedData.HistogramDataPointsStore.HistogramMetricsByID(ID)
+		eHistograms := relatedData.EHistogramDataPointsStore.EHistogramMetricsByID(ID)
 
 		metrics := scopeMetrics.Metrics()
-		metrics.EnsureCapacity(len(iSums) + len(dSums) + len(iGauges) + len(dGauges) + len(summaries))
-		for _, sum := range iSums {
+		metrics.EnsureCapacity(len(sums) + len(gauges) + len(summaries) + len(histograms) + len(eHistograms))
+		for _, sum := range sums {
 			sum.MoveTo(metrics.AppendEmpty())
 		}
-		for _, sum := range dSums {
-			sum.MoveTo(metrics.AppendEmpty())
-		}
-		for _, gauge := range iGauges {
-			gauge.MoveTo(metrics.AppendEmpty())
-		}
-		for _, gauge := range dGauges {
+		for _, gauge := range gauges {
 			gauge.MoveTo(metrics.AppendEmpty())
 		}
 		for _, sum := range summaries {
 			sum.MoveTo(metrics.AppendEmpty())
 		}
-		for _, hist := range histogram {
+		for _, hist := range histograms {
 			hist.MoveTo(metrics.AppendEmpty())
 		}
-		for _, hist := range eHistogram {
+		for _, hist := range eHistograms {
 			hist.MoveTo(metrics.AppendEmpty())
 		}
 	}

@@ -52,11 +52,6 @@ var (
 		{Name: constants.ID, Type: arrow.PrimitiveTypes.Uint32, Metadata: schema.Metadata(schema.Optional, schema.DeltaEncoding)},
 		// The ID of the parent metric.
 		{Name: constants.ParentID, Type: arrow.PrimitiveTypes.Uint16},
-		{Name: constants.Name, Type: arrow.BinaryTypes.String, Metadata: schema.Metadata(schema.Dictionary8)},
-		{Name: constants.Description, Type: arrow.BinaryTypes.String, Metadata: schema.Metadata(schema.Optional, schema.Dictionary8)},
-		{Name: constants.Unit, Type: arrow.BinaryTypes.String, Metadata: schema.Metadata(schema.Optional, schema.Dictionary8)},
-		{Name: constants.AggregationTemporality, Type: arrow.PrimitiveTypes.Int32, Metadata: schema.Metadata(schema.Optional, schema.Dictionary8)},
-		{Name: constants.IsMonotonic, Type: arrow.FixedWidthTypes.Boolean, Metadata: schema.Metadata(schema.Optional)},
 		{Name: constants.StartTimeUnixNano, Type: arrow.FixedWidthTypes.Timestamp_ns, Metadata: schema.Metadata(schema.Optional)},
 		{Name: constants.TimeUnixNano, Type: arrow.FixedWidthTypes.Timestamp_ns, Metadata: schema.Metadata(schema.Optional)},
 		{Name: constants.HistogramCount, Type: arrow.PrimitiveTypes.Uint64, Metadata: schema.Metadata(schema.Optional)},
@@ -80,12 +75,6 @@ type (
 		ib  *builder.Uint32DeltaBuilder // id builder
 		pib *builder.Uint16Builder      // parent_id builder
 
-		nb  *builder.StringBuilder  // metric name builder
-		db  *builder.StringBuilder  // metric description builder
-		ub  *builder.StringBuilder  // metric unit builder
-		atb *builder.Int32Builder   // aggregation temporality builder
-		imb *builder.BooleanBuilder // is monotonic builder
-
 		stunb *builder.TimestampBuilder // start_time_unix_nano builder
 		tunb  *builder.TimestampBuilder // time_unix_nano builder
 		hcb   *builder.Uint64Builder    // histogram_count builder
@@ -105,11 +94,8 @@ type (
 	}
 
 	HDP struct {
-		ParentID               uint16
-		Metric                 *pmetric.Metric
-		AggregationTemporality pmetric.AggregationTemporality
-		IsMonotonic            bool
-		Orig                   *pmetric.HistogramDataPoint
+		ParentID uint16
+		Orig     *pmetric.HistogramDataPoint
 	}
 
 	HDPAccumulator struct {
@@ -134,12 +120,6 @@ func (b *HistogramDataPointBuilder) init() {
 	b.ib = b.builder.Uint32DeltaBuilder(constants.ID)
 	b.ib.SetMaxDelta(1)
 	b.pib = b.builder.Uint16Builder(constants.ParentID)
-
-	b.nb = b.builder.StringBuilder(constants.Name)
-	b.db = b.builder.StringBuilder(constants.Description)
-	b.ub = b.builder.StringBuilder(constants.Unit)
-	b.atb = b.builder.Int32Builder(constants.AggregationTemporality)
-	b.imb = b.builder.BooleanBuilder(constants.IsMonotonic)
 
 	b.stunb = b.builder.TimestampBuilder(constants.StartTimeUnixNano)
 	b.tunb = b.builder.TimestampBuilder(constants.TimeUnixNano)
@@ -244,12 +224,6 @@ func (b *HistogramDataPointBuilder) TryBuild(attrsAccu *carrow.Attributes32Accum
 			return nil, werror.Wrap(err)
 		}
 
-		b.nb.AppendNonEmpty(hdpRec.Metric.Name())
-		b.db.AppendNonEmpty(hdpRec.Metric.Description())
-		b.ub.AppendNonEmpty(hdpRec.Metric.Unit())
-		b.atb.Append(int32(hdpRec.AggregationTemporality))
-		b.imb.Append(hdpRec.IsMonotonic)
-
 		b.stunb.Append(arrow.Timestamp(hdp.StartTimestamp()))
 		b.tunb.Append(arrow.Timestamp(hdp.Timestamp()))
 
@@ -328,9 +302,6 @@ func (a *HDPAccumulator) IsEmpty() bool {
 
 func (a *HDPAccumulator) Append(
 	parentID uint16,
-	metric *pmetric.Metric,
-	aggregationTemporality pmetric.AggregationTemporality,
-	isMonotonic bool,
 	hdps pmetric.HistogramDataPointSlice,
 ) {
 	if a.groupCount == math.MaxUint32 {
@@ -345,11 +316,8 @@ func (a *HDPAccumulator) Append(
 		hdp := hdps.At(i)
 
 		a.hdps = append(a.hdps, HDP{
-			ParentID:               parentID,
-			Metric:                 metric,
-			AggregationTemporality: aggregationTemporality,
-			IsMonotonic:            isMonotonic,
-			Orig:                   &hdp,
+			ParentID: parentID,
+			Orig:     &hdp,
 		})
 	}
 
@@ -358,11 +326,7 @@ func (a *HDPAccumulator) Append(
 
 func (a *HDPAccumulator) Sort() {
 	sort.Slice(a.hdps, func(i, j int) bool {
-		if a.hdps[i].Metric.Name() == a.hdps[j].Metric.Name() {
-			return a.hdps[i].ParentID < a.hdps[j].ParentID
-		} else {
-			return a.hdps[i].Metric.Name() < a.hdps[j].Metric.Name()
-		}
+		return a.hdps[i].ParentID < a.hdps[j].ParentID
 	})
 }
 

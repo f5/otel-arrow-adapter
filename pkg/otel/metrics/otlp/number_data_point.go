@@ -43,30 +43,30 @@ type (
 		Flags                  int
 	}
 
-	SumIntDataPointsStore struct {
+	SumDataPointsStore struct {
 		nextID      uint16
 		metricByIDs map[uint16]map[string]*pmetric.Metric
 	}
 
-	GaugeIntDataPointsStore struct {
+	GaugeDataPointsStore struct {
 		nextID      uint16
 		metricByIDs map[uint16]map[string]*pmetric.Metric
 	}
 )
 
-func NewSumIntDataPointsStore() *SumIntDataPointsStore {
-	return &SumIntDataPointsStore{
+func NewSumDataPointsStore() *SumDataPointsStore {
+	return &SumDataPointsStore{
 		metricByIDs: make(map[uint16]map[string]*pmetric.Metric),
 	}
 }
 
-func NewGaugeIntDataPointsStore() *GaugeIntDataPointsStore {
-	return &GaugeIntDataPointsStore{
+func NewGaugeDataPointsStore() *GaugeDataPointsStore {
+	return &GaugeDataPointsStore{
 		metricByIDs: make(map[uint16]map[string]*pmetric.Metric),
 	}
 }
 
-func (s *SumIntDataPointsStore) SumMetricsByID(ID uint16) []*pmetric.Metric {
+func (s *SumDataPointsStore) SumMetricsByID(ID uint16) []*pmetric.Metric {
 	sums, ok := s.metricByIDs[ID]
 	if !ok {
 		return make([]*pmetric.Metric, 0)
@@ -78,7 +78,7 @@ func (s *SumIntDataPointsStore) SumMetricsByID(ID uint16) []*pmetric.Metric {
 	return metrics
 }
 
-func (s *GaugeIntDataPointsStore) GaugeMetricsByID(ID uint16) []*pmetric.Metric {
+func (s *GaugeDataPointsStore) GaugeMetricsByID(ID uint16) []*pmetric.Metric {
 	sums, ok := s.metricByIDs[ID]
 	if !ok {
 		return make([]*pmetric.Metric, 0)
@@ -167,10 +167,10 @@ func SchemaToNDPIntIDs(schema *arrow.Schema) (*NumberDataPointIntIDs, error) {
 	}, nil
 }
 
-func SumIntStoreFrom(record arrow.Record, attrsStore *otlp.Attributes32Store) (*SumIntDataPointsStore, error) {
+func SumStoreFrom(record arrow.Record, attrsStore *otlp.Attributes32Store) (*SumDataPointsStore, error) {
 	defer record.Release()
 
-	store := &SumIntDataPointsStore{
+	store := &SumDataPointsStore{
 		metricByIDs: make(map[uint16]map[string]*pmetric.Metric),
 	}
 
@@ -283,10 +283,10 @@ func SumIntStoreFrom(record arrow.Record, attrsStore *otlp.Attributes32Store) (*
 	return store, nil
 }
 
-func GaugeIntStoreFrom(record arrow.Record, attrsStore *otlp.Attributes32Store) (*GaugeIntDataPointsStore, error) {
+func GaugeStoreFrom(record arrow.Record, attrsStore *otlp.Attributes32Store) (*GaugeDataPointsStore, error) {
 	defer record.Release()
 
-	store := &GaugeIntDataPointsStore{
+	store := &GaugeDataPointsStore{
 		metricByIDs: make(map[uint16]map[string]*pmetric.Metric),
 	}
 

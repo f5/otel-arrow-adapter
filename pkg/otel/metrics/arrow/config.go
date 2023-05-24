@@ -74,3 +74,47 @@ type (
 	//	Sorter           ExpHistogramSorter
 	//}
 )
+
+func DefaultConfig() *Config {
+	return NewConfig(cfg.DefaultConfig())
+}
+
+func NewConfig(globalConf *cfg.Config) *Config {
+	return &Config{
+		Global: globalConf,
+		Metric: &MetricConfig{
+			//Sorter: SortMetricsByResourceScopeTypeName(),
+			Sorter: SortMetricsByTypeNameResourceScope(),
+		},
+		Attrs: &AttrsConfig{
+			Resource: &arrow.Attrs16Config{
+				Sorter:           arrow.SortAttrs16ByKeyValueParentId(),
+				ParentIdEncoding: arrow.ParentIdDeltaGroupEncoding,
+			},
+			Scope: &arrow.Attrs16Config{
+				Sorter:           arrow.SortAttrs16ByKeyValueParentId(),
+				ParentIdEncoding: arrow.ParentIdDeltaGroupEncoding,
+			},
+			Sum: &arrow.Attrs32Config{
+				Sorter:           arrow.SortAttrs32ByKeyValueParentId(),
+				ParentIdEncoding: arrow.ParentIdDeltaGroupEncoding,
+			},
+			Gauge: &arrow.Attrs32Config{
+				Sorter:           arrow.SortAttrs32ByKeyValueParentId(),
+				ParentIdEncoding: arrow.ParentIdDeltaGroupEncoding,
+			},
+			Summary: &arrow.Attrs32Config{
+				Sorter:           arrow.SortAttrs32ByKeyValueParentId(),
+				ParentIdEncoding: arrow.ParentIdDeltaGroupEncoding,
+			},
+			Histogram: &arrow.Attrs32Config{
+				Sorter:           arrow.SortAttrs32ByKeyValueParentId(),
+				ParentIdEncoding: arrow.ParentIdDeltaGroupEncoding,
+			},
+			ExpHistogram: &arrow.Attrs32Config{
+				Sorter:           arrow.SortAttrs32ByKeyValueParentId(),
+				ParentIdEncoding: arrow.ParentIdDeltaGroupEncoding,
+			},
+		},
+	}
+}

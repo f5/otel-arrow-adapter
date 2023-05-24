@@ -14,7 +14,7 @@
 
 package arrow
 
-// INtDataPointBuilder is used to build IntSum and IntGauge data points.
+// DataPointBuilder is used to build Sum and Gauge data points.
 
 import (
 	"errors"
@@ -31,25 +31,26 @@ import (
 )
 
 var (
-	// IntDataPointSchema is the Arrow schema representing int data points.
+	// DataPointSchema is the Arrow schema representing data points.
 	// Related record.
-	IntDataPointSchema = arrow.NewSchema([]arrow.Field{
-		// Unique identifier of the IDP. This ID is used to identify the
-		// relationship between the IDP, its attributes and exemplars.
+	DataPointSchema = arrow.NewSchema([]arrow.Field{
+		// Unique identifier of the DP. This ID is used to identify the
+		// relationship between the DP, its attributes and exemplars.
 		{Name: constants.ID, Type: arrow.PrimitiveTypes.Uint32, Metadata: schema.Metadata(schema.DeltaEncoding)},
 		// The ID of the parent scope metric.
 		{Name: constants.ParentID, Type: arrow.PrimitiveTypes.Uint16},
 		{Name: constants.StartTimeUnixNano, Type: arrow.FixedWidthTypes.Timestamp_ns},
 		{Name: constants.TimeUnixNano, Type: arrow.FixedWidthTypes.Timestamp_ns},
-		{Name: constants.MetricValue, Type: arrow.PrimitiveTypes.Int64},
+		{Name: constants.IntValue, Type: arrow.PrimitiveTypes.Int64},
+		{Name: constants.DoubleValue, Type: arrow.PrimitiveTypes.Float64},
 		{Name: constants.Exemplars, Type: arrow.ListOf(ExemplarDT), Metadata: schema.Metadata(schema.Optional)},
 		{Name: constants.Flags, Type: arrow.PrimitiveTypes.Uint32, Metadata: schema.Metadata(schema.Optional)},
 	}, nil)
 )
 
 type (
-	// IntDataPointBuilder is a builder for int data points.
-	IntDataPointBuilder struct {
+	// DataPointBuilder is a builder for int data points.
+	DataPointBuilder struct {
 		released bool
 
 		builder *builder.RecordBuilderExt
@@ -59,36 +60,37 @@ type (
 
 		stunb *builder.TimestampBuilder // start_time_unix_nano builder
 		tunb  *builder.TimestampBuilder // time_unix_nano builder
-		mvb   *builder.Int64Builder     // metric_value builder
+		ivb   *builder.Int64Builder     // int_value builder
+		dvb   *builder.Float64Builder   // double_value builder
 		elb   *builder.ListBuilder      // exemplars builder
 		eb    *ExemplarBuilder          // exemplar builder
 		fb    *builder.Uint32Builder    // flags builder
 
-		accumulator *IDPAccumulator
+		accumulator *DPAccumulator
 		attrsAccu   *acommon.Attributes32Accumulator
 
 		payloadType *acommon.PayloadType
 	}
 
-	// IDP is an internal representation of an int data point used by the
-	// IDPAccumulator.
-	IDP struct {
+	// DP is an internal representation of a data point used by the
+	// DPAccumulator.
+	DP struct {
 		ParentID uint16
 		Orig     *pmetric.NumberDataPoint
 	}
 
-	// IDPAccumulator is an accumulator for int data points.
-	IDPAccumulator struct {
-		dps []IDP
+	// DPAccumulator is an accumulator for data points.
+	DPAccumulator struct {
+		dps []DP
 	}
 )
 
-// NewIntDataPointBuilder creates a new IntDataPointBuilder.
-func NewIntDataPointBuilder(rBuilder *builder.RecordBuilderExt, payloadType *acommon.PayloadType) *IntDataPointBuilder {
-	b := &IntDataPointBuilder{
+// NewDataPointBuilder creates a new DataPointBuilder.
+func NewDataPointBuilder(rBuilder *builder.RecordBuilderExt, payloadType *acommon.PayloadType) *DataPointBuilder {
+	b := &DataPointBuilder{
 		released:    false,
 		builder:     rBuilder,
-		accumulator: NewIDPAccumulator(),
+		accumulator: NewDPAccumulator(),
 		payloadType: payloadType,
 	}
 
@@ -96,7 +98,7 @@ func NewIntDataPointBuilder(rBuilder *builder.RecordBuilderExt, payloadType *aco
 	return b
 }
 
-func (b *IntDataPointBuilder) init() {
+func (b *DataPointBuilder) init() {
 	b.ib = b.builder.Uint32DeltaBuilder(constants.ID)
 	// As the attributes are sorted before insertion, the delta between two
 	// consecutive attributes ID should always be <=1.
@@ -105,33 +107,34 @@ func (b *IntDataPointBuilder) init() {
 
 	b.stunb = b.builder.TimestampBuilder(constants.StartTimeUnixNano)
 	b.tunb = b.builder.TimestampBuilder(constants.TimeUnixNano)
-	b.mvb = b.builder.Int64Builder(constants.MetricValue)
+	b.ivb = b.builder.Int64Builder(constants.IntValue)
+	b.dvb = b.builder.Float64Builder(constants.DoubleValue)
 	b.elb = b.builder.ListBuilder(constants.Exemplars)
 	b.eb = ExemplarBuilderFrom(b.elb.StructBuilder())
 	b.fb = b.builder.Uint32Builder(constants.Flags)
 }
 
-func (b *IntDataPointBuilder) SetAttributesAccumulator(accu *acommon.Attributes32Accumulator) {
+func (b *DataPointBuilder) SetAttributesAccumulator(accu *acommon.Attributes32Accumulator) {
 	b.attrsAccu = accu
 }
 
-func (b *IntDataPointBuilder) SchemaID() string {
+func (b *DataPointBuilder) SchemaID() string {
 	return b.builder.SchemaID()
 }
 
-func (b *IntDataPointBuilder) Schema() *arrow.Schema {
+func (b *DataPointBuilder) Schema() *arrow.Schema {
 	return b.builder.Schema()
 }
 
-func (b *IntDataPointBuilder) IsEmpty() bool {
+func (b *DataPointBuilder) IsEmpty() bool {
 	return b.accumulator.IsEmpty()
 }
 
-func (b *IntDataPointBuilder) Accumulator() *IDPAccumulator {
+func (b *DataPointBuilder) Accumulator() *DPAccumulator {
 	return b.accumulator
 }
 
-func (b *IntDataPointBuilder) Build() (record arrow.Record, err error) {
+func (b *DataPointBuilder) Build() (record arrow.Record, err error) {
 	schemaNotUpToDateCount := 0
 
 	// Loop until the record is built successfully.
@@ -160,7 +163,7 @@ func (b *IntDataPointBuilder) Build() (record arrow.Record, err error) {
 	return record, werror.Wrap(err)
 }
 
-func (b *IntDataPointBuilder) TryBuild(attrsAccu *acommon.Attributes32Accumulator) (record arrow.Record, err error) {
+func (b *DataPointBuilder) TryBuild(attrsAccu *acommon.Attributes32Accumulator) (record arrow.Record, err error) {
 	if b.released {
 		return nil, werror.Wrap(acommon.ErrBuilderAlreadyReleased)
 	}
@@ -184,7 +187,14 @@ func (b *IntDataPointBuilder) TryBuild(attrsAccu *acommon.Attributes32Accumulato
 			b.stunb.Append(arrow.Timestamp(startTime))
 		}
 		b.tunb.Append(arrow.Timestamp(ndp.Orig.Timestamp()))
-		b.mvb.Append(ndp.Orig.IntValue())
+		switch ndp.Orig.ValueType() {
+		case pmetric.NumberDataPointValueTypeInt:
+			b.ivb.Append(ndp.Orig.IntValue())
+			b.dvb.AppendNull()
+		case pmetric.NumberDataPointValueTypeDouble:
+			b.dvb.Append(ndp.Orig.DoubleValue())
+			b.ivb.AppendNull()
+		}
 		b.fb.Append(uint32(ndp.Orig.Flags()))
 
 		exemplars := ndp.Orig.Exemplars()
@@ -209,16 +219,16 @@ func (b *IntDataPointBuilder) TryBuild(attrsAccu *acommon.Attributes32Accumulato
 	return
 }
 
-func (b *IntDataPointBuilder) Reset() {
+func (b *DataPointBuilder) Reset() {
 	b.accumulator.Reset()
 }
 
-func (b *IntDataPointBuilder) PayloadType() *acommon.PayloadType {
+func (b *DataPointBuilder) PayloadType() *acommon.PayloadType {
 	return b.payloadType
 }
 
 // Release releases the underlying memory.
-func (b *IntDataPointBuilder) Release() {
+func (b *DataPointBuilder) Release() {
 	if b.released {
 		return
 	}
@@ -226,44 +236,40 @@ func (b *IntDataPointBuilder) Release() {
 	b.released = true
 }
 
-// NewIDPAccumulator creates a new IDPAccumulator.
-func NewIDPAccumulator() *IDPAccumulator {
-	return &IDPAccumulator{
-		dps: make([]IDP, 0),
+// NewDPAccumulator creates a new DPAccumulator.
+func NewDPAccumulator() *DPAccumulator {
+	return &DPAccumulator{
+		dps: make([]DP, 0),
 	}
 }
 
-func (a *IDPAccumulator) IsEmpty() bool {
+func (a *DPAccumulator) IsEmpty() bool {
 	return len(a.dps) == 0
 }
 
 // Append appends a slice of number data points to the accumulator.
-func (a *IDPAccumulator) Append(
+func (a *DPAccumulator) Append(
 	parentId uint16,
 	dp *pmetric.NumberDataPoint,
 ) {
-	a.dps = append(a.dps, IDP{
+	a.dps = append(a.dps, DP{
 		ParentID: parentId,
 		Orig:     dp,
 	})
 }
 
-func (a *IDPAccumulator) Sort() {
+func (a *DPAccumulator) Sort() {
 	sort.Slice(a.dps, func(i, j int) bool {
 		dpsI := a.dps[i]
 		dpsJ := a.dps[j]
-		if dpsI.Metric.Name() == dpsJ.Metric.Name() {
-			if dpsI.ParentID == dpsJ.ParentID {
-				return dpsI.Orig.Timestamp() < dpsJ.Orig.Timestamp()
-			} else {
-				return dpsI.ParentID < dpsJ.ParentID
-			}
+		if dpsI.ParentID == dpsJ.ParentID {
+			return dpsI.Orig.Timestamp() < dpsJ.Orig.Timestamp()
 		} else {
-			return dpsI.Metric.Name() < dpsJ.Metric.Name()
+			return dpsI.ParentID < dpsJ.ParentID
 		}
 	})
 }
 
-func (a *IDPAccumulator) Reset() {
+func (a *DPAccumulator) Reset() {
 	a.dps = a.dps[:0]
 }

@@ -28,9 +28,7 @@ import (
 	"github.com/apache/arrow/go/v12/arrow"
 	"github.com/apache/arrow/go/v12/arrow/array"
 	"go.opentelemetry.io/collector/pdata/pcommon"
-	"golang.org/x/exp/rand"
 
-	arrowutils "github.com/f5/otel-arrow-adapter/pkg/arrow"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/builder"
@@ -644,92 +642,5 @@ func Compare(a, b pcommon.Value) int {
 		return 1
 	default:
 		return 1
-	}
-}
-
-func PrintRecord(record arrow.Record) {
-	print("\n")
-	for _, field := range record.Schema().Fields() {
-		print(field.Name + "\t\t")
-	}
-	print("\n")
-
-	// Select a window of 1000 consecutive rows randomly from the record
-	row := rand.Intn(int(record.NumRows()) - 1000)
-
-	record = record.NewSlice(int64(row), int64(row+1000))
-	numRows := int(record.NumRows())
-	numCols := int(record.NumCols())
-
-	for row := 0; row < numRows; row++ {
-		for col := 0; col < numCols; col++ {
-			col := record.Column(col)
-			if col.IsNull(row) {
-				print("null")
-			} else {
-				switch c := col.(type) {
-				case *array.Uint32:
-					print(c.Value(row))
-				case *array.Uint16:
-					print(c.Value(row))
-				case *array.Int64:
-					print(c.Value(row))
-				case *array.String:
-					print(c.Value(row))
-				case *array.Float64:
-					print(c.Value(row))
-				case *array.Boolean:
-					print(c.Value(row))
-				case *array.Binary:
-					print(fmt.Sprintf("%x", c.Value(row)))
-				case *array.Dictionary:
-					switch d := c.Dictionary().(type) {
-					case *array.String:
-						print(d.Value(c.GetValueIndex(row)))
-					case *array.Binary:
-						print(fmt.Sprintf("%x", d.Value(c.GetValueIndex(row))))
-					default:
-						print("unknown dict type")
-					}
-				case *array.SparseUnion:
-					tcode := c.TypeCode(row)
-					fieldID := c.ChildID(row)
-					switch tcode {
-					case StrCode:
-						strArr := c.Field(fieldID)
-						val, err := arrowutils.StringFromArray(strArr, row)
-						if err != nil {
-							panic(err)
-						}
-						print(val)
-					case I64Code:
-						i64Arr := c.Field(fieldID)
-						val := i64Arr.(*array.Int64).Value(row)
-						print(val)
-					case F64Code:
-						f64Arr := c.Field(fieldID)
-						val := f64Arr.(*array.Float64).Value(row)
-						print(val)
-					case BoolCode:
-						boolArr := c.Field(fieldID)
-						val := boolArr.(*array.Boolean).Value(row)
-						print(val)
-					case BinaryCode:
-						binArr := c.Field(fieldID)
-						val, err := arrowutils.BinaryFromArray(binArr, row)
-						if err != nil {
-							panic(err)
-						}
-						print(fmt.Sprintf("%x", val))
-					default:
-						fmt.Print("unknown type")
-					}
-				default:
-					fmt.Print("unknown type")
-				}
-			}
-			print("\t\t")
-		}
-		print("\n")
 	}
 }

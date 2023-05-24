@@ -175,18 +175,8 @@ func (b *EventBuilder) Build() (record arrow.Record, err error) {
 		}
 	}
 
-	// ToDo Keep this code for debugging purposes.
-	//if err == nil && eventcount == 0 {
-	//	println(acommon.PayloadTypes.Event.PayloadType().String())
-	//	arrow2.PrintRecord(record)
-	//	eventcount = eventcount + 1
-	//}
-
 	return record, werror.Wrap(err)
 }
-
-// ToDo Keep this code for debugging purposes.
-//var eventcount = 0
 
 func (b *EventBuilder) TryBuild(attrsAccu *acommon.Attributes32Accumulator) (record arrow.Record, err error) {
 	if b.released {

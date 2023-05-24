@@ -54,8 +54,9 @@ type (
 		Sort(metrics []*FlattenedMetric)
 	}
 
-	MetricsByNothing                                       struct{}
-	MetricsByResourceMetricsIdScopeMetricsIdMetricTypeName struct{}
+	MetricsByNothing               struct{}
+	MetricsByResourceScopeTypeName struct{}
+	MetricsByTypeNameResourceScope struct{}
 )
 
 func NewMetricsOptimizer(sorter MetricSorter) *MetricsOptimizer {
@@ -115,11 +116,11 @@ func UnsortedMetrics() *MetricsByNothing {
 func (s *MetricsByNothing) Sort(_ []*FlattenedMetric) {
 }
 
-func SortMetricsByResourceMetricsIdScopeMetricsIdMetricTypeName() *MetricsByResourceMetricsIdScopeMetricsIdMetricTypeName {
-	return &MetricsByResourceMetricsIdScopeMetricsIdMetricTypeName{}
+func SortMetricsByResourceScopeTypeName() *MetricsByResourceScopeTypeName {
+	return &MetricsByResourceScopeTypeName{}
 }
 
-func (s *MetricsByResourceMetricsIdScopeMetricsIdMetricTypeName) Sort(metrics []*FlattenedMetric) {
+func (s *MetricsByResourceScopeTypeName) Sort(metrics []*FlattenedMetric) {
 	sort.Slice(metrics, func(i, j int) bool {
 		metricI := metrics[i]
 		metricJ := metrics[j]
@@ -136,6 +137,31 @@ func (s *MetricsByResourceMetricsIdScopeMetricsIdMetricTypeName) Sort(metrics []
 			}
 		} else {
 			return metricI.ResourceMetricsID < metricJ.ResourceMetricsID
+		}
+	})
+}
+
+func SortMetricsByTypeNameResourceScope() *MetricsByTypeNameResourceScope {
+	return &MetricsByTypeNameResourceScope{}
+}
+
+func (s *MetricsByTypeNameResourceScope) Sort(metrics []*FlattenedMetric) {
+	sort.Slice(metrics, func(i, j int) bool {
+		metricI := metrics[i]
+		metricJ := metrics[j]
+
+		if metricI.Metric.Type() == metricJ.Metric.Type() {
+			if metricI.Metric.Name() == metricJ.Metric.Name() {
+				if metricI.ResourceMetricsID == metricJ.ResourceMetricsID {
+					return metricI.ScopeMetricsID < metricJ.ScopeMetricsID
+				} else {
+					return metricI.ResourceMetricsID < metricJ.ResourceMetricsID
+				}
+			} else {
+				return metricI.Metric.Name() < metricJ.Metric.Name()
+			}
+		} else {
+			return metricI.Metric.Type() < metricJ.Metric.Type()
 		}
 	})
 }

@@ -18,7 +18,6 @@ import (
 	"github.com/apache/arrow/go/v12/arrow"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 
-	arrow2 "github.com/f5/otel-arrow-adapter/pkg/arrow"
 	carrow "github.com/f5/otel-arrow-adapter/pkg/otel/common/arrow"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/builder"
@@ -144,18 +143,8 @@ func (b *MetricsBuilder) Build() (record arrow.Record, err error) {
 		}
 	}
 
-	// ToDo Keep this code for debugging purposes.
-	if err == nil && count == 0 {
-		println("Metrics")
-		arrow2.PrintRecord(record)
-		count = count + 1
-	}
-
 	return
 }
-
-// ToDo Keep this code for debugging purposes.
-var count = 0
 
 // Append appends a new set of resource metrics to the builder.
 func (b *MetricsBuilder) Append(metrics pmetric.Metrics) error {
@@ -219,30 +208,48 @@ func (b *MetricsBuilder) Append(metrics pmetric.Metrics) error {
 			dps := metric.Metric.Gauge().DataPoints()
 			for i := 0; i < dps.Len(); i++ {
 				dp := dps.At(i)
-				switch dp.ValueType() {
-				case pmetric.NumberDataPointValueTypeInt:
-					b.relatedData.GaugeIDPBuilder().Accumulator().Append(ID, &dp)
-				case pmetric.NumberDataPointValueTypeDouble:
-					b.relatedData.GaugeDDPBuilder().Accumulator().Append(ID, &dp)
-				}
+				b.relatedData.GaugeDPBuilder().Accumulator().Append(ID, &dp)
+				//switch dp.ValueType() {
+				//case pmetric.NumberDataPointValueTypeInt:
+				//	b.relatedData.GaugeDPBuilder().Accumulator().Append(ID, &dp)
+				//case pmetric.NumberDataPointValueTypeDouble:
+				//	b.relatedData.GaugeDDPBuilder().Accumulator().Append(ID, &dp)
+				//}
 			}
 		case pmetric.MetricTypeSum:
 			sum := metric.Metric.Sum()
 			b.atb.Append(int32(sum.AggregationTemporality()))
 			b.imb.Append(sum.IsMonotonic())
+			dps := sum.DataPoints()
+			for i := 0; i < dps.Len(); i++ {
+				dp := dps.At(i)
+				b.relatedData.SumDPBuilder().Accumulator().Append(ID, &dp)
+				//switch dp.ValueType() {
+				//case pmetric.NumberDataPointValueTypeInt:
+				//	b.relatedData.SumDPBuilder().Accumulator().Append(ID, &dp)
+				//case pmetric.NumberDataPointValueTypeDouble:
+				//	b.relatedData.SumDDPBuilder().Accumulator().Append(ID, &dp)
+				//}
+			}
 		case pmetric.MetricTypeSummary:
 			b.atb.AppendNull()
 			b.imb.AppendNull()
+			dps := metric.Metric.Summary().DataPoints()
+			b.relatedData.SummaryDPBuilder().Accumulator().Append(ID, dps)
 		case pmetric.MetricTypeHistogram:
 			histogram := metric.Metric.Histogram()
 			b.atb.Append(int32(histogram.AggregationTemporality()))
 			b.imb.AppendNull()
+			dps := histogram.DataPoints()
+			b.relatedData.HistogramDPBuilder().Accumulator().Append(ID, dps)
 		case pmetric.MetricTypeExponentialHistogram:
 			exponentialHistogram := metric.Metric.ExponentialHistogram()
 			b.atb.Append(int32(exponentialHistogram.AggregationTemporality()))
 			b.imb.AppendNull()
+			dps := exponentialHistogram.DataPoints()
+			b.relatedData.EHistogramDPBuilder().Accumulator().Append(ID, dps)
 		default:
-			// ToDo should ignore unknow metric type and log.
+			// ToDo should log and ignore unknown metric types.
 		}
 	}
 	return nil

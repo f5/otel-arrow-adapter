@@ -38,10 +38,8 @@ type (
 		relatedRecordsManager *carrow.RelatedRecordsManager
 
 		attrsBuilders       *AttrsBuilders
-		sumIDPBuilder       *IntDataPointBuilder
-		sumDDPBuilder       *DoubleDataPointBuilder
-		gaugeIDPBuilder     *IntDataPointBuilder
-		gaugeDDPBuilder     *DoubleDataPointBuilder
+		sumDPBuilder        *DataPointBuilder
+		gaugeDPBuilder      *DataPointBuilder
 		summaryDPBuilder    *SummaryDataPointBuilder
 		histogramDPBuilder  *HistogramDataPointBuilder
 		ehistogramDPBuilder *EHistogramDataPointBuilder
@@ -55,13 +53,11 @@ type (
 		scope    *carrow.Attrs16Builder
 
 		// metrics attributes
-		intSum      *carrow.Attrs32Builder
-		doubleSum   *carrow.Attrs32Builder
-		summary     *carrow.Attrs32Builder
-		intGauge    *carrow.Attrs32Builder
-		doubleGauge *carrow.Attrs32Builder
-		histogram   *carrow.Attrs32Builder
-		eHistogram  *carrow.Attrs32Builder
+		sum        *carrow.Attrs32Builder
+		summary    *carrow.Attrs32Builder
+		gauge      *carrow.Attrs32Builder
+		histogram  *carrow.Attrs32Builder
+		eHistogram *carrow.Attrs32Builder
 	}
 )
 
@@ -76,43 +72,23 @@ func NewRelatedData(cfg *Config, stats *stats.ProducerStats) (*RelatedData, erro
 		return carrow.NewAttrs16BuilderWithEncoding(b, carrow.PayloadTypes.ScopeAttrs, cfg.Attrs.Scope)
 	})
 
-	sumIDPBuilder := rrManager.Declare(carrow.PayloadTypes.IntSum, carrow.PayloadTypes.Metrics, IntDataPointSchema, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
-		return NewIntDataPointBuilder(b, carrow.PayloadTypes.IntSum)
+	sumDPBuilder := rrManager.Declare(carrow.PayloadTypes.Sum, carrow.PayloadTypes.Metrics, DataPointSchema, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
+		return NewDataPointBuilder(b, carrow.PayloadTypes.Sum)
 	})
 
-	intSumAttrsBuilder := rrManager.Declare(carrow.PayloadTypes.IntSumAttrs, carrow.PayloadTypes.IntSum, carrow.DeltaEncodedAttrsSchema32, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
-		sab := carrow.NewAttrs32BuilderWithEncoding(b, carrow.PayloadTypes.IntSumAttrs, cfg.Attrs.Sum)
-		sumIDPBuilder.(*IntDataPointBuilder).SetAttributesAccumulator(sab.Accumulator())
+	sumAttrsBuilder := rrManager.Declare(carrow.PayloadTypes.SumAttrs, carrow.PayloadTypes.Sum, carrow.DeltaEncodedAttrsSchema32, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
+		sab := carrow.NewAttrs32BuilderWithEncoding(b, carrow.PayloadTypes.SumAttrs, cfg.Attrs.Sum)
+		sumDPBuilder.(*DataPointBuilder).SetAttributesAccumulator(sab.Accumulator())
 		return sab
 	})
 
-	sumDDPBuilder := rrManager.Declare(carrow.PayloadTypes.DoubleSum, carrow.PayloadTypes.Metrics, DoubleDataPointSchema, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
-		return NewDoubleDataPointBuilder(b, carrow.PayloadTypes.DoubleSum)
+	gaugeDPBuilder := rrManager.Declare(carrow.PayloadTypes.Gauge, carrow.PayloadTypes.Metrics, DataPointSchema, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
+		return NewDataPointBuilder(b, carrow.PayloadTypes.Gauge)
 	})
 
-	doubleSumAttrsBuilder := rrManager.Declare(carrow.PayloadTypes.DoubleSumAttrs, carrow.PayloadTypes.DoubleSum, carrow.DeltaEncodedAttrsSchema32, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
-		sab := carrow.NewAttrs32BuilderWithEncoding(b, carrow.PayloadTypes.DoubleSumAttrs, cfg.Attrs.Sum)
-		sumDDPBuilder.(*DoubleDataPointBuilder).SetAttributesAccumulator(sab.Accumulator())
-		return sab
-	})
-
-	gaugeIDPBuilder := rrManager.Declare(carrow.PayloadTypes.IntGauge, carrow.PayloadTypes.Metrics, IntDataPointSchema, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
-		return NewIntDataPointBuilder(b, carrow.PayloadTypes.IntGauge)
-	})
-
-	intGaugeAttrsBuilder := rrManager.Declare(carrow.PayloadTypes.IntGaugeAttrs, carrow.PayloadTypes.IntGauge, carrow.DeltaEncodedAttrsSchema32, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
-		gab := carrow.NewAttrs32BuilderWithEncoding(b, carrow.PayloadTypes.IntGaugeAttrs, cfg.Attrs.Gauge)
-		gaugeIDPBuilder.(*IntDataPointBuilder).SetAttributesAccumulator(gab.Accumulator())
-		return gab
-	})
-
-	gaugeDDPBuilder := rrManager.Declare(carrow.PayloadTypes.DoubleGauge, carrow.PayloadTypes.Metrics, DoubleDataPointSchema, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
-		return NewDoubleDataPointBuilder(b, carrow.PayloadTypes.DoubleGauge)
-	})
-
-	doubleGaugeAttrsBuilder := rrManager.Declare(carrow.PayloadTypes.DoubleGaugeAttrs, carrow.PayloadTypes.DoubleGauge, carrow.DeltaEncodedAttrsSchema32, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
-		gab := carrow.NewAttrs32BuilderWithEncoding(b, carrow.PayloadTypes.DoubleGaugeAttrs, cfg.Attrs.Gauge)
-		gaugeDDPBuilder.(*DoubleDataPointBuilder).SetAttributesAccumulator(gab.Accumulator())
+	gaugeAttrsBuilder := rrManager.Declare(carrow.PayloadTypes.GaugeAttrs, carrow.PayloadTypes.Gauge, carrow.DeltaEncodedAttrsSchema32, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
+		gab := carrow.NewAttrs32BuilderWithEncoding(b, carrow.PayloadTypes.GaugeAttrs, cfg.Attrs.Gauge)
+		gaugeDPBuilder.(*DataPointBuilder).SetAttributesAccumulator(gab.Accumulator())
 		return gab
 	})
 
@@ -149,20 +125,16 @@ func NewRelatedData(cfg *Config, stats *stats.ProducerStats) (*RelatedData, erro
 	return &RelatedData{
 		relatedRecordsManager: rrManager,
 		attrsBuilders: &AttrsBuilders{
-			resource:    resourceAttrsBuilder.(*carrow.Attrs16Builder),
-			scope:       scopeAttrsBuilder.(*carrow.Attrs16Builder),
-			intSum:      intSumAttrsBuilder.(*carrow.Attrs32Builder),
-			doubleSum:   doubleSumAttrsBuilder.(*carrow.Attrs32Builder),
-			summary:     summaryAttrsBuilder.(*carrow.Attrs32Builder),
-			intGauge:    intGaugeAttrsBuilder.(*carrow.Attrs32Builder),
-			doubleGauge: doubleGaugeAttrsBuilder.(*carrow.Attrs32Builder),
-			histogram:   histogramAttrsBuilder.(*carrow.Attrs32Builder),
-			eHistogram:  ehistogramAttrsBuilder.(*carrow.Attrs32Builder),
+			resource:   resourceAttrsBuilder.(*carrow.Attrs16Builder),
+			scope:      scopeAttrsBuilder.(*carrow.Attrs16Builder),
+			sum:        sumAttrsBuilder.(*carrow.Attrs32Builder),
+			summary:    summaryAttrsBuilder.(*carrow.Attrs32Builder),
+			gauge:      gaugeAttrsBuilder.(*carrow.Attrs32Builder),
+			histogram:  histogramAttrsBuilder.(*carrow.Attrs32Builder),
+			eHistogram: ehistogramAttrsBuilder.(*carrow.Attrs32Builder),
 		},
-		sumIDPBuilder:       sumIDPBuilder.(*IntDataPointBuilder),
-		sumDDPBuilder:       sumDDPBuilder.(*DoubleDataPointBuilder),
-		gaugeIDPBuilder:     gaugeIDPBuilder.(*IntDataPointBuilder),
-		gaugeDDPBuilder:     gaugeDDPBuilder.(*DoubleDataPointBuilder),
+		sumDPBuilder:        sumDPBuilder.(*DataPointBuilder),
+		gaugeDPBuilder:      gaugeDPBuilder.(*DataPointBuilder),
 		summaryDPBuilder:    summaryDPBuilder.(*SummaryDataPointBuilder),
 		histogramDPBuilder:  histogramDPBuilder.(*HistogramDataPointBuilder),
 		ehistogramDPBuilder: ehistogramDPBuilder.(*EHistogramDataPointBuilder),
@@ -185,20 +157,12 @@ func (r *RelatedData) AttrsBuilders() *AttrsBuilders {
 	return r.attrsBuilders
 }
 
-func (r *RelatedData) SumIDPBuilder() *IntDataPointBuilder {
-	return r.sumIDPBuilder
+func (r *RelatedData) SumDPBuilder() *DataPointBuilder {
+	return r.sumDPBuilder
 }
 
-func (r *RelatedData) SumDDPBuilder() *DoubleDataPointBuilder {
-	return r.sumDDPBuilder
-}
-
-func (r *RelatedData) GaugeIDPBuilder() *IntDataPointBuilder {
-	return r.gaugeIDPBuilder
-}
-
-func (r *RelatedData) GaugeDDPBuilder() *DoubleDataPointBuilder {
-	return r.gaugeDDPBuilder
+func (r *RelatedData) GaugeDPBuilder() *DataPointBuilder {
+	return r.gaugeDPBuilder
 }
 
 func (r *RelatedData) SummaryDPBuilder() *SummaryDataPointBuilder {
@@ -237,10 +201,8 @@ func (ab *AttrsBuilders) Release() {
 	ab.resource.Release()
 	ab.scope.Release()
 
-	ab.intSum.Release()
-	ab.intGauge.Release()
-	ab.doubleSum.Release()
-	ab.doubleGauge.Release()
+	ab.sum.Release()
+	ab.gauge.Release()
 	ab.summary.Release()
 	ab.histogram.Release()
 	ab.eHistogram.Release()
@@ -255,20 +217,18 @@ func (ab *AttrsBuilders) Scope() *carrow.Attrs16Builder {
 }
 
 func (ab *AttrsBuilders) Sum() *carrow.Attrs32Builder {
-	return ab.intSum
+	return ab.sum
 }
 
 func (ab *AttrsBuilders) Gauge() *carrow.Attrs32Builder {
-	return ab.intGauge
+	return ab.gauge
 }
 
 func (ab *AttrsBuilders) Reset() {
 	ab.resource.Accumulator().Reset()
 	ab.scope.Accumulator().Reset()
-	ab.intSum.Reset()
-	ab.intGauge.Reset()
-	ab.doubleSum.Reset()
-	ab.doubleGauge.Reset()
+	ab.sum.Reset()
+	ab.gauge.Reset()
 	ab.summary.Reset()
 	ab.histogram.Reset()
 	ab.eHistogram.Reset()
