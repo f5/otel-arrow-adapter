@@ -69,19 +69,15 @@ func UpdateScopeMetricsFrom(
 		}
 		scopeMetrics.SetSchemaUrl(schemaUrl)
 
-		sums := relatedData.SumDataPointsStore.SumMetricsByID(ID)
-		gauges := relatedData.GaugeDataPointsStore.GaugeMetricsByID(ID)
+		numberDPs := relatedData.NumberDataPointsStore.NumberDataPointsByID(ID)
 		summaries := relatedData.SummaryDataPointsStore.SummaryMetricsByID(ID)
 		histograms := relatedData.HistogramDataPointsStore.HistogramMetricsByID(ID)
 		eHistograms := relatedData.EHistogramDataPointsStore.EHistogramMetricsByID(ID)
 
 		metrics := scopeMetrics.Metrics()
-		metrics.EnsureCapacity(len(sums) + len(gauges) + len(summaries) + len(histograms) + len(eHistograms))
-		for _, sum := range sums {
+		metrics.EnsureCapacity(len(numberDPs) + len(summaries) + len(histograms) + len(eHistograms))
+		for _, sum := range numberDPs {
 			sum.MoveTo(metrics.AppendEmpty())
-		}
-		for _, gauge := range gauges {
-			gauge.MoveTo(metrics.AppendEmpty())
 		}
 		for _, sum := range summaries {
 			sum.MoveTo(metrics.AppendEmpty())
