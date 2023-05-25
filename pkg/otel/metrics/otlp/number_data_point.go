@@ -43,42 +43,19 @@ type (
 		Flags                  int
 	}
 
-	SumDataPointsStore struct {
-		nextID      uint16
-		metricByIDs map[uint16]map[string]*pmetric.Metric
-	}
-
-	GaugeDataPointsStore struct {
+	NumberDataPointsStore struct {
 		nextID      uint16
 		metricByIDs map[uint16]map[string]*pmetric.Metric
 	}
 )
 
-func NewSumDataPointsStore() *SumDataPointsStore {
-	return &SumDataPointsStore{
+func NewNumberDataPointsStore() *NumberDataPointsStore {
+	return &NumberDataPointsStore{
 		metricByIDs: make(map[uint16]map[string]*pmetric.Metric),
 	}
 }
 
-func NewGaugeDataPointsStore() *GaugeDataPointsStore {
-	return &GaugeDataPointsStore{
-		metricByIDs: make(map[uint16]map[string]*pmetric.Metric),
-	}
-}
-
-func (s *SumDataPointsStore) SumMetricsByID(ID uint16) []*pmetric.Metric {
-	sums, ok := s.metricByIDs[ID]
-	if !ok {
-		return make([]*pmetric.Metric, 0)
-	}
-	metrics := make([]*pmetric.Metric, 0, len(sums))
-	for _, metric := range sums {
-		metrics = append(metrics, metric)
-	}
-	return metrics
-}
-
-func (s *GaugeDataPointsStore) GaugeMetricsByID(ID uint16) []*pmetric.Metric {
+func (s *NumberDataPointsStore) NumberDataPointsByID(ID uint16) []*pmetric.Metric {
 	sums, ok := s.metricByIDs[ID]
 	if !ok {
 		return make([]*pmetric.Metric, 0)
@@ -167,10 +144,10 @@ func SchemaToNDPIntIDs(schema *arrow.Schema) (*NumberDataPointIntIDs, error) {
 	}, nil
 }
 
-func SumStoreFrom(record arrow.Record, attrsStore *otlp.Attributes32Store) (*SumDataPointsStore, error) {
+func NumberDataPointsStoreFrom(record arrow.Record, attrsStore *otlp.Attributes32Store) (*NumberDataPointsStore, error) {
 	defer record.Release()
 
-	store := &SumDataPointsStore{
+	store := &NumberDataPointsStore{
 		metricByIDs: make(map[uint16]map[string]*pmetric.Metric),
 	}
 
@@ -243,111 +220,6 @@ func SumStoreFrom(record arrow.Record, attrsStore *otlp.Attributes32Store) (*Sum
 			sum = metric.Sum()
 		}
 		ndp := sum.DataPoints().AppendEmpty()
-
-		startTimeUnixNano, err := arrowutils.TimestampFromRecord(record, fieldIDs.StartTimeUnixNano, row)
-		if err != nil {
-			return nil, werror.Wrap(err)
-		}
-		ndp.SetStartTimestamp(pcommon.Timestamp(startTimeUnixNano))
-
-		timeUnixNano, err := arrowutils.TimestampFromRecord(record, fieldIDs.TimeUnixNano, row)
-		if err != nil {
-			return nil, werror.Wrap(err)
-		}
-		ndp.SetTimestamp(pcommon.Timestamp(timeUnixNano))
-
-		metricValue, err := arrowutils.I64FromRecord(record, fieldIDs.MetricValue, row)
-		if err != nil {
-			return nil, werror.Wrap(err)
-		}
-		ndp.SetIntValue(metricValue)
-
-		if err := AppendExemplarsInto(ndp.Exemplars(), record, row, fieldIDs.Exemplars); err != nil {
-			return nil, werror.Wrap(err)
-		}
-
-		flags, err := arrowutils.U32FromRecord(record, fieldIDs.Flags, row)
-		if err != nil {
-			return nil, werror.Wrap(err)
-		}
-		ndp.SetFlags(pmetric.DataPointFlags(flags))
-
-		if ID != nil {
-			attrs := attrsStore.AttributesByDeltaID(*ID)
-			if attrs != nil {
-				attrs.CopyTo(ndp.Attributes())
-			}
-		}
-	}
-
-	return store, nil
-}
-
-func GaugeStoreFrom(record arrow.Record, attrsStore *otlp.Attributes32Store) (*GaugeDataPointsStore, error) {
-	defer record.Release()
-
-	store := &GaugeDataPointsStore{
-		metricByIDs: make(map[uint16]map[string]*pmetric.Metric),
-	}
-
-	fieldIDs, err := SchemaToNDPIntIDs(record.Schema())
-	if err != nil {
-		return nil, werror.Wrap(err)
-	}
-
-	count := int(record.NumRows())
-
-	for row := 0; row < count; row++ {
-		// Number Data Point ID
-		ID, err := arrowutils.NullableU32FromRecord(record, fieldIDs.ID, row)
-		if err != nil {
-			return nil, werror.Wrap(err)
-		}
-
-		// ParentID = Scope ID
-		parentID, err := arrowutils.U16FromRecord(record, fieldIDs.ParentID, row)
-		if err != nil {
-			return nil, werror.Wrap(err)
-		}
-
-		metrics := store.metricByIDs[parentID]
-		if metrics == nil {
-			metrics = make(map[string]*pmetric.Metric)
-			store.metricByIDs[parentID] = metrics
-		}
-
-		name, err := arrowutils.StringFromRecord(record, fieldIDs.Name, row)
-		if err != nil {
-			return nil, werror.Wrap(err)
-		}
-
-		description, err := arrowutils.StringFromRecord(record, fieldIDs.Description, row)
-		if err != nil {
-			return nil, werror.Wrap(err)
-		}
-
-		unit, err := arrowutils.StringFromRecord(record, fieldIDs.Unit, row)
-		if err != nil {
-			return nil, werror.Wrap(err)
-		}
-
-		metricSig := name + ":" + description + ":" + unit
-		metric := metrics[metricSig]
-		var gauge pmetric.Gauge
-
-		if metric == nil {
-			metricObj := pmetric.NewMetric()
-			metric = &metricObj
-			metric.SetName(name)
-			metric.SetDescription(description)
-			metric.SetUnit(unit)
-			gauge = metric.SetEmptyGauge()
-			metrics[metricSig] = metric
-		} else {
-			gauge = metric.Gauge()
-		}
-
-		ndp := gauge.DataPoints().AppendEmpty()
 
 		startTimeUnixNano, err := arrowutils.TimestampFromRecord(record, fieldIDs.StartTimeUnixNano, row)
 		if err != nil {

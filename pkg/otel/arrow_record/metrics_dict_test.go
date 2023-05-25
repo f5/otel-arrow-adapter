@@ -119,7 +119,7 @@ func TestMetricsMultiBatchWithDictionaryIndexChanges(t *testing.T) {
 		)
 	}
 
-	builder := producer.MetricsBuilder().RelatedData().RecordBuilderExt(arrow.PayloadTypes.Gauge)
+	builder := producer.MetricsBuilder().RelatedData().RecordBuilderExt(arrow.PayloadTypes.NumberDataPoints)
 	dictionariesIndexTypeChanged := builder.Events().DictionariesIndexTypeChanged
 	require.Equal(t, 2, len(dictionariesIndexTypeChanged))
 	require.Equal(t, "uint16", dictionariesIndexTypeChanged["name"])
@@ -171,7 +171,7 @@ func TestMetricsMultiBatchWithDictionaryOverflow(t *testing.T) {
 		)
 	}
 
-	builder := producer.MetricsBuilder().RelatedData().RecordBuilderExt(arrow.PayloadTypes.Gauge)
+	builder := producer.MetricsBuilder().RelatedData().RecordBuilderExt(arrow.PayloadTypes.NumberDataPoints)
 	dictionariesIndexTypeChanged := builder.Events().DictionariesIndexTypeChanged
 	require.Equal(t, 2, len(dictionariesIndexTypeChanged))
 	require.Equal(t, "uint16", dictionariesIndexTypeChanged["name"])
@@ -222,7 +222,7 @@ func TestMetricsMultiBatchWithDictionaryLimit(t *testing.T) {
 		)
 	}
 
-	builder := producer.MetricsBuilder().RelatedData().RecordBuilderExt(arrow.PayloadTypes.Gauge)
+	builder := producer.MetricsBuilder().RelatedData().RecordBuilderExt(arrow.PayloadTypes.NumberDataPoints)
 	dictionaryWithOverflow := builder.Events().DictionariesWithOverflow
 	require.Equal(t, 2, len(dictionaryWithOverflow))
 	require.Equal(t, true, dictionaryWithOverflow["name"])

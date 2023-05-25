@@ -208,13 +208,7 @@ func (b *MetricsBuilder) Append(metrics pmetric.Metrics) error {
 			dps := metric.Metric.Gauge().DataPoints()
 			for i := 0; i < dps.Len(); i++ {
 				dp := dps.At(i)
-				b.relatedData.GaugeDPBuilder().Accumulator().Append(ID, &dp)
-				//switch dp.ValueType() {
-				//case pmetric.NumberDataPointValueTypeInt:
-				//	b.relatedData.GaugeDPBuilder().Accumulator().Append(ID, &dp)
-				//case pmetric.NumberDataPointValueTypeDouble:
-				//	b.relatedData.GaugeDDPBuilder().Accumulator().Append(ID, &dp)
-				//}
+				b.relatedData.NumberDPBuilder().Accumulator().Append(ID, &dp)
 			}
 		case pmetric.MetricTypeSum:
 			sum := metric.Metric.Sum()
@@ -223,13 +217,7 @@ func (b *MetricsBuilder) Append(metrics pmetric.Metrics) error {
 			dps := sum.DataPoints()
 			for i := 0; i < dps.Len(); i++ {
 				dp := dps.At(i)
-				b.relatedData.SumDPBuilder().Accumulator().Append(ID, &dp)
-				//switch dp.ValueType() {
-				//case pmetric.NumberDataPointValueTypeInt:
-				//	b.relatedData.SumDPBuilder().Accumulator().Append(ID, &dp)
-				//case pmetric.NumberDataPointValueTypeDouble:
-				//	b.relatedData.SumDDPBuilder().Accumulator().Append(ID, &dp)
-				//}
+				b.relatedData.NumberDPBuilder().Accumulator().Append(ID, &dp)
 			}
 		case pmetric.MetricTypeSummary:
 			b.atb.AppendNull()

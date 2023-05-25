@@ -41,8 +41,7 @@ type (
 		ExpHistogramAttrsStore *otlp.Attributes32Store
 
 		// Metric stores
-		SumDataPointsStore        *SumDataPointsStore
-		GaugeDataPointsStore      *GaugeDataPointsStore
+		NumberDataPointsStore     *NumberDataPointsStore
 		SummaryDataPointsStore    *SummaryDataPointsStore
 		HistogramDataPointsStore  *HistogramDataPointsStore
 		EHistogramDataPointsStore *EHistogramDataPointsStore
@@ -61,8 +60,7 @@ func NewRelatedData() *RelatedData {
 		HistogramAttrsStore:    otlp.NewAttributes32Store(),
 		ExpHistogramAttrsStore: otlp.NewAttributes32Store(),
 
-		SumDataPointsStore:        NewSumDataPointsStore(),
-		GaugeDataPointsStore:      NewGaugeDataPointsStore(),
+		NumberDataPointsStore:     NewNumberDataPointsStore(),
 		SummaryDataPointsStore:    NewSummaryDataPointsStore(),
 		HistogramDataPointsStore:  NewHistogramDataPointsStore(),
 		EHistogramDataPointsStore: NewEHistogramDataPointsStore(),
@@ -75,8 +73,7 @@ func (r *RelatedData) MetricIDFromDelta(delta uint16) uint16 {
 }
 
 func RelatedDataFrom(records []*record_message.RecordMessage) (relatedData *RelatedData, metricsRecord *record_message.RecordMessage, err error) {
-	var sumDPRec *record_message.RecordMessage
-	var gaugeDPRec *record_message.RecordMessage
+	var numberDPRec *record_message.RecordMessage
 	var summaryDPRec *record_message.RecordMessage
 	var histogramDPRec *record_message.RecordMessage
 	var expHistogramDPRec *record_message.RecordMessage
@@ -95,52 +92,42 @@ func RelatedDataFrom(records []*record_message.RecordMessage) (relatedData *Rela
 			if err != nil {
 				return nil, nil, werror.Wrap(err)
 			}
-		case colarspb.OtlpArrowPayloadType_SUM_ATTRS:
+		case colarspb.OtlpArrowPayloadType_NUMBER_DP_ATTRS:
 			err = otlp.Attributes32StoreFrom(record.Record(), relatedData.SumAttrsStore)
 			if err != nil {
 				return nil, nil, werror.Wrap(err)
 			}
-		case colarspb.OtlpArrowPayloadType_GAUGE_ATTRS:
-			err = otlp.Attributes32StoreFrom(record.Record(), relatedData.GaugeAttrsStore)
-			if err != nil {
-				return nil, nil, werror.Wrap(err)
-			}
-		case colarspb.OtlpArrowPayloadType_SUMMARY_ATTRS:
+		case colarspb.OtlpArrowPayloadType_SUMMARY_DP_ATTRS:
 			err = otlp.Attributes32StoreFrom(record.Record(), relatedData.SummaryAttrsStore)
 			if err != nil {
 				return nil, nil, werror.Wrap(err)
 			}
-		case colarspb.OtlpArrowPayloadType_HISTOGRAM_ATTRS:
+		case colarspb.OtlpArrowPayloadType_HISTOGRAM_DP_ATTRS:
 			err = otlp.Attributes32StoreFrom(record.Record(), relatedData.HistogramAttrsStore)
 			if err != nil {
 				return nil, nil, werror.Wrap(err)
 			}
-		case colarspb.OtlpArrowPayloadType_EXP_HISTOGRAM_ATTRS:
+		case colarspb.OtlpArrowPayloadType_EXP_HISTOGRAM_DP_ATTRS:
 			err = otlp.Attributes32StoreFrom(record.Record(), relatedData.ExpHistogramAttrsStore)
 			if err != nil {
 				return nil, nil, werror.Wrap(err)
 			}
-		case colarspb.OtlpArrowPayloadType_SUM:
-			if sumDPRec != nil {
+		case colarspb.OtlpArrowPayloadType_NUMBER_DATA_POINTS:
+			if numberDPRec != nil {
 				return nil, nil, werror.Wrap(otel.ErrDuplicatePayloadType)
 			}
-			sumDPRec = record
-		case colarspb.OtlpArrowPayloadType_GAUGE:
-			if gaugeDPRec != nil {
-				return nil, nil, werror.Wrap(otel.ErrDuplicatePayloadType)
-			}
-			gaugeDPRec = record
-		case colarspb.OtlpArrowPayloadType_SUMMARIES:
+			numberDPRec = record
+		case colarspb.OtlpArrowPayloadType_SUMMARY_DATA_POINTS:
 			if summaryDPRec != nil {
 				return nil, nil, werror.Wrap(otel.ErrDuplicatePayloadType)
 			}
 			summaryDPRec = record
-		case colarspb.OtlpArrowPayloadType_HISTOGRAMS:
+		case colarspb.OtlpArrowPayloadType_HISTOGRAM_DATA_POINTS:
 			if histogramDPRec != nil {
 				return nil, nil, werror.Wrap(otel.ErrDuplicatePayloadType)
 			}
 			histogramDPRec = record
-		case colarspb.OtlpArrowPayloadType_EXP_HISTOGRAMS:
+		case colarspb.OtlpArrowPayloadType_EXP_HISTOGRAM_DATA_POINTS:
 			if expHistogramDPRec != nil {
 				return nil, nil, werror.Wrap(otel.ErrDuplicatePayloadType)
 			}
@@ -155,15 +142,8 @@ func RelatedDataFrom(records []*record_message.RecordMessage) (relatedData *Rela
 		}
 	}
 
-	if sumDPRec != nil {
-		relatedData.SumDataPointsStore, err = SumStoreFrom(sumDPRec.Record(), relatedData.SumAttrsStore)
-		if err != nil {
-			return nil, nil, werror.Wrap(err)
-		}
-	}
-
-	if gaugeDPRec != nil {
-		relatedData.GaugeDataPointsStore, err = GaugeStoreFrom(gaugeDPRec.Record(), relatedData.GaugeAttrsStore)
+	if numberDPRec != nil {
+		relatedData.NumberDataPointsStore, err = NumberDataPointsStoreFrom(numberDPRec.Record(), relatedData.SumAttrsStore)
 		if err != nil {
 			return nil, nil, werror.Wrap(err)
 		}

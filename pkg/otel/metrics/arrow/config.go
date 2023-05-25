@@ -41,13 +41,12 @@ type (
 	}
 
 	AttrsConfig struct {
-		Resource     *arrow.Attrs16Config
-		Scope        *arrow.Attrs16Config
-		Sum          *arrow.Attrs32Config
-		Gauge        *arrow.Attrs32Config
-		Summary      *arrow.Attrs32Config
-		Histogram    *arrow.Attrs32Config
-		ExpHistogram *arrow.Attrs32Config
+		Resource        *arrow.Attrs16Config
+		Scope           *arrow.Attrs16Config
+		NumberDataPoint *arrow.Attrs32Config
+		Summary         *arrow.Attrs32Config
+		Histogram       *arrow.Attrs32Config
+		ExpHistogram    *arrow.Attrs32Config
 	}
 
 	MetricConfig struct {
@@ -95,11 +94,7 @@ func NewConfig(globalConf *cfg.Config) *Config {
 				Sorter:           arrow.SortAttrs16ByKeyValueParentId(),
 				ParentIdEncoding: arrow.ParentIdDeltaGroupEncoding,
 			},
-			Sum: &arrow.Attrs32Config{
-				Sorter:           arrow.SortAttrs32ByKeyValueParentId(),
-				ParentIdEncoding: arrow.ParentIdDeltaGroupEncoding,
-			},
-			Gauge: &arrow.Attrs32Config{
+			NumberDataPoint: &arrow.Attrs32Config{
 				Sorter:           arrow.SortAttrs32ByKeyValueParentId(),
 				ParentIdEncoding: arrow.ParentIdDeltaGroupEncoding,
 			},

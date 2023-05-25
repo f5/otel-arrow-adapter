@@ -70,25 +70,29 @@ type (
 		Logs    *PayloadType
 		Spans   *PayloadType
 
-		ResourceAttrs     *PayloadType
-		ScopeAttrs        *PayloadType
-		Metric            *PayloadType
-		Gauge             *PayloadType
-		GaugeAttrs        *PayloadType
-		Sum               *PayloadType
-		SumAttrs          *PayloadType
-		Summary           *PayloadType
-		SummaryAttrs      *PayloadType
-		Histogram         *PayloadType
-		HistogramAttrs    *PayloadType
-		ExpHistogram      *PayloadType
-		ExpHistogramAttrs *PayloadType
-		LogRecordAttrs    *PayloadType
-		SpanAttrs         *PayloadType
-		Event             *PayloadType
-		EventAttrs        *PayloadType
-		Link              *PayloadType
-		LinkAttrs         *PayloadType
+		ResourceAttrs                *PayloadType
+		ScopeAttrs                   *PayloadType
+		Metric                       *PayloadType
+		NumberDataPoints             *PayloadType
+		NumberDataPointAttrs         *PayloadType
+		NumberDataPointExemplars     *PayloadType
+		NumberDataPointExemplarAttrs *PayloadType
+		Summary                      *PayloadType
+		SummaryAttrs                 *PayloadType
+		Histogram                    *PayloadType
+		HistogramAttrs               *PayloadType
+		HistogramExemplars           *PayloadType
+		HistogramExemplarAttrs       *PayloadType
+		ExpHistogram                 *PayloadType
+		ExpHistogramAttrs            *PayloadType
+		ExpHistogramExemplars        *PayloadType
+		ExpHistogramExemplarAttrs    *PayloadType
+		LogRecordAttrs               *PayloadType
+		SpanAttrs                    *PayloadType
+		Event                        *PayloadType
+		EventAttrs                   *PayloadType
+		Link                         *PayloadType
+		LinkAttrs                    *PayloadType
 	}
 
 	SchemaWithPayload struct {
@@ -123,45 +127,61 @@ var (
 			prefix:      "scope-attrs",
 			payloadType: colarspb.OtlpArrowPayloadType_SCOPE_ATTRS,
 		},
-		Gauge: &PayloadType{
-			prefix:      "int_gauge",
-			payloadType: colarspb.OtlpArrowPayloadType_GAUGE,
+		NumberDataPoints: &PayloadType{
+			prefix:      "number-dps",
+			payloadType: colarspb.OtlpArrowPayloadType_NUMBER_DATA_POINTS,
 		},
-		GaugeAttrs: &PayloadType{
-			prefix:      "int_gauge-attrs",
-			payloadType: colarspb.OtlpArrowPayloadType_GAUGE_ATTRS,
+		NumberDataPointAttrs: &PayloadType{
+			prefix:      "number-dp-attrs",
+			payloadType: colarspb.OtlpArrowPayloadType_NUMBER_DP_ATTRS,
 		},
-		Sum: &PayloadType{
-			prefix:      "int_sum",
-			payloadType: colarspb.OtlpArrowPayloadType_SUM,
+		NumberDataPointExemplars: &PayloadType{
+			prefix:      "number-dp-exemplars",
+			payloadType: colarspb.OtlpArrowPayloadType_NUMBER_DP_EXEMPLARS,
 		},
-		SumAttrs: &PayloadType{
-			prefix:      "int_sum-attrs",
-			payloadType: colarspb.OtlpArrowPayloadType_SUM_ATTRS,
+		NumberDataPointExemplarAttrs: &PayloadType{
+			prefix:      "number-dp-exemplar-attrs",
+			payloadType: colarspb.OtlpArrowPayloadType_NUMBER_DP_EXEMPLAR_ATTRS,
 		},
 		Summary: &PayloadType{
-			prefix:      "summary",
-			payloadType: colarspb.OtlpArrowPayloadType_SUMMARIES,
+			prefix:      "summary-dps",
+			payloadType: colarspb.OtlpArrowPayloadType_SUMMARY_DATA_POINTS,
 		},
 		SummaryAttrs: &PayloadType{
-			prefix:      "summary-attrs",
-			payloadType: colarspb.OtlpArrowPayloadType_SUMMARY_ATTRS,
+			prefix:      "summary-dp-attrs",
+			payloadType: colarspb.OtlpArrowPayloadType_SUMMARY_DP_ATTRS,
 		},
 		Histogram: &PayloadType{
-			prefix:      "histogram",
-			payloadType: colarspb.OtlpArrowPayloadType_HISTOGRAMS,
+			prefix:      "histogram-dps",
+			payloadType: colarspb.OtlpArrowPayloadType_HISTOGRAM_DATA_POINTS,
 		},
 		HistogramAttrs: &PayloadType{
-			prefix:      "histogram-attrs",
-			payloadType: colarspb.OtlpArrowPayloadType_HISTOGRAM_ATTRS,
+			prefix:      "histogram-dp-attrs",
+			payloadType: colarspb.OtlpArrowPayloadType_HISTOGRAM_DP_ATTRS,
+		},
+		HistogramExemplars: &PayloadType{
+			prefix:      "histogram-dp-exemplars",
+			payloadType: colarspb.OtlpArrowPayloadType_HISTOGRAM_DP_EXEMPLARS,
+		},
+		HistogramExemplarAttrs: &PayloadType{
+			prefix:      "histogram-dp-exemplar-attrs",
+			payloadType: colarspb.OtlpArrowPayloadType_HISTOGRAM_DP_EXEMPLAR_ATTRS,
 		},
 		ExpHistogram: &PayloadType{
-			prefix:      "exp-histogram",
-			payloadType: colarspb.OtlpArrowPayloadType_EXP_HISTOGRAMS,
+			prefix:      "exp-histogram-dps",
+			payloadType: colarspb.OtlpArrowPayloadType_EXP_HISTOGRAM_DATA_POINTS,
 		},
 		ExpHistogramAttrs: &PayloadType{
-			prefix:      "exp-histogram-attrs",
-			payloadType: colarspb.OtlpArrowPayloadType_EXP_HISTOGRAM_ATTRS,
+			prefix:      "exp-histogram-dp-attrs",
+			payloadType: colarspb.OtlpArrowPayloadType_EXP_HISTOGRAM_DP_ATTRS,
+		},
+		ExpHistogramExemplars: &PayloadType{
+			prefix:      "exp-histogram-dp-exemplars",
+			payloadType: colarspb.OtlpArrowPayloadType_EXP_HISTOGRAM_DP_EXEMPLARS,
+		},
+		ExpHistogramExemplarAttrs: &PayloadType{
+			prefix:      "exp-histogram-dp-exemplar-attrs",
+			payloadType: colarspb.OtlpArrowPayloadType_EXP_HISTOGRAM_DP_EXEMPLAR_ATTRS,
 		},
 		LogRecordAttrs: &PayloadType{
 			prefix:      "logs-attrs",

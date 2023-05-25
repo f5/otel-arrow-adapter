@@ -23,7 +23,6 @@ import (
 
 	"github.com/apache/arrow/go/v12/arrow"
 
-	"github.com/f5/otel-arrow-adapter/pkg/config"
 	carrow "github.com/f5/otel-arrow-adapter/pkg/otel/common/arrow"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema"
 	logsarrow "github.com/f5/otel-arrow-adapter/pkg/otel/logs/arrow"
@@ -31,8 +30,6 @@ import (
 	"github.com/f5/otel-arrow-adapter/pkg/otel/stats"
 	traces "github.com/f5/otel-arrow-adapter/pkg/otel/traces/arrow"
 )
-
-var Conf = config.DefaultConfig()
 
 type (
 	Domains struct {
@@ -80,7 +77,7 @@ func main() {
 
 func VisitMetricsDataModel(domain *Domain) {
 	mainSchema := metrics.MetricsSchema
-	relatedData, err := metrics.NewRelatedData(Conf, stats.NewProducerStats())
+	relatedData, err := metrics.NewRelatedData(metrics.DefaultConfig(), stats.NewProducerStats())
 	if err != nil {
 		panic(err)
 	}
