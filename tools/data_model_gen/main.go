@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"text/template"
 
 	"github.com/apache/arrow/go/v12/arrow"
 
@@ -30,6 +31,12 @@ import (
 	metrics "github.com/f5/otel-arrow-adapter/pkg/otel/metrics/arrow"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/stats"
 	traces "github.com/f5/otel-arrow-adapter/pkg/otel/traces/arrow"
+)
+
+const (
+	Metrics = "Metrics"
+	Logs    = "Logs"
+	Traces  = "Traces"
 )
 
 type (
@@ -64,25 +71,33 @@ type (
 		fk       bool
 		comments []string
 	}
+
+	DataModel struct {
+		Metrics string
+		Logs    string
+		Traces  string
+	}
 )
 
 func main() {
 	domains := NewDomains()
 
-	VisitMetricsDataModel(domains.Domain("Metrics"))
-	VisitLogsDataModel(domains.Domain("Logs"))
-	VisitTracesDataModel(domains.Domain("Traces"))
+	VisitMetricsDataModel(domains.Domain(Metrics))
+	VisitLogsDataModel(domains.Domain(Logs))
+	VisitTracesDataModel(domains.Domain(Traces))
 
-	md := domains.ToMarkdown()
+	tmpl := template.Must(template.ParseFiles("tools/data_model_gen/data_model.tmpl"))
 
 	// Write the content of generated Markdown to the `docs/data_model.md` file
 	f, err := os.Create("docs/data_model.md")
-	if err != nil {
-		panic(err)
-	}
-	defer f.Close()
+	check(err)
+	defer func() { check(f.Close()) }()
 
-	_, err = f.WriteString(md)
+	err = tmpl.Execute(f, domains.ToDataModel())
+	check(err)
+}
+
+func check(err error) {
 	if err != nil {
 		panic(err)
 	}
@@ -256,6 +271,12 @@ func NewDomains() *Domains {
 }
 
 func (d *Domains) Domain(name string) *Domain {
+	for _, domain := range d.domains {
+		if domain.name == name {
+			return domain
+		}
+	}
+
 	d.domains = append(d.domains, &Domain{
 		name:    name,
 		records: make(map[string]*Record),
@@ -264,22 +285,12 @@ func (d *Domains) Domain(name string) *Domain {
 	return d.domains[len(d.domains)-1]
 }
 
-func (d *Domains) ToMarkdown() string {
-	md := "\n# Arrow Data Model\n\n"
-
-	md += "This document describes the Arrow Schema used for each OTLP entity as Entity Relation diagrams.\n\n"
-	md += "The Arrow Data Model has been carefully designed to optimize:\n"
-	md += "- The compression ratio for metrics, logs, and traces,\n"
-	md += "- Its compatibility within the extensive Arrow ecosystem,\n"
-	md += "- Its compatibility with file formats, such as Parquet.\n\n"
-
-	md += "This document has been generated directly from the source code. To regenerate this document, run the following command:\n\n"
-	md += "```bash\nmake doc\n```\n\n"
-
-	for _, domain := range d.domains {
-		md += domain.ToMarkdown()
+func (d *Domains) ToDataModel() DataModel {
+	return DataModel{
+		Metrics: d.Domain(Metrics).ToMarkdown(),
+		Logs:    d.Domain(Logs).ToMarkdown(),
+		Traces:  d.Domain(Traces).ToMarkdown(),
 	}
-	return md
 }
 
 func (d *Domain) RecordByPayloadType(payloadType *carrow.PayloadType) *Record {
@@ -320,9 +331,7 @@ func (d *Domain) OneToManyRelation(from *carrow.PayloadType, to *carrow.PayloadT
 }
 
 func (d *Domain) ToMarkdown() string {
-	md := "## " + d.name + " Arrow Records\n\n"
-
-	md += "```mermaid\n"
+	md := "```mermaid\n"
 	md += "erDiagram\n"
 
 	for _, relation := range d.relations {
@@ -333,7 +342,7 @@ func (d *Domain) ToMarkdown() string {
 		md += record.ToMermaid("    ")
 	}
 
-	md += "```\n\n"
+	md += "```"
 
 	return md
 }

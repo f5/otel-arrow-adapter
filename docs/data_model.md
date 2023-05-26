@@ -1,4 +1,3 @@
-
 # Arrow Data Model
 
 This document describes the Arrow Schema used for each OTLP entity as Entity Relation diagrams.
@@ -15,6 +14,8 @@ make doc
 ```
 
 ## Metrics Arrow Records
+
+The following ER diagram describes the Arrow Schema used for metrics.
 
 ```mermaid
 erDiagram
@@ -35,7 +36,7 @@ erDiagram
     EXP_HISTOGRAM_DATA_POINTS ||--o{ EXP_HISTOGRAM_DP_ATTRS : exp-histogram-dp-attrs
     EXP_HISTOGRAM_DATA_POINTS ||--o{ EXP_HISTOGRAM_DP_EXEMPLARS : exp-histogram-dp-exemplars
     EXP_HISTOGRAM_DP_EXEMPLARS ||--o{ EXP_HISTOGRAM_DP_EXEMPLAR_ATTRS : exp-histogram-dp-exemplar-attrs
-    RESOURCE_ATTRS{
+    SCOPE_ATTRS{
         parent_id u16 
         key string 
         type u8 
@@ -46,27 +47,16 @@ erDiagram
         bytes bytes "optional"
         ser bytes "optional"
     }
-    SUMMARY_DATA_POINTS{
-        id u32 "optional"
+    NUMBER_DATA_POINTS{
+        id u32 
         parent_id u16 
-        start_time_unix_nano timestamp "optional"
-        time_unix_nano timestamp "optional"
-        count u64 "optional"
-        sum f64 "optional"
+        start_time_unix_nano timestamp 
+        time_unix_nano timestamp 
+        int_value i64 
+        double_value f64 
         flags u32 "optional"
     }
-    SUMMARY_DP_ATTRS{
-        parent_id u32 
-        key string 
-        type u8 
-        str string 
-        int i64 "optional"
-        double f64 "optional"
-        bool bool "optional"
-        bytes bytes "optional"
-        ser bytes "optional"
-    }
-    EXP_HISTOGRAM_DP_EXEMPLARS{
+    NUMBER_DP_EXEMPLARS{
         id u32 "optional"
         parent_id u32 
         time_unix_nano timestamp "optional"
@@ -75,7 +65,53 @@ erDiagram
         span_id bytes[8] "optional"
         trace_id bytes[16] "optional"
     }
-    SCOPE_ATTRS{
+    NUMBER_DP_EXEMPLAR_ATTRS{
+        parent_id u32 
+        key string 
+        type u8 
+        str string 
+        int i64 "optional"
+        double f64 "optional"
+        bool bool "optional"
+        bytes bytes "optional"
+        ser bytes "optional"
+    }
+    HISTOGRAM_DATA_POINTS{
+        id u32 "optional"
+        parent_id u16 
+        start_time_unix_nano timestamp "optional"
+        time_unix_nano timestamp "optional"
+        count u64 "optional"
+        sum f64 "optional"
+        bucket_counts u64 "optional"
+        explicit_bounds f64 "optional"
+        flags u32 "optional"
+        min f64 "optional"
+        max f64 "optional"
+    }
+    EXP_HISTOGRAM_DP_ATTRS{
+        parent_id u32 
+        key string 
+        type u8 
+        str string 
+        int i64 "optional"
+        double f64 "optional"
+        bool bool "optional"
+        bytes bytes "optional"
+        ser bytes "optional"
+    }
+    EXP_HISTOGRAM_DP_EXEMPLAR_ATTRS{
+        parent_id u32 
+        key string 
+        type u8 
+        str string 
+        int i64 "optional"
+        double f64 "optional"
+        bool bool "optional"
+        bytes bytes "optional"
+        ser bytes "optional"
+    }
+    RESOURCE_ATTRS{
         parent_id u16 
         key string 
         type u8 
@@ -97,35 +133,20 @@ erDiagram
         bytes bytes "optional"
         ser bytes "optional"
     }
-    quantile{
-        quantile f64 "optional"
-        value f64 "optional"
-    }
-    HISTOGRAM_DATA_POINTS{
+    SUMMARY_DATA_POINTS{
         id u32 "optional"
         parent_id u16 
         start_time_unix_nano timestamp "optional"
         time_unix_nano timestamp "optional"
         count u64 "optional"
         sum f64 "optional"
-        bucket_counts u64 "optional"
-        explicit_bounds f64 "optional"
         flags u32 "optional"
-        min f64 "optional"
-        max f64 "optional"
     }
-    HISTOGRAM_DP_ATTRS{
-        parent_id u32 
-        key string 
-        type u8 
-        str string 
-        int i64 "optional"
-        double f64 "optional"
-        bool bool "optional"
-        bytes bytes "optional"
-        ser bytes "optional"
+    quantile{
+        quantile f64 "optional"
+        value f64 "optional"
     }
-    EXP_HISTOGRAM_DP_EXEMPLAR_ATTRS{
+    SUMMARY_DP_ATTRS{
         parent_id u32 
         key string 
         type u8 
@@ -153,14 +174,16 @@ erDiagram
         aggregation_temporality i32 "optional"
         is_monotonic bool "optional"
     }
-    NUMBER_DATA_POINTS{
-        id u32 
-        parent_id u16 
-        start_time_unix_nano timestamp 
-        time_unix_nano timestamp 
-        int_value i64 
-        double_value f64 
-        flags u32 "optional"
+    HISTOGRAM_DP_ATTRS{
+        parent_id u32 
+        key string 
+        type u8 
+        str string 
+        int i64 "optional"
+        double f64 "optional"
+        bool bool "optional"
+        bytes bytes "optional"
+        ser bytes "optional"
     }
     HISTOGRAM_DP_EXEMPLARS{
         id u32 "optional"
@@ -199,7 +222,7 @@ erDiagram
         min f64 "optional"
         max f64 "optional"
     }
-    NUMBER_DP_EXEMPLARS{
+    EXP_HISTOGRAM_DP_EXEMPLARS{
         id u32 "optional"
         parent_id u32 
         time_unix_nano timestamp "optional"
@@ -208,48 +231,17 @@ erDiagram
         span_id bytes[8] "optional"
         trace_id bytes[16] "optional"
     }
-    NUMBER_DP_EXEMPLAR_ATTRS{
-        parent_id u32 
-        key string 
-        type u8 
-        str string 
-        int i64 "optional"
-        double f64 "optional"
-        bool bool "optional"
-        bytes bytes "optional"
-        ser bytes "optional"
-    }
-    EXP_HISTOGRAM_DP_ATTRS{
-        parent_id u32 
-        key string 
-        type u8 
-        str string 
-        int i64 "optional"
-        double f64 "optional"
-        bool bool "optional"
-        bytes bytes "optional"
-        ser bytes "optional"
-    }
 ```
 
 ## Logs Arrow Records
+
+The following ER diagram describes the Arrow Schema used for logs.
 
 ```mermaid
 erDiagram
     LOGS ||--o{ RESOURCE_ATTRS : resource-attrs
     LOGS ||--o{ SCOPE_ATTRS : scope-attrs
     LOGS ||--o{ LOG_ATTRS : logs-attrs
-    LOG_ATTRS{
-        parent_id u16 
-        key string 
-        type u8 
-        str string 
-        int i64 "optional"
-        double f64 "optional"
-        bool bool "optional"
-        bytes bytes "optional"
-        ser bytes "optional"
-    }
     LOGS{
         id u16 "optional"
         resource_id u16 "optional"
@@ -298,9 +290,22 @@ erDiagram
         bytes bytes "optional"
         ser bytes "optional"
     }
+    LOG_ATTRS{
+        parent_id u16 
+        key string 
+        type u8 
+        str string 
+        int i64 "optional"
+        double f64 "optional"
+        bool bool "optional"
+        bytes bytes "optional"
+        ser bytes "optional"
+    }
 ```
 
 ## Traces Arrow Records
+
+The following ER diagram describes the Arrow Schema used for traces.
 
 ```mermaid
 erDiagram
@@ -311,17 +316,6 @@ erDiagram
     SPANS ||--o{ SPAN_LINKS : span-link
     SPAN_EVENTS ||--o{ SPAN_EVENT_ATTRS : span-event-attrs
     SPAN_LINKS ||--o{ SPAN_LINK_ATTRS : span-link-attrs
-    SPAN_LINK_ATTRS{
-        parent_id u32 
-        key string 
-        type u8 
-        str string 
-        int i64 "optional"
-        double f64 "optional"
-        bool bool "optional"
-        bytes bytes "optional"
-        ser bytes "optional"
-    }
     SPANS{
         id u16 "optional"
         resource_id u16 "optional"
@@ -405,5 +399,15 @@ erDiagram
         bytes bytes "optional"
         ser bytes "optional"
     }
+    SPAN_LINK_ATTRS{
+        parent_id u32 
+        key string 
+        type u8 
+        str string 
+        int i64 "optional"
+        double f64 "optional"
+        bool bool "optional"
+        bytes bytes "optional"
+        ser bytes "optional"
+    }
 ```
-
