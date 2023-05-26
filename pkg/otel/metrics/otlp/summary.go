@@ -29,9 +29,6 @@ type (
 	SummaryDataPointIDs struct {
 		ID                int
 		ParentID          int
-		Name              int
-		Description       int
-		Unit              int
 		StartTimeUnixNano int
 		TimeUnixNano      int
 		Count             int
@@ -41,27 +38,23 @@ type (
 	}
 
 	SummaryDataPointsStore struct {
-		nextID      uint16
-		metricByIDs map[uint16]map[string]*pmetric.Metric
+		nextID         uint16
+		dataPointsByID map[uint16]pmetric.SummaryDataPointSlice
 	}
 )
 
 func NewSummaryDataPointsStore() *SummaryDataPointsStore {
 	return &SummaryDataPointsStore{
-		metricByIDs: make(map[uint16]map[string]*pmetric.Metric),
+		dataPointsByID: make(map[uint16]pmetric.SummaryDataPointSlice),
 	}
 }
 
-func (s *SummaryDataPointsStore) SummaryMetricsByID(ID uint16) []*pmetric.Metric {
-	summaries, ok := s.metricByIDs[ID]
+func (s *SummaryDataPointsStore) SummaryMetricsByID(ID uint16) pmetric.SummaryDataPointSlice {
+	nbdps, ok := s.dataPointsByID[ID]
 	if !ok {
-		return make([]*pmetric.Metric, 0)
+		return pmetric.NewSummaryDataPointSlice()
 	}
-	metrics := make([]*pmetric.Metric, 0, len(summaries))
-	for _, metric := range summaries {
-		metrics = append(metrics, metric)
-	}
-	return metrics
+	return nbdps
 }
 
 func SchemaToSummaryIDs(schema *arrow.Schema) (*SummaryDataPointIDs, error) {
@@ -71,21 +64,6 @@ func SchemaToSummaryIDs(schema *arrow.Schema) (*SummaryDataPointIDs, error) {
 	}
 
 	parentID, err := arrowutils.FieldIDFromSchema(schema, constants.ParentID)
-	if err != nil {
-		return nil, werror.Wrap(err)
-	}
-
-	name, err := arrowutils.FieldIDFromSchema(schema, constants.Name)
-	if err != nil {
-		return nil, werror.Wrap(err)
-	}
-
-	description, err := arrowutils.FieldIDFromSchema(schema, constants.Description)
-	if err != nil {
-		return nil, werror.Wrap(err)
-	}
-
-	unit, err := arrowutils.FieldIDFromSchema(schema, constants.Unit)
 	if err != nil {
 		return nil, werror.Wrap(err)
 	}
@@ -123,9 +101,6 @@ func SchemaToSummaryIDs(schema *arrow.Schema) (*SummaryDataPointIDs, error) {
 	return &SummaryDataPointIDs{
 		ID:                ID,
 		ParentID:          parentID,
-		Name:              name,
-		Description:       description,
-		Unit:              unit,
 		StartTimeUnixNano: startTimeUnixNano,
 		TimeUnixNano:      timeUnixNano,
 		Count:             count,
@@ -139,7 +114,7 @@ func SummaryDataPointsStoreFrom(record arrow.Record, attrsStore *otlp.Attributes
 	defer record.Release()
 
 	store := &SummaryDataPointsStore{
-		metricByIDs: make(map[uint16]map[string]*pmetric.Metric),
+		dataPointsByID: make(map[uint16]pmetric.SummaryDataPointSlice),
 	}
 
 	fieldIDs, err := SchemaToSummaryIDs(record.Schema())
@@ -148,6 +123,7 @@ func SummaryDataPointsStoreFrom(record arrow.Record, attrsStore *otlp.Attributes
 	}
 
 	count := int(record.NumRows())
+	prevParentID := uint16(0)
 
 	for row := 0; row < count; row++ {
 		// Number Data Point ID
@@ -157,48 +133,20 @@ func SummaryDataPointsStoreFrom(record arrow.Record, attrsStore *otlp.Attributes
 		}
 
 		// ParentID = Scope ID
-		parentID, err := arrowutils.U16FromRecord(record, fieldIDs.ParentID, row)
+		delta, err := arrowutils.U16FromRecord(record, fieldIDs.ParentID, row)
 		if err != nil {
 			return nil, werror.Wrap(err)
 		}
+		parentID := prevParentID + delta
+		prevParentID = parentID
 
-		metrics := store.metricByIDs[parentID]
-		if metrics == nil {
-			metrics = make(map[string]*pmetric.Metric)
-			store.metricByIDs[parentID] = metrics
+		nbdps, found := store.dataPointsByID[parentID]
+		if !found {
+			nbdps = pmetric.NewSummaryDataPointSlice()
+			store.dataPointsByID[parentID] = nbdps
 		}
 
-		name, err := arrowutils.StringFromRecord(record, fieldIDs.Name, row)
-		if err != nil {
-			return nil, werror.Wrap(err)
-		}
-
-		description, err := arrowutils.StringFromRecord(record, fieldIDs.Description, row)
-		if err != nil {
-			return nil, werror.Wrap(err)
-		}
-
-		unit, err := arrowutils.StringFromRecord(record, fieldIDs.Unit, row)
-		if err != nil {
-			return nil, werror.Wrap(err)
-		}
-
-		metricSig := name + ":" + description + ":" + unit
-		metric := metrics[metricSig]
-		var summary pmetric.Summary
-
-		if metric == nil {
-			metricObj := pmetric.NewMetric()
-			metric = &metricObj
-			metric.SetName(name)
-			metric.SetDescription(description)
-			metric.SetUnit(unit)
-			summary = metric.SetEmptySummary()
-			metrics[metricSig] = metric
-		} else {
-			summary = metric.Summary()
-		}
-		sdp := summary.DataPoints().AppendEmpty()
+		sdp := nbdps.AppendEmpty()
 
 		startTimeUnixNano, err := arrowutils.TimestampFromRecord(record, fieldIDs.StartTimeUnixNano, row)
 		if err != nil {

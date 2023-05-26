@@ -15,8 +15,6 @@
 package otlp
 
 import (
-	"strconv"
-
 	"github.com/apache/arrow/go/v12/arrow"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/pmetric"
@@ -28,77 +26,43 @@ import (
 )
 
 type (
-	NumberDataPointIntIDs struct {
-		ID                     int
-		ParentID               int
-		Name                   int
-		Description            int
-		Unit                   int
-		AggregationTemporality int
-		IsMonotonic            int
-		StartTimeUnixNano      int
-		TimeUnixNano           int
-		MetricValue            int
-		Exemplars              *ExemplarIds
-		Flags                  int
+	NumberDataPointIDs struct {
+		ID                int
+		ParentID          int
+		StartTimeUnixNano int
+		TimeUnixNano      int
+		IntValue          int
+		DoubleValue       int
+		Flags             int
 	}
 
 	NumberDataPointsStore struct {
-		nextID      uint16
-		metricByIDs map[uint16]map[string]*pmetric.Metric
+		nextID         uint16
+		dataPointsByID map[uint16]pmetric.NumberDataPointSlice
 	}
 )
 
 func NewNumberDataPointsStore() *NumberDataPointsStore {
 	return &NumberDataPointsStore{
-		metricByIDs: make(map[uint16]map[string]*pmetric.Metric),
+		dataPointsByID: make(map[uint16]pmetric.NumberDataPointSlice),
 	}
 }
 
-func (s *NumberDataPointsStore) NumberDataPointsByID(ID uint16) []*pmetric.Metric {
-	sums, ok := s.metricByIDs[ID]
+func (s *NumberDataPointsStore) NumberDataPointsByID(ID uint16) pmetric.NumberDataPointSlice {
+	nbps, ok := s.dataPointsByID[ID]
 	if !ok {
-		return make([]*pmetric.Metric, 0)
+		return pmetric.NewNumberDataPointSlice()
 	}
-	metrics := make([]*pmetric.Metric, 0, len(sums))
-	for _, metric := range sums {
-		metrics = append(metrics, metric)
-	}
-	return metrics
+	return nbps
 }
 
-func SchemaToNDPIntIDs(schema *arrow.Schema) (*NumberDataPointIntIDs, error) {
+func SchemaToNDPIDs(schema *arrow.Schema) (*NumberDataPointIDs, error) {
 	ID, err := arrowutils.FieldIDFromSchema(schema, constants.ID)
 	if err != nil {
 		return nil, werror.Wrap(err)
 	}
 
 	parentID, err := arrowutils.FieldIDFromSchema(schema, constants.ParentID)
-	if err != nil {
-		return nil, werror.Wrap(err)
-	}
-
-	name, err := arrowutils.FieldIDFromSchema(schema, constants.Name)
-	if err != nil {
-		return nil, werror.Wrap(err)
-	}
-
-	description, err := arrowutils.FieldIDFromSchema(schema, constants.Description)
-	if err != nil {
-		return nil, werror.Wrap(err)
-	}
-
-	unit, err := arrowutils.FieldIDFromSchema(schema, constants.Unit)
-	if err != nil {
-		return nil, werror.Wrap(err)
-	}
-
-	aggregationTemporality, err := arrowutils.FieldIDFromSchema(schema, constants.AggregationTemporality)
-	if err != nil {
-		return nil, werror.Wrap(err)
-	}
-
-	isMonotonic, err := arrowutils.FieldIDFromSchema(schema, constants.IsMonotonic)
 	if err != nil {
 		return nil, werror.Wrap(err)
 	}
@@ -113,12 +77,12 @@ func SchemaToNDPIntIDs(schema *arrow.Schema) (*NumberDataPointIntIDs, error) {
 		return nil, werror.Wrap(err)
 	}
 
-	metricValue, err := arrowutils.FieldIDFromSchema(schema, constants.MetricValue)
+	intValue, err := arrowutils.FieldIDFromSchema(schema, constants.IntValue)
 	if err != nil {
 		return nil, werror.Wrap(err)
 	}
 
-	exemplars, err := NewExemplarIds(schema)
+	doubleValue, err := arrowutils.FieldIDFromSchema(schema, constants.DoubleValue)
 	if err != nil {
 		return nil, werror.Wrap(err)
 	}
@@ -128,35 +92,31 @@ func SchemaToNDPIntIDs(schema *arrow.Schema) (*NumberDataPointIntIDs, error) {
 		return nil, werror.Wrap(err)
 	}
 
-	return &NumberDataPointIntIDs{
-		ID:                     ID,
-		ParentID:               parentID,
-		Name:                   name,
-		Description:            description,
-		Unit:                   unit,
-		AggregationTemporality: aggregationTemporality,
-		IsMonotonic:            isMonotonic,
-		StartTimeUnixNano:      startTimeUnixNano,
-		TimeUnixNano:           timeUnixNano,
-		MetricValue:            metricValue,
-		Exemplars:              exemplars,
-		Flags:                  flags,
+	return &NumberDataPointIDs{
+		ID:                ID,
+		ParentID:          parentID,
+		StartTimeUnixNano: startTimeUnixNano,
+		TimeUnixNano:      timeUnixNano,
+		IntValue:          intValue,
+		DoubleValue:       doubleValue,
+		Flags:             flags,
 	}, nil
 }
 
-func NumberDataPointsStoreFrom(record arrow.Record, attrsStore *otlp.Attributes32Store) (*NumberDataPointsStore, error) {
+func NumberDataPointsStoreFrom(record arrow.Record, exemplarsStore *ExemplarsStore, attrsStore *otlp.Attributes32Store) (*NumberDataPointsStore, error) {
 	defer record.Release()
 
 	store := &NumberDataPointsStore{
-		metricByIDs: make(map[uint16]map[string]*pmetric.Metric),
+		dataPointsByID: make(map[uint16]pmetric.NumberDataPointSlice),
 	}
 
-	fieldIDs, err := SchemaToNDPIntIDs(record.Schema())
+	fieldIDs, err := SchemaToNDPIDs(record.Schema())
 	if err != nil {
 		return nil, werror.Wrap(err)
 	}
 
 	count := int(record.NumRows())
+	prevParentID := uint16(0)
 
 	for row := 0; row < count; row++ {
 		// Number Data Point ID
@@ -166,60 +126,20 @@ func NumberDataPointsStoreFrom(record arrow.Record, attrsStore *otlp.Attributes3
 		}
 
 		// ParentID = Scope ID
-		parentID, err := arrowutils.U16FromRecord(record, fieldIDs.ParentID, row)
+		delta, err := arrowutils.U16FromRecord(record, fieldIDs.ParentID, row)
 		if err != nil {
 			return nil, werror.Wrap(err)
 		}
+		parentID := prevParentID + delta
+		prevParentID = parentID
 
-		metrics := store.metricByIDs[parentID]
-		if metrics == nil {
-			metrics = make(map[string]*pmetric.Metric)
-			store.metricByIDs[parentID] = metrics
+		nbdps, found := store.dataPointsByID[parentID]
+		if !found {
+			nbdps = pmetric.NewNumberDataPointSlice()
+			store.dataPointsByID[parentID] = nbdps
 		}
 
-		name, err := arrowutils.StringFromRecord(record, fieldIDs.Name, row)
-		if err != nil {
-			return nil, werror.Wrap(err)
-		}
-
-		description, err := arrowutils.StringFromRecord(record, fieldIDs.Description, row)
-		if err != nil {
-			return nil, werror.Wrap(err)
-		}
-
-		unit, err := arrowutils.StringFromRecord(record, fieldIDs.Unit, row)
-		if err != nil {
-			return nil, werror.Wrap(err)
-		}
-
-		aggregationTemporality, err := arrowutils.I32FromRecord(record, fieldIDs.AggregationTemporality, row)
-		if err != nil {
-			return nil, werror.Wrap(err)
-		}
-
-		isMonotonic, err := arrowutils.BoolFromRecord(record, fieldIDs.IsMonotonic, row)
-		if err != nil {
-			return nil, werror.Wrap(err)
-		}
-
-		metricSig := name + ":" + description + ":" + unit + ":" + strconv.Itoa(int(aggregationTemporality)) + ":" + strconv.FormatBool(isMonotonic)
-		metric := metrics[metricSig]
-		var sum pmetric.Sum
-
-		if metric == nil {
-			metricObj := pmetric.NewMetric()
-			metric = &metricObj
-			metric.SetName(name)
-			metric.SetDescription(description)
-			metric.SetUnit(unit)
-			sum = metric.SetEmptySum()
-			sum.SetAggregationTemporality(pmetric.AggregationTemporality(aggregationTemporality))
-			sum.SetIsMonotonic(isMonotonic)
-			metrics[metricSig] = metric
-		} else {
-			sum = metric.Sum()
-		}
-		ndp := sum.DataPoints().AppendEmpty()
+		ndp := nbdps.AppendEmpty()
 
 		startTimeUnixNano, err := arrowutils.TimestampFromRecord(record, fieldIDs.StartTimeUnixNano, row)
 		if err != nil {
@@ -233,14 +153,20 @@ func NumberDataPointsStoreFrom(record arrow.Record, attrsStore *otlp.Attributes3
 		}
 		ndp.SetTimestamp(pcommon.Timestamp(timeUnixNano))
 
-		metricValue, err := arrowutils.I64FromRecord(record, fieldIDs.MetricValue, row)
+		intValue, err := arrowutils.I64OrNilFromRecord(record, fieldIDs.IntValue, row)
 		if err != nil {
 			return nil, werror.Wrap(err)
 		}
-		ndp.SetIntValue(metricValue)
-
-		if err := AppendExemplarsInto(ndp.Exemplars(), record, row, fieldIDs.Exemplars); err != nil {
-			return nil, werror.Wrap(err)
+		if intValue != nil {
+			ndp.SetIntValue(*intValue)
+		} else {
+			doubleValue, err := arrowutils.F64OrNilFromRecord(record, fieldIDs.DoubleValue, row)
+			if err != nil {
+				return nil, werror.Wrap(err)
+			}
+			if doubleValue != nil {
+				ndp.SetDoubleValue(*doubleValue)
+			}
 		}
 
 		flags, err := arrowutils.U32FromRecord(record, fieldIDs.Flags, row)
@@ -250,6 +176,9 @@ func NumberDataPointsStoreFrom(record arrow.Record, attrsStore *otlp.Attributes3
 		ndp.SetFlags(pmetric.DataPointFlags(flags))
 
 		if ID != nil {
+			exemplars := exemplarsStore.ExemplarsByID(*ID)
+			exemplars.MoveAndAppendTo(ndp.Exemplars())
+
 			attrs := attrsStore.AttributesByDeltaID(*ID)
 			if attrs != nil {
 				attrs.CopyTo(ndp.Attributes())

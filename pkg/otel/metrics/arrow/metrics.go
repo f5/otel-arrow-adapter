@@ -122,6 +122,10 @@ func (b *MetricsBuilder) init() error {
 	return nil
 }
 
+func (b *MetricsBuilder) RecordBuilderExt() *builder.RecordBuilderExt {
+	return b.builder
+}
+
 func (b *MetricsBuilder) RelatedData() *RelatedData {
 	return b.relatedData
 }
