@@ -61,8 +61,7 @@ type (
 	}
 
 	ExemplarConfig struct {
-		Sorter           ExemplarSorter
-		ParentIdEncoding int
+		Sorter ExemplarSorter
 	}
 
 	NumberDataPointConfig struct {
@@ -111,53 +110,41 @@ func NewConfig(globalConf *cfg.Config) *Config {
 			Sorter: SortEHistogramsByParentID(),
 		},
 		NumberDataPointExemplar: &ExemplarConfig{
-			Sorter:           SortExemplarsByTypeValueParentId(),
-			ParentIdEncoding: arrow.ParentIdDeltaEncoding,
+			Sorter: SortExemplarsByTypeValueParentId(),
 		},
 		HistogramExemplar: &ExemplarConfig{
-			Sorter:           SortExemplarsByTypeValueParentId(),
-			ParentIdEncoding: arrow.ParentIdDeltaEncoding,
+			Sorter: SortExemplarsByTypeValueParentId(),
 		},
 		ExpHistogramExemplar: &ExemplarConfig{
-			Sorter:           SortExemplarsByTypeValueParentId(),
-			ParentIdEncoding: arrow.ParentIdDeltaEncoding,
+			Sorter: SortExemplarsByTypeValueParentId(),
 		},
 		Attrs: &AttrsConfig{
 			Resource: &arrow.Attrs16Config{
-				Sorter:           arrow.SortAttrs16ByKeyValueParentId(),
-				ParentIdEncoding: arrow.ParentIdDeltaGroupEncoding,
+				Sorter: arrow.SortAttrs16ByKeyValueParentId(),
 			},
 			Scope: &arrow.Attrs16Config{
-				Sorter:           arrow.SortAttrs16ByKeyValueParentId(),
-				ParentIdEncoding: arrow.ParentIdDeltaGroupEncoding,
+				Sorter: arrow.SortAttrs16ByKeyValueParentId(),
 			},
 			NumberDataPoint: &arrow.Attrs32Config{
-				Sorter:           arrow.SortAttrs32ByKeyValueParentId(),
-				ParentIdEncoding: arrow.ParentIdDeltaGroupEncoding,
+				Sorter: arrow.SortAttrs32ByKeyValueParentId(),
 			},
 			NumberDataPointExemplar: &arrow.Attrs32Config{
-				Sorter:           arrow.SortAttrs32ByKeyValueParentId(),
-				ParentIdEncoding: arrow.ParentIdDeltaGroupEncoding,
+				Sorter: arrow.SortAttrs32ByKeyValueParentId(),
 			},
 			Summary: &arrow.Attrs32Config{
-				Sorter:           arrow.SortAttrs32ByKeyValueParentId(),
-				ParentIdEncoding: arrow.ParentIdDeltaGroupEncoding,
+				Sorter: arrow.SortAttrs32ByKeyValueParentId(),
 			},
 			Histogram: &arrow.Attrs32Config{
-				Sorter:           arrow.SortAttrs32ByKeyValueParentId(),
-				ParentIdEncoding: arrow.ParentIdDeltaGroupEncoding,
+				Sorter: arrow.SortAttrs32ByKeyValueParentId(),
 			},
 			HistogramExemplar: &arrow.Attrs32Config{
-				Sorter:           arrow.SortAttrs32ByKeyValueParentId(),
-				ParentIdEncoding: arrow.ParentIdDeltaGroupEncoding,
+				Sorter: arrow.SortAttrs32ByKeyValueParentId(),
 			},
 			ExpHistogram: &arrow.Attrs32Config{
-				Sorter:           arrow.SortAttrs32ByKeyValueParentId(),
-				ParentIdEncoding: arrow.ParentIdDeltaGroupEncoding,
+				Sorter: arrow.SortAttrs32ByKeyValueParentId(),
 			},
 			ExpHistogramExemplar: &arrow.Attrs32Config{
-				Sorter:           arrow.SortAttrs32ByKeyValueParentId(),
-				ParentIdEncoding: arrow.ParentIdDeltaGroupEncoding,
+				Sorter: arrow.SortAttrs32ByKeyValueParentId(),
 			},
 		},
 	}

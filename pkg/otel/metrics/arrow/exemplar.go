@@ -84,10 +84,15 @@ type (
 
 	ExemplarSorter interface {
 		Sort(exemplars []Exemplar)
+		Encode(parentID uint32, dp *pmetric.Exemplar) uint32
+		Reset()
 	}
 
 	ExemplarsByNothing           struct{}
-	ExemplarsByTypeValueParentId struct{}
+	ExemplarsByTypeValueParentId struct {
+		prevParentID uint32
+		prevExemplar *pmetric.Exemplar
+	}
 )
 
 // NewExemplarBuilder creates a new ExemplarBuilder.
@@ -173,9 +178,8 @@ func (b *ExemplarBuilder) TryBuild(attrsAccu *carrow.Attributes32Accumulator) (r
 		return nil, werror.Wrap(carrow.ErrBuilderAlreadyReleased)
 	}
 
+	b.accumulator.Reset()
 	b.accumulator.sorter.Sort(b.accumulator.exemplars)
-
-	parentIdEncoder := NewExemplarParentIdEncoder(b.config.ParentIdEncoding)
 
 	exemplarID := uint32(0)
 
@@ -196,7 +200,7 @@ func (b *ExemplarBuilder) TryBuild(attrsAccu *carrow.Attributes32Accumulator) (r
 			exemplarID++
 		}
 
-		b.pib.Append(parentIdEncoder.Encode(exemplar.ParentID))
+		b.pib.Append(b.accumulator.sorter.Encode(exemplar.ParentID, exemplar.Orig))
 		b.tunb.Append(arrow.Timestamp(ex.Timestamp().AsTime().UnixNano()))
 
 		switch ex.ValueType() {
@@ -316,6 +320,12 @@ func UnsortedExemplars() *ExemplarsByNothing {
 func (s *ExemplarsByNothing) Sort(_ []Exemplar) {
 }
 
+func (s *ExemplarsByNothing) Encode(parentID uint32, _ *pmetric.Exemplar) uint32 {
+	return parentID
+}
+
+func (s *ExemplarsByNothing) Reset() {}
+
 // Sorts exemplars by type, value, and parentID.
 // =============================================
 
@@ -349,4 +359,46 @@ func (s *ExemplarsByTypeValueParentId) Sort(exemplars []Exemplar) {
 			return exI.ValueType() < exJ.ValueType()
 		}
 	})
+}
+
+func (s *ExemplarsByTypeValueParentId) Encode(parentID uint32, exemplar *pmetric.Exemplar) uint32 {
+	if s.prevExemplar == nil {
+		s.prevExemplar = exemplar
+		s.prevParentID = parentID
+		return parentID
+	}
+
+	if s.Equal(s.prevExemplar, exemplar) {
+		delta := parentID - s.prevParentID
+		s.prevParentID = parentID
+		return delta
+	} else {
+		s.prevExemplar = exemplar
+		s.prevParentID = parentID
+		return parentID
+	}
+}
+
+func (s *ExemplarsByTypeValueParentId) Reset() {
+	s.prevParentID = 0
+	s.prevExemplar = nil
+}
+
+func (s *ExemplarsByTypeValueParentId) Equal(ex1, ex2 *pmetric.Exemplar) bool {
+	if ex1 == nil || ex2 == nil {
+		return false
+	}
+
+	if ex1.ValueType() == ex2.ValueType() {
+		switch ex1.ValueType() {
+		case pmetric.ExemplarValueTypeInt:
+			return ex1.IntValue() == ex2.IntValue()
+		case pmetric.ExemplarValueTypeDouble:
+			return ex1.DoubleValue() == ex2.DoubleValue()
+		default:
+			return true
+		}
+	} else {
+		return false
+	}
 }

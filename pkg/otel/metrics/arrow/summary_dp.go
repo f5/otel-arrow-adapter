@@ -200,6 +200,7 @@ func (b *SummaryDataPointBuilder) TryBuild(attrsAccu *carrow.Attributes32Accumul
 		return nil, werror.Wrap(carrow.ErrBuilderAlreadyReleased)
 	}
 
+	b.accumulator.sorter.Reset()
 	b.accumulator.sorter.Sort(b.accumulator.summaries)
 
 	for ID, summary := range b.accumulator.summaries {

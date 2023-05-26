@@ -198,6 +198,7 @@ func (b *DataPointBuilder) TryBuild(attrsAccu *carrow.Attributes32Accumulator) (
 		return nil, werror.Wrap(carrow.ErrBuilderAlreadyReleased)
 	}
 
+	b.dataPointAccumulator.sorter.Reset()
 	b.dataPointAccumulator.sorter.Sort(b.dataPointAccumulator.dps)
 
 	ID := uint32(0)
