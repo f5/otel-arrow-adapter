@@ -15,7 +15,7 @@ Other important links:
 - [Donation proposal](https://github.com/open-telemetry/community/issues/1332) under review.
 - [Slides](https://docs.google.com/presentation/d/12uLXmMWNelAyAiKFYMR0i7E7N4dPhzBi2_HLshFOLak/edit?usp=sharing) (01/30/2023 Maintainers meeting).
 - [Project Roadmap](https://github.com/f5/otel-arrow-adapter/milestones?direction=asc&sort=due_date&state=open) and [project Board](https://github.com/orgs/f5/projects/1/views/2) describing the current state of the project.
-- [Arrow schemas](docs/arrow_schema.md) used by this package.
+- [Arrow schemas](docs/data_model.md) used by this package.
 - [Threat model](docs/threat_model_assessment.md).
 
 ## Phase 1 (current implementation)

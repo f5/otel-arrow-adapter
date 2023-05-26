@@ -19,6 +19,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/apache/arrow/go/v12/arrow"
@@ -72,7 +73,19 @@ func main() {
 	VisitLogsDataModel(domains.Domain("Logs"))
 	VisitTracesDataModel(domains.Domain("Traces"))
 
-	println(domains.ToMarkdown())
+	md := domains.ToMarkdown()
+
+	// Write the content of generated Markdown to the `docs/data_model.md` file
+	f, err := os.Create("docs/data_model.md")
+	if err != nil {
+		panic(err)
+	}
+	defer f.Close()
+
+	_, err = f.WriteString(md)
+	if err != nil {
+		panic(err)
+	}
 }
 
 func VisitMetricsDataModel(domain *Domain) {
@@ -253,6 +266,16 @@ func (d *Domains) Domain(name string) *Domain {
 
 func (d *Domains) ToMarkdown() string {
 	md := "\n# Arrow Data Model\n\n"
+
+	md += "This document describes the Arrow Schema used for each OTLP entity as Entity Relation diagrams.\n\n"
+	md += "The Arrow Data Model has been carefully designed to optimize:\n"
+	md += "- The compression ratio for metrics, logs, and traces,\n"
+	md += "- Its compatibility within the extensive Arrow ecosystem,\n"
+	md += "- Its compatibility with file formats, such as Parquet.\n\n"
+
+	md += "This document has been generated directly from the source code. To regenerate this document, run the following command:\n\n"
+	md += "```bash\nmake doc\n```\n\n"
+
 	for _, domain := range d.domains {
 		md += domain.ToMarkdown()
 	}
