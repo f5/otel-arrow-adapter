@@ -23,7 +23,7 @@ import (
 	"github.com/apache/arrow/go/v12/arrow"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 
-	acommon "github.com/f5/otel-arrow-adapter/pkg/otel/common/arrow"
+	carrow "github.com/f5/otel-arrow-adapter/pkg/otel/common/arrow"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/builder"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/constants"
@@ -43,7 +43,6 @@ var (
 		{Name: constants.TimeUnixNano, Type: arrow.FixedWidthTypes.Timestamp_ns},
 		{Name: constants.IntValue, Type: arrow.PrimitiveTypes.Int64},
 		{Name: constants.DoubleValue, Type: arrow.PrimitiveTypes.Float64},
-		{Name: constants.Exemplars, Type: arrow.ListOf(ExemplarDT), Metadata: schema.Metadata(schema.Optional)},
 		{Name: constants.Flags, Type: arrow.PrimitiveTypes.Uint32, Metadata: schema.Metadata(schema.Optional)},
 	}, nil)
 )
@@ -62,14 +61,14 @@ type (
 		tunb  *builder.TimestampBuilder // time_unix_nano builder
 		ivb   *builder.Int64Builder     // int_value builder
 		dvb   *builder.Float64Builder   // double_value builder
-		elb   *builder.ListBuilder      // exemplars builder
-		eb    *ExemplarBuilder          // exemplar builder
 		fb    *builder.Uint32Builder    // flags builder
 
-		accumulator *DPAccumulator
-		attrsAccu   *acommon.Attributes32Accumulator
+		dataPointAccumulator *DPAccumulator
+		attrsAccu            *carrow.Attributes32Accumulator
+		exemplarAccumulator  *ExemplarAccumulator
 
-		payloadType *acommon.PayloadType
+		config      *NumberDataPointConfig
+		payloadType *carrow.PayloadType
 	}
 
 	// DP is an internal representation of a data point used by the
@@ -81,17 +80,46 @@ type (
 
 	// DPAccumulator is an accumulator for data points.
 	DPAccumulator struct {
-		dps []DP
+		dps    []DP
+		sorter NumberDataPointSorter
+	}
+
+	NumberDataPointSorter interface {
+		Sort(dps []DP)
+		Encode(parentID uint16, dp *pmetric.NumberDataPoint) uint16
+		Reset()
+	}
+
+	NumberDataPointsByNothing  struct{}
+	NumberDataPointsByParentID struct {
+		prevParentID uint16
+	}
+	NumberDataPointsByTimestampParentID struct {
+		prevParentID uint16
+		prevNbDP     *pmetric.NumberDataPoint
+	}
+	NumberDataPointsByTimestampParentIDTypeValue struct {
+		prevParentID uint16
+		prevNbDP     *pmetric.NumberDataPoint
+	}
+	NumberDataPointsByTimestampTypeValueParentID struct {
+		prevParentID uint16
+		prevNbDP     *pmetric.NumberDataPoint
+	}
+	NumberDataPointsByTypeValueTimestampParentID struct {
+		prevParentID uint16
+		prevNbDP     *pmetric.NumberDataPoint
 	}
 )
 
 // NewDataPointBuilder creates a new DataPointBuilder.
-func NewDataPointBuilder(rBuilder *builder.RecordBuilderExt, payloadType *acommon.PayloadType) *DataPointBuilder {
+func NewDataPointBuilder(rBuilder *builder.RecordBuilderExt, payloadType *carrow.PayloadType, conf *NumberDataPointConfig) *DataPointBuilder {
 	b := &DataPointBuilder{
-		released:    false,
-		builder:     rBuilder,
-		accumulator: NewDPAccumulator(),
-		payloadType: payloadType,
+		released:             false,
+		builder:              rBuilder,
+		dataPointAccumulator: NewDPAccumulator(conf.Sorter),
+		config:               conf,
+		payloadType:          payloadType,
 	}
 
 	b.init()
@@ -109,13 +137,15 @@ func (b *DataPointBuilder) init() {
 	b.tunb = b.builder.TimestampBuilder(constants.TimeUnixNano)
 	b.ivb = b.builder.Int64Builder(constants.IntValue)
 	b.dvb = b.builder.Float64Builder(constants.DoubleValue)
-	b.elb = b.builder.ListBuilder(constants.Exemplars)
-	b.eb = ExemplarBuilderFrom(b.elb.StructBuilder())
 	b.fb = b.builder.Uint32Builder(constants.Flags)
 }
 
-func (b *DataPointBuilder) SetAttributesAccumulator(accu *acommon.Attributes32Accumulator) {
+func (b *DataPointBuilder) SetAttributesAccumulator(accu *carrow.Attributes32Accumulator) {
 	b.attrsAccu = accu
+}
+
+func (b *DataPointBuilder) SetExemplarAccumulator(accu *ExemplarAccumulator) {
+	b.exemplarAccumulator = accu
 }
 
 func (b *DataPointBuilder) SchemaID() string {
@@ -127,11 +157,11 @@ func (b *DataPointBuilder) Schema() *arrow.Schema {
 }
 
 func (b *DataPointBuilder) IsEmpty() bool {
-	return b.accumulator.IsEmpty()
+	return b.dataPointAccumulator.IsEmpty()
 }
 
 func (b *DataPointBuilder) Accumulator() *DPAccumulator {
-	return b.accumulator
+	return b.dataPointAccumulator
 }
 
 func (b *DataPointBuilder) Build() (record arrow.Record, err error) {
@@ -163,19 +193,21 @@ func (b *DataPointBuilder) Build() (record arrow.Record, err error) {
 	return record, werror.Wrap(err)
 }
 
-func (b *DataPointBuilder) TryBuild(attrsAccu *acommon.Attributes32Accumulator) (record arrow.Record, err error) {
+func (b *DataPointBuilder) TryBuild(attrsAccu *carrow.Attributes32Accumulator) (record arrow.Record, err error) {
 	if b.released {
-		return nil, werror.Wrap(acommon.ErrBuilderAlreadyReleased)
+		return nil, werror.Wrap(carrow.ErrBuilderAlreadyReleased)
 	}
 
-	b.accumulator.Sort()
+	b.dataPointAccumulator.sorter.Sort(b.dataPointAccumulator.dps)
 
-	for ID, ndp := range b.accumulator.dps {
-		b.ib.Append(uint32(ID))
-		b.pib.Append(ndp.ParentID)
+	ID := uint32(0)
+
+	for _, ndp := range b.dataPointAccumulator.dps {
+		b.ib.Append(ID)
+		b.pib.Append(b.dataPointAccumulator.sorter.Encode(ndp.ParentID, ndp.Orig))
 
 		// Attributes
-		err = attrsAccu.Append(uint32(ID), ndp.Orig.Attributes())
+		err = attrsAccu.Append(ID, ndp.Orig.Attributes())
 		if err != nil {
 			return nil, werror.Wrap(err)
 		}
@@ -198,18 +230,14 @@ func (b *DataPointBuilder) TryBuild(attrsAccu *acommon.Attributes32Accumulator) 
 		b.fb.Append(uint32(ndp.Orig.Flags()))
 
 		exemplars := ndp.Orig.Exemplars()
-		ec := exemplars.Len()
-		err = b.elb.Append(ec, func() error {
-			for i := 0; i < ec; i++ {
-				if err = b.eb.Append(exemplars.At(i)); err != nil {
-					return werror.Wrap(err)
-				}
+		if exemplars.Len() > 0 {
+			err = b.exemplarAccumulator.Append(ID, exemplars)
+			if err != nil {
+				return nil, werror.Wrap(err)
 			}
-			return nil
-		})
-		if err != nil {
-			return nil, werror.Wrap(err)
 		}
+
+		ID++
 	}
 
 	record, err = b.builder.NewRecord()
@@ -220,10 +248,10 @@ func (b *DataPointBuilder) TryBuild(attrsAccu *acommon.Attributes32Accumulator) 
 }
 
 func (b *DataPointBuilder) Reset() {
-	b.accumulator.Reset()
+	b.dataPointAccumulator.Reset()
 }
 
-func (b *DataPointBuilder) PayloadType() *acommon.PayloadType {
+func (b *DataPointBuilder) PayloadType() *carrow.PayloadType {
 	return b.payloadType
 }
 
@@ -237,9 +265,10 @@ func (b *DataPointBuilder) Release() {
 }
 
 // NewDPAccumulator creates a new DPAccumulator.
-func NewDPAccumulator() *DPAccumulator {
+func NewDPAccumulator(sorter NumberDataPointSorter) *DPAccumulator {
 	return &DPAccumulator{
-		dps: make([]DP, 0),
+		dps:    make([]DP, 0),
+		sorter: sorter,
 	}
 }
 
@@ -258,18 +287,327 @@ func (a *DPAccumulator) Append(
 	})
 }
 
-func (a *DPAccumulator) Sort() {
-	sort.Slice(a.dps, func(i, j int) bool {
-		dpsI := a.dps[i]
-		dpsJ := a.dps[j]
-		if dpsI.ParentID == dpsJ.ParentID {
-			return dpsI.Orig.Timestamp() < dpsJ.Orig.Timestamp()
-		} else {
+func (a *DPAccumulator) Reset() {
+	a.dps = a.dps[:0]
+}
+
+// No sorting
+// ==========
+
+func UnsortedNumberDataPoints() *NumberDataPointsByNothing {
+	return &NumberDataPointsByNothing{}
+}
+
+func (a *NumberDataPointsByNothing) Sort(_ []DP) {
+	// Do nothing
+}
+
+func (a *NumberDataPointsByNothing) Encode(parentID uint16, _ *pmetric.NumberDataPoint) uint16 {
+	return parentID
+}
+
+func (a *NumberDataPointsByNothing) Reset() {}
+
+// Sort by parentID
+// ================
+
+func SortNumberDataPointsByParentID() *NumberDataPointsByParentID {
+	return &NumberDataPointsByParentID{}
+}
+
+func (a *NumberDataPointsByParentID) Sort(dps []DP) {
+	sort.Slice(dps, func(i, j int) bool {
+		dpsI := dps[i]
+		dpsJ := dps[j]
+		return dpsI.ParentID < dpsJ.ParentID
+	})
+}
+
+func (a *NumberDataPointsByParentID) Encode(parentID uint16, _ *pmetric.NumberDataPoint) uint16 {
+	delta := parentID - a.prevParentID
+	a.prevParentID = parentID
+	return delta
+}
+
+func (a *NumberDataPointsByParentID) Reset() {
+	a.prevParentID = 0
+}
+
+// Sort by timestamp and parentID
+// ==============================
+
+func SortNumberDataPointsByTimeParentID() *NumberDataPointsByTimestampParentID {
+	return &NumberDataPointsByTimestampParentID{}
+}
+
+func (a *NumberDataPointsByTimestampParentID) Sort(dps []DP) {
+	sort.Slice(dps, func(i, j int) bool {
+		dpsI := dps[i]
+		dpsJ := dps[j]
+		if dpsI.Orig.Timestamp() == dpsJ.Orig.Timestamp() {
 			return dpsI.ParentID < dpsJ.ParentID
+		} else {
+			return dpsI.Orig.Timestamp() < dpsJ.Orig.Timestamp()
 		}
 	})
 }
 
-func (a *DPAccumulator) Reset() {
-	a.dps = a.dps[:0]
+func (a *NumberDataPointsByTimestampParentID) Encode(parentID uint16, dp *pmetric.NumberDataPoint) uint16 {
+	if a.prevNbDP == nil {
+		a.prevNbDP = dp
+		a.prevParentID = parentID
+		return parentID
+	}
+
+	if a.prevNbDP.Timestamp() == dp.Timestamp() {
+		delta := parentID - a.prevParentID
+		a.prevParentID = parentID
+		return delta
+	} else {
+		a.prevNbDP = dp
+		a.prevParentID = parentID
+		return parentID
+	}
+}
+
+func (a *NumberDataPointsByTimestampParentID) Reset() {
+	a.prevParentID = 0
+	a.prevNbDP = nil
+}
+
+// Sort by timestamp, parentID, value type, value
+// ==============================================
+
+func SortNumberDataPointsByTimeParentIDTypeValue() *NumberDataPointsByTimestampParentIDTypeValue {
+	return &NumberDataPointsByTimestampParentIDTypeValue{}
+}
+
+func (a *NumberDataPointsByTimestampParentIDTypeValue) Sort(dps []DP) {
+	sort.Slice(dps, func(i, j int) bool {
+		dpsI := dps[i]
+		dpsJ := dps[j]
+		if dpsI.Orig.Timestamp() == dpsJ.Orig.Timestamp() {
+			if dpsI.ParentID == dpsJ.ParentID {
+				if dpsI.Orig.ValueType() == dpsJ.Orig.ValueType() {
+					switch dpsI.Orig.ValueType() {
+					case pmetric.NumberDataPointValueTypeInt:
+						return dpsI.Orig.IntValue() < dpsJ.Orig.IntValue()
+					case pmetric.NumberDataPointValueTypeDouble:
+						return dpsI.Orig.DoubleValue() < dpsJ.Orig.DoubleValue()
+					default:
+						return false
+					}
+				} else {
+					return dpsI.Orig.ValueType() < dpsJ.Orig.ValueType()
+				}
+			} else {
+				return dpsI.ParentID < dpsJ.ParentID
+			}
+		} else {
+			return dpsI.Orig.Timestamp() < dpsJ.Orig.Timestamp()
+		}
+	})
+}
+
+func (a *NumberDataPointsByTimestampParentIDTypeValue) Encode(parentID uint16, dp *pmetric.NumberDataPoint) uint16 {
+	if a.prevNbDP == nil {
+		a.prevNbDP = dp
+		a.prevParentID = parentID
+		return parentID
+	}
+
+	if a.prevNbDP.Timestamp() == dp.Timestamp() {
+		delta := parentID - a.prevParentID
+		a.prevParentID = parentID
+		return delta
+	} else {
+		a.prevNbDP = dp
+		a.prevParentID = parentID
+		return parentID
+	}
+}
+
+func (a *NumberDataPointsByTimestampParentIDTypeValue) Reset() {
+	a.prevParentID = 0
+	a.prevNbDP = nil
+}
+
+// Sort by type, value, parentID
+// =============================
+
+func SortNumberDataPointsByTypeValueTimestampParentID() *NumberDataPointsByTypeValueTimestampParentID {
+	return &NumberDataPointsByTypeValueTimestampParentID{}
+}
+
+func (a *NumberDataPointsByTypeValueTimestampParentID) Sort(dps []DP) {
+	sort.Slice(dps, func(i, j int) bool {
+		dpsI := dps[i]
+		dpsJ := dps[j]
+		if dpsI.Orig.ValueType() == dpsJ.Orig.ValueType() {
+			switch dpsI.Orig.ValueType() {
+			case pmetric.NumberDataPointValueTypeInt:
+				if dpsI.Orig.IntValue() == dpsJ.Orig.IntValue() {
+					if dpsI.Orig.Timestamp() == dpsJ.Orig.Timestamp() {
+						return dpsI.ParentID < dpsJ.ParentID
+					} else {
+						return dpsI.Orig.Timestamp() < dpsJ.Orig.Timestamp()
+					}
+				} else {
+					return dpsI.Orig.IntValue() < dpsJ.Orig.IntValue()
+				}
+			case pmetric.NumberDataPointValueTypeDouble:
+				if dpsI.Orig.DoubleValue() == dpsJ.Orig.DoubleValue() {
+					if dpsI.Orig.Timestamp() == dpsJ.Orig.Timestamp() {
+						return dpsI.ParentID < dpsJ.ParentID
+					} else {
+						return dpsI.Orig.Timestamp() < dpsJ.Orig.Timestamp()
+					}
+				} else {
+					return dpsI.Orig.DoubleValue() < dpsJ.Orig.DoubleValue()
+				}
+			default:
+				if dpsI.Orig.Timestamp() == dpsJ.Orig.Timestamp() {
+					return dpsI.ParentID < dpsJ.ParentID
+				} else {
+					return dpsI.Orig.Timestamp() < dpsJ.Orig.Timestamp()
+				}
+			}
+		} else {
+			return dpsI.Orig.ValueType() < dpsJ.Orig.ValueType()
+		}
+	})
+}
+
+func (a *NumberDataPointsByTypeValueTimestampParentID) Encode(parentID uint16, dp *pmetric.NumberDataPoint) uint16 {
+	if a.prevNbDP == nil {
+		a.prevNbDP = dp
+		a.prevParentID = parentID
+		return parentID
+	}
+
+	if a.Equal(a.prevNbDP, dp) {
+		delta := parentID - a.prevParentID
+		a.prevParentID = parentID
+		return delta
+	} else {
+		a.prevNbDP = dp
+		a.prevParentID = parentID
+		return parentID
+	}
+}
+
+func (a *NumberDataPointsByTypeValueTimestampParentID) Reset() {
+	a.prevParentID = 0
+	a.prevNbDP = nil
+}
+
+func (a *NumberDataPointsByTypeValueTimestampParentID) Equal(nbDP1, nbDP2 *pmetric.NumberDataPoint) bool {
+	if nbDP1 == nil || nbDP2 == nil {
+		return false
+	}
+
+	if nbDP1.ValueType() == nbDP2.ValueType() {
+		switch nbDP1.ValueType() {
+		case pmetric.NumberDataPointValueTypeInt:
+			if nbDP1.IntValue() == nbDP2.IntValue() {
+				return nbDP1.Timestamp() == nbDP2.Timestamp()
+			} else {
+				return false
+			}
+		case pmetric.NumberDataPointValueTypeDouble:
+			if nbDP1.DoubleValue() == nbDP2.DoubleValue() {
+				return nbDP1.Timestamp() == nbDP2.Timestamp()
+			} else {
+				return false
+			}
+		default:
+			return true
+		}
+	} else {
+		return false
+	}
+}
+
+// Sort by timestamp, value type, value, parentID
+// ==============================================
+
+func SortNumberDataPointsByTimestampTypeValueParentID() *NumberDataPointsByTimestampTypeValueParentID {
+	return &NumberDataPointsByTimestampTypeValueParentID{}
+}
+
+func (a *NumberDataPointsByTimestampTypeValueParentID) Sort(dps []DP) {
+	sort.Slice(dps, func(i, j int) bool {
+		dpsI := dps[i]
+		dpsJ := dps[j]
+		if dpsI.Orig.Timestamp() == dpsJ.Orig.Timestamp() {
+			if dpsI.Orig.ValueType() == dpsJ.Orig.ValueType() {
+				switch dpsI.Orig.ValueType() {
+				case pmetric.NumberDataPointValueTypeInt:
+					if dpsI.Orig.IntValue() == dpsJ.Orig.IntValue() {
+						return dpsI.ParentID < dpsJ.ParentID
+					} else {
+						return dpsI.Orig.IntValue() < dpsJ.Orig.IntValue()
+					}
+				case pmetric.NumberDataPointValueTypeDouble:
+					if dpsI.Orig.DoubleValue() == dpsJ.Orig.DoubleValue() {
+						return dpsI.ParentID < dpsJ.ParentID
+					} else {
+						return dpsI.Orig.DoubleValue() < dpsJ.Orig.DoubleValue()
+					}
+				default:
+					return dpsI.ParentID < dpsJ.ParentID
+				}
+			} else {
+				return dpsI.Orig.ValueType() < dpsJ.Orig.ValueType()
+			}
+		} else {
+			return dpsI.Orig.Timestamp() < dpsJ.Orig.Timestamp()
+		}
+	})
+}
+
+func (a *NumberDataPointsByTimestampTypeValueParentID) Encode(parentID uint16, dp *pmetric.NumberDataPoint) uint16 {
+	if a.prevNbDP == nil {
+		a.prevNbDP = dp
+		a.prevParentID = parentID
+		return parentID
+	}
+
+	if a.Equal(a.prevNbDP, dp) {
+		delta := parentID - a.prevParentID
+		a.prevParentID = parentID
+		return delta
+	} else {
+		a.prevNbDP = dp
+		a.prevParentID = parentID
+		return parentID
+	}
+}
+
+func (a *NumberDataPointsByTimestampTypeValueParentID) Reset() {
+	a.prevParentID = 0
+	a.prevNbDP = nil
+}
+
+func (a *NumberDataPointsByTimestampTypeValueParentID) Equal(nbDP1, nbDP2 *pmetric.NumberDataPoint) bool {
+	if nbDP1 == nil || nbDP2 == nil {
+		return false
+	}
+
+	if nbDP1.Timestamp() == nbDP2.Timestamp() {
+		if nbDP1.ValueType() == nbDP2.ValueType() {
+			switch nbDP1.ValueType() {
+			case pmetric.NumberDataPointValueTypeInt:
+				return nbDP1.IntValue() == nbDP2.IntValue()
+			case pmetric.NumberDataPointValueTypeDouble:
+				return nbDP1.DoubleValue() == nbDP2.DoubleValue()
+			default:
+				return true
+			}
+		} else {
+			return false
+		}
+	} else {
+		return false
+	}
 }

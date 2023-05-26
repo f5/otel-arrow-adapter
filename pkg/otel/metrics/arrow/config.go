@@ -31,47 +31,55 @@ type (
 		Global *cfg.Config
 
 		Metric *MetricConfig
-		//Sum          *SumConfig
-		//Gauge        *GaugeConfig
-		//Summary      *SummaryConfig
-		//Histogram    *HistogramConfig
-		//ExpHistogram *ExpHistogramConfig
+
+		NumberDP     *NumberDataPointConfig
+		Summary      *SummaryConfig
+		Histogram    *HistogramConfig
+		ExpHistogram *ExpHistogramConfig
+
+		NumberDataPointExemplar *ExemplarConfig
+		HistogramExemplar       *ExemplarConfig
+		ExpHistogramExemplar    *ExemplarConfig
 
 		Attrs *AttrsConfig
 	}
 
 	AttrsConfig struct {
-		Resource        *arrow.Attrs16Config
-		Scope           *arrow.Attrs16Config
-		NumberDataPoint *arrow.Attrs32Config
-		Summary         *arrow.Attrs32Config
-		Histogram       *arrow.Attrs32Config
-		ExpHistogram    *arrow.Attrs32Config
+		Resource                *arrow.Attrs16Config
+		Scope                   *arrow.Attrs16Config
+		NumberDataPoint         *arrow.Attrs32Config
+		NumberDataPointExemplar *arrow.Attrs32Config
+		Summary                 *arrow.Attrs32Config
+		Histogram               *arrow.Attrs32Config
+		HistogramExemplar       *arrow.Attrs32Config
+		ExpHistogram            *arrow.Attrs32Config
+		ExpHistogramExemplar    *arrow.Attrs32Config
 	}
 
 	MetricConfig struct {
 		Sorter MetricSorter
 	}
 
-	//SumConfig struct {
-	//	Sorter           SumSorter
-	//}
-	//
-	//GaugeConfig struct {
-	//	Sorter           GaugeSorter
-	//}
-	//
-	//SummaryConfig struct {
-	//	Sorter           SummarySorter
-	//}
-	//
-	//HistogramConfig struct {
-	//	Sorter           HistogramSorter
-	//}
-	//
-	//ExpHistogramConfig struct {
-	//	Sorter           ExpHistogramSorter
-	//}
+	ExemplarConfig struct {
+		Sorter           ExemplarSorter
+		ParentIdEncoding int
+	}
+
+	NumberDataPointConfig struct {
+		Sorter NumberDataPointSorter
+	}
+
+	SummaryConfig struct {
+		Sorter SummarySorter
+	}
+
+	HistogramConfig struct {
+		Sorter HistogramSorter
+	}
+
+	ExpHistogramConfig struct {
+		Sorter EHistogramSorter
+	}
 )
 
 func DefaultConfig() *Config {
@@ -82,8 +90,37 @@ func NewConfig(globalConf *cfg.Config) *Config {
 	return &Config{
 		Global: globalConf,
 		Metric: &MetricConfig{
-			//Sorter: SortMetricsByResourceScopeTypeName(),
-			Sorter: SortMetricsByTypeNameResourceScope(),
+			Sorter: SortMetricsByResourceScopeTypeName(),
+			//Sorter: SortMetricsByTypeNameResourceScope(),
+		},
+		NumberDP: &NumberDataPointConfig{
+			//Sorter: UnsortedNumberDataPoints(), // 1.86, 1.82
+			//Sorter: SortNumberDataPointsByTimeParentID(), // 2.04, 2.01
+			//Sorter: SortNumberDataPointsByTimeParentIDTypeValue(), // 2.23, 2.19
+			//Sorter: SortNumberDataPointsByTypeValueTimestampParentID(), // 1.75, 1.78
+			//Sorter: SortNumberDataPointsByTimestampTypeValueParentID(), // 1.96, 1.91
+			Sorter: SortNumberDataPointsByParentID(), // 2.31, 2.29
+		},
+		Summary: &SummaryConfig{
+			Sorter: SortSummariesByParentID(),
+		},
+		Histogram: &HistogramConfig{
+			Sorter: SortHistogramsByParentID(),
+		},
+		ExpHistogram: &ExpHistogramConfig{
+			Sorter: SortEHistogramsByParentID(),
+		},
+		NumberDataPointExemplar: &ExemplarConfig{
+			Sorter:           SortExemplarsByTypeValueParentId(),
+			ParentIdEncoding: arrow.ParentIdDeltaEncoding,
+		},
+		HistogramExemplar: &ExemplarConfig{
+			Sorter:           SortExemplarsByTypeValueParentId(),
+			ParentIdEncoding: arrow.ParentIdDeltaEncoding,
+		},
+		ExpHistogramExemplar: &ExemplarConfig{
+			Sorter:           SortExemplarsByTypeValueParentId(),
+			ParentIdEncoding: arrow.ParentIdDeltaEncoding,
 		},
 		Attrs: &AttrsConfig{
 			Resource: &arrow.Attrs16Config{
@@ -98,6 +135,10 @@ func NewConfig(globalConf *cfg.Config) *Config {
 				Sorter:           arrow.SortAttrs32ByKeyValueParentId(),
 				ParentIdEncoding: arrow.ParentIdDeltaGroupEncoding,
 			},
+			NumberDataPointExemplar: &arrow.Attrs32Config{
+				Sorter:           arrow.SortAttrs32ByKeyValueParentId(),
+				ParentIdEncoding: arrow.ParentIdDeltaGroupEncoding,
+			},
 			Summary: &arrow.Attrs32Config{
 				Sorter:           arrow.SortAttrs32ByKeyValueParentId(),
 				ParentIdEncoding: arrow.ParentIdDeltaGroupEncoding,
@@ -106,7 +147,15 @@ func NewConfig(globalConf *cfg.Config) *Config {
 				Sorter:           arrow.SortAttrs32ByKeyValueParentId(),
 				ParentIdEncoding: arrow.ParentIdDeltaGroupEncoding,
 			},
+			HistogramExemplar: &arrow.Attrs32Config{
+				Sorter:           arrow.SortAttrs32ByKeyValueParentId(),
+				ParentIdEncoding: arrow.ParentIdDeltaGroupEncoding,
+			},
 			ExpHistogram: &arrow.Attrs32Config{
+				Sorter:           arrow.SortAttrs32ByKeyValueParentId(),
+				ParentIdEncoding: arrow.ParentIdDeltaGroupEncoding,
+			},
+			ExpHistogramExemplar: &arrow.Attrs32Config{
 				Sorter:           arrow.SortAttrs32ByKeyValueParentId(),
 				ParentIdEncoding: arrow.ParentIdDeltaGroupEncoding,
 			},

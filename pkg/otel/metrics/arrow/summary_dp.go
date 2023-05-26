@@ -68,6 +68,8 @@ type (
 
 		accumulator *SummaryAccumulator
 		attrsAccu   *carrow.Attributes32Accumulator
+
+		config *SummaryConfig
 	}
 
 	Summary struct {
@@ -78,15 +80,27 @@ type (
 	SummaryAccumulator struct {
 		groupCount uint32
 		summaries  []Summary
+		sorter     SummarySorter
+	}
+
+	SummarySorter interface {
+		Sort(summaries []Summary)
+		Encode(parentID uint16, summary *pmetric.SummaryDataPoint) uint16
+		Reset()
+	}
+
+	SummariesByNothing  struct{}
+	SummariesByParentID struct {
+		prevParentID uint16
 	}
 )
 
 // NewSummaryDataPointBuilder creates a new SummaryDataPointBuilder.
-func NewSummaryDataPointBuilder(rBuilder *builder.RecordBuilderExt) *SummaryDataPointBuilder {
+func NewSummaryDataPointBuilder(rBuilder *builder.RecordBuilderExt, conf *SummaryConfig) *SummaryDataPointBuilder {
 	b := &SummaryDataPointBuilder{
 		released:    false,
 		builder:     rBuilder,
-		accumulator: NewSummaryAccumulator(),
+		accumulator: NewSummaryAccumulator(conf.Sorter),
 	}
 
 	b.init()
@@ -186,11 +200,11 @@ func (b *SummaryDataPointBuilder) TryBuild(attrsAccu *carrow.Attributes32Accumul
 		return nil, werror.Wrap(carrow.ErrBuilderAlreadyReleased)
 	}
 
-	b.accumulator.Sort()
+	b.accumulator.sorter.Sort(b.accumulator.summaries)
 
 	for ID, summary := range b.accumulator.summaries {
 		b.ib.Append(uint32(ID))
-		b.pib.Append(summary.ParentID)
+		b.pib.Append(b.accumulator.sorter.Encode(summary.ParentID, summary.Orig))
 
 		// Attributes
 		err = attrsAccu.Append(uint32(ID), summary.Orig.Attributes())
@@ -229,10 +243,11 @@ func (b *SummaryDataPointBuilder) TryBuild(attrsAccu *carrow.Attributes32Accumul
 }
 
 // NewSummaryAccumulator creates a new SummaryAccumulator.
-func NewSummaryAccumulator() *SummaryAccumulator {
+func NewSummaryAccumulator(sorter SummarySorter) *SummaryAccumulator {
 	return &SummaryAccumulator{
 		groupCount: 0,
 		summaries:  make([]Summary, 0),
+		sorter:     sorter,
 	}
 }
 
@@ -265,13 +280,49 @@ func (a *SummaryAccumulator) Append(
 	a.groupCount++
 }
 
-func (a *SummaryAccumulator) Sort() {
-	sort.Slice(a.summaries, func(i, j int) bool {
-		return a.summaries[i].ParentID < a.summaries[j].ParentID
-	})
-}
-
 func (a *SummaryAccumulator) Reset() {
 	a.groupCount = 0
 	a.summaries = a.summaries[:0]
+}
+
+// No sorting
+// ==========
+
+func UnsortedSummaries() *SummariesByNothing {
+	return &SummariesByNothing{}
+}
+
+func (a *SummariesByNothing) Sort(_ []Summary) {
+	// Do nothing
+}
+
+func (a *SummariesByNothing) Encode(parentID uint16, _ *pmetric.SummaryDataPoint) uint16 {
+	return parentID
+}
+
+func (a *SummariesByNothing) Reset() {}
+
+// Sort by parentID
+// ================
+
+func SortSummariesByParentID() *SummariesByParentID {
+	return &SummariesByParentID{}
+}
+
+func (a *SummariesByParentID) Sort(summaries []Summary) {
+	sort.Slice(summaries, func(i, j int) bool {
+		dpsI := summaries[i]
+		dpsJ := summaries[j]
+		return dpsI.ParentID < dpsJ.ParentID
+	})
+}
+
+func (a *SummariesByParentID) Encode(parentID uint16, _ *pmetric.SummaryDataPoint) uint16 {
+	delta := parentID - a.prevParentID
+	a.prevParentID = parentID
+	return delta
+}
+
+func (a *SummariesByParentID) Reset() {
+	a.prevParentID = 0
 }

@@ -42,6 +42,10 @@ type (
 		summaryDPBuilder    *SummaryDataPointBuilder
 		histogramDPBuilder  *HistogramDataPointBuilder
 		ehistogramDPBuilder *EHistogramDataPointBuilder
+
+		numberDPExemplarBuilder   *ExemplarBuilder
+		histogramExemplarBuilder  *ExemplarBuilder
+		ehistogramExemplarBuilder *ExemplarBuilder
 	}
 
 	// AttrsBuilders groups together AttrsBuilder instances used to build related
@@ -52,11 +56,15 @@ type (
 		scope    *carrow.Attrs16Builder
 
 		// metrics attributes
-		sum        *carrow.Attrs32Builder
-		summary    *carrow.Attrs32Builder
 		number_dp  *carrow.Attrs32Builder
+		summary    *carrow.Attrs32Builder
 		histogram  *carrow.Attrs32Builder
 		eHistogram *carrow.Attrs32Builder
+
+		// exemplar attributes
+		numberDPExemplar   *carrow.Attrs32Builder
+		histogramExemplar  *carrow.Attrs32Builder
+		eHistogramExemplar *carrow.Attrs32Builder
 	}
 )
 
@@ -72,7 +80,7 @@ func NewRelatedData(cfg *Config, stats *stats.ProducerStats) (*RelatedData, erro
 	})
 
 	numberDPBuilder := rrManager.Declare(carrow.PayloadTypes.NumberDataPoints, carrow.PayloadTypes.Metrics, DataPointSchema, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
-		return NewDataPointBuilder(b, carrow.PayloadTypes.NumberDataPoints)
+		return NewDataPointBuilder(b, carrow.PayloadTypes.NumberDataPoints, cfg.NumberDP)
 	})
 
 	numberDPAttrsBuilder := rrManager.Declare(carrow.PayloadTypes.NumberDataPointAttrs, carrow.PayloadTypes.NumberDataPoints, carrow.DeltaEncodedAttrsSchema32, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
@@ -81,8 +89,20 @@ func NewRelatedData(cfg *Config, stats *stats.ProducerStats) (*RelatedData, erro
 		return nab
 	})
 
+	numberDPExemplarBuilder := rrManager.Declare(carrow.PayloadTypes.NumberDataPointExemplars, carrow.PayloadTypes.NumberDataPoints, ExemplarSchema, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
+		eb := NewExemplarBuilder(b, carrow.PayloadTypes.NumberDataPointExemplars, cfg.NumberDataPointExemplar)
+		numberDPBuilder.(*DataPointBuilder).SetExemplarAccumulator(eb.Accumulator())
+		return eb
+	})
+
+	numberDPExemplarAttrsBuilder := rrManager.Declare(carrow.PayloadTypes.NumberDataPointExemplarAttrs, carrow.PayloadTypes.NumberDataPointExemplars, carrow.DeltaEncodedAttrsSchema32, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
+		eb := carrow.NewAttrs32BuilderWithEncoding(b, carrow.PayloadTypes.NumberDataPointExemplarAttrs, cfg.Attrs.NumberDataPointExemplar)
+		numberDPExemplarBuilder.(*ExemplarBuilder).SetAttributesAccumulator(eb.Accumulator())
+		return eb
+	})
+
 	summaryDPBuilder := rrManager.Declare(carrow.PayloadTypes.Summary, carrow.PayloadTypes.Metrics, SummaryDataPointSchema, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
-		return NewSummaryDataPointBuilder(b)
+		return NewSummaryDataPointBuilder(b, cfg.Summary)
 	})
 
 	summaryAttrsBuilder := rrManager.Declare(carrow.PayloadTypes.SummaryAttrs, carrow.PayloadTypes.Summary, carrow.DeltaEncodedAttrsSchema32, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
@@ -92,7 +112,7 @@ func NewRelatedData(cfg *Config, stats *stats.ProducerStats) (*RelatedData, erro
 	})
 
 	histogramDPBuilder := rrManager.Declare(carrow.PayloadTypes.Histogram, carrow.PayloadTypes.Metrics, HistogramDataPointSchema, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
-		return NewHistogramDataPointBuilder(b)
+		return NewHistogramDataPointBuilder(b, cfg.Histogram)
 	})
 
 	histogramAttrsBuilder := rrManager.Declare(carrow.PayloadTypes.HistogramAttrs, carrow.PayloadTypes.Histogram, carrow.DeltaEncodedAttrsSchema32, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
@@ -101,8 +121,20 @@ func NewRelatedData(cfg *Config, stats *stats.ProducerStats) (*RelatedData, erro
 		return hab
 	})
 
+	histogramExemplarBuilder := rrManager.Declare(carrow.PayloadTypes.HistogramExemplars, carrow.PayloadTypes.Histogram, ExemplarSchema, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
+		eb := NewExemplarBuilder(b, carrow.PayloadTypes.HistogramExemplars, cfg.HistogramExemplar)
+		histogramDPBuilder.(*HistogramDataPointBuilder).SetExemplarAccumulator(eb.Accumulator())
+		return eb
+	})
+
+	histogramExemplarAttrsBuilder := rrManager.Declare(carrow.PayloadTypes.HistogramExemplarAttrs, carrow.PayloadTypes.HistogramExemplars, carrow.DeltaEncodedAttrsSchema32, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
+		eb := carrow.NewAttrs32BuilderWithEncoding(b, carrow.PayloadTypes.HistogramExemplarAttrs, cfg.Attrs.HistogramExemplar)
+		histogramExemplarBuilder.(*ExemplarBuilder).SetAttributesAccumulator(eb.Accumulator())
+		return eb
+	})
+
 	ehistogramDPBuilder := rrManager.Declare(carrow.PayloadTypes.ExpHistogram, carrow.PayloadTypes.Metrics, EHistogramDataPointSchema, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
-		return NewEHistogramDataPointBuilder(b)
+		return NewEHistogramDataPointBuilder(b, cfg.ExpHistogram)
 	})
 
 	ehistogramAttrsBuilder := rrManager.Declare(carrow.PayloadTypes.ExpHistogramAttrs, carrow.PayloadTypes.ExpHistogram, carrow.DeltaEncodedAttrsSchema32, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
@@ -111,20 +143,38 @@ func NewRelatedData(cfg *Config, stats *stats.ProducerStats) (*RelatedData, erro
 		return hab
 	})
 
+	ehistogramExemplarBuilder := rrManager.Declare(carrow.PayloadTypes.ExpHistogramExemplars, carrow.PayloadTypes.ExpHistogram, ExemplarSchema, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
+		eb := NewExemplarBuilder(b, carrow.PayloadTypes.ExpHistogramExemplars, cfg.HistogramExemplar)
+		ehistogramDPBuilder.(*EHistogramDataPointBuilder).SetExemplarAccumulator(eb.Accumulator())
+		return eb
+	})
+
+	ehistogramExemplarAttrsBuilder := rrManager.Declare(carrow.PayloadTypes.ExpHistogramExemplarAttrs, carrow.PayloadTypes.ExpHistogramExemplars, carrow.DeltaEncodedAttrsSchema32, func(b *builder.RecordBuilderExt) carrow.RelatedRecordBuilder {
+		eb := carrow.NewAttrs32BuilderWithEncoding(b, carrow.PayloadTypes.ExpHistogramExemplarAttrs, cfg.Attrs.HistogramExemplar)
+		ehistogramExemplarBuilder.(*ExemplarBuilder).SetAttributesAccumulator(eb.Accumulator())
+		return eb
+	})
+
 	return &RelatedData{
 		relatedRecordsManager: rrManager,
 		attrsBuilders: &AttrsBuilders{
-			resource:   resourceAttrsBuilder.(*carrow.Attrs16Builder),
-			scope:      scopeAttrsBuilder.(*carrow.Attrs16Builder),
-			summary:    summaryAttrsBuilder.(*carrow.Attrs32Builder),
-			number_dp:  numberDPAttrsBuilder.(*carrow.Attrs32Builder),
-			histogram:  histogramAttrsBuilder.(*carrow.Attrs32Builder),
-			eHistogram: ehistogramAttrsBuilder.(*carrow.Attrs32Builder),
+			resource:           resourceAttrsBuilder.(*carrow.Attrs16Builder),
+			scope:              scopeAttrsBuilder.(*carrow.Attrs16Builder),
+			summary:            summaryAttrsBuilder.(*carrow.Attrs32Builder),
+			number_dp:          numberDPAttrsBuilder.(*carrow.Attrs32Builder),
+			histogram:          histogramAttrsBuilder.(*carrow.Attrs32Builder),
+			eHistogram:         ehistogramAttrsBuilder.(*carrow.Attrs32Builder),
+			numberDPExemplar:   numberDPExemplarAttrsBuilder.(*carrow.Attrs32Builder),
+			histogramExemplar:  histogramExemplarAttrsBuilder.(*carrow.Attrs32Builder),
+			eHistogramExemplar: ehistogramExemplarAttrsBuilder.(*carrow.Attrs32Builder),
 		},
-		numberDPBuilder:     numberDPBuilder.(*DataPointBuilder),
-		summaryDPBuilder:    summaryDPBuilder.(*SummaryDataPointBuilder),
-		histogramDPBuilder:  histogramDPBuilder.(*HistogramDataPointBuilder),
-		ehistogramDPBuilder: ehistogramDPBuilder.(*EHistogramDataPointBuilder),
+		numberDPBuilder:           numberDPBuilder.(*DataPointBuilder),
+		summaryDPBuilder:          summaryDPBuilder.(*SummaryDataPointBuilder),
+		histogramDPBuilder:        histogramDPBuilder.(*HistogramDataPointBuilder),
+		ehistogramDPBuilder:       ehistogramDPBuilder.(*EHistogramDataPointBuilder),
+		numberDPExemplarBuilder:   numberDPExemplarBuilder.(*ExemplarBuilder),
+		histogramExemplarBuilder:  histogramExemplarBuilder.(*ExemplarBuilder),
+		ehistogramExemplarBuilder: ehistogramExemplarBuilder.(*ExemplarBuilder),
 	}, nil
 }
 
@@ -160,6 +210,18 @@ func (r *RelatedData) EHistogramDPBuilder() *EHistogramDataPointBuilder {
 	return r.ehistogramDPBuilder
 }
 
+func (r *RelatedData) NumberDPExemplarBuilder() *ExemplarBuilder {
+	return r.numberDPExemplarBuilder
+}
+
+func (r *RelatedData) HistogramExemplarBuilder() *ExemplarBuilder {
+	return r.histogramExemplarBuilder
+}
+
+func (r *RelatedData) EHistogramExemplarBuilder() *ExemplarBuilder {
+	return r.ehistogramExemplarBuilder
+}
+
 func (r *RelatedData) Reset() {
 	r.nextMetricScopeID = 0
 	r.relatedRecordsManager.Reset()
@@ -184,11 +246,13 @@ func (ab *AttrsBuilders) Release() {
 	ab.resource.Release()
 	ab.scope.Release()
 
-	ab.sum.Release()
 	ab.number_dp.Release()
 	ab.summary.Release()
 	ab.histogram.Release()
 	ab.eHistogram.Release()
+	ab.numberDPExemplar.Release()
+	ab.histogramExemplar.Release()
+	ab.eHistogramExemplar.Release()
 }
 
 func (ab *AttrsBuilders) Resource() *carrow.Attrs16Builder {
@@ -199,20 +263,14 @@ func (ab *AttrsBuilders) Scope() *carrow.Attrs16Builder {
 	return ab.scope
 }
 
-func (ab *AttrsBuilders) Sum() *carrow.Attrs32Builder {
-	return ab.sum
-}
-
-func (ab *AttrsBuilders) Gauge() *carrow.Attrs32Builder {
-	return ab.number_dp
-}
-
 func (ab *AttrsBuilders) Reset() {
 	ab.resource.Accumulator().Reset()
 	ab.scope.Accumulator().Reset()
-	ab.sum.Reset()
 	ab.number_dp.Reset()
 	ab.summary.Reset()
 	ab.histogram.Reset()
 	ab.eHistogram.Reset()
+	ab.numberDPExemplar.Reset()
+	ab.histogramExemplar.Reset()
+	ab.eHistogramExemplar.Reset()
 }

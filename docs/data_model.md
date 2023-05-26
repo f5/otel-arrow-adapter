@@ -7,17 +7,31 @@ erDiagram
     METRICS ||--o{ RESOURCE_ATTRS : resource-attrs
     METRICS ||--o{ SCOPE_ATTRS : scope-attrs
     METRICS ||--o{ NUMBER_DATA_POINTS : number-dps
-    NUMBER_DATA_POINTS ||--o{ exemplars : exemplars
     NUMBER_DATA_POINTS ||--o{ NUMBER_DP_ATTRS : number-dp-attrs
+    NUMBER_DATA_POINTS ||--o{ NUMBER_DP_EXEMPLARS : number-dp-exemplars
+    NUMBER_DP_EXEMPLARS ||--o{ NUMBER_DP_EXEMPLAR_ATTRS : number-dp-exemplar-attrs
     METRICS ||--o{ SUMMARY_DATA_POINTS : summary-dps
     SUMMARY_DATA_POINTS ||--o{ quantile : quantile
     SUMMARY_DATA_POINTS ||--o{ SUMMARY_DP_ATTRS : summary-dp-attrs
     METRICS ||--o{ HISTOGRAM_DATA_POINTS : histogram-dps
-    HISTOGRAM_DATA_POINTS ||--o{ exemplars : exemplars
     HISTOGRAM_DATA_POINTS ||--o{ HISTOGRAM_DP_ATTRS : histogram-dp-attrs
+    HISTOGRAM_DATA_POINTS ||--o{ HISTOGRAM_DP_EXEMPLARS : histogram-dp-exemplars
+    HISTOGRAM_DP_EXEMPLARS ||--o{ HISTOGRAM_DP_EXEMPLAR_ATTRS : histogram-dp-exemplar-attrs
     METRICS ||--o{ EXP_HISTOGRAM_DATA_POINTS : exp-histogram-dps
-    EXP_HISTOGRAM_DATA_POINTS ||--o{ exemplars : exemplars
     EXP_HISTOGRAM_DATA_POINTS ||--o{ EXP_HISTOGRAM_DP_ATTRS : exp-histogram-dp-attrs
+    EXP_HISTOGRAM_DATA_POINTS ||--o{ EXP_HISTOGRAM_DP_EXEMPLARS : exp-histogram-dp-exemplars
+    EXP_HISTOGRAM_DP_EXEMPLARS ||--o{ EXP_HISTOGRAM_DP_EXEMPLAR_ATTRS : exp-histogram-dp-exemplar-attrs
+    RESOURCE_ATTRS{
+        parent_id u16 
+        key string 
+        type u8 
+        str string 
+        int i64 "optional"
+        double f64 "optional"
+        bool bool "optional"
+        bytes bytes "optional"
+        ser bytes "optional"
+    }
     NUMBER_DATA_POINTS{
         id u32 
         parent_id u16 
@@ -27,7 +41,20 @@ erDiagram
         double_value f64 
         flags u32 "optional"
     }
-    NUMBER_DP_ATTRS{
+    HISTOGRAM_DATA_POINTS{
+        id u32 "optional"
+        parent_id u16 
+        start_time_unix_nano timestamp "optional"
+        time_unix_nano timestamp "optional"
+        count u64 "optional"
+        sum f64 "optional"
+        bucket_counts u64 "optional"
+        explicit_bounds f64 "optional"
+        flags u32 "optional"
+        min f64 "optional"
+        max f64 "optional"
+    }
+    HISTOGRAM_DP_ATTRS{
         parent_id u32 
         key string 
         type u8 
@@ -38,37 +65,16 @@ erDiagram
         bytes bytes "optional"
         ser bytes "optional"
     }
-    SUMMARY_DATA_POINTS{
+    HISTOGRAM_DP_EXEMPLARS{
         id u32 "optional"
-        parent_id u16 
-        start_time_unix_nano timestamp "optional"
+        parent_id u32 
         time_unix_nano timestamp "optional"
-        count u64 "optional"
-        sum f64 "optional"
-        flags u32 "optional"
+        int_value i64 "optional"
+        double_value f64 "optional"
+        span_id bytes[8] "optional"
+        trace_id bytes[16] "optional"
     }
-    quantile{
-        quantile f64 "optional"
-        value f64 "optional"
-    }
-    EXP_HISTOGRAM_DATA_POINTS{
-        id u32 "optional"
-        parent_id u16 
-        start_time_unix_nano timestamp "optional"
-        time_unix_nano timestamp "optional"
-        count u64 "optional"
-        sum f64 "optional"
-        scale i32 "optional"
-        zero_count u64 "optional"
-        positive_offset i32 "optional"
-        positive_bucket_counts u64 "optional"
-        negative_offset i32 "optional"
-        negative_bucket_counts u64 "optional"
-        flags u32 "optional"
-        min f64 "optional"
-        max f64 "optional"
-    }
-    EXP_HISTOGRAM_DP_ATTRS{
+    EXP_HISTOGRAM_DP_EXEMPLAR_ATTRS{
         parent_id u32 
         key string 
         type u8 
@@ -96,6 +102,48 @@ erDiagram
         aggregation_temporality i32 "optional"
         is_monotonic bool "optional"
     }
+    NUMBER_DP_ATTRS{
+        parent_id u32 
+        key string 
+        type u8 
+        str string 
+        int i64 "optional"
+        double f64 "optional"
+        bool bool "optional"
+        bytes bytes "optional"
+        ser bytes "optional"
+    }
+    NUMBER_DP_EXEMPLARS{
+        id u32 "optional"
+        parent_id u32 
+        time_unix_nano timestamp "optional"
+        int_value i64 "optional"
+        double_value f64 "optional"
+        span_id bytes[8] "optional"
+        trace_id bytes[16] "optional"
+    }
+    HISTOGRAM_DP_EXEMPLAR_ATTRS{
+        parent_id u32 
+        key string 
+        type u8 
+        str string 
+        int i64 "optional"
+        double f64 "optional"
+        bool bool "optional"
+        bytes bytes "optional"
+        ser bytes "optional"
+    }
+    EXP_HISTOGRAM_DP_ATTRS{
+        parent_id u32 
+        key string 
+        type u8 
+        str string 
+        int i64 "optional"
+        double f64 "optional"
+        bool bool "optional"
+        bytes bytes "optional"
+        ser bytes "optional"
+    }
     SCOPE_ATTRS{
         parent_id u16 
         key string 
@@ -107,12 +155,46 @@ erDiagram
         bytes bytes "optional"
         ser bytes "optional"
     }
-    exemplars{
-        attributes map "map<utf8, sparse_union>, optional, map<utf8, sparse_union>, optional, map<utf8, sparse_union>, optional"
-        time_unix_nano timestamp "optional, optional, optional"
-        value union "i64|f64, optional, i64|f64, optional, i64|f64, optional"
-        span_id bytes[8] "optional, optional, optional"
-        trace_id bytes[16] "optional, optional, optional"
+    NUMBER_DP_EXEMPLAR_ATTRS{
+        parent_id u32 
+        key string 
+        type u8 
+        str string 
+        int i64 "optional"
+        double f64 "optional"
+        bool bool "optional"
+        bytes bytes "optional"
+        ser bytes "optional"
+    }
+    SUMMARY_DATA_POINTS{
+        id u32 "optional"
+        parent_id u16 
+        start_time_unix_nano timestamp "optional"
+        time_unix_nano timestamp "optional"
+        count u64 "optional"
+        sum f64 "optional"
+        flags u32 "optional"
+    }
+    EXP_HISTOGRAM_DATA_POINTS{
+        id u32 "optional"
+        parent_id u16 
+        start_time_unix_nano timestamp "optional"
+        time_unix_nano timestamp "optional"
+        count u64 "optional"
+        sum f64 "optional"
+        scale i32 "optional"
+        zero_count u64 "optional"
+        positive_offset i32 "optional"
+        positive_bucket_counts u64 "optional"
+        negative_offset i32 "optional"
+        negative_bucket_counts u64 "optional"
+        flags u32 "optional"
+        min f64 "optional"
+        max f64 "optional"
+    }
+    quantile{
+        quantile f64 "optional"
+        value f64 "optional"
     }
     SUMMARY_DP_ATTRS{
         parent_id u32 
@@ -125,40 +207,14 @@ erDiagram
         bytes bytes "optional"
         ser bytes "optional"
     }
-    HISTOGRAM_DATA_POINTS{
+    EXP_HISTOGRAM_DP_EXEMPLARS{
         id u32 "optional"
-        parent_id u16 
-        start_time_unix_nano timestamp "optional"
-        time_unix_nano timestamp "optional"
-        count u64 "optional"
-        sum f64 "optional"
-        bucket_counts u64 "optional"
-        explicit_bounds f64 "optional"
-        flags u32 "optional"
-        min f64 "optional"
-        max f64 "optional"
-    }
-    HISTOGRAM_DP_ATTRS{
         parent_id u32 
-        key string 
-        type u8 
-        str string 
-        int i64 "optional"
-        double f64 "optional"
-        bool bool "optional"
-        bytes bytes "optional"
-        ser bytes "optional"
-    }
-    RESOURCE_ATTRS{
-        parent_id u16 
-        key string 
-        type u8 
-        str string 
-        int i64 "optional"
-        double f64 "optional"
-        bool bool "optional"
-        bytes bytes "optional"
-        ser bytes "optional"
+        time_unix_nano timestamp "optional"
+        int_value i64 "optional"
+        double_value f64 "optional"
+        span_id bytes[8] "optional"
+        trace_id bytes[16] "optional"
     }
 ```
 
@@ -241,6 +297,32 @@ erDiagram
     SPANS ||--o{ SPAN_LINKS : span-link
     SPAN_EVENTS ||--o{ SPAN_EVENT_ATTRS : span-event-attrs
     SPAN_LINKS ||--o{ SPAN_LINK_ATTRS : span-link-attrs
+    SPAN_EVENTS{
+        id u32 "optional"
+        parent_id u16 
+        time_unix_nano timestamp "optional"
+        name string 
+        dropped_attributes_count u32 "optional"
+    }
+    SPAN_LINKS{
+        id u32 "optional"
+        parent_id u16 
+        trace_id bytes[16] "optional"
+        span_id bytes[8] "optional"
+        trace_state string "optional"
+        dropped_attributes_count u32 "optional"
+    }
+    SPAN_EVENT_ATTRS{
+        parent_id u32 
+        key string 
+        type u8 
+        str string 
+        int i64 "optional"
+        double f64 "optional"
+        bool bool "optional"
+        bytes bytes "optional"
+        ser bytes "optional"
+    }
     SPAN_LINK_ATTRS{
         parent_id u32 
         key string 
@@ -300,32 +382,6 @@ erDiagram
     }
     SPAN_ATTRS{
         parent_id u16 
-        key string 
-        type u8 
-        str string 
-        int i64 "optional"
-        double f64 "optional"
-        bool bool "optional"
-        bytes bytes "optional"
-        ser bytes "optional"
-    }
-    SPAN_EVENTS{
-        id u32 "optional"
-        parent_id u16 
-        time_unix_nano timestamp "optional"
-        name string 
-        dropped_attributes_count u32 "optional"
-    }
-    SPAN_LINKS{
-        id u32 "optional"
-        parent_id u16 
-        trace_id bytes[16] "optional"
-        span_id bytes[8] "optional"
-        trace_state string "optional"
-        dropped_attributes_count u32 "optional"
-    }
-    SPAN_EVENT_ATTRS{
-        parent_id u32 
         key string 
         type u8 
         str string 

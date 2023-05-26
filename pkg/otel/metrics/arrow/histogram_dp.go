@@ -26,6 +26,8 @@ package arrow
 // by the metric name, further enhancing the schema's efficiency and accessibility.
 
 import (
+	"sort"
+
 	"github.com/apache/arrow/go/v12/arrow"
 
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema"
@@ -33,7 +35,6 @@ import (
 
 	"errors"
 	"math"
-	"sort"
 
 	"go.opentelemetry.io/collector/pdata/pmetric"
 
@@ -58,7 +59,6 @@ var (
 		{Name: constants.HistogramSum, Type: arrow.PrimitiveTypes.Float64, Metadata: schema.Metadata(schema.Optional)},
 		{Name: constants.HistogramBucketCounts, Type: arrow.ListOf(arrow.PrimitiveTypes.Uint64), Metadata: schema.Metadata(schema.Optional)},
 		{Name: constants.HistogramExplicitBounds, Type: arrow.ListOf(arrow.PrimitiveTypes.Float64), Metadata: schema.Metadata(schema.Optional)},
-		{Name: constants.Exemplars, Type: arrow.ListOf(ExemplarDT), Metadata: schema.Metadata(schema.Optional)},
 		{Name: constants.Flags, Type: arrow.PrimitiveTypes.Uint32, Metadata: schema.Metadata(schema.Optional)},
 		{Name: constants.HistogramMin, Type: arrow.PrimitiveTypes.Float64, Metadata: schema.Metadata(schema.Optional)},
 		{Name: constants.HistogramMax, Type: arrow.PrimitiveTypes.Float64, Metadata: schema.Metadata(schema.Optional)},
@@ -83,14 +83,14 @@ type (
 		hbcb  *builder.Uint64Builder    // histogram_bucket_counts builder
 		heblb *builder.ListBuilder      // histogram_explicit_bounds list builder
 		hebb  *builder.Float64Builder   // histogram_explicit_bounds builder
-		elb   *builder.ListBuilder      // exemplars builder
-		eb    *ExemplarBuilder          // exemplar builder
 		fb    *builder.Uint32Builder    // flags builder
 		hmib  *builder.Float64Builder   // histogram_min builder
 		hmab  *builder.Float64Builder   // histogram_max builder
 
-		accumulator *HDPAccumulator
-		attrsAccu   *carrow.Attributes32Accumulator
+		dataPointAccumulator *HDPAccumulator
+		attrsAccu            *carrow.Attributes32Accumulator
+		exemplarAccumulator  *ExemplarAccumulator
+		config               *HistogramConfig
 	}
 
 	HDP struct {
@@ -101,15 +101,28 @@ type (
 	HDPAccumulator struct {
 		groupCount uint32
 		hdps       []HDP
+		sorter     HistogramSorter
 	}
+
+	HistogramSorter interface {
+		Sort(histograms []HDP)
+		Encode(parentID uint16, dp *pmetric.HistogramDataPoint) uint16
+		Reset()
+	}
+
+	HistogramsByNothing  struct{}
+	HistogramsByParentID struct {
+		prevParentID uint16
+	}
+	// ToDo explore other sorting options
 )
 
 // NewHistogramDataPointBuilder creates a new HistogramDataPointBuilder.
-func NewHistogramDataPointBuilder(rBuilder *builder.RecordBuilderExt) *HistogramDataPointBuilder {
+func NewHistogramDataPointBuilder(rBuilder *builder.RecordBuilderExt, conf *HistogramConfig) *HistogramDataPointBuilder {
 	b := &HistogramDataPointBuilder{
-		released:    false,
-		builder:     rBuilder,
-		accumulator: NewHDPAccumulator(),
+		released:             false,
+		builder:              rBuilder,
+		dataPointAccumulator: NewHDPAccumulator(conf.Sorter),
 	}
 
 	b.init()
@@ -127,10 +140,8 @@ func (b *HistogramDataPointBuilder) init() {
 	b.hsb = b.builder.Float64Builder(constants.HistogramSum)
 	b.hbclb = b.builder.ListBuilder(constants.HistogramBucketCounts)
 	b.heblb = b.builder.ListBuilder(constants.HistogramExplicitBounds)
-	b.elb = b.builder.ListBuilder(constants.Exemplars)
 	b.hbcb = b.hbclb.Uint64Builder()
 	b.hebb = b.heblb.Float64Builder()
-	b.eb = ExemplarBuilderFrom(b.elb.StructBuilder())
 	b.fb = b.builder.Uint32Builder(constants.Flags)
 	b.hmib = b.builder.Float64Builder(constants.HistogramMin)
 	b.hmab = b.builder.Float64Builder(constants.HistogramMax)
@@ -138,6 +149,10 @@ func (b *HistogramDataPointBuilder) init() {
 
 func (b *HistogramDataPointBuilder) SetAttributesAccumulator(accu *carrow.Attributes32Accumulator) {
 	b.attrsAccu = accu
+}
+
+func (b *HistogramDataPointBuilder) SetExemplarAccumulator(accu *ExemplarAccumulator) {
+	b.exemplarAccumulator = accu
 }
 
 func (b *HistogramDataPointBuilder) SchemaID() string {
@@ -149,11 +164,11 @@ func (b *HistogramDataPointBuilder) Schema() *arrow.Schema {
 }
 
 func (b *HistogramDataPointBuilder) IsEmpty() bool {
-	return b.accumulator.IsEmpty()
+	return b.dataPointAccumulator.IsEmpty()
 }
 
 func (b *HistogramDataPointBuilder) Accumulator() *HDPAccumulator {
-	return b.accumulator
+	return b.dataPointAccumulator
 }
 
 // Build builds the underlying array.
@@ -189,7 +204,7 @@ func (b *HistogramDataPointBuilder) Build() (record arrow.Record, err error) {
 }
 
 func (b *HistogramDataPointBuilder) Reset() {
-	b.accumulator.Reset()
+	b.dataPointAccumulator.Reset()
 }
 
 func (b *HistogramDataPointBuilder) PayloadType() *carrow.PayloadType {
@@ -211,12 +226,12 @@ func (b *HistogramDataPointBuilder) TryBuild(attrsAccu *carrow.Attributes32Accum
 		return nil, werror.Wrap(carrow.ErrBuilderAlreadyReleased)
 	}
 
-	b.accumulator.Sort()
+	b.dataPointAccumulator.sorter.Sort(b.dataPointAccumulator.hdps)
 
-	for ID, hdpRec := range b.accumulator.hdps {
+	for ID, hdpRec := range b.dataPointAccumulator.hdps {
 		hdp := hdpRec.Orig
 		b.ib.Append(uint32(ID))
-		b.pib.Append(hdpRec.ParentID)
+		b.pib.Append(b.dataPointAccumulator.sorter.Encode(hdpRec.ParentID, hdp))
 
 		// Attributes
 		err = attrsAccu.Append(uint32(ID), hdp.Attributes())
@@ -256,18 +271,14 @@ func (b *HistogramDataPointBuilder) TryBuild(attrsAccu *carrow.Attributes32Accum
 			return nil, werror.Wrap(err)
 		}
 
-		exs := hdp.Exemplars()
-		ec := exs.Len()
-		if err := b.elb.Append(ec, func() error {
-			for i := 0; i < ec; i++ {
-				if err := b.eb.Append(exs.At(i)); err != nil {
-					return werror.Wrap(err)
-				}
+		exemplars := hdp.Exemplars()
+		if exemplars.Len() > 0 {
+			err = b.exemplarAccumulator.Append(uint32(ID), exemplars)
+			if err != nil {
+				return nil, werror.Wrap(err)
 			}
-			return nil
-		}); err != nil {
-			return nil, werror.Wrap(err)
 		}
+
 		b.fb.Append(uint32(hdp.Flags()))
 
 		if hdp.HasMin() {
@@ -289,10 +300,11 @@ func (b *HistogramDataPointBuilder) TryBuild(attrsAccu *carrow.Attributes32Accum
 	return
 }
 
-func NewHDPAccumulator() *HDPAccumulator {
+func NewHDPAccumulator(sorter HistogramSorter) *HDPAccumulator {
 	return &HDPAccumulator{
 		groupCount: 0,
 		hdps:       make([]HDP, 0),
+		sorter:     sorter,
 	}
 }
 
@@ -324,13 +336,49 @@ func (a *HDPAccumulator) Append(
 	a.groupCount++
 }
 
-func (a *HDPAccumulator) Sort() {
-	sort.Slice(a.hdps, func(i, j int) bool {
-		return a.hdps[i].ParentID < a.hdps[j].ParentID
-	})
-}
-
 func (a *HDPAccumulator) Reset() {
 	a.groupCount = 0
 	a.hdps = a.hdps[:0]
+}
+
+// No sorting
+// ==========
+
+func UnsortedHistograms() *HistogramsByNothing {
+	return &HistogramsByNothing{}
+}
+
+func (a *HistogramsByNothing) Sort(_ []HDP) {
+	// Do nothing
+}
+
+func (a *HistogramsByNothing) Encode(parentID uint16, _ *pmetric.HistogramDataPoint) uint16 {
+	return parentID
+}
+
+func (a *HistogramsByNothing) Reset() {}
+
+// Sort by parentID
+// ================
+
+func SortHistogramsByParentID() *HistogramsByParentID {
+	return &HistogramsByParentID{}
+}
+
+func (a *HistogramsByParentID) Sort(histograms []HDP) {
+	sort.Slice(histograms, func(i, j int) bool {
+		dpsI := histograms[i]
+		dpsJ := histograms[j]
+		return dpsI.ParentID < dpsJ.ParentID
+	})
+}
+
+func (a *HistogramsByParentID) Encode(parentID uint16, _ *pmetric.HistogramDataPoint) uint16 {
+	delta := parentID - a.prevParentID
+	a.prevParentID = parentID
+	return delta
+}
+
+func (a *HistogramsByParentID) Reset() {
+	a.prevParentID = 0
 }

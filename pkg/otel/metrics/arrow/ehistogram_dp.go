@@ -58,7 +58,6 @@ var (
 		{Name: constants.ExpHistogramZeroCount, Type: arrow.PrimitiveTypes.Uint64, Metadata: schema.Metadata(schema.Optional)},
 		{Name: constants.ExpHistogramPositive, Type: EHistogramDataPointBucketsDT, Metadata: schema.Metadata(schema.Optional)},
 		{Name: constants.ExpHistogramNegative, Type: EHistogramDataPointBucketsDT, Metadata: schema.Metadata(schema.Optional)},
-		{Name: constants.Exemplars, Type: arrow.ListOf(ExemplarDT), Metadata: schema.Metadata(schema.Optional)},
 		{Name: constants.Flags, Type: arrow.PrimitiveTypes.Uint32, Metadata: schema.Metadata(schema.Optional)},
 		{Name: constants.HistogramMin, Type: arrow.PrimitiveTypes.Float64, Metadata: schema.Metadata(schema.Optional)},
 		{Name: constants.HistogramMax, Type: arrow.PrimitiveTypes.Float64, Metadata: schema.Metadata(schema.Optional)},
@@ -83,14 +82,14 @@ type (
 		zcb   *builder.Uint64Builder             // zero_count builder
 		pb    *EHistogramDataPointBucketsBuilder // positive buckets builder
 		nbb   *EHistogramDataPointBucketsBuilder // negative buckets builder
-		elb   *builder.ListBuilder               // exemplars builder
-		eb    *ExemplarBuilder                   // exemplar builder
 		fb    *builder.Uint32Builder             // flags builder
 		hmib  *builder.Float64Builder            // histogram_min builder
 		hmab  *builder.Float64Builder            // histogram_max builder
 
-		accumulator *EHDPAccumulator
-		attrsAccu   *carrow.Attributes32Accumulator
+		dataPointAccumulator *EHDPAccumulator
+		attrsAccu            *carrow.Attributes32Accumulator
+		exemplarAccumulator  *ExemplarAccumulator
+		config               *ExpHistogramConfig
 	}
 
 	EHDP struct {
@@ -101,15 +100,28 @@ type (
 	EHDPAccumulator struct {
 		groupCount uint32
 		ehdps      []EHDP
+		sorter     EHistogramSorter
 	}
+
+	EHistogramSorter interface {
+		Sort(histograms []EHDP)
+		Encode(parentID uint16, dp *pmetric.ExponentialHistogramDataPoint) uint16
+		Reset()
+	}
+
+	EHistogramsByNothing  struct{}
+	EHistogramsByParentID struct {
+		prevParentID uint16
+	}
+	// ToDo explore other sorting options
 )
 
-// EHistogramDataPointBuilderFrom creates a new EHistogramDataPointBuilder from an existing StructBuilder.
-func NewEHistogramDataPointBuilder(rBuilder *builder.RecordBuilderExt) *EHistogramDataPointBuilder {
+// NewEHistogramDataPointBuilder creates a new EHistogramDataPointBuilder.
+func NewEHistogramDataPointBuilder(rBuilder *builder.RecordBuilderExt, conf *ExpHistogramConfig) *EHistogramDataPointBuilder {
 	b := &EHistogramDataPointBuilder{
-		released:    false,
-		builder:     rBuilder,
-		accumulator: NewEHDPAccumulator(),
+		released:             false,
+		builder:              rBuilder,
+		dataPointAccumulator: NewEHDPAccumulator(conf.Sorter),
 	}
 
 	b.init()
@@ -129,8 +141,6 @@ func (b *EHistogramDataPointBuilder) init() {
 	b.zcb = b.builder.Uint64Builder(constants.ExpHistogramZeroCount)
 	b.pb = EHistogramDataPointBucketsBuilderFrom(b.builder.StructBuilder(constants.ExpHistogramPositive))
 	b.nbb = EHistogramDataPointBucketsBuilderFrom(b.builder.StructBuilder(constants.ExpHistogramNegative))
-	b.elb = b.builder.ListBuilder(constants.Exemplars)
-	b.eb = ExemplarBuilderFrom(b.elb.StructBuilder())
 	b.fb = b.builder.Uint32Builder(constants.Flags)
 	b.hmib = b.builder.Float64Builder(constants.HistogramMin)
 	b.hmab = b.builder.Float64Builder(constants.HistogramMax)
@@ -138,6 +148,10 @@ func (b *EHistogramDataPointBuilder) init() {
 
 func (b *EHistogramDataPointBuilder) SetAttributesAccumulator(accu *carrow.Attributes32Accumulator) {
 	b.attrsAccu = accu
+}
+
+func (b *EHistogramDataPointBuilder) SetExemplarAccumulator(accu *ExemplarAccumulator) {
+	b.exemplarAccumulator = accu
 }
 
 func (b *EHistogramDataPointBuilder) SchemaID() string {
@@ -149,11 +163,11 @@ func (b *EHistogramDataPointBuilder) Schema() *arrow.Schema {
 }
 
 func (b *EHistogramDataPointBuilder) IsEmpty() bool {
-	return b.accumulator.IsEmpty()
+	return b.dataPointAccumulator.IsEmpty()
 }
 
 func (b *EHistogramDataPointBuilder) Accumulator() *EHDPAccumulator {
-	return b.accumulator
+	return b.dataPointAccumulator
 }
 
 // Build builds the underlying array.
@@ -189,7 +203,7 @@ func (b *EHistogramDataPointBuilder) Build() (record arrow.Record, err error) {
 }
 
 func (b *EHistogramDataPointBuilder) Reset() {
-	b.accumulator.Reset()
+	b.dataPointAccumulator.Reset()
 }
 
 func (b *EHistogramDataPointBuilder) PayloadType() *carrow.PayloadType {
@@ -211,12 +225,12 @@ func (b *EHistogramDataPointBuilder) TryBuild(attrsAccu *carrow.Attributes32Accu
 		return nil, werror.Wrap(carrow.ErrBuilderAlreadyReleased)
 	}
 
-	b.accumulator.Sort()
+	b.dataPointAccumulator.sorter.Sort(b.dataPointAccumulator.ehdps)
 
-	for ID, ehdpRec := range b.accumulator.ehdps {
+	for ID, ehdpRec := range b.dataPointAccumulator.ehdps {
 		ehdp := ehdpRec.Orig
 		b.ib.Append(uint32(ID))
-		b.pib.Append(ehdpRec.ParentID)
+		b.pib.Append(b.dataPointAccumulator.sorter.Encode(ehdpRec.ParentID, ehdp))
 
 		// Attributes
 		err = attrsAccu.Append(uint32(ID), ehdp.Attributes())
@@ -237,7 +251,7 @@ func (b *EHistogramDataPointBuilder) TryBuild(attrsAccu *carrow.Attributes32Accu
 			return nil, werror.Wrap(err)
 		}
 
-		err := b.AppendExemplars(*ehdp)
+		err := b.AppendExemplars(uint32(ID), *ehdp)
 		if err != nil {
 			return nil, werror.Wrap(err)
 		}
@@ -253,17 +267,15 @@ func (b *EHistogramDataPointBuilder) TryBuild(attrsAccu *carrow.Attributes32Accu
 	return
 }
 
-func (b *EHistogramDataPointBuilder) AppendExemplars(hdp pmetric.ExponentialHistogramDataPoint) error {
-	exs := hdp.Exemplars()
-	ec := exs.Len()
-	return b.elb.Append(ec, func() error {
-		for i := 0; i < ec; i++ {
-			if err := b.eb.Append(exs.At(i)); err != nil {
-				return werror.Wrap(err)
-			}
+func (b *EHistogramDataPointBuilder) AppendExemplars(ID uint32, hdp pmetric.ExponentialHistogramDataPoint) error {
+	exemplars := hdp.Exemplars()
+	if exemplars.Len() > 0 {
+		err := b.exemplarAccumulator.Append(uint32(ID), exemplars)
+		if err != nil {
+			return werror.Wrap(err)
 		}
-		return nil
-	})
+	}
+	return nil
 }
 
 func (b *EHistogramDataPointBuilder) AppendCountSum(hdp pmetric.ExponentialHistogramDataPoint) {
@@ -288,10 +300,11 @@ func (b *EHistogramDataPointBuilder) AppendMinMax(hdp pmetric.ExponentialHistogr
 	}
 }
 
-func NewEHDPAccumulator() *EHDPAccumulator {
+func NewEHDPAccumulator(sorter EHistogramSorter) *EHDPAccumulator {
 	return &EHDPAccumulator{
 		groupCount: 0,
 		ehdps:      make([]EHDP, 0),
+		sorter:     sorter,
 	}
 }
 
@@ -323,13 +336,49 @@ func (a *EHDPAccumulator) Append(
 	a.groupCount++
 }
 
-func (a *EHDPAccumulator) Sort() {
-	sort.Slice(a.ehdps, func(i, j int) bool {
-		return a.ehdps[i].Orig.Timestamp() < a.ehdps[j].Orig.Timestamp()
-	})
-}
-
 func (a *EHDPAccumulator) Reset() {
 	a.groupCount = 0
 	a.ehdps = a.ehdps[:0]
+}
+
+// No sorting
+// ==========
+
+func UnsortedEHistograms() *EHistogramsByNothing {
+	return &EHistogramsByNothing{}
+}
+
+func (a *EHistogramsByNothing) Sort(_ []EHDP) {
+	// Do nothing
+}
+
+func (a *EHistogramsByNothing) Encode(parentID uint16, _ *pmetric.ExponentialHistogramDataPoint) uint16 {
+	return parentID
+}
+
+func (a *EHistogramsByNothing) Reset() {}
+
+// Sort by parentID
+// ================
+
+func SortEHistogramsByParentID() *EHistogramsByParentID {
+	return &EHistogramsByParentID{}
+}
+
+func (a *EHistogramsByParentID) Sort(histograms []EHDP) {
+	sort.Slice(histograms, func(i, j int) bool {
+		dpsI := histograms[i]
+		dpsJ := histograms[j]
+		return dpsI.ParentID < dpsJ.ParentID
+	})
+}
+
+func (a *EHistogramsByParentID) Encode(parentID uint16, _ *pmetric.ExponentialHistogramDataPoint) uint16 {
+	delta := parentID - a.prevParentID
+	a.prevParentID = parentID
+	return delta
+}
+
+func (a *EHistogramsByParentID) Reset() {
+	a.prevParentID = 0
 }
