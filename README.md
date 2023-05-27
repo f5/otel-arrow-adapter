@@ -18,6 +18,8 @@ Other important links:
 - [Arrow schemas](docs/data_model.md) used by this package.
 - [Threat model](docs/threat_model_assessment.md).
 
+See the following [benchmark results](docs/benchmarks.md) to the compression ratio gains.
+ 
 ## Phase 1 (current implementation)
 
 This first step is intended to address the specific use cases of traffic reduction. Based on community feedback, many
@@ -38,52 +40,6 @@ data has not been updated and this collector is still fundamentally row-oriented
 
 > Note 2: A future phase 2 of this project will focus on implementing end-to-end OTel Arrow to improve the overall
 > performance.
-
-## OTel Arrow Performance
-
-A comparison of the performance and compression rates between the standard OTLP protocol and the OTel Arrow protocol is
-given below. Except for the traces, the telemetry data used for these benchmarks are from a synthetic data generator.
-A larger campaign of tests and benchmarks on real production data will be conducted with the help of the community
-(see the [Help us](#tests-and-benchmarks-on-real-production-data) section).
-
-**Current results show an improvement of the compression ratio from 200% to 400%.**
-
-### Compression ratio benchmarks
-
-The following three tables compare the performance in terms of compression ratio 
-between:
-
-- OTLP,
-- OTel Arrow (streaming mode),
-- and OTel Arrow (unary RPC mode),
-
-for metrics, logs, and traces (in this order).
-
-![img](docs/img/metrics_compression_rate_benchmark.png)
-
-![img](docs/img/logs_compression_rate_benchmark.png)
-
-![img](docs/img/traces_compression_rate_benchmark.png)
-
-### End-to-end performance benchmarks
-
-The following results compare the end-to-end performance between OTLP and OTel 
-Arrow (streaming mode), and OTel Arrow (unary RPC mode) for metrics, logs, and 
-traces (in this order).
-
-All the steps are included: encoding, sending, decoding, compression, 
-decompression, and conversion (when that is applicable). 
-
-Each result is composed of two tables: one for the phase 1 (current implementation)
-and one evaluation for the phase 2 (future implementation). The results of phase
-2 are extrapolated from the results of phase 1 by removing the conversion steps.
-
-![img](docs/img/metrics_end_to_end_benchmark.png)
-
-![img](docs/img/logs_end_to_end_benchmark.png)
-
-![img](docs/img/traces_end_to_end_benchmark.png)
-
 
 ## Testing and validation
 
