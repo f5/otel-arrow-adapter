@@ -14,6 +14,20 @@
 > ratio of the OTel Arrow with a protobuf-based protocol that uses dictionary 
 > compression and streaming mode. More details can be found on this [branch](https://github.com/f5/otel-arrow-adapter/compare/main...tigrannajaryan:otel-arrow-adapter:feature/tigran/otlpdict)).
 
+## Benchmark summary
+
+The following chart shows the compressed message size (in bytes) as a function 
+of the batch size for metrics (univariate), logs, and traces. The bottom of the
+chart shows the reduction factor for both the standard OTLP protocol and the 
+OTel Arrow protocol.
+
+![compression_ratio](./img/compression_ratio_summary_std_metrics.png)
+
+The next chart follows the same logic but shows the results for multivariate 
+metrics (left column). 
+
+![compression_ratio](./img/compression_ratio_summary_multivariate_metrics.png)
+
 ## Metrics
 
 ### Hipster Shop Metrics

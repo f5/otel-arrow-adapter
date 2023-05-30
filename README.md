@@ -18,7 +18,21 @@ Other important links:
 - [Arrow schemas](docs/data_model.md) used by this package.
 - [Threat model](docs/threat_model_assessment.md).
 
-See the following [benchmark results](docs/benchmarks.md) to the compression ratio gains.
+## Benchmark summary
+
+The following chart shows the compressed message size (in bytes) as a function
+of the batch size for metrics (univariate), logs, and traces. The bottom of the
+chart shows the reduction factor for both the standard OTLP protocol and the
+OTel Arrow protocol.
+
+![compression_ratio](./docs/img/compression_ratio_summary_std_metrics.png)
+
+The next chart follows the same logic but shows the results for multivariate
+metrics (left column).
+
+![compression_ratio](./docs/img/compression_ratio_summary_multivariate_metrics.png)
+
+See the following [benchmark results](docs/benchmarks.md) for more details.
  
 ## Phase 1 (current implementation)
 
