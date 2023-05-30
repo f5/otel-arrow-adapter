@@ -9,7 +9,14 @@
 - STREAM: gRPC streaming mode
 - UNARY RPC: gRPC unary RPC mode
 
-## Hipster Shop Metrics
+> Note: OTLP DICT was implemented by Tigran Najaryan as part of the donation 
+> process review. This implementation was created to compare the compression 
+> ratio of the OTel Arrow with a protobuf-based protocol that uses dictionary 
+> compression and streaming mode. More details can be found on this [branch](https://github.com/f5/otel-arrow-adapter/compare/main...tigrannajaryan:otel-arrow-adapter:feature/tigran/otlpdict)).
+
+## Metrics
+
+### Hipster Shop Metrics
 
 | PROTO MSG SIZE           | OTLP ZSTD - MEAN        | OTLP DICT ZSTD+STREAM MODE - MEAN | OTel ARROW ZSTD+STREAM MODE - MEAN | OTLP DICT ZSTD+UNARY RPC - MEAN  | OTel ARROW ZSTD+UNARY RPC MODE - MEAN |
 |--------------------------|-------------------------|-----------------------------------|------------------------------------|----------------------------------|---------------------------------------|
@@ -30,7 +37,7 @@
 | batch_size: 4000         | 64622  (total: 646 kB)  | 43162 (x  1.50) (total: 432 kB)   | 27991 (x  2.31) (total: 280 kB)    | 50749 (x  1.27) (total: 508 kB)  | 40270 (x  1.60) (total: 403 kB)       |
 | batch_size: 5000         | 75325  (total: 603 kB)  | 50870 (x  1.48) (total: 407 kB)   | 32800 (x  2.30) (total: 262 kB)    | 58869 (x  1.28) (total: 471 kB)  | 44532 (x  1.69) (total: 356 kB)       |
 
-## Multivariate Metrics
+### Multivariate Metrics
 
 | PROTO MSG SIZE           | OTLP ZSTD - MEAN          | OTLP DICT ZSTD+STREAM MODE - MEAN  | OTel ARROW ZSTD+STREAM MODE - MEAN | OTLP DICT ZSTD+UNARY RPC - MEAN    | OTel ARROW ZSTD+UNARY RPC MODE - MEAN |
 |--------------------------|---------------------------|------------------------------------|------------------------------------|------------------------------------|---------------------------------------|
@@ -56,39 +63,69 @@
 | PROTO MSG SIZE           | OTLP ZSTD - MEAN         | OTel ARROW ZSTD+STREAM MODE - MEAN | OTel ARROW ZSTD+UNARY RPC MODE - MEAN |
 |--------------------------|--------------------------|------------------------------------|---------------------------------------|
 | **Uncompressed (bytes)** |                          |                                    |                                       |
-| batch_size: 5000         | 1324852  (total: 130 MB) | 719397 (x  1.84) (total: 70 MB)    | 861324 (x  1.54) (total: 84 MB)       |
-| batch_size: 10000        | 2649728  (total: 127 MB) | 1432833 (x  1.85) (total: 69 MB)   | 1714589 (x  1.55) (total: 82 MB)      |
+| batch_size: 10           | 2649  (total: 132 MB)    |     3854 (x  0.69) (total: 193 MB) | 9846 (x  0.27) (total: 492 MB)        |
+| batch_size: 100          | 26496  (total: 132 MB)   |    16744 (x  1.58) (total: 84 MB)  | 24988 (x  1.06) (total: 125 MB)       |
+| batch_size: 500          | 132484  (total: 132 MB)  |    74265 (x  1.78) (total: 74 MB)  | 92471 (x  1.43) (total: 92 MB)        |
+| batch_size: 1000         | 264970  (total: 132 MB)  |   146077 (x  1.81) (total: 73 MB)  | 176784 (x  1.50) (total: 88 MB)       |
+| batch_size: 2000         | 529940  (total: 131 MB)  |   289473 (x  1.83) (total: 72 MB)  | 349482 (x  1.52) (total: 87 MB)       |
+| batch_size: 4000         | 1059880  (total: 130 MB) |   576048 (x  1.84) (total: 71 MB)  | 690880 (x  1.53) (total: 85 MB)       |
+| batch_size: 5000         | 1324852  (total: 130 MB) |   719397 (x  1.84) (total: 70 MB)  | 861324 (x  1.54) (total: 84 MB)       |
 | **Compressed (bytes)**   |                          |                                    |                                       |
-| batch_size: 5000         | 263515  (total: 26 MB)   | 130915 (x  2.01) (total: 13 MB)    | 185619 (x  1.42) (total: 18 MB)       |
-| batch_size: 10000        | 522715  (total: 25 MB)   | 255211 (x  2.05) (total: 12 MB)    | 364671 (x  1.43) (total: 18 MB)       |
+| batch_size: 10           | 1013  (total: 51 MB)     |      984 (x  1.03) (total: 49 MB)  | 2473 (x  0.41) (total: 124 MB)        |
+| batch_size: 100          | 6377  (total: 32 MB)     |     3872 (x  1.65) (total: 19 MB)  | 6557 (x  0.97) (total: 33 MB)         |
+| batch_size: 500          | 28004  (total: 28 MB)    |    15160 (x  1.85) (total: 15 MB)  | 22398 (x  1.25) (total: 22 MB)        |
+| batch_size: 1000         | 54669  (total: 27 MB)    |    28694 (x  1.91) (total: 14 MB)  | 41658 (x  1.31) (total: 21 MB)        |
+| batch_size: 2000         | 107246  (total: 27 MB)   |    54625 (x  1.96) (total: 14 MB)  | 78497 (x  1.37) (total: 20 MB)        |
+| batch_size: 4000         | 211553  (total: 26 MB)   |   105660 (x  2.00) (total: 13 MB)  | 150369 (x  1.41) (total: 18 MB)       |
+|  batch_size: 5000        | 263527  (total: 26 MB)   |   130874 (x  2.01) (total: 13 MB)  | 185938 (x  1.42) (total: 18 MB)       |
 
-## Hipster Shop Traces
+Note: OTLP Dict doesn't exist for logs.
 
-| PROTO MSG SIZE           | OTLP ZSTD - MEAN          | OTLP DICT ZSTD+STREAM MODE - MEAN | OTel ARROW ZSTD+STREAM MODE - MEAN  | OTLP DICT ZSTD+UNARY RPC - MEAN   | OTel ARROW ZSTD+UNARY RPC MODE - MEAN   |
-|--------------------------|---------------------------|-----------------------------------|-------------------------------------|-----------------------------------|-----------------------------------------|
-| **Uncompressed (bytes)** |                           |                                   |                                     |                                   |                                         |
-| batch_size: 500          |   134629  (total: 23 MB)  | 56243 (x  2.39) (total: 9.7 MB)   | 50872 (x  2.65) (total: 8.8 MB)     | 60467 (x  2.23) (total: 10 MB)    | 61539 (x  2.19) (total: 11 MB)          |
-| batch_size: 5000         |  1252139  (total: 20 MB)  | 532425 (x  2.35) (total: 8.5 MB)  | 473748 (x  2.64) (total: 7.6 MB)    | 538216 (x  2.33) (total: 8.6 MB)  | 495640 (x  2.53) (total: 7.9 MB)        |
-| batch_size: 10000        |  2494746  (total: 18 MB)  | 1063158 (x  2.35) (total: 7.4 MB) | 947829 (x  2.63) (total: 6.6 MB)    | 1066571 (x  2.34) (total: 7.5 MB) | 973397 (x  2.56) (total: 6.8 MB)        |
-| **Compressed (bytes)**   |                           |                                   |                                     |                                   |                                         |
-| batch_size: 500          |    21662  (total: 3.7 MB) | 17331 (x  1.25) (total: 3.0 MB)   | 12291 (x  1.76) (total: 2.1 MB)     | 20088 (x  1.08) (total: 3.5 MB)   | 17042 (x  1.27) (total: 2.9 MB)         |
-| batch_size: 5000         |   178704  (total: 2.9 MB) | 159338 (x  1.12) (total: 2.5 MB)  | 108570 (x  1.65) (total: 1.7 MB)    | 163787 (x  1.09) (total: 2.6 MB)  | 115699 (x  1.54) (total: 1.9 MB)        |
-| batch_size: 10000        |   355126  (total: 2.5 MB) | 322501 (x  1.10) (total: 2.3 MB)  | 217190 (x  1.64) (total: 1.5 MB)    | 326945 (x  1.09) (total: 2.3 MB)  | 228829 (x  1.55) (total: 1.6 MB)        |
+## Traces
 
-## Prod Traces (anonymized)
+### Hipster Shop Traces
 
-| PROTO MSG SIZE           | OTLP ZSTD - MEAN          | OTLP DICT ZSTD+STREAM MODE - MEAN | OTel ARROW ZSTD+STREAM MODE - MEAN   | OTLP DICT ZSTD+UNARY RPC - MEAN   | OTel  ARROW ZSTD+UNARY RPC MODE - MEAN   |
-|--------------------------|---------------------------|-----------------------------------|--------------------------------------|-----------------------------------|------------------------------------------|
-| **Uncompressed (bytes)** |                           |                                   |                                      |                                   |                                          |
-| batch_size: 500          |   909780  (total: 757 MB) | 261413 (x  3.48) (total: 218 MB)  | 296585 (x  3.07) (total: 247 MB)     | 390731 (x  2.33) (total: 325 MB)  | 414941 (x  2.19) (total: 345 MB)         |
-| batch_size: 5000         |  6354479  (total: 521 MB) | 2088389 (x  3.04) (total: 171 MB) | 2437692 (x  2.61) (total: 200 MB)    | 2504505 (x  2.54) (total: 205 MB) | 2867963 (x  2.22) (total: 235 MB)        |
-| batch_size: 10000        | 11027424  (total: 441 MB) | 3825658 (x  2.88) (total: 153 MB) | 4590592 (x  2.40) (total: 184 MB)    | 4327249 (x  2.55) (total: 173 MB) | 5066534 (x  2.18) (total: 203 MB)        |
-| **Compressed (bytes)**   |                           |                                   |                                      |                                   |                                          |
-| batch_size: 500          |   213043  (total: 177 MB) | 89167 (x  2.39) (total: 74 MB)    | 86100 (x  2.47) (total: 72 MB)       | 217476 (x  0.98) (total: 181 MB)  | 200475 (x  1.06) (total: 167 MB)         |
-| batch_size: 5000         |  1344735  (total: 110 MB) | 805998 (x  1.67) (total: 66 MB)   | 752228 (x  1.79) (total: 62 MB)      | 1197737 (x  1.12) (total: 98 MB)  | 1219833 (x  1.10) (total: 100 MB)        |
-| batch_size: 10000        |  2376598  (total: 95 MB)  | 1542975 (x  1.54) (total: 62 MB)  | 1456160 (x  1.63) (total: 58 MB)     | 2006944 (x  1.18) (total: 80 MB)  | 2052184 (x  1.16) (total: 82 MB)         |
+| PROTO MSG SIZE           | OTLP ZSTD - MEAN          | OTLP DICT ZSTD+STREAM MODE - MEAN | OTel ARROW ZSTD+STREAM MODE - MEAN | OTLP DICT ZSTD+UNARY RPC - MEAN  | OTel ARROW ZSTD+UNARY RPC MODE - MEAN |
+|--------------------------|---------------------------|-----------------------------------|------------------------------------|----------------------------------|---------------------------------------|
+| **Uncompressed (bytes)** |                           |                                   |                                    |                                  |                                       |
+| batch_size: 10           |     5559  (total: 48 MB)  | 1784 (x  3.12) (total: 15 MB)     | 3133 (x  1.77) (total: 27 MB)      | 3584 (x  1.55) (total: 31 MB)    | 8394 (x  0.66) (total: 73 MB)         |         
+| batch_size: 100          |    30812  (total: 27 MB)  | 12163 (x  2.53) (total: 10 MB)    | 12176 (x  2.53) (total: 10 MB)     | 15359 (x  2.01) (total: 13 MB)   | 19660 (x  1.57) (total: 17 MB)        |       
+| batch_size: 500          |   134629  (total: 23 MB)  | 56243 (x  2.39) (total: 9.7 MB)   | 50872 (x  2.65) (total: 8.8 MB)    | 60467 (x  2.23) (total: 10 MB)   | 61539 (x  2.19) (total: 11 MB)        |      
+| batch_size: 1000         |   263839  (total: 22 MB)  | 111286 (x  2.37) (total: 9.5 MB)  | 99360 (x  2.66) (total: 8.4 MB)    | 116134 (x  2.27) (total: 9.9 MB) | 112537 (x  2.34) (total: 9.6 MB)      |     
+| batch_size: 2000         |   516272  (total: 22 MB)  | 218875 (x  2.36) (total: 9.2 MB)  | 194423 (x  2.66) (total: 8.2 MB)   | 224179 (x  2.30) (total: 9.4 MB) | 210977 (x  2.45) (total: 8.9 MB)      |    
+| batch_size: 4000         |  1027779  (total: 21 MB)  | 436749 (x  2.35) (total: 8.7 MB)  | 388840 (x  2.64) (total: 7.8 MB)   | 442652 (x  2.32) (total: 8.9 MB) | 409314 (x  2.51) (total: 8.2 MB)      |   
+| batch_size: 5000         |  1252139  (total: 20 MB)  | 532425 (x  2.35) (total: 8.5 MB)  | 473748 (x  2.64) (total: 7.6 MB)   | 538216 (x  2.33) (total: 8.6 MB) | 495640 (x  2.53) (total: 7.9 MB)      |  
+| **Compressed (bytes)**   |                           |                                   |                                    |                                  |                                       |
+| batch_size: 10           |     1782  (total: 15 MB)  | 774 (x  2.30) (total: 6.7 MB)     | 924 (x  1.93) (total: 8.0 MB)      | 1784 (x  1.00) (total: 15 MB)    | 2855 (x  0.62) (total: 25 MB)         |         
+| batch_size: 100          |     6106  (total: 5.3 MB) | 4013 (x  1.52) (total: 3.5 MB)    | 3297 (x  1.85) (total: 2.8 MB)     | 5694 (x  1.07) (total: 4.9 MB)   | 6238 (x  0.98) (total: 5.4 MB)        |        
+| batch_size: 500          |    21662  (total: 3.7 MB) | 17331 (x  1.25) (total: 3.0 MB)   | 12291 (x  1.76) (total: 2.1 MB)    | 20088 (x  1.08) (total: 3.5 MB)  | 17042 (x  1.27) (total: 2.9 MB)       |       
+| batch_size: 1000         |    40271  (total: 3.4 MB) | 33890 (x  1.19) (total: 2.9 MB)   | 23634 (x  1.70) (total: 2.0 MB)    | 37207 (x  1.08) (total: 3.2 MB)  | 30475 (x  1.32) (total: 2.6 MB)       |      
+| batch_size: 2000         |    75810  (total: 3.2 MB) | 65789 (x  1.15) (total: 2.8 MB)   | 46272 (x  1.64) (total: 1.9 MB)    | 69021 (x  1.10) (total: 2.9 MB)  | 54854 (x  1.38) (total: 2.3 MB)       |     
+| batch_size: 4000         |   147406  (total: 2.9 MB) | 130875 (x  1.13) (total: 2.6 MB)  | 91913 (x  1.60) (total: 1.8 MB)    | 134771 (x  1.09) (total: 2.7 MB) | 100075 (x  1.47) (total: 2.0 MB)      |    
+| batch_size: 5000         |   178704  (total: 2.9 MB) | 159338 (x  1.12) (total: 2.5 MB)  | 108570 (x  1.65) (total: 1.7 MB)   | 163787 (x  1.09) (total: 2.6 MB) | 115699 (x  1.54) (total: 1.9 MB)      |   
 
-## Generated Traces
+### Prod Traces (anonymized)
+
+| PROTO MSG SIZE           | OTLP ZSTD - MEAN          | OTLP DICT ZSTD+STREAM MODE - MEAN | OTel ARROW ZSTD+STREAM MODE - MEAN | OTLP DICT ZSTD+UNARY RPC - MEAN   | OTel  ARROW ZSTD+UNARY RPC MODE - MEAN |
+|--------------------------|---------------------------|-----------------------------------|------------------------------------|-----------------------------------|----------------------------------------|
+| **Uncompressed (bytes)** |                           |                                   |                                    |                                   |                                        |
+| batch_size: 10           |    20620  (total: 860 MB) | 5706 (x  3.61) (total: 238 MB)    | 9567 (x  2.16) (total: 399 MB)     | 12364 (x  1.67) (total: 516 MB)   | 21120 (x  0.98) (total: 881 MB)        |
+| batch_size: 100          |   196478  (total: 819 MB) | 54881 (x  3.58) (total: 229 MB)   | 64923 (x  3.03) (total: 271 MB)    | 93211 (x  2.11) (total: 388 MB)   | 104962 (x  1.87) (total: 438 MB)       |
+| batch_size: 500          |   909780  (total: 757 MB) | 261413 (x  3.48) (total: 218 MB)  | 296585 (x  3.07) (total: 247 MB)   | 390731 (x  2.33) (total: 325 MB)  | 414941 (x  2.19) (total: 345 MB)       |
+| batch_size: 1000         |  1699149  (total: 705 MB) | 510209 (x  3.33) (total: 212 MB)  | 568327 (x  2.99) (total: 236 MB)   | 704717 (x  2.41) (total: 292 MB)  | 750672 (x  2.26) (total: 312 MB)       |
+| batch_size: 2000         |  3059031  (total: 633 MB) | 946324 (x  3.23) (total: 196 MB)  | 1071349 (x  2.86) (total: 222 MB)  | 1232814 (x  2.48) (total: 255 MB) | 1338620 (x  2.29) (total: 277 MB)      |
+| batch_size: 4000         |  5327245  (total: 549 MB) | 1721632 (x  3.09) (total: 177 MB) | 1994564 (x  2.67) (total: 205 MB)  | 2106812 (x  2.53) (total: 217 MB) | 2363645 (x  2.25) (total: 244 MB)      |
+| batch_size: 5000         |  6354479  (total: 521 MB) | 2088389 (x  3.04) (total: 171 MB) | 2437692 (x  2.61) (total: 200 MB)  | 2504505 (x  2.54) (total: 205 MB) | 2867963 (x  2.22) (total: 235 MB)      |
+| **Compressed (bytes)**   |                           |                                   |                                    |                                   |                                        |
+| batch_size: 10           |     8370  (total: 349 MB) | 2703 (x  3.10) (total: 113 MB)    | 2996 (x  2.79) (total: 125 MB)     | 8025 (x  1.04) (total: 335 MB)    | 9967 (x  0.84) (total: 416 MB)         |
+| batch_size: 100          |    54403  (total: 227 MB) | 20726 (x  2.62) (total: 86 MB)    | 19195 (x  2.83) (total: 80 MB)     | 51181 (x  1.06) (total: 213 MB)   | 53790 (x  1.01) (total: 224 MB)        |
+| batch_size: 500          |   213043  (total: 177 MB) | 89167 (x  2.39) (total: 74 MB)    | 86100 (x  2.47) (total: 72 MB)     | 217476 (x  0.98) (total: 181 MB)  | 200475 (x  1.06) (total: 167 MB)       |
+| batch_size: 1000         |   376280  (total: 156 MB) | 169939 (x  2.21) (total: 70 MB)   | 162483 (x  2.32) (total: 67 MB)    | 366433 (x  1.03) (total: 152 MB)  | 347062 (x  1.08) (total: 144 MB)       |
+| batch_size: 2000         |   651372  (total: 135 MB) | 331460 (x  1.97) (total: 69 MB)   | 308896 (x  2.11) (total: 64 MB)    | 628834 (x  1.04) (total: 130 MB)  | 613428 (x  1.06) (total: 127 MB)       |
+| batch_size: 4000         |  1123219  (total: 116 MB) | 658455 (x  1.71) (total: 68 MB)   | 609538 (x  1.84) (total: 63 MB)    | 1016331 (x  1.11) (total: 105 MB) | 1044078 (x  1.08) (total: 108 MB)      |
+| batch_size: 5000         |  1344735  (total: 110 MB) | 805998 (x  1.67) (total: 66 MB)   | 752228 (x  1.79) (total: 62 MB)    | 1197737 (x  1.12) (total: 98 MB)  | 1219833 (x  1.10) (total: 100 MB)      |
+
+### Generated Traces
 
 | PROTO MSG SIZE           | OTLP ZSTD - MEAN          | OTLP DICT ZSTD+STREAM MODE - MEAN  | OTel ARROW ZSTD+STREAM MODE - MEAN | OTLP DICT ZSTD+UNARY RPC - MEAN    | OTel  ARROW ZSTD+UNARY RPC MODE - MEAN |
 |--------------------------|---------------------------|------------------------------------|------------------------------------|------------------------------------|----------------------------------------|
