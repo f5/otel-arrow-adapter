@@ -12,6 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// This protocol specifies the services and messages utilized by the OTel Arrow
+// Protocol. It extends the OTLP protocol by representing OTLP entities in a
+// columnar manner using Apache Arrow. The primary objective of this new
+// protocol is to optimize transport efficiency in terms of compression (phase 1),
+// memory, and CPU usage (phase 2).
+//
+// Note: This protocol is still experimental and subject to change.
+
 syntax = "proto3";
 
 package opentelemetry.proto.experimental.arrow.v1;
@@ -26,6 +34,10 @@ option go_package = "github.com/f5/otel-arrow-adapter/api/experimental/arrow/v1"
 // This service can be utilized to transmit `BatchArrowRecords` either from an
 // application instrumented with OpenTelemetry to a collector, or between
 // multiple collectors.
+//
+// Note: If your deployment requires to load-balance the telemetry data based on
+// the nature of the telemetry data (e.g. traces, metrics, logs), then you should
+// use the `ArrowTracesService`, `ArrowMetricsService`, and `ArrowLogsService`.
 service ArrowStreamService {
   // The ArrowStream endpoint is a bi-directional stream used to send batch of
   // `BatchArrowRecords` from the exporter to the collector. The collector
