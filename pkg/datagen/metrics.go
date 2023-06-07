@@ -74,7 +74,26 @@ func (mg *MetricsGenerator) Generate(batchSize int, collectInterval time.Duratio
 		mg.SystemCpuLoadAverage1m(metrics.AppendEmpty())
 		mg.FakeSummary(metrics.AppendEmpty())
 		mg.FakeHistogram(metrics.AppendEmpty())
-		mg.FakeExpHistogram(metrics.AppendEmpty())
+		mg.ExpHistogramWithEverything(metrics.AppendEmpty())
+	}
+
+	mg.generation++
+
+	return result
+}
+
+func (mg *MetricsGenerator) GenerateExponentialHistograms(batchSize int, collectInterval time.Duration) pmetric.Metrics {
+	result, metrics := mg.newResult()
+
+	for i := 0; i < batchSize; i++ {
+		mg.AdvanceTime(collectInterval)
+
+		mg.ExpHistogramWithNoDataPoints(metrics.AppendEmpty())
+		mg.ExpHistogramWithOnlyTimestamps(metrics.AppendEmpty())
+		mg.ExpHistogramWithoutAttrsAndWithoutBuckets(metrics.AppendEmpty())
+		mg.ExpHistogramWithoutAttrs(metrics.AppendEmpty())
+		mg.ExpHistogramWithEverything(metrics.AppendEmpty())
+		mg.ExpHistogramWithOnlyExemplars(metrics.AppendEmpty())
 	}
 
 	mg.generation++
@@ -93,7 +112,7 @@ func (mg *MetricsGenerator) GenerateMetricSlice(batchSize int, collectInterval t
 		mg.SystemCpuLoadAverage1m(metrics.AppendEmpty())
 		mg.FakeSummary(metrics.AppendEmpty())
 		mg.FakeHistogram(metrics.AppendEmpty())
-		mg.FakeExpHistogram(metrics.AppendEmpty())
+		mg.ExpHistogramWithEverything(metrics.AppendEmpty())
 	}
 
 	mg.generation++
@@ -368,17 +387,13 @@ func (dg *DataGenerator) FakeHistogram(metric pmetric.Metric) {
 	}
 }
 
-// FakeExpHistogram generates a fake exponential histogram metric.
+// ExpHistogramWithEverything generates a fake exponential histogram metric.
 // All field are purposely filled with random values.
-func (dg *DataGenerator) FakeExpHistogram(metric pmetric.Metric) {
-	metric.SetName("fake.exp_histogram")
+func (dg *DataGenerator) ExpHistogramWithEverything(metric pmetric.Metric) {
+	metric.SetName("exp_histogram_with_everything")
 	// Generate description and unit only half of the time.
-	if dg.HasMetricDescription() {
-		metric.SetDescription("An exponential histogram with a few buckets.")
-	}
-	if dg.HasMetricUnit() {
-		metric.SetUnit("1")
-	}
+	metric.SetDescription("An exponential histogram with a few buckets.")
+	metric.SetUnit("1")
 
 	histogram := metric.SetEmptyExponentialHistogram()
 	histogram.SetAggregationTemporality(pmetric.AggregationTemporalityCumulative)
@@ -404,9 +419,7 @@ func (dg *DataGenerator) FakeExpHistogram(metric pmetric.Metric) {
 		attrs.PutStr("cpu_logical_processors", "8")
 
 		dp.SetCount(uint64(dg.GenI64Range(0, 100)))
-		if dg.HasHistogramSum() {
-			dp.SetSum(dg.GenF64Range(0, 100))
-		}
+		dp.SetSum(dg.GenF64Range(0, 100))
 		dp.SetScale(int32(dg.GenI64Range(-10, 10)))
 		dp.SetZeroCount(uint64(dg.GenI64Range(0, 100)))
 
@@ -426,12 +439,163 @@ func (dg *DataGenerator) FakeExpHistogram(metric pmetric.Metric) {
 			buckets.Append(uint64(dg.GenI64Range(0, 100)))
 		}
 
-		dp.SetFlags(pmetric.DataPointFlags(dg.GenI64Range(1, 50)))
-		if dg.HasHistogramMin() {
-			dp.SetMin(dg.GenF64Range(0, 100))
+		exemplars := dp.Exemplars()
+		exemplars.EnsureCapacity(10)
+		for j := 0; j < 10; j++ {
+			exemplar := exemplars.AppendEmpty()
+			exemplar.SetTimestamp(dg.CurrentTime())
+			exemplar.SetIntValue(dg.GenI64Range(0, 100))
+			attrs := exemplar.FilteredAttributes()
+			attrs.EnsureCapacity(2)
+			attrs.PutStr("freq", "3GHz")
+			attrs.PutInt("cpu", 0)
 		}
-		if dg.HasHistogramMax() {
-			dp.SetMax(dg.GenF64Range(0, 100))
+
+		dp.SetMin(dg.GenF64Range(0, 100))
+		dp.SetMax(dg.GenF64Range(0, 100))
+		dp.SetFlags(pmetric.DataPointFlags(dg.GenI64Range(1, 50)))
+	}
+}
+
+func (dg *DataGenerator) ExpHistogramWithoutAttrs(metric pmetric.Metric) {
+	metric.SetName("exp_histogram_without_attrs")
+	// Generate description and unit only half of the time.
+	if dg.HasMetricDescription() {
+		metric.SetDescription("An exponential histogram with a few buckets.")
+	}
+	if dg.HasMetricUnit() {
+		metric.SetUnit("1")
+	}
+
+	histogram := metric.SetEmptyExponentialHistogram()
+	histogram.SetAggregationTemporality(pmetric.AggregationTemporalityCumulative)
+
+	dps := histogram.DataPoints()
+	dps.EnsureCapacity(10)
+
+	for i := 0; i < 10; i++ {
+		dp := dps.AppendEmpty()
+		dp.SetStartTimestamp(dg.PrevTime())
+		dp.SetTimestamp(dg.CurrentTime())
+
+		dp.SetCount(uint64(dg.GenI64Range(0, 100)))
+		dp.SetSum(dg.GenF64Range(0, 100))
+		dp.SetScale(int32(dg.GenI64Range(-10, 10)))
+		dp.SetZeroCount(uint64(dg.GenI64Range(0, 100)))
+
+		positive := dp.Positive()
+		positive.SetOffset(int32(dg.GenI64Range(-100, 100)))
+		buckets := positive.BucketCounts()
+		buckets.EnsureCapacity(10)
+		for j := 0; j < 10; j++ {
+			buckets.Append(uint64(dg.GenI64Range(0, 100)))
+		}
+
+		negative := dp.Negative()
+		negative.SetOffset(int32(dg.GenI64Range(-100, 100)))
+		buckets = negative.BucketCounts()
+		buckets.EnsureCapacity(10)
+		for j := 0; j < 10; j++ {
+			buckets.Append(uint64(dg.GenI64Range(0, 100)))
+		}
+
+		dp.SetMin(dg.GenF64Range(0, 100))
+		dp.SetMax(dg.GenF64Range(0, 100))
+		dp.SetFlags(pmetric.DataPointFlags(dg.GenI64Range(1, 50)))
+	}
+}
+
+func (dg *DataGenerator) ExpHistogramWithoutAttrsAndWithoutBuckets(metric pmetric.Metric) {
+	metric.SetName("exp_histogram_without_attrs_and_buckets")
+	// Generate description and unit only half of the time.
+	if dg.HasMetricDescription() {
+		metric.SetDescription("An exponential histogram with a few buckets.")
+	}
+	if dg.HasMetricUnit() {
+		metric.SetUnit("1")
+	}
+
+	histogram := metric.SetEmptyExponentialHistogram()
+	histogram.SetAggregationTemporality(pmetric.AggregationTemporalityCumulative)
+
+	dps := histogram.DataPoints()
+	dps.EnsureCapacity(10)
+
+	for i := 0; i < 10; i++ {
+		dp := dps.AppendEmpty()
+		dp.SetStartTimestamp(dg.PrevTime())
+		dp.SetTimestamp(dg.CurrentTime())
+
+		dp.SetCount(uint64(dg.GenI64Range(0, 100)))
+		dp.SetSum(dg.GenF64Range(0, 100))
+		dp.SetScale(int32(dg.GenI64Range(-10, 10)))
+		dp.SetZeroCount(uint64(dg.GenI64Range(0, 100)))
+
+		dp.SetMin(dg.GenF64Range(0, 100))
+		dp.SetMax(dg.GenF64Range(0, 100))
+		dp.SetFlags(pmetric.DataPointFlags(dg.GenI64Range(1, 50)))
+	}
+}
+
+func (dg *DataGenerator) ExpHistogramWithOnlyTimestamps(metric pmetric.Metric) {
+	metric.SetName("exp_histogram_with_only_timestamps")
+	// Generate description and unit only half of the time.
+	if dg.HasMetricDescription() {
+		metric.SetDescription("An exponential histogram with a few buckets.")
+	}
+	if dg.HasMetricUnit() {
+		metric.SetUnit("1")
+	}
+
+	histogram := metric.SetEmptyExponentialHistogram()
+	histogram.SetAggregationTemporality(pmetric.AggregationTemporalityCumulative)
+
+	dps := histogram.DataPoints()
+	dps.EnsureCapacity(10)
+
+	for i := 0; i < 10; i++ {
+		dp := dps.AppendEmpty()
+		dp.SetStartTimestamp(dg.PrevTime())
+		dp.SetTimestamp(dg.CurrentTime())
+	}
+}
+
+func (dg *DataGenerator) ExpHistogramWithNoDataPoints(metric pmetric.Metric) {
+	metric.SetName("exp_histogram_with_no_data_points")
+	// Generate description and unit only half of the time.
+	if dg.HasMetricDescription() {
+		metric.SetDescription("An exponential histogram with a few buckets.")
+	}
+	if dg.HasMetricUnit() {
+		metric.SetUnit("1")
+	}
+
+	histogram := metric.SetEmptyExponentialHistogram()
+	histogram.SetAggregationTemporality(pmetric.AggregationTemporalityCumulative)
+}
+
+func (dg *DataGenerator) ExpHistogramWithOnlyExemplars(metric pmetric.Metric) {
+	metric.SetName("exp_histogram_with_only_exemplars")
+
+	histogram := metric.SetEmptyExponentialHistogram()
+	histogram.SetAggregationTemporality(pmetric.AggregationTemporalityCumulative)
+
+	dps := histogram.DataPoints()
+	dps.EnsureCapacity(10)
+
+	for i := 0; i < 10; i++ {
+		dp := dps.AppendEmpty()
+
+		exemplars := dp.Exemplars()
+		exemplars.EnsureCapacity(10)
+		for j := 0; j < 10; j++ {
+			exemplar := exemplars.AppendEmpty()
+			exemplar.SetTimestamp(dg.CurrentTime())
+			exemplar.SetIntValue(dg.GenI64Range(0, 100))
+			attrs := exemplar.FilteredAttributes()
+			attrs.EnsureCapacity(2)
+			attrs.PutStr("freq", "3GHz")
+			attrs.PutInt("cpu", 0)
 		}
 	}
 }

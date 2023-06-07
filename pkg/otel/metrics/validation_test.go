@@ -101,3 +101,62 @@ func TestBackAndForthConversion(t *testing.T) {
 
 	assert.Equiv(t, []json.Marshaler{expectedRequest}, []json.Marshaler{pmetricotlp.NewExportRequestFromMetrics(metrics)})
 }
+
+func TestExponentialHistograms(t *testing.T) {
+	t.Parallel()
+
+	entropy := datagen.NewTestEntropy(int64(rand.Uint64())) //nolint:gosec // only used for testing
+
+	dg := datagen.NewDataGenerator(entropy, entropy.NewStandardResourceAttributes(), entropy.NewStandardInstrumentationScopes()).
+		WithConfig(datagen.Config{
+			ProbMetricDescription: 0.5,
+			ProbMetricUnit:        0.5,
+			ProbHistogramHasSum:   0.5,
+			ProbHistogramHasMin:   0.5,
+			ProbHistogramHasMax:   0.5,
+		})
+	metricsGen := datagen.NewMetricsGeneratorWithDataGenerator(dg)
+
+	// Generate a random OTLP metrics request.
+	expectedRequest := pmetricotlp.NewExportRequestFromMetrics(metricsGen.GenerateExponentialHistograms(100, 100))
+
+	// Convert the OTLP metrics request to Arrow.
+	pool := memory.NewCheckedAllocator(memory.NewGoAllocator())
+	defer pool.AssertSize(t, 0)
+
+	rBuilder := builder.NewRecordBuilderExt(pool, ametrics.MetricsSchema, DefaultDictConfig, stats.NewProducerStats())
+	defer rBuilder.Release()
+
+	var record arrow.Record
+	var relatedRecords []*record_message.RecordMessage
+
+	conf := config.DefaultConfig()
+
+	for {
+		lb, err := ametrics.NewMetricsBuilder(rBuilder, ametrics.NewConfig(conf), stats.NewProducerStats())
+		require.NoError(t, err)
+		defer lb.Release()
+
+		err = lb.Append(expectedRequest.Metrics())
+		require.NoError(t, err)
+
+		record, err = rBuilder.NewRecord()
+		if err == nil {
+			relatedRecords, err = lb.RelatedData().BuildRecordMessages()
+			require.NoError(t, err)
+			break
+		}
+		require.Error(t, schema.ErrSchemaNotUpToDate)
+	}
+
+	relatedData, _, err := otlp.RelatedDataFrom(relatedRecords)
+	require.NoError(t, err)
+
+	// Convert the Arrow records back to OTLP.
+	metrics, err := otlp.MetricsFrom(record, relatedData)
+	require.NoError(t, err)
+
+	record.Release()
+
+	assert.Equiv(t, []json.Marshaler{expectedRequest}, []json.Marshaler{pmetricotlp.NewExportRequestFromMetrics(metrics)})
+}

@@ -167,6 +167,8 @@ func (b *MetricsBuilder) Append(metrics pmetric.Metrics) error {
 	var resID, scopeID int64
 	var err error
 
+	b.builder.Reserve(len(optimizedMetrics.Metrics))
+
 	for _, metric := range optimizedMetrics.Metrics {
 		ID := metricID
 
