@@ -153,11 +153,6 @@ type CsvRowSchema struct {
 	logAttrs []AttrIndex
 }
 
-type LogsPerSource struct {
-	sourceAttrs *pcommon.Map
-	logs        []*plog.LogRecord
-}
-
 type CsvLogsDataset struct {
 	logs        []plog.LogRecord
 	sizeInBytes int
@@ -227,7 +222,6 @@ func CsvToLogsDataset(file string) dataset.LogsDataset {
 		}
 
 		logRecord := ReadCsvRow(csvSchema, rec)
-		ds.logs = append(ds.logs, logRecord)
 		ds.logs = append(ds.logs, logRecord)
 	}
 
