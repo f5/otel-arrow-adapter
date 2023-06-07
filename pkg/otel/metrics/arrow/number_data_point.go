@@ -229,6 +229,9 @@ func (b *DataPointBuilder) TryBuild(attrsAccu *carrow.Attributes32Accumulator) (
 		case pmetric.NumberDataPointValueTypeDouble:
 			b.dvb.Append(ndp.Orig.DoubleValue())
 			b.ivb.AppendNull()
+		case pmetric.NumberDataPointValueTypeEmpty:
+			b.ivb.AppendNull()
+			b.dvb.AppendNull()
 		}
 		b.fb.Append(uint32(ndp.Orig.Flags()))
 

@@ -90,7 +90,10 @@ func (mg *MetricsGenerator) GenerateSums(batchSize int, collectInterval time.Dur
 
 		mg.SystemCpuTime(metrics.AppendEmpty(), 1)
 		mg.SystemMemoryUsage(metrics.AppendEmpty())
-		mg.SumWithoutDataPoints(metrics.AppendEmpty())
+		mg.EmptyMetric(metrics.AppendEmpty())
+		mg.EmptySumMetric(metrics.AppendEmpty())
+		mg.SumWithoutAttribute(metrics.AppendEmpty())
+		mg.SumWithoutValue(metrics.AppendEmpty())
 	}
 
 	mg.generation++
@@ -267,8 +270,43 @@ func (dg *DataGenerator) SystemMemoryUsage(metric pmetric.Metric) {
 	p3.SetIntValue(4_000_000_000)
 }
 
-func (dg *DataGenerator) SumWithoutDataPoints(metric pmetric.Metric) {
-	metric.SetName("sum_without_data_points")
+func (dg *DataGenerator) EmptyMetric(metric pmetric.Metric) {
+	metric.SetName("empty_metric")
+}
+
+func (dg *DataGenerator) EmptySumMetric(metric pmetric.Metric) {
+	metric.SetName("empty_sum_metric")
+
+	metric.SetEmptySum()
+}
+
+func (dg *DataGenerator) SumWithoutAttribute(metric pmetric.Metric) {
+	metric.SetName("sum_without_attribute")
+
+	sum := metric.SetEmptySum()
+	points := sum.DataPoints()
+
+	for cpu := 0; cpu < 5; cpu++ {
+		dataPoint := points.AppendEmpty()
+
+		dataPoint.SetStartTimestamp(dg.PrevTime())
+		dataPoint.SetTimestamp(dg.CurrentTime())
+		dataPoint.SetDoubleValue(dg.GenF64Range(0.0, 1.0))
+	}
+}
+
+func (dg *DataGenerator) SumWithoutValue(metric pmetric.Metric) {
+	metric.SetName("sum_without_value")
+
+	sum := metric.SetEmptySum()
+	points := sum.DataPoints()
+
+	for cpu := 0; cpu < 5; cpu++ {
+		dataPoint := points.AppendEmpty()
+
+		dataPoint.SetStartTimestamp(dg.PrevTime())
+		dataPoint.SetTimestamp(dg.CurrentTime())
+	}
 }
 
 func (dg *DataGenerator) SystemCpuLoadAverage1m(metric pmetric.Metric) {
