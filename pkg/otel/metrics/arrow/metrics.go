@@ -242,6 +242,9 @@ func (b *MetricsBuilder) Append(metrics pmetric.Metrics) error {
 			b.imb.AppendNull()
 			dps := exponentialHistogram.DataPoints()
 			b.relatedData.EHistogramDPBuilder().Accumulator().Append(ID, dps)
+		case pmetric.MetricTypeEmpty:
+			b.atb.AppendNull()
+			b.imb.AppendNull()
 		default:
 			// ToDo should log and ignore unknown metric types.
 		}

@@ -60,7 +60,7 @@ func (mg *MetricsGenerator) newResult() (pmetric.Metrics, pmetric.MetricSlice) {
 	return result, scopeMetrics.Metrics()
 }
 
-func (mg *MetricsGenerator) Generate(batchSize int, collectInterval time.Duration) pmetric.Metrics {
+func (mg *MetricsGenerator) GenerateAllKindOfMetrics(batchSize int, collectInterval time.Duration) pmetric.Metrics {
 	result, metrics := mg.newResult()
 
 	// Note: the OTLP data model calls for aggregation of the
@@ -75,6 +75,22 @@ func (mg *MetricsGenerator) Generate(batchSize int, collectInterval time.Duratio
 		mg.FakeSummary(metrics.AppendEmpty())
 		mg.FakeHistogram(metrics.AppendEmpty())
 		mg.ExpHistogramWithEverything(metrics.AppendEmpty())
+	}
+
+	mg.generation++
+
+	return result
+}
+
+func (mg *MetricsGenerator) GenerateSums(batchSize int, collectInterval time.Duration) pmetric.Metrics {
+	result, metrics := mg.newResult()
+
+	for i := 0; i < batchSize; i++ {
+		mg.AdvanceTime(collectInterval)
+
+		mg.SystemCpuTime(metrics.AppendEmpty(), 1)
+		mg.SystemMemoryUsage(metrics.AppendEmpty())
+		mg.SumWithoutDataPoints(metrics.AppendEmpty())
 	}
 
 	mg.generation++
@@ -249,6 +265,10 @@ func (dg *DataGenerator) SystemMemoryUsage(metric pmetric.Metric) {
 	p3.SetStartTimestamp(dg.PrevTime())
 	p3.SetTimestamp(dg.CurrentTime())
 	p3.SetIntValue(4_000_000_000)
+}
+
+func (dg *DataGenerator) SumWithoutDataPoints(metric pmetric.Metric) {
+	metric.SetName("sum_without_data_points")
 }
 
 func (dg *DataGenerator) SystemCpuLoadAverage1m(metric pmetric.Metric) {
