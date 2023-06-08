@@ -28,6 +28,7 @@ import (
 	"github.com/f5/otel-arrow-adapter/pkg/config"
 	"github.com/f5/otel-arrow-adapter/pkg/datagen"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/assert"
+	"github.com/f5/otel-arrow-adapter/pkg/otel/common"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/builder"
 	cfg "github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/config"
@@ -39,18 +40,26 @@ import (
 
 var DefaultDictConfig = cfg.NewDictionary(math.MaxUint16)
 
-// TestBackAndForthConversion tests the conversion of OTLP metrics to Arrow and back to OTLP.
+// TestMetricsEncodingDecoding tests the conversion of OTLP metrics to Arrow and back to OTLP.
 // The initial OTLP metrics are generated from a synthetic dataset.
 // This test is based on the JSON serialization of the initial generated OTLP metrics compared to the JSON serialization
 // of the OTLP metrics generated from the Arrow records.
-func TestBackAndForthConversion(t *testing.T) {
+func TestMetricsEncodingDecoding(t *testing.T) {
 	t.Parallel()
 
 	metricsGen := MetricsGenerator()
 	expectedRequest := pmetricotlp.NewExportRequestFromMetrics(metricsGen.GenerateAllKindOfMetrics(100, 100))
 
-	GenericMetricTests(t, expectedRequest)
-	MultiRoundOfMessUpArrowRecordsTests(t, expectedRequest)
+	CheckEncodeDecode(t, expectedRequest)
+}
+
+func TestInvalidMetricsDecoding(t *testing.T) {
+	t.Parallel()
+
+	metricsGen := MetricsGenerator()
+	expectedRequest := pmetricotlp.NewExportRequestFromMetrics(metricsGen.GenerateAllKindOfMetrics(100, 100))
+
+	MultiRoundOfCheckEncodeMessUpDecode(t, expectedRequest)
 }
 
 func TestGauges(t *testing.T) {
@@ -59,7 +68,8 @@ func TestGauges(t *testing.T) {
 	metricsGen := MetricsGenerator()
 	expectedRequest := pmetricotlp.NewExportRequestFromMetrics(metricsGen.GenerateGauges(100, 100))
 
-	GenericMetricTests(t, expectedRequest)
+	CheckEncodeDecode(t, expectedRequest)
+	MultiRoundOfCheckEncodeMessUpDecode(t, expectedRequest)
 }
 
 func TestSums(t *testing.T) {
@@ -68,8 +78,8 @@ func TestSums(t *testing.T) {
 	metricsGen := MetricsGenerator()
 	expectedRequest := pmetricotlp.NewExportRequestFromMetrics(metricsGen.GenerateSums(100, 100))
 
-	GenericMetricTests(t, expectedRequest)
-	MultiRoundOfMessUpArrowRecordsTests(t, expectedRequest)
+	CheckEncodeDecode(t, expectedRequest)
+	MultiRoundOfCheckEncodeMessUpDecode(t, expectedRequest)
 }
 
 func TestSummaries(t *testing.T) {
@@ -78,7 +88,8 @@ func TestSummaries(t *testing.T) {
 	metricsGen := MetricsGenerator()
 	expectedRequest := pmetricotlp.NewExportRequestFromMetrics(metricsGen.GenerateSummaries(100, 100))
 
-	GenericMetricTests(t, expectedRequest)
+	CheckEncodeDecode(t, expectedRequest)
+	MultiRoundOfCheckEncodeMessUpDecode(t, expectedRequest)
 }
 
 func TestHistograms(t *testing.T) {
@@ -87,7 +98,8 @@ func TestHistograms(t *testing.T) {
 	metricsGen := MetricsGenerator()
 	expectedRequest := pmetricotlp.NewExportRequestFromMetrics(metricsGen.GenerateHistograms(100, 100))
 
-	GenericMetricTests(t, expectedRequest)
+	CheckEncodeDecode(t, expectedRequest)
+	MultiRoundOfCheckEncodeMessUpDecode(t, expectedRequest)
 }
 
 func TestExponentialHistograms(t *testing.T) {
@@ -96,8 +108,8 @@ func TestExponentialHistograms(t *testing.T) {
 	metricsGen := MetricsGenerator()
 	expectedRequest := pmetricotlp.NewExportRequestFromMetrics(metricsGen.GenerateExponentialHistograms(100, 100))
 
-	GenericMetricTests(t, expectedRequest)
-	MultiRoundOfMessUpArrowRecordsTests(t, expectedRequest)
+	CheckEncodeDecode(t, expectedRequest)
+	MultiRoundOfCheckEncodeMessUpDecode(t, expectedRequest)
 }
 
 func MetricsGenerator() *datagen.MetricsGenerator {
@@ -114,7 +126,7 @@ func MetricsGenerator() *datagen.MetricsGenerator {
 	return datagen.NewMetricsGeneratorWithDataGenerator(dg)
 }
 
-func GenericMetricTests(t *testing.T, expectedRequest pmetricotlp.ExportRequest) {
+func CheckEncodeDecode(t *testing.T, expectedRequest pmetricotlp.ExportRequest) {
 	// Convert the OTLP metrics request to Arrow.
 	pool := memory.NewCheckedAllocator(memory.NewGoAllocator())
 	defer pool.AssertSize(t, 0)
@@ -156,12 +168,12 @@ func GenericMetricTests(t *testing.T, expectedRequest pmetricotlp.ExportRequest)
 	assert.Equiv(t, []json.Marshaler{expectedRequest}, []json.Marshaler{pmetricotlp.NewExportRequestFromMetrics(metrics)})
 }
 
-// MultiRoundOfMessUpArrowRecordsTests tests the robustness of the conversion of
+// MultiRoundOfCheckEncodeMessUpDecode tests the robustness of the conversion of
 // OTel Arrow records to OTLP metrics. These tests should never trigger a panic.
 // For every main record, and related records (if any), we mix up the Arrow
 // records in order to test the robustness of the conversion. In this situation,
 // the conversion can generate errors, but should never panic.
-func MultiRoundOfMessUpArrowRecordsTests(t *testing.T, expectedRequest pmetricotlp.ExportRequest) {
+func MultiRoundOfCheckEncodeMessUpDecode(t *testing.T, expectedRequest pmetricotlp.ExportRequest) {
 	rng := rand.New(rand.NewSource(int64(rand.Uint64())))
 
 	for i := 0; i < 100; i++ {
@@ -204,7 +216,7 @@ func OneRoundOfMessUpArrowRecords(t *testing.T, expectedRequest pmetricotlp.Expo
 	}
 
 	// Mix up the Arrow records in such a way as to make decoding impossible.
-	mainRecordChanged, record, relatedRecords := MixUpArrowRecords(rng, record, relatedRecords)
+	mainRecordChanged, record, relatedRecords := common.MixUpArrowRecords(rng, record, relatedRecords)
 
 	relatedData, _, err := otlp.RelatedDataFrom(relatedRecords)
 
@@ -218,29 +230,4 @@ func OneRoundOfMessUpArrowRecords(t *testing.T, expectedRequest pmetricotlp.Expo
 	}
 
 	record.Release()
-}
-
-func MixUpArrowRecords(rng *rand.Rand, record arrow.Record, relatedRecords []*record_message.RecordMessage) (bool, arrow.Record, []*record_message.RecordMessage) {
-	mainRecordChanged := false
-
-	if rng.Intn(100)%2 == 0 {
-		// exchange one of the related records with the main record
-		relatedRecordPos := rng.Intn(len(relatedRecords))
-		relatedRecord := relatedRecords[relatedRecordPos].Record()
-		relatedRecords[relatedRecordPos].SetRecord(record)
-		record = relatedRecord
-		mainRecordChanged = true
-	}
-
-	// mix up the related records
-	payloadTypes := make([]record_message.PayloadType, len(relatedRecords))
-	for i := 0; i < len(relatedRecords); i++ {
-		payloadTypes[i] = relatedRecords[i].PayloadType()
-	}
-	rng.Shuffle(len(payloadTypes), func(i, j int) { payloadTypes[i], payloadTypes[j] = payloadTypes[j], payloadTypes[i] })
-	for i := 0; i < len(relatedRecords); i++ {
-		relatedRecords[i].SetPayloadType(payloadTypes[i])
-	}
-
-	return mainRecordChanged, record, relatedRecords
 }

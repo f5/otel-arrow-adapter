@@ -28,6 +28,7 @@ import (
 	"github.com/f5/otel-arrow-adapter/pkg/config"
 	"github.com/f5/otel-arrow-adapter/pkg/datagen"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/assert"
+	"github.com/f5/otel-arrow-adapter/pkg/otel/common"
 	acommon "github.com/f5/otel-arrow-adapter/pkg/otel/common/schema"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/builder"
 	cfg "github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/config"
@@ -42,11 +43,11 @@ var (
 	producerStats     = stats.NewProducerStats()
 )
 
-// TestConversionFromSyntheticData tests the conversion of OTLP logs to Arrow and back to OTLP.
+// TestLogsEncodingDecoding tests the conversion of OTLP logs to Arrow and back to OTLP.
 // The initial OTLP logs are generated from a synthetic dataset.
 // This test is based on the JSON serialization of the initial generated OTLP logs compared to the JSON serialization
 // of the OTLP logs generated from the Arrow records.
-func TestConversionFromSyntheticData(t *testing.T) {
+func TestLogsEncodingDecoding(t *testing.T) {
 	t.Parallel()
 
 	entropy := datagen.NewTestEntropy(int64(rand.Uint64())) //nolint:gosec	// only used for testing
@@ -55,6 +56,25 @@ func TestConversionFromSyntheticData(t *testing.T) {
 	// Generate a random OTLP logs request.
 	expectedRequest := plogotlp.NewExportRequestFromLogs(logsGen.Generate(1, 100))
 
+	CheckEncodeDecode(t, expectedRequest)
+}
+
+func TestInvalidLogsDecoding(t *testing.T) {
+	t.Parallel()
+
+	entropy := datagen.NewTestEntropy(int64(rand.Uint64())) //nolint:gosec	// only used for testing
+	logsGen := datagen.NewLogsGenerator(entropy, entropy.NewStandardResourceAttributes(), entropy.NewStandardInstrumentationScopes())
+
+	// Generate a random OTLP logs request.
+	expectedRequest := plogotlp.NewExportRequestFromLogs(logsGen.Generate(1, 100))
+
+	MultiRoundOfCheckEncodeMessUpDecode(t, expectedRequest)
+}
+
+func CheckEncodeDecode(
+	t *testing.T,
+	expectedRequest plogotlp.ExportRequest,
+) {
 	// Convert the OTLP logs request to Arrow.
 	pool := memory.NewCheckedAllocator(memory.NewGoAllocator())
 	defer pool.AssertSize(t, 0)
@@ -62,10 +82,10 @@ func TestConversionFromSyntheticData(t *testing.T) {
 	rBuilder := builder.NewRecordBuilderExt(pool, logsarrow.LogsSchema, DefaultDictConfig, producerStats)
 	defer rBuilder.Release()
 
+	conf := config.DefaultConfig()
+
 	var record arrow.Record
 	var relatedRecords []*record_message.RecordMessage
-
-	conf := config.DefaultConfig()
 
 	for {
 		lb, err := logsarrow.NewLogsBuilder(rBuilder, logsarrow.NewConfig(conf), stats.NewProducerStats())
@@ -94,4 +114,66 @@ func TestConversionFromSyntheticData(t *testing.T) {
 	record.Release()
 
 	assert.Equiv(t, []json.Marshaler{expectedRequest}, []json.Marshaler{plogotlp.NewExportRequestFromLogs(logs)})
+}
+
+func MultiRoundOfCheckEncodeMessUpDecode(
+	t *testing.T,
+	expectedRequest plogotlp.ExportRequest,
+) {
+	rng := rand.New(rand.NewSource(int64(rand.Uint64())))
+
+	for i := 0; i < 100; i++ {
+		CheckEncodeMessUpDecode(t, expectedRequest, rng)
+	}
+}
+
+func CheckEncodeMessUpDecode(
+	t *testing.T,
+	expectedRequest plogotlp.ExportRequest,
+	rng *rand.Rand,
+) {
+	// Convert the OTLP logs request to Arrow.
+	pool := memory.NewCheckedAllocator(memory.NewGoAllocator())
+	defer pool.AssertSize(t, 0)
+
+	rBuilder := builder.NewRecordBuilderExt(pool, logsarrow.LogsSchema, DefaultDictConfig, producerStats)
+	defer rBuilder.Release()
+
+	conf := config.DefaultConfig()
+
+	var record arrow.Record
+	var relatedRecords []*record_message.RecordMessage
+
+	for {
+		lb, err := logsarrow.NewLogsBuilder(rBuilder, logsarrow.NewConfig(conf), stats.NewProducerStats())
+		require.NoError(t, err)
+		defer lb.Release()
+
+		err = lb.Append(expectedRequest.Logs())
+		require.NoError(t, err)
+
+		record, err = rBuilder.NewRecord()
+		if err == nil {
+			relatedRecords, err = lb.RelatedData().BuildRecordMessages()
+			require.NoError(t, err)
+			break
+		}
+		require.Error(t, acommon.ErrSchemaNotUpToDate)
+	}
+
+	// Mix up the Arrow records in such a way as to make decoding impossible.
+	mainRecordChanged, record, relatedRecords := common.MixUpArrowRecords(rng, record, relatedRecords)
+
+	relatedData, _, err := logsotlp.RelatedDataFrom(relatedRecords)
+
+	// Convert the Arrow records back to OTLP.
+	_, err = logsotlp.LogsFrom(record, relatedData)
+
+	if mainRecordChanged || relatedData == nil {
+		require.Error(t, err)
+	} else {
+		require.NoError(t, err)
+	}
+
+	record.Release()
 }
