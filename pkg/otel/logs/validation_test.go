@@ -56,7 +56,6 @@ func TestLogsEncodingDecoding(t *testing.T) {
 	entropy := datagen.NewTestEntropy(int64(rand.Uint64())) //nolint:gosec	// only used for testing
 	logsGen := datagen.NewLogsGenerator(entropy, entropy.NewStandardResourceAttributes(), entropy.NewStandardInstrumentationScopes())
 
-	// Generate a random OTLP logs request.
 	expectedRequest := plogotlp.NewExportRequestFromLogs(logsGen.Generate(5000, 100))
 
 	CheckEncodeDecode(t, expectedRequest)
@@ -72,7 +71,6 @@ func TestInvalidLogsDecoding(t *testing.T) {
 	entropy := datagen.NewTestEntropy(int64(rand.Uint64())) //nolint:gosec	// only used for testing
 	logsGen := datagen.NewLogsGenerator(entropy, entropy.NewStandardResourceAttributes(), entropy.NewStandardInstrumentationScopes())
 
-	// Generate a random OTLP logs request.
 	expectedRequest := plogotlp.NewExportRequestFromLogs(logsGen.Generate(100, 100))
 
 	MultiRoundOfCheckEncodeMessUpDecode(t, expectedRequest)
