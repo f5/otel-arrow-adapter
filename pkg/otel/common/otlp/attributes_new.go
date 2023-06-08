@@ -325,7 +325,7 @@ func Attributes32StoreFrom(record arrow.Record, store *Attributes32Store) error 
 
 // SchemaToAttributeIDs pre-computes the field IDs for the attributes record.
 func SchemaToAttributeIDs(schema *arrow.Schema) (*AttributeIDs, error) {
-	parentID, err := arrowutils.FieldIDFromSchema(schema, constants.ParentID)
+	parentID, err := arrowutils.MandatoryFieldIDFromSchema(schema, constants.ParentID)
 	if err != nil {
 		return nil, werror.Wrap(err)
 	}
@@ -336,12 +336,12 @@ func SchemaToAttributeIDs(schema *arrow.Schema) (*AttributeIDs, error) {
 		deltaEncoded = v == oschema.DeltaEncodingValue
 	}
 
-	key, err := arrowutils.FieldIDFromSchema(schema, constants.AttributeKey)
+	key, err := arrowutils.MandatoryFieldIDFromSchema(schema, constants.AttributeKey)
 	if err != nil {
 		return nil, werror.Wrap(err)
 	}
 
-	vType, err := arrowutils.FieldIDFromSchema(schema, constants.AttributeType)
+	vType, err := arrowutils.MandatoryFieldIDFromSchema(schema, constants.AttributeType)
 	if err != nil {
 		return nil, werror.Wrap(err)
 	}

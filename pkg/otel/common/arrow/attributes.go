@@ -322,6 +322,10 @@ func (c *Attributes32Accumulator) Reset() {
 }
 
 func Equal(a, b *pcommon.Value) bool {
+	if a == nil || b == nil {
+		return false
+	}
+
 	switch a.Type() {
 	case pcommon.ValueTypeInt:
 		if b.Type() == pcommon.ValueTypeInt {
@@ -365,6 +369,10 @@ func Equal(a, b *pcommon.Value) bool {
 }
 
 func IsLess(a, b *pcommon.Value) bool {
+	if a == nil || b == nil {
+		return false
+	}
+
 	switch a.Type() {
 	case pcommon.ValueTypeInt:
 		if b.Type() == pcommon.ValueTypeInt {
@@ -404,6 +412,10 @@ func IsLess(a, b *pcommon.Value) bool {
 }
 
 func Compare(a, b *pcommon.Value) int {
+	if a == nil || b == nil {
+		return -1
+	}
+
 	switch a.Type() {
 	case pcommon.ValueTypeInt:
 		aI := a.Int()

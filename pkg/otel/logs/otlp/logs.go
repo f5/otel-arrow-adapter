@@ -60,6 +60,10 @@ func LogsFrom(record arrow.Record, relatedData *RelatedData) (plog.Logs, error) 
 
 	logs := plog.NewLogs()
 
+	if relatedData == nil {
+		return logs, werror.Wrap(otlp.ErrMissingRelatedData)
+	}
+
 	logRecordIDs, err := SchemaToIDs(record.Schema())
 	if err != nil {
 		return logs, werror.Wrap(err)
