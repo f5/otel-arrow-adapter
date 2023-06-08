@@ -16,12 +16,13 @@ package dataset
 
 import (
 	"bufio"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"log"
 	"os"
-	"strconv"
+	// "strconv"
 	// "path/filepath"
 
 	"github.com/klauspost/compress/zstd"
@@ -54,9 +55,10 @@ func (mr *metricReader) readAllMetrics() (pmetric.Metrics, error) {
 
 	for {
 		if line, err := mr.stringReader.ReadString('\n'); err != nil {
+			fmt.Println(json.Valid([]byte(line)))
 			fmt.Println(line)
-			un, _ := strconv.Unquote(line)
-			ml, err := mr.unmarshaler.UnmarshalMetrics([]byte(un))
+			// un, _ := strconv.Unquote(line)
+			ml, err := mr.unmarshaler.UnmarshalMetrics([]byte(line))
 			if err != nil {
 				return metrics, err
 			}
@@ -96,6 +98,8 @@ func NewRealMetricsDataset(file *os.File, compression string) *RealMetricsDatase
 	}
 
 	mdata, err := mr.readAllMetrics() 
+	fmt.Println("BYTES READ")
+	fmt.Println(mr.bytesRead)
 
 	if err != nil {
 		log.Fatal("Failed to read lines from file: ", err)
