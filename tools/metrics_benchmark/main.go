@@ -18,6 +18,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/dustin/go-humanize"
 
@@ -51,7 +52,7 @@ func main() {
 	// Define default input file
 	inputFiles := flag.Args()
 	if len(inputFiles) == 0 {
-		inputFiles = append(inputFiles, "./data/otlp_metrics.pb")
+		inputFiles = append(inputFiles, filepath.Join("data", "otlp_metrics.json"))
 	}
 
 	conf := &benchmark.Config{
@@ -66,11 +67,15 @@ func main() {
 
 	// Performance comparison for each input file
 	for i := range inputFiles {
+		file, err := os.Open(filepath.Clean(inputFiles[i]))
+		if err != nil {
+			panic(fmt.Errorf("open file:", err))
+		}
 		// Compare the performance between the standard OTLP representation and the OTLP Arrow representation.
 		profiler := benchmark.NewProfiler([]int{128, 1024, 2048, 4096}, "output/metrics_benchmark.log", warmUpIter)
 		compressionAlgo := benchmark.Zstd()
 		maxIter := uint64(3)
-		ds := dataset.NewRealMetricsDataset(inputFiles[i])
+		ds := dataset.NewRealMetricsDataset(file, "")
 		profiler.Printf("Dataset '%s' (%s) loaded\n", inputFiles[i], humanize.Bytes(uint64(ds.SizeInBytes())))
 		otlpMetrics := otlp.NewMetricsProfileable(ds, compressionAlgo)
 		//otlpDictMetrics := otlpdict.NewMetricsProfileable(ds, compressionAlgo)

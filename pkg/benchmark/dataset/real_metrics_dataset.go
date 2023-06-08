@@ -15,12 +15,17 @@
 package dataset
 
 import (
+	"bufio"
+	"errors"
+	"fmt"
+	"io"
 	"log"
 	"os"
-	"path/filepath"
+	"strconv"
+	// "path/filepath"
 
+	"github.com/klauspost/compress/zstd"
 	"go.opentelemetry.io/collector/pdata/pmetric"
-	"go.opentelemetry.io/collector/pdata/pmetric/pmetricotlp"
 
 	"github.com/f5/otel-arrow-adapter/pkg/benchmark/stats"
 )
@@ -38,21 +43,67 @@ type metrics struct {
 	scope    pmetric.ScopeMetrics
 }
 
+type metricReader struct {
+	stringReader *bufio.Reader
+	unmarshaler  *pmetric.JSONUnmarshaler
+	bytesRead    int
+}
+
+func (mr *metricReader) readAllMetrics() (pmetric.Metrics, error) {
+	metrics := pmetric.NewMetrics()
+
+	for {
+		if line, err := mr.stringReader.ReadString('\n'); err != nil {
+			fmt.Println(line)
+			un, _ := strconv.Unquote(line)
+			ml, err := mr.unmarshaler.UnmarshalMetrics([]byte(un))
+			if err != nil {
+				return metrics, err
+			}
+			for i := 0; i < ml.ResourceMetrics().Len(); i++ {
+				rm := metrics.ResourceMetrics().AppendEmpty()
+				ml.ResourceMetrics().At(i).CopyTo(rm) 
+			} 
+			mr.bytesRead += len(line)
+		} else { // failed to read line
+			if err != nil {
+				if errors.Is(err, io.EOF) {
+					return metrics, nil
+				}
+				return metrics, err
+			}
+		}
+
+	}
+}
+
 // NewRealMetricsDataset creates a new RealMetricsDataset from a binary file.
-func NewRealMetricsDataset(path string) *RealMetricsDataset {
-	data, err := os.ReadFile(filepath.Clean(path))
+func NewRealMetricsDataset(file *os.File, compression string) *RealMetricsDataset {
+
+	mr := &metricReader{
+		unmarshaler: &pmetric.JSONUnmarshaler{},
+		bytesRead: 0,
+	}
+
+	if compression == "zstd" {
+		cr, err := zstd.NewReader(file)
+		if err != nil {
+			log.Fatal("Failed to create compressed reader")
+		}
+		mr.stringReader = bufio.NewReader(cr)
+	} else { // no compression
+		mr.stringReader = bufio.NewReader(file)
+	}
+
+	mdata, err := mr.readAllMetrics() 
+
 	if err != nil {
-		log.Fatal("read file:", err)
+		log.Fatal("Failed to read lines from file: ", err)
 	}
-	otlp := pmetricotlp.NewExportRequest()
-	if err := otlp.UnmarshalProto(data); err != nil {
-		log.Fatal("unmarshal:", err)
-	}
-	mdata := otlp.Metrics()
 
 	ds := &RealMetricsDataset{
 		metrics:      []metrics{},
-		sizeInBytes:  len(data),
+		sizeInBytes:  mr.bytesRead, 
 		metricsStats: stats.NewMetricsStats(),
 	}
 	ds.metricsStats.Analyze(mdata)
