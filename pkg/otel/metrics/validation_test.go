@@ -53,6 +53,15 @@ func TestBackAndForthConversion(t *testing.T) {
 	MultiRoundOfMessUpArrowRecordsTests(t, expectedRequest)
 }
 
+func TestGauges(t *testing.T) {
+	t.Parallel()
+
+	metricsGen := MetricsGenerator()
+	expectedRequest := pmetricotlp.NewExportRequestFromMetrics(metricsGen.GenerateGauges(100, 100))
+
+	GenericMetricTests(t, expectedRequest)
+}
+
 func TestSums(t *testing.T) {
 	t.Parallel()
 
@@ -61,6 +70,24 @@ func TestSums(t *testing.T) {
 
 	GenericMetricTests(t, expectedRequest)
 	MultiRoundOfMessUpArrowRecordsTests(t, expectedRequest)
+}
+
+func TestSummaries(t *testing.T) {
+	t.Parallel()
+
+	metricsGen := MetricsGenerator()
+	expectedRequest := pmetricotlp.NewExportRequestFromMetrics(metricsGen.GenerateSummaries(100, 100))
+
+	GenericMetricTests(t, expectedRequest)
+}
+
+func TestHistograms(t *testing.T) {
+	t.Parallel()
+
+	metricsGen := MetricsGenerator()
+	expectedRequest := pmetricotlp.NewExportRequestFromMetrics(metricsGen.GenerateHistograms(100, 100))
+
+	GenericMetricTests(t, expectedRequest)
 }
 
 func TestExponentialHistograms(t *testing.T) {
