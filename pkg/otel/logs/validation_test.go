@@ -43,10 +43,13 @@ var (
 	producerStats     = stats.NewProducerStats()
 )
 
-// TestLogsEncodingDecoding tests the conversion of OTLP logs to Arrow and back to OTLP.
-// The initial OTLP logs are generated from a synthetic dataset.
-// This test is based on the JSON serialization of the initial generated OTLP logs compared to the JSON serialization
-// of the OTLP logs generated from the Arrow records.
+// TestLogsEncodingDecoding tests the conversion of OTLP logs to OTel Arrow logs
+// and back to OTLP. The initial OTLP logs are generated from a synthetic
+// dataset.
+//
+// The validation process is based on the JSON comparison the OTLP logs generated
+// and the OTLP logs decoded from the OTel Arrow logs. This comparison is strict
+// and accept differences in the order of the fields.
 func TestLogsEncodingDecoding(t *testing.T) {
 	t.Parallel()
 
@@ -59,6 +62,10 @@ func TestLogsEncodingDecoding(t *testing.T) {
 	CheckEncodeDecode(t, expectedRequest)
 }
 
+// TestInvalidLogsDecoding is similar to TestLogsEncodingDecoding but introduces
+// some random modification of the Arrow Records used to represent OTel logs.
+// These modifications should be handled gracefully by the decoding process and
+// generate an error but should never panic.
 func TestInvalidLogsDecoding(t *testing.T) {
 	t.Parallel()
 

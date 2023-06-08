@@ -42,10 +42,13 @@ import (
 var DefaultDictConfig = cfg.NewDictionary(math.MaxUint16)
 var ProducerStats = stats.NewProducerStats()
 
-// TestTracesEncodingDecoding tests the conversion of OTLP traces to Arrow and back to OTLP.
-// The initial OTLP traces are generated from a synthetic dataset.
-// This test is based on the JSON serialization of the initial generated OTLP traces compared to the JSON serialization
-// of the OTLP traces generated from the Arrow records.
+// TestTracesEncodingDecoding tests the conversion of OTLP traces to OTel Arrow traces
+// and back to OTLP. The initial OTLP traces are generated from a synthetic
+// dataset.
+//
+// The validation process is based on the JSON comparison the OTLP traces generated
+// and the OTLP traces decoded from the OTel Arrow traces. This comparison is strict
+// and accept differences in the order of the fields.
 func TestTracesEncodingDecoding(t *testing.T) {
 	t.Parallel()
 
@@ -59,6 +62,10 @@ func TestTracesEncodingDecoding(t *testing.T) {
 	CheckEncodeDecode(t, expectedRequest)
 }
 
+// TestInvalidTracesDecoding is similar to TestLogsEncodingDecoding but introduces
+// some random modification of the Arrow Records used to represent OTel traces.
+// These modifications should be handled gracefully by the decoding process and
+// generate an error but should never panic.
 func TestInvalidTracesDecoding(t *testing.T) {
 	t.Parallel()
 
