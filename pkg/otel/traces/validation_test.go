@@ -29,6 +29,7 @@ import (
 	"github.com/f5/otel-arrow-adapter/pkg/config"
 	"github.com/f5/otel-arrow-adapter/pkg/datagen"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/assert"
+	"github.com/f5/otel-arrow-adapter/pkg/otel/common"
 	acommon "github.com/f5/otel-arrow-adapter/pkg/otel/common/schema"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/builder"
 	cfg "github.com/f5/otel-arrow-adapter/pkg/otel/common/schema/config"
@@ -41,11 +42,11 @@ import (
 var DefaultDictConfig = cfg.NewDictionary(math.MaxUint16)
 var ProducerStats = stats.NewProducerStats()
 
-// TestConversionFromSyntheticData tests the conversion of OTLP traces to Arrow and back to OTLP.
+// TestTracesEncodingDecoding tests the conversion of OTLP traces to Arrow and back to OTLP.
 // The initial OTLP traces are generated from a synthetic dataset.
 // This test is based on the JSON serialization of the initial generated OTLP traces compared to the JSON serialization
 // of the OTLP traces generated from the Arrow records.
-func TestConversionFromSyntheticData(t *testing.T) {
+func TestTracesEncodingDecoding(t *testing.T) {
 	t.Parallel()
 
 	entropy := datagen.NewTestEntropy(int64(rand.Uint64())) //nolint:gosec // only used for testing
@@ -55,6 +56,26 @@ func TestConversionFromSyntheticData(t *testing.T) {
 	// Generate a random OTLP traces request.
 	expectedRequest := ptraceotlp.NewExportRequestFromTraces(tracesGen.Generate(1, 100))
 
+	CheckEncodeDecode(t, expectedRequest)
+}
+
+func TestInvalidTracesDecoding(t *testing.T) {
+	t.Parallel()
+
+	entropy := datagen.NewTestEntropy(int64(rand.Uint64())) //nolint:gosec // only used for testing
+
+	tracesGen := datagen.NewTracesGenerator(entropy, entropy.NewStandardResourceAttributes(), entropy.NewStandardInstrumentationScopes())
+
+	// Generate a random OTLP traces request.
+	expectedRequest := ptraceotlp.NewExportRequestFromTraces(tracesGen.Generate(1, 100))
+
+	MultiRoundOfCheckEncodeMessUpDecode(t, expectedRequest)
+}
+
+func CheckEncodeDecode(
+	t *testing.T,
+	expectedRequest ptraceotlp.ExportRequest,
+) {
 	// Convert the OTLP traces request to Arrow.
 	pool := memory.NewCheckedAllocator(memory.NewGoAllocator())
 	defer pool.AssertSize(t, 0)
@@ -96,6 +117,68 @@ func TestConversionFromSyntheticData(t *testing.T) {
 	assert.Equiv(t, []json.Marshaler{expectedRequest}, []json.Marshaler{ptraceotlp.NewExportRequestFromTraces(traces)})
 }
 
+func MultiRoundOfCheckEncodeMessUpDecode(
+	t *testing.T,
+	expectedRequest ptraceotlp.ExportRequest,
+) {
+	rng := rand.New(rand.NewSource(int64(rand.Uint64())))
+
+	for i := 0; i < 100; i++ {
+		CheckEncodeMessUpDecode(t, expectedRequest, rng)
+	}
+}
+
+func CheckEncodeMessUpDecode(
+	t *testing.T,
+	expectedRequest ptraceotlp.ExportRequest,
+	rng *rand.Rand,
+) {
+	// Convert the OTLP traces request to Arrow.
+	pool := memory.NewCheckedAllocator(memory.NewGoAllocator())
+	defer pool.AssertSize(t, 0)
+
+	rBuilder := builder.NewRecordBuilderExt(pool, tracesarrow.TracesSchema, DefaultDictConfig, ProducerStats)
+	defer rBuilder.Release()
+
+	var record arrow.Record
+	var relatedRecords []*record_message.RecordMessage
+
+	conf := config.DefaultConfig()
+
+	for {
+		tb, err := tracesarrow.NewTracesBuilder(rBuilder, tracesarrow.NewConfig(conf), stats.NewProducerStats())
+		require.NoError(t, err)
+		defer tb.Release()
+
+		err = tb.Append(expectedRequest.Traces())
+		require.NoError(t, err)
+
+		record, err = rBuilder.NewRecord()
+		if err == nil {
+			relatedRecords, err = tb.RelatedData().BuildRecordMessages()
+			require.NoError(t, err)
+			break
+		}
+		require.Error(t, acommon.ErrSchemaNotUpToDate)
+	}
+
+	// Mix up the Arrow records in such a way as to make decoding impossible.
+	mainRecordChanged, record, relatedRecords := common.MixUpArrowRecords(rng, record, relatedRecords)
+
+	relatedData, _, err := tracesotlp.RelatedDataFrom(relatedRecords, tracesarrow.NewConfig(conf))
+
+	// Convert the Arrow record back to OTLP.
+	_, err = tracesotlp.TracesFrom(record, relatedData)
+
+	if mainRecordChanged || relatedData == nil {
+		require.Error(t, err)
+	} else {
+		require.NoError(t, err)
+	}
+
+	record.Release()
+}
+
 // TestConversionFromRealData tests the conversion of OTLP traces to Arrow and back to OTLP.
 // The initial OTLP traces are generated from a real dataset (anonymized).
 // This test is based on the JSON serialization of the initial generated OTLP traces compared to the JSON serialization
@@ -129,10 +212,10 @@ func checkTracesConversion(t *testing.T, expectedRequest ptraceotlp.ExportReques
 	var record arrow.Record
 	var relatedRecords []*record_message.RecordMessage
 
-	cfg := config.DefaultConfig()
+	conf := config.DefaultConfig()
 
 	for {
-		tb, err := tracesarrow.NewTracesBuilder(rBuilder, tracesarrow.NewConfig(cfg), stats.NewProducerStats())
+		tb, err := tracesarrow.NewTracesBuilder(rBuilder, tracesarrow.NewConfig(conf), stats.NewProducerStats())
 		require.NoError(t, err)
 		err = tb.Append(expectedRequest.Traces())
 		require.NoError(t, err)
@@ -145,7 +228,7 @@ func checkTracesConversion(t *testing.T, expectedRequest ptraceotlp.ExportReques
 		require.Error(t, acommon.ErrSchemaNotUpToDate)
 	}
 
-	relatedData, _, err := tracesotlp.RelatedDataFrom(relatedRecords, tracesarrow.NewConfig(cfg))
+	relatedData, _, err := tracesotlp.RelatedDataFrom(relatedRecords, tracesarrow.NewConfig(conf))
 	require.NoError(t, err)
 
 	// Convert the Arrow records back to OTLP.
