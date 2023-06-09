@@ -64,9 +64,9 @@ func main() {
 	// Define default input file
 	inputFiles := flag.Args()
 	if len(inputFiles) == 0 {
-		println("\nNo input file specified, using default file ./data/otlp_logs.pb")
-		println("CSV and OTLP protobuf files are supported as input files (ext .csv or .pb)")
-		inputFiles = append(inputFiles, "./data/otlp_logs.pb")
+		println("\nNo input file specified, using default file ./data/otlp_logs.json")
+		println("CSV and OTLP json files are supported as input files (ext .csv or .json)")
+		inputFiles = append(inputFiles, "./data/otlp_logs.json")
 	}
 
 	conf := &benchmark.Config{
@@ -91,9 +91,8 @@ func main() {
 		// Build dataset from CSV file or from OTLP protobuf file
 		if strings.HasSuffix(inputFile, ".csv") {
 			ds = CsvToLogsDataset(inputFile)
-		} else if strings.HasSuffix(inputFile, ".pb") {
-			// ToDo Remove
-			rds := dataset.NewRealLogsDataset(inputFiles[i])
+		} else if strings.HasSuffix(inputFile, ".json") {
+			rds := dataset.NewRealLogsDataset(inputFiles[i], benchmark.CompressionTypeZstd)
 			//rds.Resize(10)
 			ds = rds
 		} else {

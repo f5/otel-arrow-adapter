@@ -15,13 +15,17 @@
 package dataset
 
 import (
+	"bufio"
+	"errors"
+	"io"
 	"log"
 	"os"
 	"path/filepath"
 
 	"go.opentelemetry.io/collector/pdata/plog"
-	"go.opentelemetry.io/collector/pdata/plog/plogotlp"
 
+	"github.com/klauspost/compress/zstd"
+	"github.com/f5/otel-arrow-adapter/pkg/benchmark"
 	"github.com/f5/otel-arrow-adapter/pkg/benchmark/stats"
 )
 
@@ -38,24 +42,73 @@ type logUnit struct {
 	scope     plog.ScopeLogs
 }
 
-// NewRealLogsDataset creates a new RealLogsDataset from a binary file.
-func NewRealLogsDataset(path string) *RealLogsDataset {
-	data, err := os.ReadFile(filepath.Clean(path))
-	if err != nil {
-		log.Fatal("read file:", err)
-	}
-	otlp := plogotlp.NewExportRequest()
+type logReader struct {
+	stringReader *bufio.Reader
+	unmarshaler  *plog.JSONUnmarshaler
+	bytesRead    int
+}
 
-	if err := otlp.UnmarshalProto(data); err != nil {
-		log.Fatal("unmarshal:", err)
+func (lr *logReader) readAllLogs() (plog.Logs, error) {
+	logs := plog.NewLogs()
+
+	for {
+		if line, err := lr.stringReader.ReadString('\n'); err == nil {
+			ll, err := lr.unmarshaler.UnmarshalLogs([]byte(line))
+			if err != nil {
+				return logs, err
+			}
+			for i := 0; i < ll.ResourceLogs().Len(); i++ {
+				rl := logs.ResourceLogs().AppendEmpty()
+				ll.ResourceLogs().At(i).CopyTo(rl)
+			}
+			lr.bytesRead += len(line)
+		} else { // failed to read line
+			if err != nil {
+				if errors.Is(err, io.EOF) {
+					return logs, nil
+				}
+				return logs, err
+			}
+		}
+	}
+}
+
+// NewRealLogsDataset creates a new RealLogsDataset from a binary file.
+func NewRealLogsDataset(path string, compression string) *RealLogsDataset {
+	file, err := os.Open(filepath.Clean(path))
+	if err != nil {
+		log.Fatal("open file:", err)
+	}
+
+	lr := &logReader{
+		unmarshaler: &plog.JSONUnmarshaler{},
+		bytesRead: 0,
+	}
+
+	if compression == benchmark.CompressionTypeZstd {
+		cr, err := zstd.NewReader(file)
+		if err != nil {
+			log.Fatal("Failed to create compressed reader: ", err)
+		}
+		lr.stringReader = bufio.NewReader(cr)
+	} else { // no compression
+		lr.stringReader = bufio.NewReader(file)
+	}
+
+	logs, err := lr.readAllLogs() 
+	if err != nil {
+		if lr.bytesRead == 0 {
+			log.Fatal("Read zero bytes from file: ", err)
+		}
+		log.Print("Found error when reading file: ", err)
+		log.Print("Bytes read: ", lr.bytesRead)
 	}
 
 	ds := &RealLogsDataset{
 		logs:        []logUnit{},
-		sizeInBytes: len(data),
+		sizeInBytes: lr.bytesRead,
 		logsStats:   stats.NewLogsStats(),
 	}
-	logs := otlp.Logs()
 	ds.logsStats.Analyze(logs)
 
 	for ri := 0; ri < logs.ResourceLogs().Len(); ri++ {

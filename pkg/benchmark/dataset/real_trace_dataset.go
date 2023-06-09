@@ -62,7 +62,6 @@ func (tr *traceReader) readAllTraces() (ptrace.Traces, error) {
 
 	for {
 		if line, err := tr.stringReader.ReadString('\n'); err == nil {
-			// fmt.Println(line)
 			tl, err := tr.unmarshaler.UnmarshalTraces([]byte(line))
 			if err != nil {
 				return traces, err
@@ -73,7 +72,6 @@ func (tr *traceReader) readAllTraces() (ptrace.Traces, error) {
 			}
 			tr.bytesRead += len(line)
 		} else { // failed to read line
-			fmt.Println(err)
 			if err != nil {
 				if errors.Is(err, io.EOF) {
 					return traces, nil
@@ -90,7 +88,6 @@ func NewRealTraceDataset(path string, compression string, sortOrder []string) *R
 		log.Fatal("open file:", err)
 	}
 
-	fmt.Println(path)
 	tr := &traceReader{
 		unmarshaler: &ptrace.JSONUnmarshaler{},
 		bytesRead: 0,
