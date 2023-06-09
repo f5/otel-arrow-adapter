@@ -50,7 +50,7 @@ func main() {
 	// Define default input file
 	inputFiles := flag.Args()
 	if len(inputFiles) == 0 {
-		inputFiles = append(inputFiles, "./data/otlp_traces.pb")
+		inputFiles = append(inputFiles, "./data/compressed_otlp_traces.json")
 	}
 
 	conf := &benchmark.Config{
@@ -69,7 +69,7 @@ func main() {
 		//profiler := benchmark.NewProfiler([]int{1000}, "output/trace_benchmark.log", 2)
 		compressionAlgo := benchmark.Zstd()
 		maxIter := uint64(1)
-		ds := dataset.NewRealTraceDataset(inputFiles[i], []string{"trace_id"})
+		ds := dataset.NewRealTraceDataset(inputFiles[i], benchmark.CompressionTypeZstd, []string{"trace_id"})
 		//ds.Resize(5000)
 		profiler.Printf("Dataset '%s' (%s) loaded\n", inputFiles[i], humanize.Bytes(uint64(ds.SizeInBytes())))
 		otlpTraces := otlp.NewTraceProfileable(ds, compressionAlgo)

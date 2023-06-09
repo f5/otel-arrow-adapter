@@ -17,10 +17,10 @@ package dataset
 import (
 	"bufio"
 	"errors"
-	"fmt"
 	"io"
 	"log"
 	"os"
+	"path/filepath"
 
 	"github.com/klauspost/compress/zstd"
 	"go.opentelemetry.io/collector/pdata/pmetric"
@@ -74,7 +74,11 @@ func (mr *metricReader) readAllMetrics() (pmetric.Metrics, error) {
 }
 
 // NewRealMetricsDataset creates a new RealMetricsDataset from a binary file.
-func NewRealMetricsDataset(file *os.File, compression string) *RealMetricsDataset {
+func NewRealMetricsDataset(path string, compression string) *RealMetricsDataset {
+	file, err := os.Open(filepath.Clean(path))
+	if err != nil {
+		log.Fatal("open file:", err)
+	}
 
 	mr := &metricReader{
 		unmarshaler: &pmetric.JSONUnmarshaler{},
@@ -95,7 +99,7 @@ func NewRealMetricsDataset(file *os.File, compression string) *RealMetricsDatase
 
 	if err != nil {
 		if mr.bytesRead == 0 {
-			return log.Fatal("Read zero bytes from file: ", err)
+			log.Fatal("Read zero bytes from file: ", err)
 		}
 		log.Print("Found error when reading file: ", err)
 		log.Print("Bytes read: ", mr.bytesRead)

@@ -15,19 +15,23 @@
 package dataset
 
 import (
+	"bufio"
 	"encoding/hex"
+	"errors"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
 
+	"github.com/klauspost/compress/zstd"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/ptrace"
-	"go.opentelemetry.io/collector/pdata/ptrace/ptraceotlp"
 	"golang.org/x/exp/rand"
 
+	"github.com/f5/otel-arrow-adapter/pkg/benchmark"
 	carrow "github.com/f5/otel-arrow-adapter/pkg/otel/common/otlp"
 )
 
@@ -47,22 +51,74 @@ type spanSorter struct {
 
 var _ sort.Interface = spanSorter{}
 
-func NewRealTraceDataset(path string, sortOrder []string) *RealTraceDataset {
-	data, err := os.ReadFile(filepath.Clean(path))
-	if err != nil {
-		log.Fatal("read file:", err)
+type traceReader struct {
+	stringReader *bufio.Reader
+	unmarshaler  *ptrace.JSONUnmarshaler
+	bytesRead    int
+}
+
+func (tr *traceReader) readAllTraces() (ptrace.Traces, error) {
+	traces := ptrace.NewTraces()
+
+	for {
+		if line, err := tr.stringReader.ReadString('\n'); err == nil {
+			// fmt.Println(line)
+			tl, err := tr.unmarshaler.UnmarshalTraces([]byte(line))
+			if err != nil {
+				return traces, err
+			}
+			for i := 0; i < tl.ResourceSpans().Len(); i++ {
+				rs := traces.ResourceSpans().AppendEmpty()
+				tl.ResourceSpans().At(i).CopyTo(rs)
+			}
+			tr.bytesRead += len(line)
+		} else { // failed to read line
+			fmt.Println(err)
+			if err != nil {
+				if errors.Is(err, io.EOF) {
+					return traces, nil
+				}
+				return traces, err
+			}
+		}
 	}
-	otlp := ptraceotlp.NewExportRequest()
-	if err := otlp.UnmarshalProto(data); err != nil {
-		log.Fatalf("in %q unmarshal: %v", path, err)
+}
+
+func NewRealTraceDataset(path string, compression string, sortOrder []string) *RealTraceDataset {
+	file, err := os.Open(filepath.Clean(path))
+	if err != nil {
+		log.Fatal("open file:", err)
+	}
+
+	fmt.Println(path)
+	tr := &traceReader{
+		unmarshaler: &ptrace.JSONUnmarshaler{},
+		bytesRead: 0,
+	}
+	if compression == benchmark.CompressionTypeZstd {
+		cr, err := zstd.NewReader(file)
+		if err != nil {
+			log.Fatal("Failed to create compressed reader: ", err)
+		}
+		tr.stringReader = bufio.NewReader(cr)
+	} else { // no compression
+		tr.stringReader = bufio.NewReader(file)
+	}
+
+	traces, err := tr.readAllTraces() 
+	if err != nil {
+		if tr.bytesRead == 0 {
+			log.Fatal("Read zero bytes from file: ", err)
+		}
+		log.Print("Found error when reading file: ", err)
+		log.Print("Bytes read: ", tr.bytesRead)
 	}
 
 	ds := &RealTraceDataset{
 		s2r:         map[ptrace.Span]pcommon.Resource{},
 		s2s:         map[ptrace.Span]pcommon.InstrumentationScope{},
-		sizeInBytes: len(data),
+		sizeInBytes: tr.bytesRead,
 	}
-	traces := otlp.Traces()
 
 	for i := 0; i < traces.ResourceSpans().Len(); i++ {
 		rs := traces.ResourceSpans().At(i)
