@@ -16,19 +16,17 @@ package dataset
 
 import (
 	"bufio"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"log"
 	"os"
-	// "strconv"
-	// "path/filepath"
 
 	"github.com/klauspost/compress/zstd"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 
 	"github.com/f5/otel-arrow-adapter/pkg/benchmark/stats"
+	"github.com/f5/otel-arrow-adapter/pkg/benchmark"
 )
 
 // RealMetricsDataset represents a dataset of real metrics read from a Metrics serialized to a binary file.
@@ -54,10 +52,7 @@ func (mr *metricReader) readAllMetrics() (pmetric.Metrics, error) {
 	metrics := pmetric.NewMetrics()
 
 	for {
-		if line, err := mr.stringReader.ReadString('\n'); err != nil {
-			fmt.Println(json.Valid([]byte(line)))
-			fmt.Println(line)
-			// un, _ := strconv.Unquote(line)
+		if line, err := mr.stringReader.ReadString('\n'); err == nil {
 			ml, err := mr.unmarshaler.UnmarshalMetrics([]byte(line))
 			if err != nil {
 				return metrics, err
@@ -75,7 +70,6 @@ func (mr *metricReader) readAllMetrics() (pmetric.Metrics, error) {
 				return metrics, err
 			}
 		}
-
 	}
 }
 
@@ -87,10 +81,10 @@ func NewRealMetricsDataset(file *os.File, compression string) *RealMetricsDatase
 		bytesRead: 0,
 	}
 
-	if compression == "zstd" {
+	if compression == benchmark.CompressionTypeZstd {
 		cr, err := zstd.NewReader(file)
 		if err != nil {
-			log.Fatal("Failed to create compressed reader")
+			log.Fatal("Failed to create compressed reader: ", err)
 		}
 		mr.stringReader = bufio.NewReader(cr)
 	} else { // no compression
@@ -98,11 +92,13 @@ func NewRealMetricsDataset(file *os.File, compression string) *RealMetricsDatase
 	}
 
 	mdata, err := mr.readAllMetrics() 
-	fmt.Println("BYTES READ")
-	fmt.Println(mr.bytesRead)
 
 	if err != nil {
-		log.Fatal("Failed to read lines from file: ", err)
+		if mr.bytesRead == 0 {
+			return log.Fatal("Read zero bytes from file: ", err)
+		}
+		log.Print("Found error when reading file: ", err)
+		log.Print("Bytes read: ", mr.bytesRead)
 	}
 
 	ds := &RealMetricsDataset{
