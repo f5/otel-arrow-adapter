@@ -111,6 +111,8 @@ func (dg *DataGenerator) complexLogRecord(log plog.LogRecord, sev plog.SeverityN
 	log.SetSpanID(dg.Id8Bytes())
 }
 
+// RandomLogRecord generates a random log record. The list of fields set is random.
+// The value of these fields is also random.
 func (dg *DataGenerator) RandomLogRecord(log plog.LogRecord) {
 	if dg.GenBool() {
 		log.SetTimestamp(dg.CurrentTime())

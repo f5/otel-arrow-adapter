@@ -56,9 +56,10 @@ func TestTracesEncodingDecoding(t *testing.T) {
 
 	tracesGen := datagen.NewTracesGenerator(entropy, entropy.NewStandardResourceAttributes(), entropy.NewStandardInstrumentationScopes())
 
-	// Generate a random OTLP traces request.
-	expectedRequest := ptraceotlp.NewExportRequestFromTraces(tracesGen.Generate(1, 100))
+	expectedRequest := ptraceotlp.NewExportRequestFromTraces(tracesGen.Generate(100, 100))
+	CheckEncodeDecode(t, expectedRequest)
 
+	expectedRequest = ptraceotlp.NewExportRequestFromTraces(tracesGen.GenerateRandomTraces(100, 100))
 	CheckEncodeDecode(t, expectedRequest)
 }
 
@@ -74,7 +75,7 @@ func TestInvalidTracesDecoding(t *testing.T) {
 	tracesGen := datagen.NewTracesGenerator(entropy, entropy.NewStandardResourceAttributes(), entropy.NewStandardInstrumentationScopes())
 
 	// Generate a random OTLP traces request.
-	expectedRequest := ptraceotlp.NewExportRequestFromTraces(tracesGen.Generate(1, 100))
+	expectedRequest := ptraceotlp.NewExportRequestFromTraces(tracesGen.GenerateRandomTraces(2000, 100))
 
 	MultiRoundOfCheckEncodeMessUpDecode(t, expectedRequest)
 }
