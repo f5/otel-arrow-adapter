@@ -29,7 +29,7 @@ import (
 
 var help = flag.Bool("help", false, "Show help")
 
-var inputFile = "data/compressed_otlp_traces.json"
+var inputFile = "data/otlp_traces.json"
 var outputFile = "./data/nth_first_otlp_traces.json"
 var spanCount = 10
 

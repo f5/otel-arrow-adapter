@@ -50,7 +50,7 @@ func main() {
 	// Define default input file
 	inputFiles := flag.Args()
 	if len(inputFiles) == 0 {
-		inputFiles = append(inputFiles, "./data/compressed_otlp_traces.json")
+		inputFiles = append(inputFiles, "./data/otlp_traces.json")
 	}
 
 	conf := &benchmark.Config{
