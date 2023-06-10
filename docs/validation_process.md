@@ -37,3 +37,9 @@ but randomly change their payload types. The goal is to test the resilience of
 the decoding process to invalid data. The decoding layer must be able to handle
 any invalid data and return appropriate error messages without crashing.
 
+## Capturing and Replaying production data
+
+A new version of the OTel file exporter has been implemented to capture OTLP
+traffic in a generic JSON format (with ZSTD compression). A set of tools have
+been developed to replay this data, convert it to OTel Arrow, validate the
+encoding/decoding process, and assess the compression and end-to-end performance.
