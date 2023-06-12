@@ -37,6 +37,8 @@ func main() {
 	// The -stats flag displays a series of statistics about the schema and the
 	// dataset. This flag is disabled by default.
 	stats := flag.Bool("stats", false, "stats mode")
+	// supports "proto" and "json" formats
+	format := flag.String("format", "proto", "file format")
 
 	// Parse the flag
 	flag.Parse()
@@ -50,7 +52,7 @@ func main() {
 	// Define default input file
 	inputFiles := flag.Args()
 	if len(inputFiles) == 0 {
-		inputFiles = append(inputFiles, "./data/otlp_traces.json")
+		inputFiles = append(inputFiles, "./data/otlp_traces.pb")
 	}
 
 	conf := &benchmark.Config{
@@ -69,7 +71,7 @@ func main() {
 		//profiler := benchmark.NewProfiler([]int{1000}, "output/trace_benchmark.log", 2)
 		compressionAlgo := benchmark.Zstd()
 		maxIter := uint64(1)
-		ds := dataset.NewRealTraceDataset(inputFiles[i], benchmark.CompressionTypeZstd, []string{"trace_id"})
+		ds := dataset.NewRealTraceDataset(inputFiles[i], benchmark.CompressionTypeZstd, *format, []string{"trace_id"})
 		//ds.Resize(5000)
 		profiler.Printf("Dataset '%s' (%s) loaded\n", inputFiles[i], humanize.Bytes(uint64(ds.SizeInBytes())))
 		otlpTraces := otlp.NewTraceProfileable(ds, compressionAlgo)

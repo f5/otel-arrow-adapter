@@ -29,6 +29,7 @@ import (
 	"github.com/klauspost/compress/zstd"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/ptrace"
+	"go.opentelemetry.io/collector/pdata/ptrace/ptraceotlp"
 	"golang.org/x/exp/rand"
 
 	"github.com/f5/otel-arrow-adapter/pkg/benchmark"
@@ -82,7 +83,7 @@ func (tr *traceReader) readAllTraces() (ptrace.Traces, error) {
 	}
 }
 
-func NewRealTraceDataset(path string, compression string, sortOrder []string) *RealTraceDataset {
+func tracesFromJSON(path string, compression string) (ptrace.Traces, int) {
 	file, err := os.Open(filepath.Clean(path))
 	if err != nil {
 		log.Fatal("open file:", err)
@@ -92,6 +93,7 @@ func NewRealTraceDataset(path string, compression string, sortOrder []string) *R
 		unmarshaler: &ptrace.JSONUnmarshaler{},
 		bytesRead: 0,
 	}
+
 	if compression == benchmark.CompressionTypeZstd {
 		cr, err := zstd.NewReader(file)
 		if err != nil {
@@ -111,10 +113,37 @@ func NewRealTraceDataset(path string, compression string, sortOrder []string) *R
 		log.Print("Bytes read: ", tr.bytesRead)
 	}
 
+	return traces, tr.bytesRead
+}
+
+func tracesFromProto(path string, compression string) (ptrace.Traces, int) {
+	data, err := os.ReadFile(filepath.Clean(path))
+	if err != nil {
+		log.Fatal("read file:", err)
+	}
+
+	otlp := ptraceotlp.NewExportRequest()
+	if err := otlp.UnmarshalProto(data); err != nil {
+		log.Fatalf("in %q unmarshal: %v", path, err)
+	}
+
+	traces := otlp.Traces()
+	return traces, len(data)
+}
+
+func NewRealTraceDataset(path string, compression string, format string, sortOrder []string) *RealTraceDataset {
+	var traces ptrace.Traces
+	var size int
+	if format == "json" {
+		traces, size = tracesFromJSON(path, compression)
+	} else {
+		traces, size = tracesFromProto(path, compression)
+	}
+
 	ds := &RealTraceDataset{
 		s2r:         map[ptrace.Span]pcommon.Resource{},
 		s2s:         map[ptrace.Span]pcommon.InstrumentationScope{},
-		sizeInBytes: tr.bytesRead,
+		sizeInBytes: size,
 	}
 
 	for i := 0; i < traces.ResourceSpans().Len(); i++ {
