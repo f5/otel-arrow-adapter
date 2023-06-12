@@ -62,7 +62,7 @@ func TestOtlpLightstepTracesProfiler(t *testing.T) {
 	t.Skip("Lightstep specific test")
 	t.Parallel()
 
-	benchdata := dataset.NewRealTraceDataset("../../../../tools/trace_benchmark/data/otlp_traces.json", benchmark.CompressionTypeZstd, []string{
+	benchdata := dataset.NewRealTraceDataset("../../../../tools/trace_benchmark/data/otlp_traces.pb", benchmark.CompressionTypeZstd, "proto", []string{
 		"trace_id",
 	})
 
