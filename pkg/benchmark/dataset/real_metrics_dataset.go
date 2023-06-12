@@ -136,7 +136,7 @@ func NewRealMetricsDataset(path string, compression string, format string) *Real
 
 	ds := &RealMetricsDataset{
 		metrics:      []metrics{},
-		sizeInBytes:  bytes, 
+		sizeInBytes:  bytes,
 		metricsStats: stats.NewMetricsStats(),
 	}
 	ds.metricsStats.Analyze(mdata)

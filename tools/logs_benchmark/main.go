@@ -51,6 +51,8 @@ func main() {
 	// The -stats flag displays a series of statistics about the schema and the
 	// dataset. This flag is disabled by default.
 	statsFlag := flag.Bool("stats", false, "stats mode")
+	// supports "proto" and "json" formats
+	formatFlag := flag.String("format", "proto", "file format")
 
 	// Parse the flag
 	flag.Parse()
@@ -64,9 +66,9 @@ func main() {
 	// Define default input file
 	inputFiles := flag.Args()
 	if len(inputFiles) == 0 {
-		println("\nNo input file specified, using default file ./data/otlp_logs.json")
-		println("CSV and OTLP json files are supported as input files (ext .csv or .json)")
-		inputFiles = append(inputFiles, "./data/otlp_logs.json")
+		println("\nNo input file specified, using default file ./data/otlp_logs.pb")
+		println("CSV, OTLP protobuf, and OTLP json files are supported as input files (ext .csv or .pb or .json)")
+		inputFiles = append(inputFiles, "./data/otlp_logs.pb")
 	}
 
 	conf := &benchmark.Config{
@@ -91,12 +93,12 @@ func main() {
 		// Build dataset from CSV file or from OTLP protobuf file
 		if strings.HasSuffix(inputFile, ".csv") {
 			ds = CsvToLogsDataset(inputFile)
-		} else if strings.HasSuffix(inputFile, ".json") {
-			rds := dataset.NewRealLogsDataset(inputFiles[i], benchmark.CompressionTypeZstd)
+		} else if strings.HasSuffix(inputFile, ".json") || strings.HasSuffix(inputFile, ".pb"){
+			rds := dataset.NewRealLogsDataset(inputFiles[i], benchmark.CompressionTypeZstd, *formatFlag)
 			//rds.Resize(10)
 			ds = rds
 		} else {
-			log.Fatal("Unsupported input file format (only .csv and .pb are supported)")
+			log.Fatal("Unsupported input file format (only .csv .json and .pb are supported)")
 		}
 		profiler.Printf("Dataset '%s' (%s) loaded\n", inputFiles[i], humanize.Bytes(uint64(ds.SizeInBytes())))
 

@@ -23,6 +23,7 @@ import (
 	"path/filepath"
 
 	"go.opentelemetry.io/collector/pdata/plog"
+	"go.opentelemetry.io/collector/pdata/plog/plogotlp"
 
 	"github.com/klauspost/compress/zstd"
 	"github.com/f5/otel-arrow-adapter/pkg/benchmark"
@@ -73,8 +74,7 @@ func (lr *logReader) readAllLogs() (plog.Logs, error) {
 	}
 }
 
-// NewRealLogsDataset creates a new RealLogsDataset from a binary file.
-func NewRealLogsDataset(path string, compression string) *RealLogsDataset {
+func logsFromJSON(path string, compression string) (plog.Logs, int) {
 	file, err := os.Open(filepath.Clean(path))
 	if err != nil {
 		log.Fatal("open file:", err)
@@ -104,9 +104,39 @@ func NewRealLogsDataset(path string, compression string) *RealLogsDataset {
 		log.Print("Bytes read: ", lr.bytesRead)
 	}
 
+	return logs, lr.bytesRead
+}
+
+func logsFromProto(path string) (plog.Logs, int) {
+	data, err := os.ReadFile(filepath.Clean(path))
+	if err != nil {
+		log.Fatal("read file:", err)
+	}
+	otlp := plogotlp.NewExportRequest()
+
+	if err := otlp.UnmarshalProto(data); err != nil {
+		log.Fatal("unmarshal:", err)
+	}
+	logs := otlp.Logs()
+
+	return logs, len(data)
+}
+
+
+// NewRealLogsDataset creates a new RealLogsDataset from a binary file.
+func NewRealLogsDataset(path string, compression string, format string) *RealLogsDataset {
+	var logs plog.Logs
+	var size int
+
+	if format == "json" {
+		logs, size = logsFromJSON(path, compression)
+	} else {
+		logs, size = logsFromProto(path)
+	}
+
 	ds := &RealLogsDataset{
 		logs:        []logUnit{},
-		sizeInBytes: lr.bytesRead,
+		sizeInBytes: size,
 		logsStats:   stats.NewLogsStats(),
 	}
 	ds.logsStats.Analyze(logs)

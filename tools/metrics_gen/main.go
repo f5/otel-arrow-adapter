@@ -71,6 +71,7 @@ func writeProto(file *os.File, batchSize int, generator *datagen.MetricsGenerato
 		log.Fatal("marshaling error: ", err)
 	}
 
+	// Write protobuf to file
 	err = os.WriteFile(outputFile, msg, 0600)
 
 	if err != nil {
@@ -113,10 +114,10 @@ func main() {
 		log.Fatal("failed to open file: ", err)
 	}
 
-	if format == "proto" {
-		writeProto(f, batchSize, generator)
-	} else {
+	if format == "json" {
 		writeJSON(f, batchSize, generator)
+	} else { // proto
+		writeProto(f, batchSize, generator)
 	}
 
 }
