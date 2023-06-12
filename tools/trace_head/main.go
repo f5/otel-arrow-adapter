@@ -16,7 +16,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"log"
 	"os"
 	"path"
@@ -29,9 +28,10 @@ import (
 
 var help = flag.Bool("help", false, "Show help")
 
-var inputFile = "data/otlp_traces.json"
-var outputFile = "./data/nth_first_otlp_traces.json"
+var inputFile = "data/otlp_traces.pb"
+var outputFile = "./data/nth_first_otlp_traces.pb"
 var spanCount = 10
+var format = "proto"
 
 // This tool extracts the first n spans from a compressed json file of traces (i.e. kind of `head` command for spans).
 func main() {
@@ -39,6 +39,7 @@ func main() {
 	flag.StringVar(&inputFile, "input", inputFile, "Input file")
 	flag.StringVar(&outputFile, "output", outputFile, "Output file")
 	flag.IntVar(&spanCount, "span_count", spanCount, "Number of spans")
+	flag.StringVar(&format, "format", format, "file format")
 
 	// Parse the flag
 	flag.Parse()
@@ -50,18 +51,14 @@ func main() {
 	}
 
 	// Extract the first n spans
-	ds := dataset.NewRealTraceDataset(inputFile, benchmark.CompressionTypeZstd, []string{"trace_id"})
+	ds := dataset.NewRealTraceDataset(inputFile, benchmark.CompressionTypeZstd, format, []string{"trace_id"})
 	if ds.SizeInBytes() == 0 {
 		log.Fatal("failed to read any bytes from input")
 	}
-	fmt.Println(ds.SizeInBytes())
 	traces := ds.Traces(0, spanCount)
 	request := ptraceotlp.NewExportRequestFromTraces(traces[0])
 
-	js, err := request.MarshalJSON()
-	if err != nil {
-		log.Fatal("marshaling error: ", err)
-	}
+
 
 	// Write protobuf to file
 	if _, err := os.Stat(outputFile); os.IsNotExist(err) {
@@ -71,7 +68,21 @@ func main() {
 		}
 	}
 
-	err = os.WriteFile(outputFile, js, 0600)
+	var buf []byte
+	var err error
+	if format == "json" {
+		buf, err = request.MarshalJSON()
+		if err != nil {
+			log.Fatal("marshaling error: ", err)
+		}
+	} else {
+		buf, err = request.MarshalProto()
+		if err != nil {
+			log.Fatal("marshaling error: ", err)
+		}
+	}
+
+	err = os.WriteFile(outputFile, buf, 0600)
 	if err != nil {
 		log.Fatal("write error: ", err)
 	}
