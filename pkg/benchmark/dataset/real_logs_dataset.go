@@ -123,7 +123,8 @@ func logsFromProto(path string) (plog.Logs, int) {
 }
 
 
-// NewRealLogsDataset creates a new RealLogsDataset from a binary file.
+// NewRealLogsDataset creates a new RealLogsDataset from a binary file
+// which is either formatted as otlp protobuf or compressed otlp json.
 func NewRealLogsDataset(path string, compression string, format string) *RealLogsDataset {
 	var logs plog.Logs
 	var size int

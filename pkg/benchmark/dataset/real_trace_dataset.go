@@ -131,6 +131,8 @@ func tracesFromProto(path string, compression string) (ptrace.Traces, int) {
 	return traces, len(data)
 }
 
+// NewRealTraceDataset creates a new RealTraceDataset from a binary file
+// which is either formatted as otlp protobuf or compressed otlp json.
 func NewRealTraceDataset(path string, compression string, format string, sortOrder []string) *RealTraceDataset {
 	var traces ptrace.Traces
 	var size int

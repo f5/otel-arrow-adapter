@@ -90,16 +90,22 @@ func main() {
 		profiler := benchmark.NewProfiler([]int{128, 1024, 2048, 4096}, "output/logs_benchmark.log", 2)
 		//profiler := benchmark.NewProfiler([]int{10}, "output/logs_benchmark.log", 2)
 
+		// in case formatFlag was not passed
+		if strings.HasSuffix(inputFile, ".json") {
+			*formatFlag = "json"
+		} else if strings.HasSuffix(inputFile, ".pb") {
+			*formatFlag = "proto"
+		}
+
 		// Build dataset from CSV file or from OTLP protobuf file
 		if strings.HasSuffix(inputFile, ".csv") {
 			ds = CsvToLogsDataset(inputFile)
-		} else if strings.HasSuffix(inputFile, ".json") || strings.HasSuffix(inputFile, ".pb"){
-			rds := dataset.NewRealLogsDataset(inputFiles[i], benchmark.CompressionTypeZstd, *formatFlag)
+		} else {
+			rds := dataset.NewRealLogsDataset(inputFiles[i], benchmark.CompressionTypeZstd, *formatFlag) 
 			//rds.Resize(10)
 			ds = rds
-		} else {
-			log.Fatal("Unsupported input file format (only .csv .json and .pb are supported)")
 		}
+		
 		profiler.Printf("Dataset '%s' (%s) loaded\n", inputFiles[i], humanize.Bytes(uint64(ds.SizeInBytes())))
 
 		otlpLogs := otlp.NewLogsProfileable(ds, compressionAlgo)

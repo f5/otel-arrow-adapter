@@ -124,7 +124,8 @@ func metricsFromProto(path string) (pmetric.Metrics, int) {
 }
 
 
-// NewRealMetricsDataset creates a new RealMetricsDataset from a binary file.
+// NewRealMetricsDataset creates a new RealMetricsDataset from a binary file
+// which is either formatted as otlp protobuf or compressed otlp json.
 func NewRealMetricsDataset(path string, compression string, format string) *RealMetricsDataset {
 	var mdata pmetric.Metrics
 	var bytes int
