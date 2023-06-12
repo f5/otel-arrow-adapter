@@ -31,13 +31,58 @@ import (
 )
 
 var help = flag.Bool("help", false, "Show help")
-var outputFile = "./data/otlp_metrics.json"
+var outputFile = "./data/otlp_metrics.pb"
 var batchSize = 20
+var format = "proto"
+
+// when format == "json" this function will write zstd compressed
+// json to the desired output file.
+func writeJSON(file *os.File, batchSize int, generator *datagen.MetricsGenerator) {
+	fw, err := zstd.NewWriter(file)
+	if err != nil {
+		log.Fatal("error creating compressed writer", err)
+	}
+	defer fw.Close()
+
+	for i := 0; i < batchSize; i++ {
+		request := pmetricotlp.NewExportRequestFromMetrics(generator.GenerateAllKindOfMetrics(1, 100))
+
+		// Marshal the request to bytes.
+		msg, err := request.MarshalJSON()
+		if err != nil {
+			log.Fatal("marshaling error: ", err)
+		}
+		if _, err := fw.Write(msg); err != nil {
+			log.Fatal("writing error: ", err)
+		}
+		if _, err := io.WriteString(fw, "\n"); err != nil {
+			log.Fatal("writing newline error: ", err)
+		}
+	}
+
+	fw.Flush()
+}
+
+func writeProto(file *os.File, batchSize int, generator *datagen.MetricsGenerator) {
+	request := pmetricotlp.NewExportRequestFromMetrics(generator.GenerateAllKindOfMetrics(batchSize, 100))
+	// Marshal the request to bytes.
+	msg, err := request.MarshalProto()
+	if err != nil {
+		log.Fatal("marshaling error: ", err)
+	}
+
+	err = os.WriteFile(outputFile, msg, 0600)
+
+	if err != nil {
+		log.Fatal("write error: ", err)
+	}
+}
 
 func main() {
 	// Define the flags.
 	flag.StringVar(&outputFile, "output", outputFile, "Output file")
 	flag.IntVar(&batchSize, "batchsize", batchSize, "Batch size")
+	flag.StringVar(&format, "format", format, "file format")
 
 	// Parse the flag
 	flag.Parse()
@@ -68,27 +113,10 @@ func main() {
 		log.Fatal("failed to open file: ", err)
 	}
 
-	fw, err := zstd.NewWriter(f)
-	if err != nil {
-		log.Fatal("error creating compressed writer", err)
-	}
-	defer fw.Close()
-
-	for i := 0; i < batchSize; i++ {
-		request := pmetricotlp.NewExportRequestFromMetrics(generator.GenerateAllKindOfMetrics(1, 100))
-
-		// Marshal the request to bytes.
-		msg, err := request.MarshalJSON()
-		if err != nil {
-			log.Fatal("marshaling error: ", err)
-		}
-		if _, err := fw.Write(msg); err != nil {
-			log.Fatal("writing error: ", err)
-		}
-		if _, err := io.WriteString(fw, "\n"); err != nil {
-			log.Fatal("writing newline error: ", err)
-		}
+	if format == "proto" {
+		writeProto(f, batchSize, generator)
+	} else {
+		writeJSON(f, batchSize, generator)
 	}
 
-	fw.Flush()
 }

@@ -24,6 +24,7 @@ import (
 
 	"github.com/klauspost/compress/zstd"
 	"go.opentelemetry.io/collector/pdata/pmetric"
+	"go.opentelemetry.io/collector/pdata/pmetric/pmetricotlp"
 
 	"github.com/f5/otel-arrow-adapter/pkg/benchmark/stats"
 	"github.com/f5/otel-arrow-adapter/pkg/benchmark"
@@ -73,8 +74,7 @@ func (mr *metricReader) readAllMetrics() (pmetric.Metrics, error) {
 	}
 }
 
-// NewRealMetricsDataset creates a new RealMetricsDataset from a binary file.
-func NewRealMetricsDataset(path string, compression string) *RealMetricsDataset {
+func metricsFromJSON(path string, compression string) (pmetric.Metrics, int) {
 	file, err := os.Open(filepath.Clean(path))
 	if err != nil {
 		log.Fatal("open file:", err)
@@ -105,9 +105,38 @@ func NewRealMetricsDataset(path string, compression string) *RealMetricsDataset 
 		log.Print("Bytes read: ", mr.bytesRead)
 	}
 
+	return mdata, mr.bytesRead
+
+}
+
+func metricsFromProto(path string) (pmetric.Metrics, int) {
+	data, err := os.ReadFile(filepath.Clean(path))
+	if err != nil {
+		log.Fatal("read file:", err)
+	}
+	otlp := pmetricotlp.NewExportRequest()
+	if err := otlp.UnmarshalProto(data); err != nil {
+		log.Fatal("unmarshal:", err)
+	}
+	mdata := otlp.Metrics()
+
+	return mdata, len(data)
+}
+
+
+// NewRealMetricsDataset creates a new RealMetricsDataset from a binary file.
+func NewRealMetricsDataset(path string, compression string, format string) *RealMetricsDataset {
+	var mdata pmetric.Metrics
+	var bytes int
+	if format == "json" {
+		mdata, bytes = metricsFromJSON(path, compression)
+	} else {
+		mdata, bytes = metricsFromProto(path)
+	}
+
 	ds := &RealMetricsDataset{
 		metrics:      []metrics{},
-		sizeInBytes:  mr.bytesRead, 
+		sizeInBytes:  bytes, 
 		metricsStats: stats.NewMetricsStats(),
 	}
 	ds.metricsStats.Analyze(mdata)
