@@ -65,7 +65,7 @@ service ArrowMetricsService {
 // records.
 message BatchArrowRecords {
   // [mandatory] Batch ID. Must be unique in the context of the stream.
-  string batch_id = 1;
+  int64 batch_id = 1;
 
   // [mandatory] A collection of payloads containing the data of the batch.
   repeated ArrowPayload arrow_payloads = 2;
@@ -135,7 +135,7 @@ message BatchStatus {
 }
 
 message StatusMessage {
-  string batch_id = 1;
+  int64 batch_id = 1;
   StatusCode status_code = 2;
   ErrorCode error_code = 3;
   string error_message = 4;

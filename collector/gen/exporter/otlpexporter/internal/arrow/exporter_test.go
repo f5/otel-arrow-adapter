@@ -157,7 +157,7 @@ func newExporterTestCaseCommon(t *testing.T, noisy noisyTest, numStreams int, di
 	}
 }
 
-func statusOKFor(id string) *arrowpb.BatchStatus {
+func statusOKFor(id int64) *arrowpb.BatchStatus {
 	return &arrowpb.BatchStatus{
 		Statuses: []*arrowpb.StatusMessage{
 			{
@@ -168,7 +168,7 @@ func statusOKFor(id string) *arrowpb.BatchStatus {
 	}
 }
 
-func statusUnavailableFor(id string) *arrowpb.BatchStatus {
+func statusUnavailableFor(id int64) *arrowpb.BatchStatus {
 	return &arrowpb.BatchStatus{
 		Statuses: []*arrowpb.StatusMessage{
 			{
@@ -181,7 +181,7 @@ func statusUnavailableFor(id string) *arrowpb.BatchStatus {
 	}
 }
 
-func statusInvalidFor(id string) *arrowpb.BatchStatus {
+func statusInvalidFor(id int64) *arrowpb.BatchStatus {
 	return &arrowpb.BatchStatus{
 		Statuses: []*arrowpb.StatusMessage{
 			{
@@ -194,7 +194,7 @@ func statusInvalidFor(id string) *arrowpb.BatchStatus {
 	}
 }
 
-func statusUnrecognizedFor(id string) *arrowpb.BatchStatus {
+func statusUnrecognizedFor(id int64) *arrowpb.BatchStatus {
 	return &arrowpb.BatchStatus{
 		Statuses: []*arrowpb.StatusMessage{
 			{

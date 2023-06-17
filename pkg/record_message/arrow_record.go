@@ -31,14 +31,14 @@ type PayloadType = v1.ArrowPayloadType
 // RecordMessage wraps an Arrow Record with a set of metadata used to identify the batch, sub-stream, and few other
 // properties.
 type RecordMessage struct {
-	batchId     string
+	batchId     int64
 	subStreamId string
 	payloadType PayloadType
 	record      arrow.Record
 }
 
 // NewRecordMessage creates a record message.
-func NewRecordMessage(batchId string, payloadType PayloadType, record arrow.Record) *RecordMessage {
+func NewRecordMessage(batchId int64, payloadType PayloadType, record arrow.Record) *RecordMessage {
 	return &RecordMessage{
 		batchId:     batchId,
 		payloadType: payloadType,
@@ -85,7 +85,7 @@ func NewRelatedDataMessage(schemaID string, record arrow.Record, payloadType Pay
 	}
 }
 
-func (rm *RecordMessage) BatchId() string {
+func (rm *RecordMessage) BatchId() int64 {
 	return rm.batchId
 }
 

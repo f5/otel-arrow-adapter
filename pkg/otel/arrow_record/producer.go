@@ -412,7 +412,7 @@ func (p *Producer) Produce(rms []*record_message.RecordMessage) (*colarspb.Batch
 		}
 	}
 
-	batchId := fmt.Sprintf("%d", p.batchId)
+	batchId := p.batchId
 	p.batchId++
 
 	return &colarspb.BatchArrowRecords{
