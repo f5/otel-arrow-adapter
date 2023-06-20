@@ -116,9 +116,14 @@ enum ArrowPayloadType {
 
 // Represents a batch of OTel Arrow entities.
 message ArrowPayload {
-  // [mandatory] A unique id assigned to a sub-stream of the batch sharing the
-  // same schema, and dictionaries.
-  string sub_stream_id = 1;
+  // [mandatory] A canonical ID representing the schema of the Arrow Record.
+  // This ID is used on the consumer side to determine the IPC reader to use
+  // for interpreting the corresponding record. For any NEW `schema_id`, the
+  // consumer must:
+  // 1) close the current IPC reader,
+  // 2) create a new IPC reader in order to interpret the new schema,
+  // dictionaries, and corresponding data.
+  string schema_id = 1;
 
   // [mandatory] Type of the OTel Arrow payload.
   ArrowPayloadType type = 2;
