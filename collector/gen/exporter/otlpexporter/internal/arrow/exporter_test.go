@@ -111,9 +111,9 @@ func copyBatch[T any](real func(T) (*arrowpb.BatchArrowRecords, error)) func(T) 
 			rcpy := make([]byte, len(inp.Record))
 			copy(rcpy, inp.Record)
 			pays[i] = &arrowpb.ArrowPayload{
-				SubStreamId: inp.SubStreamId,
-				Type:        inp.Type,
-				Record:      rcpy,
+				SchemaId: inp.SchemaId,
+				Type:     inp.Type,
+				Record:   rcpy,
 			}
 		}
 
