@@ -814,7 +814,7 @@ func TestGRPCInvalidTLSCredentials(t *testing.T) {
 		receivertest.NewNopCreateSettings(),
 		cfg,
 		consumertest.NewNop())
-		
+
 	require.NoError(t, err)
 	assert.NotNil(t, r)
 
