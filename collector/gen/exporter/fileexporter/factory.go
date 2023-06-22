@@ -57,7 +57,7 @@ func createTracesExporter(
 	if err != nil {
 		return nil, err
 	}
-	fe, err := exporters.GetOrAdd(cfg, func() (component.Component, error) {
+	fe, err := exporters.GetOrAdd(conf, func() (component.Component, error) {
 		return newFileExporter(conf, writer), nil
 	})
 	if err != nil {
@@ -84,7 +84,7 @@ func createMetricsExporter(
 	if err != nil {
 		return nil, err
 	}
-	fe, err := exporters.GetOrAdd(cfg, func() (component.Component, error) {
+	fe, err := exporters.GetOrAdd(conf, func() (component.Component, error) {
 		return newFileExporter(conf, writer), nil
 	})
 	if err != nil {
@@ -111,7 +111,7 @@ func createLogsExporter(
 	if err != nil {
 		return nil, err
 	}
-	fe, err := exporters.GetOrAdd(cfg, func() (component.Component, error) {
+	fe, err := exporters.GetOrAdd(conf, func() (component.Component, error) {
 		return newFileExporter(conf, writer), nil
 	})
 	if err != nil {
@@ -172,4 +172,4 @@ func buildFileWriter(cfg *Config, logger *zap.Logger) (WriteCloseFlusher, error)
 // We maintain this map because the Factory is asked trace and metric receivers separately
 // when it gets CreateTracesReceiver() and CreateMetricsReceiver() but they must not
 // create separate objects, they must use one Receiver object per configuration.
-var exporters = sharedcomponent.NewSharedComponents[component.Config, component.Component]()
+var exporters = sharedcomponent.NewSharedComponents[*Config, component.Component]()
