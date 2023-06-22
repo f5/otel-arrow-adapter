@@ -8,8 +8,8 @@ import (
 	"io"
 	"os"
 
-	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/fileexporter/internal/metadata"
-	"github.com/open-telemetry/opentelemetry-collector-contrib/internal/sharedcomponent"
+	"github.com/f5/otel-arrow-adapter/collector/gen/exporter/fileexporter/internal/metadata"
+	"github.com/f5/otel-arrow-adapter/collector/gen/internal/sharedcomponent"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/consumer"
 	"go.opentelemetry.io/collector/exporter"
@@ -57,9 +57,12 @@ func createTracesExporter(
 	if err != nil {
 		return nil, err
 	}
-	fe := exporters.GetOrAdd(cfg, func() component.Component {
-		return newFileExporter(conf, writer)
+	fe, err := exporters.GetOrAdd(cfg, func() (component.Component, error) {
+		return newFileExporter(conf, writer), nil
 	})
+	if err != nil {
+		return nil, err
+	}
 	return exporterhelper.NewTracesExporter(
 		ctx,
 		set,
@@ -81,9 +84,12 @@ func createMetricsExporter(
 	if err != nil {
 		return nil, err
 	}
-	fe := exporters.GetOrAdd(cfg, func() component.Component {
-		return newFileExporter(conf, writer)
+	fe, err := exporters.GetOrAdd(cfg, func() (component.Component, error) {
+		return newFileExporter(conf, writer), nil
 	})
+	if err != nil {
+		return nil, err
+	}
 	return exporterhelper.NewMetricsExporter(
 		ctx,
 		set,
@@ -105,9 +111,12 @@ func createLogsExporter(
 	if err != nil {
 		return nil, err
 	}
-	fe := exporters.GetOrAdd(cfg, func() component.Component {
-		return newFileExporter(conf, writer)
+	fe, err := exporters.GetOrAdd(cfg, func() (component.Component, error) {
+		return newFileExporter(conf, writer), nil
 	})
+	if err != nil {
+		return nil, err
+	}
 	return exporterhelper.NewLogsExporter(
 		ctx,
 		set,
@@ -163,4 +172,4 @@ func buildFileWriter(cfg *Config, logger *zap.Logger) (WriteCloseFlusher, error)
 // We maintain this map because the Factory is asked trace and metric receivers separately
 // when it gets CreateTracesReceiver() and CreateMetricsReceiver() but they must not
 // create separate objects, they must use one Receiver object per configuration.
-var exporters = sharedcomponent.NewSharedComponents()
+var exporters = sharedcomponent.NewSharedComponents[component.Config, component.Component]()

@@ -47,6 +47,8 @@ github.com/envoyproxy/go-control-plane v0.9.1-0.20191026205805-5f8ba28d4473/go.m
 github.com/envoyproxy/go-control-plane v0.9.4/go.mod h1:6rpuAdCZL397s3pYoYcLgu1mIlRU8Am5FuJP05cCM98=
 github.com/envoyproxy/go-control-plane v0.9.9-0.20210217033140-668b12f5399d/go.mod h1:cXg6YxExXjJnVBQHBLXeUAgxn2UodCpnH306RInaBQk=
 github.com/envoyproxy/protoc-gen-validate v0.1.0/go.mod h1:iSmxcyjqTsJpI2R4NaDN7+kN2VEUnK/pcBlmesArF7c=
+github.com/f5/otel-arrow-adapter/collector v0.0.0-20230127173631-36e2831e0eee h1:nJEvgpBSDdktO4OEXilCU6/HZcVnc2g6uFZ0dbfh5Eo=
+github.com/f5/otel-arrow-adapter/collector v0.0.0-20230127173631-36e2831e0eee/go.mod h1:Fr5QSvSK9CYjO5GdUlpEU0OkO56OyumwxtA+sVqhq2E=
 github.com/fatih/color v1.7.0/go.mod h1:Zm6kSWBoL9eyXnKyktHP6abPY2pDugNf5KwzbycvMj4=
 github.com/fatih/color v1.9.0/go.mod h1:eQcE1qtQxscV5RaZvpXrrb8Drkc3/DdQ+uUYCNjL+zU=
 github.com/fatih/structs v1.1.0/go.mod h1:9NiDSp5zOcgEDl+j00MP/WkGVPOlPRLejGD8Ga6PJ7M=
@@ -209,10 +211,6 @@ github.com/mwitkow/go-conntrack v0.0.0-20161129095857-cc309e4a2223/go.mod h1:qRW
 github.com/mwitkow/go-conntrack v0.0.0-20190716064945-2f068394615f/go.mod h1:qRWi+5nqEBWmkhHvq77mSJWrCKwh8bxhgT7d/eI7P4U=
 github.com/npillmayer/nestext v0.1.3/go.mod h1:h2lrijH8jpicr25dFY+oAJLyzlya6jhnuG+zWp9L0Uk=
 github.com/oklog/run v1.0.0/go.mod h1:dlhp/R75TPv97u0XWUtDeV/lRKWPKSdTuV0TZvrmrQA=
-github.com/open-telemetry/opentelemetry-collector-contrib/internal/coreinternal v0.80.0 h1:oJTxSiEJggI5YcmK+SsPQWgml0EMGEzK8K7RWwPC39Q=
-github.com/open-telemetry/opentelemetry-collector-contrib/internal/coreinternal v0.80.0/go.mod h1:GezufcOBscYo2wdN7Thfw/ejsAWFAPHYYbpAqzNZIdQ=
-github.com/open-telemetry/opentelemetry-collector-contrib/internal/sharedcomponent v0.80.0 h1:zclXBkziJXfoxGfflrHcLl2uqdA77vQu5ik+10Wx3JU=
-github.com/open-telemetry/opentelemetry-collector-contrib/internal/sharedcomponent v0.80.0/go.mod h1:lwVQFBB6pISsishcASYmqk0XlIq5aDHdtFffGeL9qHA=
 github.com/pascaldekloe/goe v0.0.0-20180627143212-57f6aae5913c/go.mod h1:lzWF7FIEvWOWxwDKqyGYQf6ZUaNfKdP144TG7ZOy1lc=
 github.com/pascaldekloe/goe v0.1.0/go.mod h1:lzWF7FIEvWOWxwDKqyGYQf6ZUaNfKdP144TG7ZOy1lc=
 github.com/pelletier/go-toml v1.7.0/go.mod h1:vwGMzjaWMwyfHwgIBhI2YUM4fB6nL6lVAvS1LBMMhTE=

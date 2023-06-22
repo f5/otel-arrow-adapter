@@ -16,7 +16,7 @@ import (
 	"time"
 
 	"github.com/klauspost/compress/zstd"
-	"github.com/open-telemetry/opentelemetry-collector-contrib/internal/coreinternal/testdata"
+	"github.com/f5/otel-arrow-adapter/collector/gen/internal/testdata"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/component/componenttest"
