@@ -63,11 +63,9 @@ require (
 	contrib.go.opencensus.io/exporter/prometheus v0.4.2 // indirect
 	github.com/GehirnInc/crypt v0.0.0-20200316065508-bb7000b8a962 // indirect
 	github.com/andybalholm/brotli v1.0.4 // indirect
-	github.com/antonmedv/expr v1.12.5 // indirect
 	github.com/apache/thrift v0.16.0 // indirect
 	github.com/benbjohnson/clock v1.3.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
-	github.com/bmatcuk/doublestar/v4 v4.6.0 // indirect
 	github.com/cenkalti/backoff/v4 v4.2.1 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
@@ -102,6 +100,7 @@ require (
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 <<<<<<< HEAD
+<<<<<<< HEAD
 	github.com/mostynb/go-grpc-compression v1.1.19 // indirect
 =======
 	github.com/mostynb/go-grpc-compression v1.1.18 // indirect
@@ -109,6 +108,11 @@ require (
 	github.com/open-telemetry/opentelemetry-collector-contrib/internal/sharedcomponent v0.79.0 // indirect
 	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza v0.79.0 // indirect
 >>>>>>> a196947499 (add filereceiver)
+=======
+	github.com/mostynb/go-grpc-compression v1.1.19 // indirect
+	github.com/open-telemetry/opentelemetry-collector-contrib/internal/sharedcomponent v0.79.0 // indirect
+	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/filereceiver v0.80.0 // indirect
+>>>>>>> 11064bae68 (remove positional scanner due to bug)
 	github.com/pierrec/lz4/v4 v4.1.17 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/power-devops/perfstat v0.0.0-20210106213030-5aafc221ea8c // indirect
@@ -153,8 +157,6 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
-<<<<<<< HEAD
 replace github.com/f5/otel-arrow-adapter/collector/gen/exporter/fileexporter => ./collector/gen/exporter/fileexporter
-=======
->>>>>>> 830865d000 (move directory)
+
 replace github.com/f5/otel-arrow-adapter/collector/receiver/filereceiver => ./collector/receiver/filereceiver

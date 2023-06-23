@@ -61,13 +61,12 @@ func TestFileReader_Cancellation(t *testing.T) {
 		consumer: consumerType{
 			metricsConsumer: consumertest.NewNop(),
 		},
+		stringReader: blockingStringReader{},
 	}
-	f, err := os.Open(filepath.Join("testdata", "metrics.json"))
-	require.NoError(t, err)
 	ctx, cancel := context.WithCancel(context.Background())
 	errs := make(chan error)
 	go func() {
-		errs <- fr.readAllLines(ctx, f)
+		errs <- fr.readAllLines(ctx)
 	}()
 	cancel()
 	require.Equal(t, 0, len(errs))
@@ -86,7 +85,7 @@ func TestFileReader_ReadAll(t *testing.T) {
 		sleepFunc: sleeper.fakeSleep,
 	}
 	fr := newFileReader(cons, f, rt, "json", "")
-	err = fr.readAllLines(context.Background(), f)
+	err = fr.readAllLines(context.Background())
 	require.NoError(t, err)
 	const expectedSleeps = 10
 	assert.Len(t, sleeper.durations, expectedSleeps)
@@ -112,7 +111,7 @@ func TestFileReader_ReadAllChunks(t *testing.T) {
 		sleepFunc: sleeper.fakeSleep,
 	}
 	fr := newFileReader(cons, f, rt, "proto", "")
-	err = fr.readAllChunks(context.Background(), f)
+	err = fr.readAllChunks(context.Background())
 	require.NoError(t, err)
 	const expectedSleeps = 10
 	assert.Len(t, sleeper.durations, expectedSleeps)
@@ -123,6 +122,17 @@ func TestFileReader_ReadAllChunks(t *testing.T) {
 		delta := time.Millisecond * 10
 		assert.InDelta(t, float64(expected), float64(actual), float64(delta))
 	}
+}
+
+type blockingStringReader struct {
+}
+
+func (sr blockingStringReader) ReadString(byte) (string, error) {
+	select {}
+}
+
+func (sr blockingStringReader) Read([]byte) (int, error) {
+	return 0, nil
 }
 
 func metricsByName(pm pmetric.Metrics) map[string]pmetric.Metric {
