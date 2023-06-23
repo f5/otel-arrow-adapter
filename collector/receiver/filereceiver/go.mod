@@ -1,4 +1,4 @@
-module github.com/f5/otel-arrow-adapter/collector/gen/receiver/filereceiver
+module github.com/f5/otel-arrow-adapter/collector/receiver/filereceiver
 
 go 1.20
 

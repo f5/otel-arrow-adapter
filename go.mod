@@ -153,5 +153,8 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
+<<<<<<< HEAD
 replace github.com/f5/otel-arrow-adapter/collector/gen/exporter/fileexporter => ./collector/gen/exporter/fileexporter
+=======
+>>>>>>> 830865d000 (move directory)
 replace github.com/f5/otel-arrow-adapter/collector/receiver/filereceiver => ./collector/receiver/filereceiver

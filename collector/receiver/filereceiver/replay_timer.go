@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package filereceiver // import "github.com/f5/otel-arrow-adapter/collector/gen/receiver/filereceiver"
+package filereceiver // import "github.com/f5/otel-arrow-adapter/collector/receiver/filereceiver"
 
 import (
 	"context"

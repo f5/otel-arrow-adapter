@@ -4,7 +4,7 @@ import (
 	"github.com/f5/otel-arrow-adapter/collector/gen/exporter/otlpexporter"
 	"github.com/f5/otel-arrow-adapter/collector/gen/exporter/fileexporter"
 	"github.com/f5/otel-arrow-adapter/collector/gen/receiver/otlpreceiver"
-	"github.com/f5/otel-arrow-adapter/collector/gen/receiver/filereceiver"
+	"github.com/f5/otel-arrow-adapter/collector/receiver/filereceiver"
 	"github.com/f5/otel-arrow-adapter/collector/processor/experimentprocessor"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/basicauthextension"
