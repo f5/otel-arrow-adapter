@@ -376,15 +376,6 @@ github.com/open-telemetry/opentelemetry-collector-contrib/extension/basicauthext
 github.com/open-telemetry/opentelemetry-collector-contrib/extension/basicauthextension v0.79.0/go.mod h1:oTHjRYegHhIlYN5vQdH3aauDChKpkzBTnA4zYcAyR2Y=
 github.com/open-telemetry/opentelemetry-collector-contrib/extension/headerssetterextension v0.79.0 h1:GbQLphSDQ947g/I3248Ww4MD8v6VFACcLGsfj2F6HUg=
 github.com/open-telemetry/opentelemetry-collector-contrib/extension/headerssetterextension v0.79.0/go.mod h1:7dEWh1aCP3rEuCWBJOJsDtBlBdn+mAeuNCH1HkMo7e4=
-github.com/open-telemetry/opentelemetry-collector-contrib/receiver/filereceiver v0.79.0 h1:g3zs9bnUC+nZICcwOboD28EXWCgTtinvFXQih5Tp21s=
-github.com/open-telemetry/opentelemetry-collector-contrib/receiver/filereceiver v0.79.0/go.mod h1:d8m4KuJKoBfKc+6e9YiJIruKCqbxLWVID5Duhuq4qCQ=
-github.com/open-telemetry/opentelemetry-collector-contrib/internal/coreinternal v0.79.0 h1:OZPeakqoSZ1yRlmGBlWi9kISx/9PJzlNLGLutFPOQY0=
-github.com/open-telemetry/opentelemetry-collector-contrib/internal/sharedcomponent v0.79.0 h1:GUJzejawtyOk9Iz9XJQ6ihdIIftfO2vTgQ84HdrcAiE=
-github.com/open-telemetry/opentelemetry-collector-contrib/internal/sharedcomponent v0.79.0/go.mod h1:JM8fR/4ZuVIsjmtHHvBU547gluTv0D5ACUuMxbhm/J8=
-github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza v0.79.0 h1:o1aUgN0pA5Sc0s2bOUy7vDoNyJ6D6qdHihXk3BKyf58=
-github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza v0.79.0/go.mod h1:t8I2umZdg81AQmncs7fVHw1YMzSol3A7ecsc2lfqgaM=
-github.com/open-telemetry/opentelemetry-collector-contrib/receiver/filereceiver v0.80.0 h1:vKAZjSn2RMDemNYm5jVsE2s0eMkZJlvhpziM7b8TPMk=
-github.com/open-telemetry/opentelemetry-collector-contrib/receiver/filereceiver v0.80.0/go.mod h1:x1U/gCdrjAQ0A+pzTSg7VbOK6n5AP79k9FpX9mQKOOU=
 github.com/pascaldekloe/goe v0.0.0-20180627143212-57f6aae5913c/go.mod h1:lzWF7FIEvWOWxwDKqyGYQf6ZUaNfKdP144TG7ZOy1lc=
 github.com/pascaldekloe/goe v0.1.0/go.mod h1:lzWF7FIEvWOWxwDKqyGYQf6ZUaNfKdP144TG7ZOy1lc=
 github.com/pelletier/go-toml v1.7.0/go.mod h1:vwGMzjaWMwyfHwgIBhI2YUM4fB6nL6lVAvS1LBMMhTE=

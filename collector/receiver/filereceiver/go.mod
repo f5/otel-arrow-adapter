@@ -4,7 +4,6 @@ go 1.20
 
 require (
 	github.com/klauspost/compress v1.16.5
-	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/filereceiver v0.80.0
 	github.com/stretchr/testify v1.8.4
 	go.opentelemetry.io/collector/component v0.80.0
 	go.opentelemetry.io/collector/confmap v0.80.0

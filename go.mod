@@ -99,20 +99,7 @@ require (
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
-<<<<<<< HEAD
-<<<<<<< HEAD
 	github.com/mostynb/go-grpc-compression v1.1.19 // indirect
-=======
-	github.com/mostynb/go-grpc-compression v1.1.18 // indirect
-	github.com/observiq/ctimefmt v1.0.0 // indirect
-	github.com/open-telemetry/opentelemetry-collector-contrib/internal/sharedcomponent v0.79.0 // indirect
-	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza v0.79.0 // indirect
->>>>>>> a196947499 (add filereceiver)
-=======
-	github.com/mostynb/go-grpc-compression v1.1.19 // indirect
-	github.com/open-telemetry/opentelemetry-collector-contrib/internal/sharedcomponent v0.79.0 // indirect
-	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/filereceiver v0.80.0 // indirect
->>>>>>> 11064bae68 (remove positional scanner due to bug)
 	github.com/pierrec/lz4/v4 v4.1.17 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/power-devops/perfstat v0.0.0-20210106213030-5aafc221ea8c // indirect
