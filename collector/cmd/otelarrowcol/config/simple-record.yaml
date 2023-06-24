@@ -1,0 +1,30 @@
+receivers:
+  otlp:
+    protocols:
+      grpc:
+  file:
+    path: ./foo5 
+    format: json
+  generator:
+    path: ./config/hipster_shop.yaml
+
+exporters:
+  file:
+    path: ./recorded_data.json
+    format: json
+  logging:
+
+processors:
+  batch:
+  obfuscation:
+    encrypt_key: "some-32-byte-long-key-to-be-safe"
+    encrypt_round: 128
+    # obfuscate all attributes with string values
+    encrypt_all: true
+
+service:
+  pipelines:
+    traces:
+      receivers: [generator]
+      processors: [obfuscation, batch]
+      exporters: [file, logging]

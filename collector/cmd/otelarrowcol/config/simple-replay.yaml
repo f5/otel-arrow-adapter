@@ -1,0 +1,23 @@
+receivers:
+  otlp:
+    protocols:
+      grpc:
+  file:
+    path: ./recorded_data.json 
+    format: json
+
+exporters:
+  file:
+    path: ./replayed_data.json
+    format: json
+  logging:
+
+processors:
+  batch:
+
+service:
+  pipelines:
+    traces:
+      receivers: [file]
+      processors: [batch]
+      exporters: [file, logging]
