@@ -2,16 +2,19 @@ receivers:
   otlp:
     protocols:
       grpc:
-  file:
-    path: ./foo5 
-    format: json
   generator:
     path: ./config/hipster_shop.yaml
 
 exporters:
-  file:
-    path: ./recorded_data.json
+  file/traces:
+    path: ./recorded_traces.json
+    compression: zstd
     format: json
+  file/metrics:
+    path: ./recorded_metrics.json
+    compression: zstd
+    format: json
+
   logging:
 
 processors:
@@ -27,4 +30,8 @@ service:
     traces:
       receivers: [generator]
       processors: [obfuscation, batch]
-      exporters: [file, logging]
+      exporters: [file/traces, logging]
+    metrics:
+      receivers: [generator]
+      processors: [obfuscation, batch]
+      exporters: [file/metrics, logging]

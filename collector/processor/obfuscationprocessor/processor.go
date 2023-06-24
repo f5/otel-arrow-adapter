@@ -7,6 +7,7 @@ import (
 	"go.opentelemetry.io/collector/consumer"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/ptrace"
+	"go.opentelemetry.io/collector/pdata/pmetric"
 	"go.uber.org/zap"
 )
 
@@ -14,7 +15,8 @@ type obfuscation struct {
 	// Logger
 	logger *zap.Logger
 	// Next trace consumer in line
-	next consumer.Traces
+	nextTraces consumer.Traces
+	nextMetrics consumer.Metrics
 
 	encryptAttributes map[string]struct{}
 	encrypt           *feistel.FPECipher
@@ -22,6 +24,74 @@ type obfuscation struct {
 }
 
 // processTraces implements ProcessMetricsFunc. It processes the incoming data
+// and returns the data to be sent to the next component
+func (o *obfuscation) processMetrics(ctx context.Context, batch pmetric.Metrics) (pmetric.Metrics, error) {
+	for i := 0; i < batch.ResourceMetrics().Len(); i++ {
+		rm := batch.ResourceMetrics().At(i)
+		o.processResourceMetrics(ctx, rm)
+	}
+	return batch, nil
+}
+
+func (o *obfuscation) processResourceMetrics(ctx context.Context, rm pmetric.ResourceMetrics) {
+	rmAttrs := rm.Resource().Attributes()
+
+	o.processAttrs(ctx, rmAttrs)
+
+	for j := 0; j < rm.ScopeMetrics().Len(); j++ {
+		sm := rm.ScopeMetrics().At(j)
+		for k := 0; k < sm.Metrics().Len(); k++ {
+			metric := sm.Metrics().At(k)
+			o.processMetricAttrs(ctx, metric)
+		}
+	}
+
+}
+
+func (o *obfuscation) processMetricAttrs(ctx context.Context, metric pmetric.Metric) {
+	switch metric.Type() {
+	case pmetric.MetricTypeGauge:
+		gdp := metric.Gauge().DataPoints()
+		for i := 0; i < gdp.Len(); i++ {
+			dp := gdp.At(i)
+			o.processAttrs(ctx, dp.Attributes())
+		}
+
+	case pmetric.MetricTypeSum:
+		sdp := metric.Sum().DataPoints()
+		for i := 0; i < sdp.Len(); i++ {
+			dp := sdp.At(i)
+			o.processAttrs(ctx, dp.Attributes())
+		}
+
+	case pmetric.MetricTypeHistogram:
+		hdp := metric.Histogram().DataPoints()
+		for i := 0; i < hdp.Len(); i++ {
+			dp := hdp.At(i)
+			o.processAttrs(ctx, dp.Attributes())
+		}
+
+	case pmetric.MetricTypeExponentialHistogram:
+		ehdp := metric.ExponentialHistogram().DataPoints()
+		for i := 0; i < ehdp.Len(); i++ {
+			dp := ehdp.At(i)
+			o.processAttrs(ctx, dp.Attributes())
+		}
+
+	case pmetric.MetricTypeSummary:
+		smdp := metric.Summary().DataPoints()
+		for i := 0; i < smdp.Len(); i++ {
+			dp := smdp.At(i)
+			o.processAttrs(ctx, dp.Attributes())
+		}
+
+	default:
+		o.logger.Info("unrecognized metric type")
+	}
+}
+
+
+// processTraces implements ProcessTracesFunc. It processes the incoming data
 // and returns the data to be sent to the next component
 func (o *obfuscation) processTraces(ctx context.Context, batch ptrace.Traces) (ptrace.Traces, error) {
 	for i := 0; i < batch.ResourceSpans().Len(); i++ {

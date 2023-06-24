@@ -2,13 +2,21 @@ receivers:
   otlp:
     protocols:
       grpc:
-  file:
-    path: ./recorded_data.json 
+  file/traces:
+    path: ./recorded_traces.json
+    compression: zstd
+    format: json
+  file/metrics:
+    path: ./recorded_metrics.json
+    compression: zstd
     format: json
 
 exporters:
-  file:
-    path: ./replayed_data.json
+  file/traces:
+    path: ./replayed_traces.json
+    format: json
+  file/metrics:
+    path: ./replayed_metrics.json
     format: json
   logging:
 
@@ -18,6 +26,10 @@ processors:
 service:
   pipelines:
     traces:
-      receivers: [file]
+      receivers: [file/traces]
       processors: [batch]
-      exporters: [file, logging]
+      exporters: [file/traces, logging]
+    metrics:
+      receivers: [file/metrics]
+      processors: [batch]
+      exporters: [file/metrics, logging]

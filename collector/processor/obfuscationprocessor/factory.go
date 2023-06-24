@@ -25,6 +25,7 @@ func NewFactory() processor.Factory {
 		typeStr,
 		createDefaultConfig,
 		processor.WithTraces(createTracesProcessor, stability),
+		processor.WithMetrics(createMetricsProcessor, stability),
 	)
 }
 
@@ -34,6 +35,31 @@ func createDefaultConfig() component.Config {
 		// encrypt all string attributes by default
 		EncryptAll:   true,
 	}
+}
+
+func createMetricsProcessor(
+	ctx context.Context,
+	set processor.CreateSettings,
+	cfg component.Config,
+	next consumer.Metrics,
+) (processor.Metrics, error) {
+	oCfg := cfg.(*Config)
+	processor := &obfuscation{
+		logger:            set.Logger,
+		nextMetrics:       next,
+		encrypt:           feistel.NewFPECipher(hash.SHA_256, oCfg.EncryptKey, oCfg.EncryptRound),
+		encryptAttributes: makeEncryptList(oCfg),
+		encryptAll:        oCfg.EncryptAll,
+	}
+	return processorhelper.NewMetricsProcessor(
+		ctx,
+		set,
+		cfg,
+		next,
+		processor.processMetrics,
+		processorhelper.WithCapabilities(processor.Capabilities()),
+		processorhelper.WithStart(processor.Start),
+		processorhelper.WithShutdown(processor.Shutdown))
 }
 
 // createTracesProcessor creates an instance of obfuscation for processing traces
@@ -46,7 +72,7 @@ func createTracesProcessor(
 	oCfg := cfg.(*Config)
 	processor := &obfuscation{
 		logger:            set.Logger,
-		next:              next,
+		nextTraces:        next,
 		encrypt:           feistel.NewFPECipher(hash.SHA_256, oCfg.EncryptKey, oCfg.EncryptRound),
 		encryptAttributes: makeEncryptList(oCfg),
 		encryptAll:        oCfg.EncryptAll,
