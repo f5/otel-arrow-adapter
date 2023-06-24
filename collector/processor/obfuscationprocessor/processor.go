@@ -2,6 +2,7 @@ package obfuscationprocessor
 
 import (
 	"context"
+
 	"github.com/cyrildever/feistel"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/consumer"
@@ -148,7 +149,20 @@ func (o *obfuscation) processResourceSpan(ctx context.Context, rs ptrace.Resourc
 
 			// Attributes can also be part of span
 			o.processAttrs(ctx, spanAttrs)
+			o.processEventAndLinkAttrs(ctx, span)
 		}
+	}
+}
+
+func (o *obfuscation) processEventAndLinkAttrs(ctx context.Context, span ptrace.Span) {
+	for i := 0; i < span.Events().Len(); i++ {
+		ev := span.Events().At(i)
+		o.processAttrs(ctx, ev.Attributes())
+	}
+
+	for j := 0; j < span.Links().Len(); j++ {
+		lk := span.Links().At(j)
+		o.processAttrs(ctx, lk.Attributes())
 	}
 }
 
