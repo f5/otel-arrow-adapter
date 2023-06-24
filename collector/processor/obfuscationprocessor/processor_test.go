@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/pdata/ptrace"
+	"go.opentelemetry.io/collector/pdata/plog"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 )
 
@@ -27,6 +28,9 @@ var (
 	histAttrVal    = "hist-attr-val-1"
 	eHistAttrVal   = "exp-hist-attr-val-1"
 	summaryAttrVal = "summary-attr-val-1"
+
+	// log specific attrs
+	logAttrVal = "log-attr-val-1"
 )
 
 func setupSpanWithAttrs() ptrace.Traces {
@@ -254,4 +258,67 @@ func TestProcessMetrics(t *testing.T) {
 	processedMetrics, err := processor.processMetrics(context.Background(), metrics)
 	require.NoError(t, err)
 	validateMetricsAttrs(t, expected, processedMetrics)
+}
+
+func setupLogsWithAttrs() plog.Logs {
+	ld := plog.NewLogs()
+	rl := ld.ResourceLogs().AppendEmpty()
+
+	rl.Resource().Attributes().PutStr("resource-attr", resAttrVal)
+
+	sl := rl.ScopeLogs().AppendEmpty()
+	sl.Scope().Attributes().PutStr("scope-attr", scopeAttrVal)
+
+	log := sl.LogRecords().AppendEmpty()
+	log.Attributes().PutStr("log-attr", logAttrVal)
+
+	return ld
+}
+
+func validateLogsAttrs(t *testing.T, expected map[string]string, logs plog.Logs) {
+	for i := 0; i < logs.ResourceLogs().Len(); i++ {
+		// validate resource attributes
+		rl := logs.ResourceLogs().At(i)
+		val, ok := rl.Resource().Attributes().Get("resource-attr")
+		assert.True(t, ok)
+		assert.Equal(t, expected["resource-attr"], val.AsString())
+
+		for j := 0; j < rl.ScopeLogs().Len(); j++ {
+			// validate scope attributes
+			sl := rl.ScopeLogs().At(j)
+			scopeVal, ok := sl.Scope().Attributes().Get("scope-attr")
+			assert.True(t, ok)
+			assert.Equal(t, expected["scope-attr"], scopeVal.AsString())
+
+			for k := 0; k < sl.LogRecords().Len(); k++ {
+				// validate span attributes
+				log := sl.LogRecords().At(k)
+				val, ok := log.Attributes().Get("log-attr")
+				assert.True(t, ok)
+				assert.Equal(t, expected["log-attr"], val.AsString())
+			}
+		}
+	}
+}
+
+func TestProcessLogs(t *testing.T) {
+	logs := setupLogsWithAttrs()
+
+	processor := &obfuscation{
+		encrypt:           feistel.NewFPECipher(hash.SHA_256, "some-32-byte-long-key-to-be-safe", 128),
+		encryptAll:        true,
+	}
+
+	obfsResAttr, _ := processor.encrypt.Encrypt(resAttrVal)
+	obfsScopeAttr, _ := processor.encrypt.Encrypt(scopeAttrVal)
+	obfsLogAttr, _ := processor.encrypt.Encrypt(logAttrVal)
+	expected := map[string]string{
+		"resource-attr": obfsResAttr.String(true),
+		"scope-attr":    obfsScopeAttr.String(true),
+		"log-attr":      obfsLogAttr.String(true),
+	}
+
+	processedLogs, err := processor.processLogs(context.Background(), logs)
+	require.NoError(t, err)
+	validateLogsAttrs(t, expected, processedLogs)
 }
