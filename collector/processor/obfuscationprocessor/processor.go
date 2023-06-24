@@ -6,8 +6,9 @@ import (
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/consumer"
 	"go.opentelemetry.io/collector/pdata/pcommon"
-	"go.opentelemetry.io/collector/pdata/ptrace"
+	"go.opentelemetry.io/collector/pdata/plog"
 	"go.opentelemetry.io/collector/pdata/pmetric"
+	"go.opentelemetry.io/collector/pdata/ptrace"
 	"go.uber.org/zap"
 )
 
@@ -23,7 +24,34 @@ type obfuscation struct {
 	encryptAll        bool
 }
 
-// processTraces implements ProcessMetricsFunc. It processes the incoming data
+// processLogs implements ProcessLogsFunc. It processes the incoming data
+// and returns the data to be sent to the next component
+func (o *obfuscation) processLogs(ctx context.Context, batch plog.Logs) (plog.Logs, error) {
+	for i := 0; i < batch.ResourceLogs().Len(); i++ {
+		rm := batch.ResourceLogs().At(i)
+		o.processResourceLogs(ctx, rm)
+	}
+	return batch, nil
+}
+
+func (o *obfuscation) processResourceLogs(ctx context.Context, rl plog.ResourceLogs) {
+	rlAttrs := rl.Resource().Attributes()
+	o.processAttrs(ctx, rlAttrs)
+
+	for j := 0; j < rl.ScopeLogs().Len(); j++ {
+		sl := rl.ScopeLogs().At(j)
+		slScopeAttrs := sl.Scope().Attributes()
+		o.processAttrs(ctx, slScopeAttrs)
+
+		for k := 0; k < sl.LogRecords().Len(); k++ {
+			log := sl.LogRecords().At(k)
+			o.processAttrs(ctx, log.Attributes())
+		}
+	}
+
+}
+
+// processMetrics implements ProcessMetricsFunc. It processes the incoming data
 // and returns the data to be sent to the next component
 func (o *obfuscation) processMetrics(ctx context.Context, batch pmetric.Metrics) (pmetric.Metrics, error) {
 	for i := 0; i < batch.ResourceMetrics().Len(); i++ {
@@ -35,11 +63,13 @@ func (o *obfuscation) processMetrics(ctx context.Context, batch pmetric.Metrics)
 
 func (o *obfuscation) processResourceMetrics(ctx context.Context, rm pmetric.ResourceMetrics) {
 	rmAttrs := rm.Resource().Attributes()
-
 	o.processAttrs(ctx, rmAttrs)
 
 	for j := 0; j < rm.ScopeMetrics().Len(); j++ {
 		sm := rm.ScopeMetrics().At(j)
+		smScopeAttrs := sm.Scope().Attributes()
+		o.processAttrs(ctx, smScopeAttrs)
+
 		for k := 0; k < sm.Metrics().Len(); k++ {
 			metric := sm.Metrics().At(k)
 			o.processMetricAttrs(ctx, metric)
@@ -104,12 +134,14 @@ func (o *obfuscation) processTraces(ctx context.Context, batch ptrace.Traces) (p
 // processResourceSpan processes the ResourceSpans and all of its spans
 func (o *obfuscation) processResourceSpan(ctx context.Context, rs ptrace.ResourceSpans) {
 	rsAttrs := rs.Resource().Attributes()
-
 	// Attributes can be part of a resource span
 	o.processAttrs(ctx, rsAttrs)
 
 	for j := 0; j < rs.ScopeSpans().Len(); j++ {
 		ils := rs.ScopeSpans().At(j)
+		ilsScopeAttrs := ils.Scope().Attributes()
+		o.processAttrs(ctx, ilsScopeAttrs)
+
 		for k := 0; k < ils.Spans().Len(); k++ {
 			span := ils.Spans().At(k)
 			spanAttrs := span.Attributes()
