@@ -8,12 +8,18 @@ import (
 	"github.com/cyrildever/feistel/common/utils/hash"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.opentelemetry.io/collector/pdata/ptrace"
 	"go.opentelemetry.io/collector/pdata/plog"
 	"go.opentelemetry.io/collector/pdata/pmetric"
+	"go.opentelemetry.io/collector/pdata/ptrace"
 )
 
 var (
+	resAttrKey       = "resource-attr"
+	scopeAttrKey     = "scope-attr"
+	spanAttrKey      = "span-attr"
+	spanEventAttrKey = "span-event-attr"
+	spanLinkAttrKey  = "span-link-attr"
+
 	resAttrVal   = "resource-attr-val-1"
 	scopeAttrVal = "scope-attr-val-1"
 
@@ -54,45 +60,59 @@ func setupSpanWithAttrs() ptrace.Traces {
 	return td
 }
 
-func validateTraceAttrs(t *testing.T, expected map[string]string, traces ptrace.Traces) {
+func validateTraceAttrs(t *testing.T, expected map[string]pair, traces ptrace.Traces) {
 	for i := 0; i < traces.ResourceSpans().Len(); i++ {
 		// validate resource attributes
 		rs := traces.ResourceSpans().At(i)
-		val, ok := rs.Resource().Attributes().Get("resource-attr")
+		val, ok := rs.Resource().Attributes().Get(expected["resource-attr"].key)
 		assert.True(t, ok)
-		assert.Equal(t, expected["resource-attr"], val.AsString())
+		assert.Equal(t, expected["resource-attr"].val, val.AsString())
 
 		for j := 0; j < rs.ScopeSpans().Len(); j++ {
 			// validate scope attributes
 			ss := rs.ScopeSpans().At(j)
-			scopeVal, ok := ss.Scope().Attributes().Get("scope-attr")
+			scopeVal, ok := ss.Scope().Attributes().Get(expected["scope-attr"].key)
 			assert.True(t, ok)
-			assert.Equal(t, expected["scope-attr"], scopeVal.AsString())
+			assert.Equal(t, expected["scope-attr"].val, scopeVal.AsString())
 
 			for k := 0; k < ss.Spans().Len(); k++ {
 				// validate span attributes
 				span := ss.Spans().At(k)
-				val, ok := span.Attributes().Get("span-attr")
+				val, ok := span.Attributes().Get(expected["span-attr"].key)
 				assert.True(t, ok)
-				assert.Equal(t, expected["span-attr"], val.AsString())
+				assert.Equal(t, expected["span-attr"].val, val.AsString())
 
 				for h := 0; h < span.Events().Len(); h++ {
 					// validate event attributes
 					event := span.Events().At(h)
-					val, ok := event.Attributes().Get("span-event-attr")
+					val, ok := event.Attributes().Get(expected["span-event-attr"].key)
 					assert.True(t, ok)
-					assert.Equal(t, expected["span-event-attr"], val.AsString())
+					assert.Equal(t, expected["span-event-attr"].val, val.AsString())
 				}
 
 				for h := 0; h < span.Links().Len(); h++ {
 					// validate link attributes
 					link := span.Links().At(h)
-					val, ok := link.Attributes().Get("span-link-attr")
+					val, ok := link.Attributes().Get(expected["span-link-attr"].key)
 					assert.True(t, ok)
-					assert.Equal(t, expected["span-link-attr"], val.AsString())
+					assert.Equal(t, expected["span-link-attr"].val, val.AsString())
 				}
 			}
 		}
+	}
+}
+
+type pair struct {
+	key string
+	val string
+}
+
+func cryptPair(o *obfuscation, k, v string) pair {
+	ok, _ := o.encrypt.Encrypt(k)
+	ov, _ := o.encrypt.Encrypt(v)
+	return pair{
+		key: ok.String(true),
+		val: ov.String(true),
 	}
 }
 
@@ -100,28 +120,22 @@ func TestProcessTraces(t *testing.T) {
 	traces := setupSpanWithAttrs()
 
 	processor := &obfuscation{
-		encrypt:           feistel.NewFPECipher(hash.SHA_256, "some-32-byte-long-key-to-be-safe", 128),
-		encryptAll:        true,
+		encrypt:    feistel.NewFPECipher(hash.SHA_256, "some-32-byte-long-key-to-be-safe", 128),
+		encryptAll: true,
 	}
 
-	obfsResAttr, _ := processor.encrypt.Encrypt(resAttrVal)
-	obfsScopeAttr, _ := processor.encrypt.Encrypt(scopeAttrVal)
-	obfsSpanAttr, _ := processor.encrypt.Encrypt(spanAttrVal)
-	obfsEventAttr, _ := processor.encrypt.Encrypt(eventAttrVal)
-	obfsLinkAttr, _ := processor.encrypt.Encrypt(linkAttrVal)
-	expected := map[string]string{
-		"resource-attr":   obfsResAttr.String(true),
-		"scope-attr":      obfsScopeAttr.String(true),
-		"span-attr":       obfsSpanAttr.String(true),
-		"span-link-attr":  obfsLinkAttr.String(true),
-		"span-event-attr": obfsEventAttr.String(true),
+	expected := map[string]pair{
+		"resource-attr":   cryptPair(processor, resAttrKey, resAttrVal),
+		"scope-attr":      cryptPair(processor, scopeAttrKey, scopeAttrVal),
+		"span-attr":       cryptPair(processor, spanAttrKey, spanAttrVal),
+		"span-link-attr":  cryptPair(processor, spanLinkAttrKey, linkAttrVal),
+		"span-event-attr": cryptPair(processor, spanEventAttrKey, eventAttrVal),
 	}
 
 	processedTraces, err := processor.processTraces(context.Background(), traces)
 	require.NoError(t, err)
 	validateTraceAttrs(t, expected, processedTraces)
 }
-
 
 func setupMetricsWithAttrs() pmetric.Metrics {
 	md := pmetric.NewMetrics()
@@ -160,20 +174,20 @@ func setupMetricsWithAttrs() pmetric.Metrics {
 	return md
 }
 
-func validateMetricsAttrs(t *testing.T, expected map[string]string, metrics pmetric.Metrics) {
+func validateMetricsAttrs(t *testing.T, expected map[string]pair, metrics pmetric.Metrics) {
 	for i := 0; i < metrics.ResourceMetrics().Len(); i++ {
 		// validate resource attributes
 		rm := metrics.ResourceMetrics().At(i)
-		val, ok := rm.Resource().Attributes().Get("resource-attr")
+		val, ok := rm.Resource().Attributes().Get(expected["resource-attr"].key)
 		assert.True(t, ok)
-		assert.Equal(t, expected["resource-attr"], val.AsString())
+		assert.Equal(t, expected["resource-attr"].val, val.AsString())
 
 		for j := 0; j < rm.ScopeMetrics().Len(); j++ {
 			// validate scope attributes
 			sm := rm.ScopeMetrics().At(j)
-			scopeVal, ok := sm.Scope().Attributes().Get("scope-attr")
+			scopeVal, ok := sm.Scope().Attributes().Get(expected["scope-attr"].key)
 			assert.True(t, ok)
-			assert.Equal(t, expected["scope-attr"], scopeVal.AsString())
+			assert.Equal(t, expected["scope-attr"].val, scopeVal.AsString())
 
 			for k := 0; k < sm.Metrics().Len(); k++ {
 				metric := sm.Metrics().At(k)
@@ -183,45 +197,45 @@ func validateMetricsAttrs(t *testing.T, expected map[string]string, metrics pmet
 					gdp := metric.Gauge().DataPoints()
 					for i := 0; i < gdp.Len(); i++ {
 						dp := gdp.At(i)
-						val, ok := dp.Attributes().Get("gauge-attr")
+						val, ok := dp.Attributes().Get(expected["gauge-attr"].key)
 						assert.True(t, ok)
-						assert.Equal(t, expected["gauge-attr"], val.AsString())
+						assert.Equal(t, expected["gauge-attr"].val, val.AsString())
 					}
 
 				case pmetric.MetricTypeSum:
 					sdp := metric.Sum().DataPoints()
 					for i := 0; i < sdp.Len(); i++ {
 						dp := sdp.At(i)
-						val, ok := dp.Attributes().Get("sum-attr")
+						val, ok := dp.Attributes().Get(expected["sum-attr"].key)
 						assert.True(t, ok)
-						assert.Equal(t, expected["sum-attr"], val.AsString())
+						assert.Equal(t, expected["sum-attr"].val, val.AsString())
 					}
 
 				case pmetric.MetricTypeHistogram:
 					hdp := metric.Histogram().DataPoints()
 					for i := 0; i < hdp.Len(); i++ {
 						dp := hdp.At(i)
-						val, ok := dp.Attributes().Get("histogram-attr")
+						val, ok := dp.Attributes().Get(expected["histogram-attr"].key)
 						assert.True(t, ok)
-						assert.Equal(t, expected["histogram-attr"], val.AsString())
+						assert.Equal(t, expected["histogram-attr"].val, val.AsString())
 					}
 
 				case pmetric.MetricTypeExponentialHistogram:
 					ehdp := metric.ExponentialHistogram().DataPoints()
 					for i := 0; i < ehdp.Len(); i++ {
 						dp := ehdp.At(i)
-						val, ok := dp.Attributes().Get("exp-histogram-attr")
+						val, ok := dp.Attributes().Get(expected["exp-histogram-attr"].key)
 						assert.True(t, ok)
-						assert.Equal(t, expected["exp-histogram-attr"], val.AsString())
+						assert.Equal(t, expected["exp-histogram-attr"].val, val.AsString())
 					}
 
 				case pmetric.MetricTypeSummary:
 					smdp := metric.Summary().DataPoints()
 					for i := 0; i < smdp.Len(); i++ {
 						dp := smdp.At(i)
-						val, ok := dp.Attributes().Get("summary-attr")
+						val, ok := dp.Attributes().Get(expected["summary-attr"].key)
 						assert.True(t, ok)
-						assert.Equal(t, expected["summary-attr"], val.AsString())
+						assert.Equal(t, expected["summary-attr"].val, val.AsString())
 					}
 				}
 			}
@@ -233,26 +247,18 @@ func TestProcessMetrics(t *testing.T) {
 	metrics := setupMetricsWithAttrs()
 
 	processor := &obfuscation{
-		encrypt:           feistel.NewFPECipher(hash.SHA_256, "some-32-byte-long-key-to-be-safe", 128),
-		encryptAll:        true,
+		encrypt:    feistel.NewFPECipher(hash.SHA_256, "some-32-byte-long-key-to-be-safe", 128),
+		encryptAll: true,
 	}
 
-	obfsResAttr, _ := processor.encrypt.Encrypt(resAttrVal)
-	obfsScopeAttr, _ := processor.encrypt.Encrypt(scopeAttrVal)
-	obfsGaugeAttr, _ := processor.encrypt.Encrypt(gaugeAttrVal)
-	obfsSumAttr, _ := processor.encrypt.Encrypt(sumAttrVal)
-	obfsHistAttr, _ := processor.encrypt.Encrypt(histAttrVal)
-	obfsEHistAttr, _ := processor.encrypt.Encrypt(eHistAttrVal)
-	obfsSummaryAttr, _ := processor.encrypt.Encrypt(summaryAttrVal)
-
-	expected := map[string]string{
-		"resource-attr":      obfsResAttr.String(true),
-		"scope-attr":         obfsScopeAttr.String(true),
-		"gauge-attr":         obfsGaugeAttr.String(true),
-		"sum-attr":           obfsSumAttr.String(true),
-		"histogram-attr":     obfsHistAttr.String(true),
-		"exp-histogram-attr": obfsEHistAttr.String(true),
-		"summary-attr":       obfsSummaryAttr.String(true),
+	expected := map[string]pair{
+		"resource-attr":      cryptPair(processor, resAttrKey, resAttrVal),
+		"scope-attr":         cryptPair(processor, scopeAttrKey, scopeAttrVal),
+		"gauge-attr":         cryptPair(processor, "gauge-attr", gaugeAttrVal),
+		"sum-attr":           cryptPair(processor, "sum-attr", sumAttrVal),
+		"histogram-attr":     cryptPair(processor, "histogram-attr", histAttrVal),
+		"exp-histogram-attr": cryptPair(processor, "exp-histogram-attr", eHistAttrVal),
+		"summary-attr":       cryptPair(processor, "summary-attr", summaryAttrVal),
 	}
 
 	processedMetrics, err := processor.processMetrics(context.Background(), metrics)
@@ -275,27 +281,27 @@ func setupLogsWithAttrs() plog.Logs {
 	return ld
 }
 
-func validateLogsAttrs(t *testing.T, expected map[string]string, logs plog.Logs) {
+func validateLogsAttrs(t *testing.T, expected map[string]pair, logs plog.Logs) {
 	for i := 0; i < logs.ResourceLogs().Len(); i++ {
 		// validate resource attributes
 		rl := logs.ResourceLogs().At(i)
-		val, ok := rl.Resource().Attributes().Get("resource-attr")
+		val, ok := rl.Resource().Attributes().Get(expected["resource-attr"].key)
 		assert.True(t, ok)
-		assert.Equal(t, expected["resource-attr"], val.AsString())
+		assert.Equal(t, expected["resource-attr"].val, val.AsString())
 
 		for j := 0; j < rl.ScopeLogs().Len(); j++ {
 			// validate scope attributes
 			sl := rl.ScopeLogs().At(j)
-			scopeVal, ok := sl.Scope().Attributes().Get("scope-attr")
+			scopeVal, ok := sl.Scope().Attributes().Get(expected["scope-attr"].key)
 			assert.True(t, ok)
-			assert.Equal(t, expected["scope-attr"], scopeVal.AsString())
+			assert.Equal(t, expected["scope-attr"].val, scopeVal.AsString())
 
 			for k := 0; k < sl.LogRecords().Len(); k++ {
 				// validate span attributes
 				log := sl.LogRecords().At(k)
-				val, ok := log.Attributes().Get("log-attr")
+				val, ok := log.Attributes().Get(expected["log-attr"].key)
 				assert.True(t, ok)
-				assert.Equal(t, expected["log-attr"], val.AsString())
+				assert.Equal(t, expected["log-attr"].val, val.AsString())
 			}
 		}
 	}
@@ -305,17 +311,14 @@ func TestProcessLogs(t *testing.T) {
 	logs := setupLogsWithAttrs()
 
 	processor := &obfuscation{
-		encrypt:           feistel.NewFPECipher(hash.SHA_256, "some-32-byte-long-key-to-be-safe", 128),
-		encryptAll:        true,
+		encrypt:    feistel.NewFPECipher(hash.SHA_256, "some-32-byte-long-key-to-be-safe", 128),
+		encryptAll: true,
 	}
 
-	obfsResAttr, _ := processor.encrypt.Encrypt(resAttrVal)
-	obfsScopeAttr, _ := processor.encrypt.Encrypt(scopeAttrVal)
-	obfsLogAttr, _ := processor.encrypt.Encrypt(logAttrVal)
-	expected := map[string]string{
-		"resource-attr": obfsResAttr.String(true),
-		"scope-attr":    obfsScopeAttr.String(true),
-		"log-attr":      obfsLogAttr.String(true),
+	expected := map[string]pair{
+		"resource-attr": cryptPair(processor, resAttrKey, resAttrVal),
+		"scope-attr":    cryptPair(processor, scopeAttrKey, scopeAttrVal),
+		"log-attr":      cryptPair(processor, "log-attr", logAttrVal),
 	}
 
 	processedLogs, err := processor.processLogs(context.Background(), logs)
