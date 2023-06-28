@@ -3,7 +3,7 @@ receivers:
     protocols:
       grpc:
   generator:
-    path: ./config/hipster_shop.yaml
+    path: ./generator/hipster_shop.yaml
 
 exporters:
   file/traces:
@@ -25,6 +25,8 @@ processors:
     # obfuscate all attributes with string values
     encrypt_all: true
 
+# Note: to disable obfuscation, simply remove "obfuscation" from the
+# list of processors below.
 service:
   pipelines:
     traces:

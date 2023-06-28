@@ -17,7 +17,7 @@ type obfuscation struct {
 	// Logger
 	logger *zap.Logger
 	// Next trace consumer in line
-	nextTraces consumer.Traces
+	nextTraces  consumer.Traces
 	nextMetrics consumer.Metrics
 
 	encryptAttributes map[string]struct{}
@@ -121,7 +121,6 @@ func (o *obfuscation) processMetricAttrs(ctx context.Context, metric pmetric.Met
 	}
 }
 
-
 // processTraces implements ProcessTracesFunc. It processes the incoming data
 // and returns the data to be sent to the next component
 func (o *obfuscation) processTraces(ctx context.Context, batch ptrace.Traces) (ptrace.Traces, error) {
@@ -145,6 +144,7 @@ func (o *obfuscation) processResourceSpan(ctx context.Context, rs ptrace.Resourc
 
 		for k := 0; k < ils.Spans().Len(); k++ {
 			span := ils.Spans().At(k)
+			span.SetName(o.encryptString(span.Name()))
 			spanAttrs := span.Attributes()
 
 			// Attributes can also be part of span
@@ -168,6 +168,7 @@ func (o *obfuscation) processEventAndLinkAttrs(ctx context.Context, span ptrace.
 
 // processAttrs obfuscates the attributes of a resource span or a span
 func (o *obfuscation) processAttrs(_ context.Context, attributes pcommon.Map) {
+	cpy := pcommon.NewMap()
 	attributes.Range(func(k string, value pcommon.Value) bool {
 		if !o.encryptAll {
 			// check if in encryptList
@@ -177,13 +178,18 @@ func (o *obfuscation) processAttrs(_ context.Context, attributes pcommon.Map) {
 			}
 		}
 
-		if value.Type() == pcommon.ValueTypeStr {
-			encryptValue := o.encryptString(value.Str())
-			value.SetStr(encryptValue)
+		switch value.Type() {
+		case pcommon.ValueTypeStr:
+			cpy.PutStr(o.encryptString(k), o.encryptString(value.Str()))
+		default:
+			// TODO: This does not cover all string values, needs
+			// to be updated for StringSlice and KVList types at
+			// least.
+			value.CopyTo(cpy.PutEmpty(o.encryptString(k)))
 		}
 		return true
 	})
-
+	cpy.CopyTo(attributes)
 }
 
 // Capabilities specifies what this processor does, such as whether it mutates data
