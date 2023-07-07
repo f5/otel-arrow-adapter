@@ -166,7 +166,7 @@ func (o *obfuscation) processEventAndLinkAttrs(ctx context.Context, span ptrace.
 	}
 }
 
-func obfSlice(slice pcommon.Slice) pcommon.Slice {
+func (o *obfuscation) obfSlice(ctx context.Context, slice pcommon.Slice) {
 	cpy := pcommon.NewSlice()
 	for i := 0; i < slice.Len(); i++ {
 		cpyVal := cpy.AppendEmpty()
@@ -175,70 +175,26 @@ func obfSlice(slice pcommon.Slice) pcommon.Slice {
 		switch val.Type() {
 		case pcommon.ValueTypeStr:
 			cpyVal.SetStr(o.encryptString(val.Str()))
-		case pcommon.ValueTypeStr:
-			obfuscated := obfSlice(val)
-			obfuscated.CopyTo(cpyVal)
+		case pcommon.ValueTypeSlice:
+			cpySlice := cpyVal.SetEmptySlice()
+			o.obfSlice(ctx, val.Slice())
+			val.Slice().CopyTo(cpySlice)
 		case pcommon.ValueTypeMap:
-			obfuscated := obfMap(val)
-			obfuscated.CopyTo(cpyVal)
-		}
+			cpyMap := cpyVal.SetEmptyMap()
+			o.processAttrs(ctx, val.Map())
+			val.Map().CopyTo(cpyMap)
 		default:
 			// no need to obfuscate types that cannot contain a string
 			val.CopyTo(cpyVal)
-
-	}
-
-	return cpy
-}
-
-func obfMap(kv pcommon.Map) pcommon.Map {
-	cpy := pcommon.NewMap()
-	kv.Range(func(k string, value pcommon.Value) bool {
-		switch value.Type() {
-		case pcommon.ValueTypeStr:
-			cpy.PutStr(o.encryptString(k), o.encryptString(value.Str()))
-		case pcommon.ValueTypeSlice:
-			slc := cpy.PutEmptySlice(o.encryptString(k))
-			obfuscated := obfSlice(value.Slice())
-			obfuscated.CopyTo(slc)
-		case pcommon.ValueTypeMap:
-			mp := cpy.PutEmptyMap(o.encryptString(k))
-			obfuscated := obfMap(value.Map())
-			obfuscated.CopyTo(mp)
-		default:
-			value.CopyTo(cpy.PutEmpty(o.encryptString(k)))
-		}
-		return true
-	})
-
-	return cpy
-}
-
-func obfAttrs(cpy pcommon.Map, k string, val pcommon.Value) pcommon.Value {
-	switch value.Type() {
-	case pcommon.ValueTypeStr:
-		cpy.PutStr(o.encryptString(k), o.encryptString(value.Str()))
-	case pcommon.ValueTypeSlice:
-		slc := cpy.PutEmptySlice(o.encryptString(k))
-		value.Slice().CopyTo(slc)
-		for i := 0; i < slc.Len(); i++ {
-			val := slc.At(i)
-
-			switch val.Type() {
-			case pcommon.ValueTypeStr:
-				val.SetStr(o.encryptString(val.Str()))
-			case pcommon.ValueTypeSlice:
-
-			default:
-				val.CopyTo(cpy.PutEmpty(o.encryptString(k)))
-			}
 		}
 
 	}
+
+	cpy.CopyTo(slice)
 }
 
 // processAttrs obfuscates the attributes of a resource span or a span
-func (o *obfuscation) processAttrs(_ context.Context, attributes pcommon.Map) {
+func (o *obfuscation) processAttrs(ctx context.Context, attributes pcommon.Map) {
 	cpy := pcommon.NewMap()
 	attributes.Range(func(k string, value pcommon.Value) bool {
 		if !o.encryptAll {
@@ -253,20 +209,14 @@ func (o *obfuscation) processAttrs(_ context.Context, attributes pcommon.Map) {
 		case pcommon.ValueTypeStr:
 			cpy.PutStr(o.encryptString(k), o.encryptString(value.Str()))
 		case pcommon.ValueTypeSlice:
-			slc := value.Slice()
-			for i := 0; i < slc.Len(); i++ {
-				val := slc.At(i)
-				switch val.Type() {
-				case pcommon.ValueTypeStr:
-					cpy.PutStr(o.encryptString(k), o.encryptString(val.Str()))
-				default:
-					val.CopyTo(cpy.PutEmpty(o.encryptString(k)))
-				}
-			}
+			slc := cpy.PutEmptySlice(o.encryptString(k))
+			o.obfSlice(ctx, value.Slice())
+			value.Slice().CopyTo(slc)
+		case pcommon.ValueTypeMap:
+			mp := cpy.PutEmptyMap(o.encryptString(k))
+			o.processAttrs(ctx, value.Map())
+			value.Map().CopyTo(mp)
 		default:
-			// TODO: This does not cover all string values, needs
-			// to be updated for StringSlice and KVList types at
-			// least.
 			value.CopyTo(cpy.PutEmpty(o.encryptString(k)))
 		}
 		return true
