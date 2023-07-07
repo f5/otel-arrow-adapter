@@ -140,7 +140,7 @@ func cryptPair(o *obfuscation, k string, v pcommon.Value) pair {
 		ov, _ := o.encrypt.Encrypt(v.Str())
 		v.SetStr(ov.String(true))
 	case pcommon.ValueTypeSlice:
-		o.obfSlice(context.Background(), v.Slice())
+		o.processSliceValue(context.Background(), v.Slice())
 	case pcommon.ValueTypeMap:
 		o.processAttrs(context.Background(), v.Map())
 	default:

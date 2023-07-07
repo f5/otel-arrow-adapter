@@ -166,7 +166,7 @@ func (o *obfuscation) processEventAndLinkAttrs(ctx context.Context, span ptrace.
 	}
 }
 
-func (o *obfuscation) obfSlice(ctx context.Context, slice pcommon.Slice) {
+func (o *obfuscation) processSliceValue(ctx context.Context, slice pcommon.Slice) {
 	cpy := pcommon.NewSlice()
 	for i := 0; i < slice.Len(); i++ {
 		cpyVal := cpy.AppendEmpty()
@@ -177,7 +177,7 @@ func (o *obfuscation) obfSlice(ctx context.Context, slice pcommon.Slice) {
 			cpyVal.SetStr(o.encryptString(val.Str()))
 		case pcommon.ValueTypeSlice:
 			cpySlice := cpyVal.SetEmptySlice()
-			o.obfSlice(ctx, val.Slice())
+			o.processSliceValue(ctx, val.Slice())
 			val.Slice().CopyTo(cpySlice)
 		case pcommon.ValueTypeMap:
 			cpyMap := cpyVal.SetEmptyMap()
@@ -210,7 +210,7 @@ func (o *obfuscation) processAttrs(ctx context.Context, attributes pcommon.Map) 
 			cpy.PutStr(o.encryptString(k), o.encryptString(value.Str()))
 		case pcommon.ValueTypeSlice:
 			slc := cpy.PutEmptySlice(o.encryptString(k))
-			o.obfSlice(ctx, value.Slice())
+			o.processSliceValue(ctx, value.Slice())
 			value.Slice().CopyTo(slc)
 		case pcommon.ValueTypeMap:
 			mp := cpy.PutEmptyMap(o.encryptString(k))
