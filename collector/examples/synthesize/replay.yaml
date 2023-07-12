@@ -23,6 +23,8 @@ exporters:
     arrow:
       disabled: false
       num_streams: 1
+    retry_on_failure:
+      enabled: false
   file/traces:
     path: ./replayed_traces.json
     format: json
@@ -70,3 +72,12 @@ service:
       receivers: [validation/verify/metrics]
       exporters: [file/metrics, logging]
       
+  telemetry:
+    resource:
+      "service.name": "replayer"
+    metrics:
+      address: 127.0.0.1:8888
+      level: detailed
+    logs:
+      #level: debug
+      level: info

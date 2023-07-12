@@ -6,6 +6,7 @@ package validationconnector
 import (
 	"context"
 	"fmt"
+	"strings"
 	"sync"
 
 	"go.opentelemetry.io/collector/component"
@@ -48,6 +49,29 @@ type spanKey struct {
 	SpanName       string
 	SpanAttrs      attribute.Set
 	SpanID         pcommon.SpanID
+}
+
+func attrsToString(m attribute.Set) string {
+	var sb strings.Builder
+	for _, attr := range m.ToSlice() {
+		sb.WriteString(fmt.Sprint(attr.Key, "=", attr.Value, "\n"))
+	}
+	return sb.String()
+}
+
+func (s spanKey) String() string {
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprint("span_name=", s.SpanName, "\n"))
+	sb.WriteString(fmt.Sprint("span_id=", s.SpanID, "\n"))
+	sb.WriteString(fmt.Sprint("res_attrs=", attrsToString(s.ResAttrs), "\n"))
+	return sb.String()
+}
+
+func spanToString(s ptrace.Span) string {
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprint("span_name=", s.Name(), "\n"))
+	sb.WriteString(fmt.Sprint("span_id=", s.SpanID(), "\n"))
+	return sb.String()
 }
 
 type tracesValidation struct {
@@ -104,7 +128,6 @@ func (v *validation) reorder(ids []component.ID) ([]component.ID, error) {
 		ordered = append(ordered, pid)
 	}
 	if v.cfg.hasFollower() && !found {
-		fmt.Println("LOOK", ids, "AND", v.cfg.Follower)
 		return nil, errMissingFollower
 	}
 	return ordered, nil
@@ -130,7 +153,7 @@ func (v *validation) toSet(in pcommon.Map) attribute.Set {
 	return attribute.NewSet(attrs...)
 }
 
-func (v *tracesValidation) foreachSpan(td ptrace.Traces, tf func(key spanKey, span ptrace.Span)) {
+func (v *tracesValidation) foreachSpan(td ptrace.Traces, tf func(key spanKey, span ptrace.Span) error) error {
 	for ri := 0; ri < td.ResourceSpans().Len(); ri++ {
 		rs := td.ResourceSpans().At(ri)
 		rattrs := v.toSet(rs.Resource().Attributes())
@@ -154,40 +177,56 @@ func (v *tracesValidation) foreachSpan(td ptrace.Traces, tf func(key spanKey, sp
 					SpanAttrs:      v.toSet(span.Attributes()),
 					SpanID:         span.SpanID(),
 				}
-				tf(key, span)
+				if err := tf(key, span); err != nil {
+					return err
+				}
 			}
 		}
 	}
+	return nil
 }
 
 func (v *tracesValidation) expecting(td ptrace.Traces) {
 	v.lock.Lock()
 	defer v.lock.Unlock()
 
-	v.foreachSpan(td, func(key spanKey, span ptrace.Span) {
-		if _, ok := v.store[key]; ok {
-			v.logger.Error("duplicate test input span", zap.Reflect("found", key))
-			return
+	err := v.foreachSpan(td, func(key spanKey, span ptrace.Span) error {
+		if have, ok := v.store[key]; ok {
+			v.logger.Info("duplicate test input span", zap.String("key", key.String()), zap.String("s2", spanToString(span)), zap.String("s1", spanToString(have)))
+			return fmt.Errorf("Stop the test!")
 		}
+		fmt.Println("expecting to receive span key", key, "data", spanToString(span))
 		v.store[key] = span
+		return nil
 	})
+
+	if err != nil {
+		panic(err)
+	}
 }
 
 func (v *tracesValidation) received(td ptrace.Traces) error {
 	v.lock.Lock()
 	defer v.lock.Unlock()
 
-	v.foreachSpan(td, func(key spanKey, span ptrace.Span) {
+	return v.foreachSpan(td, func(key spanKey, span ptrace.Span) error {
 		_, ok := v.store[key]
 		if !ok {
-			v.logger.Info("span not expected")
-			fmt.Println(key.ResAttrs.ToSlice())
-			return
-		}
-		delete(v.store, key)
-	})
+			v.logger.Info("test input span not found", zap.String("key", key.String()), zap.String("expect", spanToString(span)))
 
-	return nil
+			for havekey, have := range v.store {
+				if have.Name() == span.Name() && have.SpanID() == span.SpanID() {
+					fmt.Println("possible match span", spanToString(have), "having received", spanToString(span))
+					fmt.Println("received key", key)
+					fmt.Println("expected key", havekey)
+				}
+			}
+			return fmt.Errorf("stop the test!")
+		}
+		// @@@ TODO Require have == expect
+		delete(v.store, key)
+		return nil
+	})
 }
 
 func createTracesToTraces(
@@ -271,7 +310,7 @@ func createLogsToLogs(
 }
 
 func (v *validation) Capabilities() consumer.Capabilities {
-	return consumer.Capabilities{MutatesData: false}
+	return consumer.Capabilities{MutatesData: true}
 }
 
 func (v *validation) Start(ctx context.Context, host component.Host) error {
@@ -284,16 +323,25 @@ func (v *validation) Shutdown(ctx context.Context) error {
 
 func (v *tracesValidation) ConsumeTraces(ctx context.Context, td ptrace.Traces) error {
 	if v.cfg.hasFollower() {
+		fmt.Println("1st stage received spans", td.SpanCount())
 		// Input outputs as to its follower first.
 		ctx = context.WithValue(ctx, inputToOutputContext{}, struct{}{})
-	} else if ctx.Value(inputToOutputContext{}) != nil {
-		// Output expected test input.
+		return v.next.ConsumeTraces(ctx, td)
+	}
+
+	if ctx.Value(inputToOutputContext{}) != nil {
+		fmt.Println("2nd stage expecting spans", td.SpanCount())
+		// Output expected test input.  Do not consume.
 		v.expecting(td)
-	} else if err := v.received(td); err != nil {
+		return nil
+	}
+
+	if err := v.received(td); err != nil {
+		fmt.Println("2nd stage FAILED spans", td.SpanCount(), err)
 		// Output validating actual input failed.
 		return err
 	}
-
+	defer fmt.Println("2nd stage validated spans", td.SpanCount())
 	return v.next.ConsumeTraces(ctx, td)
 }
 
