@@ -560,26 +560,26 @@ flags:
 rootRoutes:
   - service: frontend
     route: /product
-    tracesPerHour: 2880
+    tracesPerHour: 288000
   - service: frontend
     route: /cart
-    tracesPerHour: 1400
+    tracesPerHour: 140000
   - service: frontend
     route: /shipping
-    tracesPerHour: 480
+    tracesPerHour: 48000
   - service: frontend
     route: /currency
-    tracesPerHour: 200
+    tracesPerHour: 20000
   - service: frontend
     route: /checkout
-    tracesPerHour: 480
+    tracesPerHour: 48000
   - service: iOS
     route: /api/make-payment
-    tracesPerHour: 480
+    tracesPerHour: 48000
   - service: android  
     route: /api/make-payment
-    tracesPerHour: 480
+    tracesPerHour: 48000
 
 config:
   kubernetes:
-    pod_count: 1
+    pod_count: 10
