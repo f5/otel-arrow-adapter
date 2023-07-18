@@ -15,6 +15,8 @@
 package otlp
 
 import (
+	"fmt"
+
 	"github.com/apache/arrow/go/v12/arrow"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 
@@ -72,6 +74,7 @@ func UpdateResourceFromRecord(r pcommon.Resource, record arrow.Record, row int, 
 	if err != nil {
 		return "", werror.WrapWithContext(err, map[string]interface{}{"row": row})
 	}
+	fmt.Println("GOT RES_ID", ID)
 	if ID != nil {
 		attrs := attrsStore.AttributesByDeltaID(*ID)
 		if attrs != nil {

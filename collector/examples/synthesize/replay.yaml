@@ -25,6 +25,8 @@ exporters:
       num_streams: 1
     retry_on_failure:
       enabled: false
+    sending_queue:
+      enabled: false
   file/traces:
     path: ./replayed_traces.json
     format: json

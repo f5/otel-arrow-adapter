@@ -18,6 +18,8 @@
 package otlp
 
 import (
+	"fmt"
+
 	"github.com/apache/arrow/go/v12/arrow"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 
@@ -96,6 +98,7 @@ func NewAttributes32Store() *Attributes32Store {
 
 // AttributesByDeltaID returns the attributes for the given Delta ID.
 func (s *Attributes16Store) AttributesByDeltaID(ID uint16) *pcommon.Map {
+	fmt.Println("GOT ATTRS DELTA", s.lastID, ID, "=>", s.lastID+ID)
 	s.lastID += ID
 	if m, ok := s.attributesByID[s.lastID]; ok {
 		return m

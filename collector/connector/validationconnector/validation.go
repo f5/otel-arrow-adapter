@@ -12,6 +12,7 @@ import (
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/connector"
 	"go.opentelemetry.io/collector/consumer"
+	"go.opentelemetry.io/collector/consumer/consumererror"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/plog"
 	"go.opentelemetry.io/collector/pdata/pmetric"
@@ -76,8 +77,10 @@ func spanToString(s ptrace.Span) string {
 
 type tracesValidation struct {
 	validation
-	store map[spanKey]ptrace.Span
-	next  consumer.Traces
+	counter  int
+	vcounter int
+	store    map[spanKey]ptrace.Span
+	next     consumer.Traces
 }
 
 type metricsValidation struct {
@@ -191,11 +194,12 @@ func (v *tracesValidation) expecting(td ptrace.Traces) {
 	defer v.lock.Unlock()
 
 	err := v.foreachSpan(td, func(key spanKey, span ptrace.Span) error {
+		v.logger.Info("expecting to receive span", zap.Int("cnt", v.counter), zap.Stringer("key", key), zap.String("data", spanToString(span)))
 		if have, ok := v.store[key]; ok {
 			v.logger.Info("duplicate test input span", zap.String("key", key.String()), zap.String("s2", spanToString(span)), zap.String("s1", spanToString(have)))
 			return fmt.Errorf("Stop the test!")
 		}
-		fmt.Println("expecting to receive span key", key, "data", spanToString(span))
+		v.counter++
 		v.store[key] = span
 		return nil
 	})
@@ -216,13 +220,18 @@ func (v *tracesValidation) received(td ptrace.Traces) error {
 
 			for havekey, have := range v.store {
 				if have.Name() == span.Name() && have.SpanID() == span.SpanID() {
-					fmt.Println("possible match span", spanToString(have), "having received", spanToString(span))
-					fmt.Println("received key", key)
-					fmt.Println("expected key", havekey)
+					v.logger.Info("possible match span", zap.String("have", spanToString(have)), zap.String("received", spanToString(span)))
+					v.logger.Info("received", zap.Stringer("key", key))
+					v.logger.Info("expected", zap.Stringer("have", havekey))
 				}
 			}
 			return fmt.Errorf("stop the test!")
 		}
+		v.logger.Info("test input span not found",
+			zap.String("key", key.String()),
+			zap.String("expect", spanToString(span)),
+			zap.Int("cnt", v.vcounter))
+		v.vcounter++
 		// @@@ TODO Require have == expect
 		delete(v.store, key)
 		return nil
@@ -310,6 +319,15 @@ func createLogsToLogs(
 }
 
 func (v *validation) Capabilities() consumer.Capabilities {
+	// Note! The service/internal/fanoutconsumer logic reorders
+	// the consumers based on MutatesData (in an undocumented way).
+	//
+	// As an experiment (in this branch) the OTLP exporter has
+	// MutatesData: true.  Therefore, this module also has to have
+	// false while the other has true.
+	//
+	// TODO: Discover a better way to enforce order of fanout
+	// consumers.
 	return consumer.Capabilities{MutatesData: true}
 }
 
@@ -323,26 +341,37 @@ func (v *validation) Shutdown(ctx context.Context) error {
 
 func (v *tracesValidation) ConsumeTraces(ctx context.Context, td ptrace.Traces) error {
 	if v.cfg.hasFollower() {
-		fmt.Println("1st stage received spans", td.SpanCount())
 		// Input outputs as to its follower first.
 		ctx = context.WithValue(ctx, inputToOutputContext{}, struct{}{})
-		return v.next.ConsumeTraces(ctx, td)
+		err := v.next.ConsumeTraces(ctx, td)
+		if err != nil {
+			return consumererror.NewPermanent(err)
+		}
+		return nil
 	}
 
 	if ctx.Value(inputToOutputContext{}) != nil {
-		fmt.Println("2nd stage expecting spans", td.SpanCount())
+		v.logger.Info("2nd stage RECEIVED EXPECTING spans", zap.Int("num", td.SpanCount()))
+		defer v.logger.Info("2nd stage RECEIVED EXPECTING DONE", zap.Int("num", td.SpanCount()))
 		// Output expected test input.  Do not consume.
 		v.expecting(td)
 		return nil
 	}
 
+	v.logger.Info("2nd stage NOW CHECKING spans", zap.Int("num", td.SpanCount()))
+	defer v.logger.Info("2nd stage NOW CHECKING spans", zap.Int("num", td.SpanCount()))
 	if err := v.received(td); err != nil {
-		fmt.Println("2nd stage FAILED spans", td.SpanCount(), err)
+		v.logger.Info("2nd stage FAILED spans", zap.Int("num", td.SpanCount()), zap.Error(err))
+		defer v.logger.Info("2nd stage FAILED spans DONE", zap.Int("num", td.SpanCount()), zap.Error(err))
 		// Output validating actual input failed.
-		return err
+		return consumererror.NewPermanent(err)
 	}
-	defer fmt.Println("2nd stage validated spans", td.SpanCount())
-	return v.next.ConsumeTraces(ctx, td)
+
+	err := v.next.ConsumeTraces(ctx, td)
+	if err != nil {
+		return consumererror.NewPermanent(err)
+	}
+	return nil
 }
 
 func (v *metricsValidation) ConsumeMetrics(ctx context.Context, md pmetric.Metrics) error {

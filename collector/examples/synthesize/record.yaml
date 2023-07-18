@@ -16,6 +16,7 @@ exporters:
     format: json
 
   logging:
+    loglevel: debug
 
 processors:
   batch:
@@ -24,9 +25,9 @@ service:
   pipelines:
     traces:
       receivers: [generator]
-      processors: [batch]
-      exporters: [file/traces, logging]
+      processors: []
+      exporters: [file/traces]
     metrics:
       receivers: [generator]
-      processors: [batch]
-      exporters: [file/metrics, logging]
+      processors: []
+      exporters: [file/metrics]
