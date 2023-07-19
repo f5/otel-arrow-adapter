@@ -322,13 +322,8 @@ func (v *validation) Capabilities() consumer.Capabilities {
 	// Note! The service/internal/fanoutconsumer logic reorders
 	// the consumers based on MutatesData (in an undocumented way).
 	//
-	// As an experiment (in this branch) the OTLP exporter has
-	// MutatesData: true.  Therefore, this module also has to have
-	// false while the other has true.
-	//
-	// TODO: Discover a better way to enforce order of fanout
-	// consumers.
-	return consumer.Capabilities{MutatesData: true}
+	// See https://github.com/open-telemetry/opentelemetry-collector/issues/8104
+	return consumer.Capabilities{MutatesData: false}
 }
 
 func (v *validation) Start(ctx context.Context, host component.Host) error {

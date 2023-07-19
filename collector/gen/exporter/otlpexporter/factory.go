@@ -56,7 +56,7 @@ func createDefaultConfig() component.Config {
 
 func (oce *baseExporter) helperOptions() []exporterhelper.Option {
 	return []exporterhelper.Option{
-		exporterhelper.WithCapabilities(consumer.Capabilities{MutatesData: true}),
+		exporterhelper.WithCapabilities(consumer.Capabilities{MutatesData: false}),
 		exporterhelper.WithTimeout(oce.config.TimeoutSettings),
 		exporterhelper.WithRetry(oce.config.RetrySettings),
 		exporterhelper.WithQueue(oce.config.QueueSettings),
