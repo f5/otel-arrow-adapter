@@ -55,6 +55,166 @@ func TestEquiv(t *testing.T) {
 	NotEquiv(t, expectedTraces, actualTraces)
 }
 
+func TestEquivSortAndMerge(t *testing.T) {
+	t.Parallel()
+
+	traces_1 := ptrace.NewTraces()
+	rs := traces_1.ResourceSpans().AppendEmpty()
+	rs.Resource().Attributes().PutStr("k2", "v2")
+	rs.Resource().Attributes().PutStr("k1", "v1")
+	rs.Resource().Attributes().PutStr("k3", "v3")
+	ss := rs.ScopeSpans().AppendEmpty()
+	ss.Scope().Attributes().PutStr("k2", "v2")
+	ss.Scope().Attributes().PutStr("k1", "v1")
+	span := ss.Spans().AppendEmpty()
+	span.SetStartTimestamp(123)
+	span.SetEndTimestamp(456)
+	span.Attributes().PutStr("k2", "v2")
+	span.Attributes().PutStr("k1", "v1")
+	span = ss.Spans().AppendEmpty()
+	span.SetStartTimestamp(1234)
+	span.SetEndTimestamp(4567)
+	span.Attributes().PutStr("k2", "v2")
+	span.Attributes().PutStr("k3", "v3")
+	ss = rs.ScopeSpans().AppendEmpty()
+	ss.Scope().Attributes().PutStr("k2", "v2") // scope with same attributes as above
+	ss.Scope().Attributes().PutStr("k1", "v1") // so that spans are merged and scopes are deduplicated
+	span = ss.Spans().AppendEmpty()
+	span.SetStartTimestamp(12345)
+	span.SetEndTimestamp(45678)
+	span.Attributes().PutStr("k2", "v2")
+	span.Attributes().PutStr("k3", "v3")
+	rs = traces_1.ResourceSpans().AppendEmpty()
+	rs.Resource().Attributes().PutStr("k2", "v2") // resource with same attributes as above
+	rs.Resource().Attributes().PutStr("k1", "v1") // so that spans are merged and resources are deduplicated
+	rs.Resource().Attributes().PutStr("k3", "v3")
+	ss = rs.ScopeSpans().AppendEmpty()
+	ss.Scope().Attributes().PutStr("k2", "v2") // scope with same attributes as above
+	ss.Scope().Attributes().PutStr("k1", "v1") // so that spans are merged and scopes are deduplicated
+	span = ss.Spans().AppendEmpty()
+	span.SetStartTimestamp(123456)
+	span.SetEndTimestamp(456789)
+	span.Attributes().PutStr("k2", "v2")
+	span.Attributes().PutStr("k1", "v1")
+
+	traces_2 := ptrace.NewTraces()
+	rs = traces_2.ResourceSpans().AppendEmpty()
+	rs.Resource().Attributes().PutStr("k2", "v2")
+	rs.Resource().Attributes().PutStr("k1", "v1")
+	rs.Resource().Attributes().PutStr("k3", "v3")
+	ss = rs.ScopeSpans().AppendEmpty()
+	ss.Scope().Attributes().PutStr("k2", "v2")
+	ss.Scope().Attributes().PutStr("k1", "v1")
+	span = ss.Spans().AppendEmpty()
+	span.SetStartTimestamp(123)
+	span.SetEndTimestamp(456)
+	span.Attributes().PutStr("k2", "v2")
+	span.Attributes().PutStr("k1", "v1")
+	span = ss.Spans().AppendEmpty()
+	span.SetStartTimestamp(1234)
+	span.SetEndTimestamp(4567)
+	span.Attributes().PutStr("k2", "v2")
+	span.Attributes().PutStr("k3", "v3")
+	span = ss.Spans().AppendEmpty()
+	span.SetStartTimestamp(123456)
+	span.SetEndTimestamp(456789)
+	span.Attributes().PutStr("k2", "v2")
+	span.Attributes().PutStr("k1", "v1")
+	span = ss.Spans().AppendEmpty()
+	span.SetStartTimestamp(12345)
+	span.SetEndTimestamp(45678)
+	span.Attributes().PutStr("k2", "v2")
+	span.Attributes().PutStr("k3", "v3")
+
+	expectedTraces := []json.Marshaler{
+		ptraceotlp.NewExportRequestFromTraces(traces_2),
+	}
+	actualTraces := []json.Marshaler{
+		ptraceotlp.NewExportRequestFromTraces(traces_1),
+	}
+	Equiv(t, expectedTraces, actualTraces)
+}
+
+func TestNotEquivSortAndMerge(t *testing.T) {
+	t.Parallel()
+
+	traces_1 := ptrace.NewTraces()
+	rs := traces_1.ResourceSpans().AppendEmpty()
+	rs.Resource().Attributes().PutStr("k2", "v2")
+	rs.Resource().Attributes().PutStr("k1", "v1")
+	rs.Resource().Attributes().PutStr("k3", "v3")
+	ss := rs.ScopeSpans().AppendEmpty()
+	ss.Scope().Attributes().PutStr("k2", "v2")
+	ss.Scope().Attributes().PutStr("k1", "v1")
+	span := ss.Spans().AppendEmpty()
+	span.SetStartTimestamp(123)
+	span.SetEndTimestamp(456)
+	span.Attributes().PutStr("k2", "v2")
+	span.Attributes().PutStr("k1", "v1")
+	span = ss.Spans().AppendEmpty()
+	span.SetStartTimestamp(1234)
+	span.SetEndTimestamp(4567)
+	span.Attributes().PutStr("k2", "v2")
+	span.Attributes().PutStr("k3", "v3")
+	ss = rs.ScopeSpans().AppendEmpty()
+	ss.Scope().Attributes().PutStr("k2", "v2.1") // scope with different attributes
+	ss.Scope().Attributes().PutStr("k1", "v1.1")
+	span = ss.Spans().AppendEmpty()
+	span.SetStartTimestamp(12345)
+	span.SetEndTimestamp(45678)
+	span.Attributes().PutStr("k2", "v2")
+	span.Attributes().PutStr("k3", "v3")
+	rs = traces_1.ResourceSpans().AppendEmpty()
+	rs.Resource().Attributes().PutStr("k2", "v2")
+	rs.Resource().Attributes().PutStr("k1", "v1")
+	rs.Resource().Attributes().PutStr("k3", "v3")
+	ss = rs.ScopeSpans().AppendEmpty()
+	ss.Scope().Attributes().PutStr("k2", "v2")
+	ss.Scope().Attributes().PutStr("k1", "v1")
+	span = ss.Spans().AppendEmpty()
+	span.SetStartTimestamp(123456)
+	span.SetEndTimestamp(456789)
+	span.Attributes().PutStr("k2", "v2")
+	span.Attributes().PutStr("k1", "v1")
+
+	traces_2 := ptrace.NewTraces()
+	rs = traces_2.ResourceSpans().AppendEmpty()
+	rs.Resource().Attributes().PutStr("k2", "v2")
+	rs.Resource().Attributes().PutStr("k1", "v1")
+	rs.Resource().Attributes().PutStr("k3", "v3")
+	ss = rs.ScopeSpans().AppendEmpty()
+	ss.Scope().Attributes().PutStr("k2", "v2")
+	ss.Scope().Attributes().PutStr("k1", "v1")
+	span = ss.Spans().AppendEmpty()
+	span.SetStartTimestamp(123)
+	span.SetEndTimestamp(456)
+	span.Attributes().PutStr("k2", "v2")
+	span.Attributes().PutStr("k1", "v1")
+	span = ss.Spans().AppendEmpty()
+	span.SetStartTimestamp(1234)
+	span.SetEndTimestamp(4567)
+	span.Attributes().PutStr("k2", "v2")
+	span.Attributes().PutStr("k3", "v3")
+	span = ss.Spans().AppendEmpty()
+	span.SetStartTimestamp(123456)
+	span.SetEndTimestamp(456789)
+	span.Attributes().PutStr("k2", "v2")
+	span.Attributes().PutStr("k1", "v1")
+	span = ss.Spans().AppendEmpty()
+	span.SetStartTimestamp(12345)
+	span.SetEndTimestamp(45678)
+	span.Attributes().PutStr("k2", "v2")
+	span.Attributes().PutStr("k3", "v3")
+
+	expectedTraces := []json.Marshaler{
+		ptraceotlp.NewExportRequestFromTraces(traces_2),
+	}
+	actualTraces := []json.Marshaler{
+		ptraceotlp.NewExportRequestFromTraces(traces_1),
+	}
+	NotEquiv(t, expectedTraces, actualTraces)
+}
+
 func TestNonPositionalIndex(t *testing.T) {
 	t.Parallel()
 
