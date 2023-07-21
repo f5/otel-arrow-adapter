@@ -55,6 +55,177 @@ func TestEquiv(t *testing.T) {
 	NotEquiv(t, expectedTraces, actualTraces)
 }
 
+func TestNonPositionalIndex(t *testing.T) {
+	t.Parallel()
+
+	// Resource Metrics
+	resMetrics := map[string]interface{}{
+		"resource": map[string]interface{}{
+			"attributes": map[string]interface{}{
+				"k2": "v2",
+				"k1": "v1",
+				"k3": "v3",
+			},
+			"schema_url": "https://foo.bar",
+		},
+		"scopeMetrics": []map[string]interface{}{
+			{
+				"scope": map[string]interface{}{
+					"attributes": map[string]interface{}{
+						"k2": "v2",
+						"k1": "v1",
+					},
+					"name":    "foo",
+					"version": "1.0.0",
+				},
+				"schema_url": "https://foo.bar",
+				"metrics":    []interface{}{},
+			},
+		},
+	}
+	assert.Equal(t, nonPositionalIndex("resourceMetrics", resMetrics), "{attributes={k1=v1,k2=v2,k3=v3},schema_url=https://foo.bar}")
+	resMetrics = map[string]interface{}{}
+	assert.Equal(t, nonPositionalIndex("resourceMetrics", resMetrics), "_")
+
+	// Resource Logs
+	resLogs := map[string]interface{}{
+		"resource": map[string]interface{}{
+			"attributes": map[string]interface{}{
+				"k2": "v2",
+				"k1": "v1",
+				"k3": "v3",
+			},
+			"schema_url": "https://foo.bar",
+		},
+		"scopeLogs": []map[string]interface{}{
+			{
+				"scope": map[string]interface{}{
+					"attributes": map[string]interface{}{
+						"k2": "v2",
+						"k1": "v1",
+					},
+					"name":    "foo",
+					"version": "1.0.0",
+				},
+				"schema_url": "https://foo.bar",
+				"logs":       []interface{}{},
+			},
+		},
+	}
+	assert.Equal(t, nonPositionalIndex("resourceLogs", resLogs), "{attributes={k1=v1,k2=v2,k3=v3},schema_url=https://foo.bar}")
+
+	// Resource Spans
+	resSpans := map[string]interface{}{
+		"resource": map[string]interface{}{
+			"attributes": map[string]interface{}{
+				"k2": "v2",
+				"k1": "v1",
+				"k3": "v3",
+			},
+			"schema_url": "https://foo.bar",
+		},
+		"scopeSpans": []map[string]interface{}{
+			{
+				"scope": map[string]interface{}{
+					"attributes": map[string]interface{}{
+						"k2": "v2",
+						"k1": "v1",
+					},
+					"name":    "foo",
+					"version": "1.0.0",
+				},
+				"schema_url": "https://foo.bar",
+				"spans":      []interface{}{},
+			},
+		},
+	}
+	assert.Equal(t, nonPositionalIndex("resourceSpans", resSpans), "{attributes={k1=v1,k2=v2,k3=v3},schema_url=https://foo.bar}")
+
+	// Scope Metrics
+	scopeMetrics := map[string]interface{}{
+		"scope": map[string]interface{}{
+			"attributes": map[string]interface{}{
+				"k2": "v2",
+				"k1": "v1",
+			},
+			"name":    "foo",
+			"version": "1.0.0",
+		},
+		"metrics": []interface{}{},
+	}
+	assert.Equal(t, nonPositionalIndex("scopeMetrics", scopeMetrics), "{attributes={k1=v1,k2=v2},name=foo,version=1.0.0}")
+
+	// Scope Logs
+	scopeLogs := map[string]interface{}{
+		"scope": map[string]interface{}{
+			"attributes": map[string]interface{}{
+				"k2": "v2",
+				"k1": "v1",
+			},
+			"name":    "foo",
+			"version": "1.0.0",
+		},
+		"logs": []interface{}{},
+	}
+	assert.Equal(t, nonPositionalIndex("scopeLogs", scopeLogs), "{attributes={k1=v1,k2=v2},name=foo,version=1.0.0}")
+
+	// Scope Spans
+	scopeSpans := map[string]interface{}{
+		"scope": map[string]interface{}{
+			"attributes": map[string]interface{}{
+				"k2": "v2",
+				"k1": "v1",
+			},
+			"name":    "foo",
+			"version": "1.0.0",
+		},
+		"spans": []interface{}{},
+	}
+	assert.Equal(t, nonPositionalIndex("scopeSpans", scopeSpans), "{attributes={k1=v1,k2=v2},name=foo,version=1.0.0}")
+
+	// Other
+	other := map[string]interface{}{
+		"foo": "bar",
+	}
+	assert.Equal(t, nonPositionalIndex("other", other), "_")
+}
+
+func TestSig(t *testing.T) {
+	t.Parallel()
+
+	// Simple values
+	assert.Equal(t, sig(int64(10)), "10")
+	assert.Equal(t, sig(3.1415), "3.1415")
+	assert.Equal(t, sig(true), "true")
+	assert.Equal(t, sig(false), "false")
+	assert.Equal(t, sig("foo"), "foo")
+
+	// Array of simple values
+	assert.Equal(t, sig([]int64{1, 2, 3}), "[1,2,3]")
+	assert.Equal(t, sig([]float64{1.1, 2.1, 3.1}), "[1.1,2.1,3.1]")
+	assert.Equal(t, sig([]bool{true, false}), "[true,false]")
+	assert.Equal(t, sig([]string{"foo", "bar"}), "[foo,bar]")
+	assert.Equal(t, sig([]interface{}{int64(1), "one", true, 1.23, false}), "[1,one,true,1.23,false]")
+
+	// Map of simple values
+	assert.Equal(t, sig(map[string]interface{}{"key2": 2, "key1": 1}), "{key1=1,key2=2}")
+	assert.Equal(t, sig(map[string]interface{}{"key2": int64(2), "key1": int64(1)}), "{key1=1,key2=2}")
+	assert.Equal(t, sig(map[string]interface{}{"key2": 2.1, "key1": 1.1}), "{key1=1.1,key2=2.1}")
+	assert.Equal(t, sig(map[string]interface{}{"key2": true, "key1": false}), "{key1=false,key2=true}")
+	assert.Equal(t, sig(map[string]interface{}{"key2": "two", "key1": "one"}), "{key1=one,key2=two}")
+
+	// Map containing OTel attributes
+	attrs := make([]interface{}, 0)
+	attrs = append(attrs, attribute("key2", "value2"))
+	attrs = append(attrs, attribute("key1", "value1"))
+	attrs = append(attrs, attribute("key3", "value3"))
+	assert.Equal(t, sig(map[string]interface{}{
+		"name":       "my-service",
+		"attributes": attrs,
+		"version":    "1.0.0",
+	}), "{attributes={key1=value1,key2=value2,key3=value3},name=my-service,version=1.0.0}")
+}
+
 func TestTryAttributesSig(t *testing.T) {
 	t.Parallel()
 
@@ -101,7 +272,7 @@ func TestTryAttributesSig(t *testing.T) {
 	// attrs is a valid slice of attributes.
 	assert.True(t, done)
 	// All key/value pairs are sorted by key.
-	assert.Equal(t, attrsSig, "{key0=[1,one,true,1.230000,false],key1=value1,key2=value2,key3={host.name=my-host,service.name=my-service,service.version=1.0.0},key4=[true,false,true]}")
+	assert.Equal(t, attrsSig, "{key0=[1,one,true,1.23,false],key1=value1,key2=value2,key3={host.name=my-host,service.name=my-service,service.version=1.0.0},key4=[true,false,true]}")
 
 	// Invalid case 1
 	attrs = make([]interface{}, 0)

@@ -184,7 +184,7 @@ func exportAllVPaths(traces map[string]interface{}, currentVPath string, vPaths 
 			for i := 0; i < len(v); i++ {
 				// TODO: this is an approximation that is good enough for now, medium-term we should compute the index key based on a signature of the non-array fields.
 				if vMap, ok := v[i].(map[string]interface{}); ok {
-					index := nonPositionalIndex(key, vMap)
+					index := md5Hash(nonPositionalIndex(key, vMap))
 					arrayVPath := localVPath + "[" + index + "]"
 					exportAllVPaths(vMap, arrayVPath, vPaths)
 				} else {
@@ -219,12 +219,12 @@ func nonPositionalIndex(key string, vMap map[string]interface{}) string {
 	case "resourceMetrics", "resourceLogs", "resourceSpans":
 		res, ok := vMap["resource"]
 		if ok {
-			return md5Hash(sig(res))
+			return sig(res)
 		}
 	case "scopeMetrics", "scopeLogs", "scopeSpans":
 		res, ok := vMap["scope"]
 		if ok {
-			return md5Hash(sig(res))
+			return sig(res)
 		}
 	}
 	return "_"
@@ -241,14 +241,16 @@ func sig(value interface{}) string {
 	switch v := value.(type) {
 	case string:
 		sigBuilder.WriteString(v)
+	case int:
+		sigBuilder.WriteString(strconv.Itoa(v))
 	case int64:
-		sigBuilder.WriteString(fmt.Sprintf("%d", v))
+		sigBuilder.WriteString(strconv.FormatInt(v, 10))
 	case float64:
-		sigBuilder.WriteString(fmt.Sprintf("%f", v))
+		sigBuilder.WriteString(strconv.FormatFloat(v, 'G', -1, 64))
 	case bool:
 		sigBuilder.WriteString(strconv.FormatBool(v))
 	case []string:
-		sigBuilder.WriteString(strings.Join(v, ","))
+		sigBuilder.WriteString(fmt.Sprintf("[%s]", strings.Join(v, ",")))
 	case []int64:
 		sigBuilder.WriteString(strings.Join(strings.Fields(fmt.Sprint(v)), ","))
 	case []float64:
