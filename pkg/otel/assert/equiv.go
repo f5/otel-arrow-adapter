@@ -15,6 +15,8 @@
 package assert
 
 import (
+	"crypto/md5"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"sort"
@@ -182,7 +184,8 @@ func exportAllVPaths(traces map[string]interface{}, currentVPath string, vPaths 
 			for i := 0; i < len(v); i++ {
 				// TODO: this is an approximation that is good enough for now, medium-term we should compute the index key based on a signature of the non-array fields.
 				if vMap, ok := v[i].(map[string]interface{}); ok {
-					arrayVPath := localVPath + "[_]"
+					index := nonPositionalIndex(key, vMap)
+					arrayVPath := localVPath + "[" + index + "]"
 					exportAllVPaths(vMap, arrayVPath, vPaths)
 				} else {
 					arrayVPath := fmt.Sprintf("%s[%d]=%s", localVPath, i, fmt.Sprint(v[i]))
@@ -209,6 +212,145 @@ func exportAllVPaths(traces map[string]interface{}, currentVPath string, vPaths 
 			vPaths[localVPath+"="+fmt.Sprintf("%f", 123.456)] = true
 		}
 	}
+}
+
+func nonPositionalIndex(key string, vMap map[string]interface{}) string {
+	switch key {
+	case "resourceMetrics", "resourceLogs", "resourceSpans":
+		res, ok := vMap["resource"]
+		if ok {
+			return md5Hash(sig(res))
+		}
+	case "scopeMetrics", "scopeLogs", "scopeSpans":
+		res, ok := vMap["scope"]
+		if ok {
+			return md5Hash(sig(res))
+		}
+	}
+	return "_"
+}
+
+func md5Hash(text string) string {
+	hash := md5.Sum([]byte(text))
+	return hex.EncodeToString(hash[:])
+}
+
+func sig(value interface{}) string {
+	var sigBuilder strings.Builder
+
+	switch v := value.(type) {
+	case string:
+		sigBuilder.WriteString(v)
+	case int64:
+		sigBuilder.WriteString(fmt.Sprintf("%d", v))
+	case float64:
+		sigBuilder.WriteString(fmt.Sprintf("%f", v))
+	case bool:
+		sigBuilder.WriteString(strconv.FormatBool(v))
+	case []string:
+		sigBuilder.WriteString(strings.Join(v, ","))
+	case []int64:
+		sigBuilder.WriteString(strings.Join(strings.Fields(fmt.Sprint(v)), ","))
+	case []float64:
+		sigBuilder.WriteString(strings.Join(strings.Fields(fmt.Sprint(v)), ","))
+	case []bool:
+		sigBuilder.WriteString(strings.Join(strings.Fields(fmt.Sprint(v)), ","))
+	case map[string]interface{}:
+		sigBuilder.WriteString(mapSig(v))
+	case []interface{}:
+		sigBuilder.WriteString("[")
+		for i := 0; i < len(v); i++ {
+			if i > 0 {
+				sigBuilder.WriteString(",")
+			}
+			sigBuilder.WriteString(sig(v[i]))
+		}
+		sigBuilder.WriteString("]")
+	}
+	return sigBuilder.String()
+}
+
+func mapSig(vMap map[string]interface{}) string {
+	var sigBuilder strings.Builder
+
+	// Compute a signature of the map by sorting the keys and then appending the values.
+	keys := make([]string, 0, len(vMap))
+	for key := range vMap {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	sigBuilder.WriteString("{")
+	count := 0
+	for _, key := range keys {
+		if count > 0 {
+			sigBuilder.WriteString(",")
+		}
+		if key == "attributes" {
+			attributes, ok := vMap[key].([]interface{})
+			if ok {
+				// Special case for attributes, which are sorted by key.
+				attrsSig, done := tryAttributesSig(attributes)
+				if done {
+					sigBuilder.WriteString("attributes=")
+					sigBuilder.WriteString(attrsSig)
+					count++
+					continue
+				}
+			}
+		}
+		sigBuilder.WriteString(fmt.Sprintf("%s=%s", key, sig(vMap[key])))
+		count++
+	}
+	sigBuilder.WriteString("}")
+
+	return sigBuilder.String()
+}
+
+func tryAttributesSig(attrs []interface{}) (string, bool) {
+	type otelAttribute struct {
+		Key   string
+		Value interface{}
+	}
+
+	// Convert the attributes to a slice of otelAttribute structs.
+	otelAttrs := make([]otelAttribute, 0, len(attrs))
+	for _, attr := range attrs {
+		attr, ok := attr.(map[string]interface{})
+		if !ok {
+			return "", false
+		}
+		key, found := attr["key"]
+		if !found {
+			return "", false
+		}
+		keyStr, ok := key.(string)
+		if !ok {
+			return "", false
+		}
+		value, found := attr["value"]
+		if !found {
+			return "", false
+		}
+		otelAttrs = append(otelAttrs, otelAttribute{Key: keyStr, Value: value})
+	}
+
+	// Sort the attributes by key.
+	sort.Slice(otelAttrs, func(i, j int) bool {
+		return otelAttrs[i].Key < otelAttrs[j].Key
+	})
+
+	var sigBuilder strings.Builder
+
+	sigBuilder.WriteString("{")
+	for i, attr := range otelAttrs {
+		if i > 0 {
+			sigBuilder.WriteString(",")
+		}
+		sigBuilder.WriteString(fmt.Sprintf("%s=%s", attr.Key, sig(attr.Value)))
+	}
+	sigBuilder.WriteString("}")
+
+	return sigBuilder.String(), true
 }
 
 func jsonify(marshaler []json.Marshaler) ([]map[string]interface{}, error) {
