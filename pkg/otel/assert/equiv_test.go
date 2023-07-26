@@ -74,28 +74,33 @@ func TestEquivSortAndMerge(t *testing.T) {
 	span = ss.Spans().AppendEmpty()
 	span.SetStartTimestamp(1234)
 	span.SetEndTimestamp(4567)
-	span.Attributes().PutStr("k2", "v2")
 	span.Attributes().PutStr("k3", "v3")
+	span.Attributes().PutStr("k2", "v2")
 	ss = rs.ScopeSpans().AppendEmpty()
-	ss.Scope().Attributes().PutStr("k2", "v2") // scope with same attributes as above
-	ss.Scope().Attributes().PutStr("k1", "v1") // so that spans are merged and scopes are deduplicated
+	ss.Scope().Attributes().PutStr("k1", "v1") // scope with same attributes as above
+	ss.Scope().Attributes().PutStr("k2", "v2") // so that spans are merged and scopes are deduplicated
 	span = ss.Spans().AppendEmpty()
 	span.SetStartTimestamp(12345)
 	span.SetEndTimestamp(45678)
 	span.Attributes().PutStr("k2", "v2")
 	span.Attributes().PutStr("k3", "v3")
 	rs = split_res_and_scope.ResourceSpans().AppendEmpty()
-	rs.Resource().Attributes().PutStr("k2", "v2") // resource with same attributes as above
-	rs.Resource().Attributes().PutStr("k1", "v1") // so that spans are merged and resources are deduplicated
-	rs.Resource().Attributes().PutStr("k3", "v3")
+	rs.Resource().Attributes().PutStr("k3", "v3") // resource with same attributes as above
+	rs.Resource().Attributes().PutStr("k2", "v2") // so that spans are merged and resources are deduplicated
+	rs.Resource().Attributes().PutStr("k1", "v1")
 	ss = rs.ScopeSpans().AppendEmpty()
 	ss.Scope().Attributes().PutStr("k2", "v2") // scope with same attributes as above
 	ss.Scope().Attributes().PutStr("k1", "v1") // so that spans are merged and scopes are deduplicated
 	span = ss.Spans().AppendEmpty()
 	span.SetStartTimestamp(123456)
 	span.SetEndTimestamp(456789)
-	span.Attributes().PutStr("k2", "v2")
 	span.Attributes().PutStr("k1", "v1")
+	span.Attributes().PutStr("k2", "v2")
+	link := span.Links().AppendEmpty()
+	link.Attributes().PutStr("k2", "lv2")
+	link.Attributes().PutStr("k1", "lv1")
+	link.SetTraceID([16]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16})
+	link.SetSpanID([8]byte{1, 2, 3, 4, 5, 6, 7, 8})
 	ss = rs.ScopeSpans().AppendEmpty()
 	ss.Scope().Attributes().PutStr("k2", "v2") // scope with different attributes
 	span = ss.Spans().AppendEmpty()
@@ -132,6 +137,11 @@ func TestEquivSortAndMerge(t *testing.T) {
 	span.SetEndTimestamp(456789)
 	span.Attributes().PutStr("k2", "v2")
 	span.Attributes().PutStr("k1", "v1")
+	link = span.Links().AppendEmpty()
+	link.Attributes().PutStr("k2", "lv2")
+	link.Attributes().PutStr("k1", "lv1")
+	link.SetTraceID([16]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16})
+	link.SetSpanID([8]byte{1, 2, 3, 4, 5, 6, 7, 8})
 	span = ss.Spans().AppendEmpty()
 	span.SetStartTimestamp(12345)
 	span.SetEndTimestamp(45678)
