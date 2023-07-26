@@ -272,6 +272,10 @@ func (s *Stream) write(ctx context.Context) error {
 			// is a potential sender race since the stream
 			// is currently in the ready set.
 			s.prioritizer.removeReady(s)
+			err := s.client.CloseSend()
+			if err != nil {
+				return err
+			}
 			return ctx.Err()
 		}
 		// Note: For the two return statements below there is no potential

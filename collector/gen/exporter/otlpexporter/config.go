@@ -5,6 +5,7 @@ package otlpexporter // import "github.com/f5/otel-arrow-adapter/collector/gen/e
 
 import (
 	"fmt"
+	"time"
 
 	"google.golang.org/grpc"
 
