@@ -237,6 +237,8 @@ func nonPositionalIndex(key string, vMap map[string]interface{}) string {
 		return sig(vMap)
 	case "attributes":
 		return sig(vMap)
+		//case "spans":
+		//	return sig(vMap)
 	}
 	return "_"
 }
