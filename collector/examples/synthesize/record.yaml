@@ -1,4 +1,10 @@
 receivers:
+  otlp/loopback:
+    protocols:
+      grpc:
+        endpoint: 127.0.0.1:4000
+      arrow:
+        disabled: false
   otlp:
     protocols:
       grpc:
@@ -6,9 +12,20 @@ receivers:
     path: ./generator/hipster_shop.yaml
 
 exporters:
+  otlp/arrow:
+    endpoint: 127.0.0.1:4000
+    wait_for_ready: true
+    tls:
+      insecure: true
+    arrow:
+      disabled: false
+      num_streams: 1
+    retry_on_failure:
+      enabled: false
+    sending_queue:
+      enabled: false
   file/traces:
     path: ./recorded_traces.json
-    compression: zstd
     format: json
   file/metrics:
     path: ./recorded_metrics.json
@@ -29,11 +46,9 @@ processors:
 # list of processors below.
 service:
   pipelines:
-    traces:
+    traces/generate:
       receivers: [generator]
-      processors: [obfuscation, batch]
-      exporters: [file/traces, logging]
-    metrics:
-      receivers: [generator]
-      processors: [obfuscation, batch]
-      exporters: [file/metrics, logging]
+      exporters: [otlp/arrow, logging]
+    traces/loop:
+      receivers: [otlp/loopback]
+      exporters: [file/traces]

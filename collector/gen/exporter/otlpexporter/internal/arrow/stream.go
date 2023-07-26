@@ -179,6 +179,7 @@ func (s *Stream) run(bgctx context.Context, streamClient StreamClientFunc, grpcO
 				// streams are successful and half of streams
 				// take this return path.  Design a graceful
 				// recovery mechanism?
+				_ = s.client.CloseSend()
 				s.client = nil
 				s.telemetry.Logger.Info("arrow is not supported",
 					zap.String("message", status.Message()),
