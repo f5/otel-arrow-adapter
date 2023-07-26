@@ -115,6 +115,7 @@ func (te TestEntropy) NewStandardResourceAttributes() []pcommon.Map {
 			func(attrs Attrs) { attrs.PutBool("up", true) },
 			func(attrs Attrs) { attrs.PutInt("status", 200) },
 			func(attrs Attrs) { attrs.PutDouble("version", 1.0) },
+			func(attrs Attrs) { attrs.PutStr("unique1", "uv1") },
 		),
 		te.shuffleAttrs(
 			func(attrs Attrs) { attrs.PutStr("hostname", "host2.mydomain.com") },
@@ -122,6 +123,7 @@ func (te TestEntropy) NewStandardResourceAttributes() []pcommon.Map {
 			func(attrs Attrs) { attrs.PutBool("up", true) },
 			func(attrs Attrs) { attrs.PutInt("status", 200) },
 			func(attrs Attrs) { attrs.PutDouble("version", 1.0) },
+			func(attrs Attrs) { attrs.PutStr("unique2", "uv2") },
 		),
 		te.shuffleAttrs(
 			func(attrs Attrs) { attrs.PutStr("hostname", "host3.mydomain.com") },
@@ -129,6 +131,7 @@ func (te TestEntropy) NewStandardResourceAttributes() []pcommon.Map {
 			func(attrs Attrs) { attrs.PutBool("up", false) },
 			func(attrs Attrs) { attrs.PutInt("status", 500) },
 			func(attrs Attrs) { attrs.PutDouble("version", 1.5) },
+			func(attrs Attrs) { attrs.PutStr("unique3", "uv3") },
 		),
 	}
 }

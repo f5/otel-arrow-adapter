@@ -58,8 +58,8 @@ func TestEquiv(t *testing.T) {
 func TestEquivSortAndMerge(t *testing.T) {
 	t.Parallel()
 
-	traces_1 := ptrace.NewTraces()
-	rs := traces_1.ResourceSpans().AppendEmpty()
+	split_res_and_scope := ptrace.NewTraces()
+	rs := split_res_and_scope.ResourceSpans().AppendEmpty()
 	rs.Resource().Attributes().PutStr("k2", "v2")
 	rs.Resource().Attributes().PutStr("k1", "v1")
 	rs.Resource().Attributes().PutStr("k3", "v3")
@@ -84,7 +84,7 @@ func TestEquivSortAndMerge(t *testing.T) {
 	span.SetEndTimestamp(45678)
 	span.Attributes().PutStr("k2", "v2")
 	span.Attributes().PutStr("k3", "v3")
-	rs = traces_1.ResourceSpans().AppendEmpty()
+	rs = split_res_and_scope.ResourceSpans().AppendEmpty()
 	rs.Resource().Attributes().PutStr("k2", "v2") // resource with same attributes as above
 	rs.Resource().Attributes().PutStr("k1", "v1") // so that spans are merged and resources are deduplicated
 	rs.Resource().Attributes().PutStr("k3", "v3")
@@ -96,9 +96,21 @@ func TestEquivSortAndMerge(t *testing.T) {
 	span.SetEndTimestamp(456789)
 	span.Attributes().PutStr("k2", "v2")
 	span.Attributes().PutStr("k1", "v1")
+	ss = rs.ScopeSpans().AppendEmpty()
+	ss.Scope().Attributes().PutStr("k2", "v2") // scope with different attributes
+	span = ss.Spans().AppendEmpty()
+	span.SetStartTimestamp(123456)
+	span.SetEndTimestamp(456789)
+	span.Attributes().PutStr("k2", "v2")
+	span.Attributes().PutStr("k1", "v1")
+	event := span.Events().AppendEmpty()
+	event.SetTimestamp(1234567)
+	event.SetName("event1")
+	event.Attributes().PutStr("k2.1", "v2")
+	event.Attributes().PutStr("k1.2", "v1")
 
-	traces_2 := ptrace.NewTraces()
-	rs = traces_2.ResourceSpans().AppendEmpty()
+	merged_res_and_scope := ptrace.NewTraces()
+	rs = merged_res_and_scope.ResourceSpans().AppendEmpty()
 	rs.Resource().Attributes().PutStr("k2", "v2")
 	rs.Resource().Attributes().PutStr("k1", "v1")
 	rs.Resource().Attributes().PutStr("k3", "v3")
@@ -125,12 +137,24 @@ func TestEquivSortAndMerge(t *testing.T) {
 	span.SetEndTimestamp(45678)
 	span.Attributes().PutStr("k2", "v2")
 	span.Attributes().PutStr("k3", "v3")
+	ss = rs.ScopeSpans().AppendEmpty()
+	ss.Scope().Attributes().PutStr("k2", "v2")
+	span = ss.Spans().AppendEmpty()
+	span.SetStartTimestamp(123456)
+	span.SetEndTimestamp(456789)
+	span.Attributes().PutStr("k2", "v2")
+	span.Attributes().PutStr("k1", "v1")
+	event = span.Events().AppendEmpty()
+	event.SetTimestamp(1234567)
+	event.SetName("event1")
+	event.Attributes().PutStr("k2.1", "v2")
+	event.Attributes().PutStr("k1.2", "v1")
 
 	expectedTraces := []json.Marshaler{
-		ptraceotlp.NewExportRequestFromTraces(traces_2),
+		ptraceotlp.NewExportRequestFromTraces(merged_res_and_scope),
 	}
 	actualTraces := []json.Marshaler{
-		ptraceotlp.NewExportRequestFromTraces(traces_1),
+		ptraceotlp.NewExportRequestFromTraces(split_res_and_scope),
 	}
 	Equiv(t, expectedTraces, actualTraces)
 }

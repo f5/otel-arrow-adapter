@@ -184,7 +184,10 @@ func exportAllVPaths(traces map[string]interface{}, currentVPath string, vPaths 
 			for i := 0; i < len(v); i++ {
 				// TODO: this is an approximation that is good enough for now, medium-term we should compute the index key based on a signature of the non-array fields.
 				if vMap, ok := v[i].(map[string]interface{}); ok {
-					index := md5Hash(nonPositionalIndex(key, vMap))
+					index := nonPositionalIndex(key, vMap)
+					if index != "_" {
+						index = md5Hash(index)
+					}
 					arrayVPath := localVPath + "[" + index + "]"
 					exportAllVPaths(vMap, arrayVPath, vPaths)
 				} else {
@@ -214,6 +217,10 @@ func exportAllVPaths(traces map[string]interface{}, currentVPath string, vPaths 
 	}
 }
 
+// nonPositionalIndex returns a string that can be used to identify:
+// - a resource,
+// - a scope,
+// Note: The string `_` is returned if the key is not supported.
 func nonPositionalIndex(key string, vMap map[string]interface{}) string {
 	switch key {
 	case "resourceMetrics", "resourceLogs", "resourceSpans":
@@ -226,6 +233,10 @@ func nonPositionalIndex(key string, vMap map[string]interface{}) string {
 		if ok {
 			return sig(res)
 		}
+	case "events", "links":
+		return sig(vMap)
+	case "attributes":
+		return sig(vMap)
 	}
 	return "_"
 }
