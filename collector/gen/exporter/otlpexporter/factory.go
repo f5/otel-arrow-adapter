@@ -5,6 +5,7 @@ package otlpexporter // import "github.com/f5/otel-arrow-adapter/collector/gen/e
 
 import (
 	"context"
+	"math"
 	"runtime"
 	"time"
 
@@ -52,7 +53,7 @@ func createDefaultConfig() component.Config {
 		Arrow: ArrowSettings{
 			NumStreams: runtime.NumCPU(),
 			// set to a large number by default
-			MaxStreamLifetime: 10 * time.Second,
+			MaxStreamLifetime: math.MaxInt32 * time.Second,
 		},
 	}
 }

@@ -150,8 +150,8 @@ func (e *Exporter) runStreamController(bgctx context.Context) {
 		case stream := <-e.returning:
 			if stream.client != nil || e.disableDowngrade {
 				// The stream closed or broken.  Restart it.
-				// e.wg.Add(1)
-				// go e.runArrowStream(bgctx)
+				e.wg.Add(1)
+				go e.runArrowStream(bgctx)
 				continue
 			}
 			// Otherwise, the stream never got started.  It was
