@@ -51,6 +51,7 @@ func createDefaultConfig() component.Config {
 		},
 		Arrow: ArrowSettings{
 			NumStreams: runtime.NumCPU(),
+			// set to a large number by default
 			MaxStreamLifetime: 10 * time.Second,
 		},
 	}

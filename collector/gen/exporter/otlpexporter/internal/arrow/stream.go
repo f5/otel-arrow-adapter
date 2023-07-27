@@ -217,6 +217,7 @@ func (s *Stream) run(bgctx context.Context, streamClient StreamClientFunc, grpcO
 				// returned from read() will be the cancellation by the
 				// writer. So if the reader's error is canceled and the
 				// writer's error is non-nil, use it instead.
+				_ = s.client.CloseSend()
 				if writeErr != nil {
 					s.telemetry.Logger.Error("arrow stream internal error",
 						zap.Error(writeErr),
