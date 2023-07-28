@@ -182,7 +182,6 @@ func (s *Stream) run(bgctx context.Context, streamClient StreamClientFunc, grpcO
 				// streams are successful and half of streams
 				// take this return path.  Design a graceful
 				// recovery mechanism?
-				_ = s.client.CloseSend()
 				s.client = nil
 				s.telemetry.Logger.Info("arrow is not supported",
 					zap.String("message", status.Message()),
@@ -220,7 +219,6 @@ func (s *Stream) run(bgctx context.Context, streamClient StreamClientFunc, grpcO
 				// returned from read() will be the cancellation by the
 				// writer. So if the reader's error is canceled and the
 				// writer's error is non-nil, use it instead.
-				_ = s.client.CloseSend()
 				if writeErr != nil {
 					s.telemetry.Logger.Error("arrow stream internal error",
 						zap.Error(writeErr),
@@ -281,10 +279,10 @@ func (s *Stream) write(ctx context.Context) error {
 			// is a potential sender race since the stream
 			// is currently in the ready set.
 			s.prioritizer.removeReady(s)
-			err := s.client.CloseSend()
-			if err != nil {
-				return err
-			}
+			// err := s.client.CloseSend()
+			// if err != nil {
+			// 	return err
+			// }
 			return ctx.Err()
 		}
 		// Note: For the two return statements below there is no potential

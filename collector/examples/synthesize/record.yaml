@@ -24,6 +24,7 @@ exporters:
     arrow:
       disabled: false
       num_streams: 1
+      max_stream_lifetime: 10s
     retry_on_failure:
       enabled: false
     sending_queue:
