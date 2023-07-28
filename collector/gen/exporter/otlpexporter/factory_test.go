@@ -5,8 +5,6 @@ package otlpexporter
 
 import (
 	"context"
-	"fmt"
-	"math"
 	"path/filepath"
 	"runtime"
 	"testing"
@@ -31,13 +29,12 @@ func TestCreateDefaultConfig(t *testing.T) {
 	assert.NotNil(t, cfg, "failed to create default config")
 	assert.NoError(t, componenttest.CheckConfigStruct(cfg))
 	ocfg, ok := factory.CreateDefaultConfig().(*Config)
-	fmt.Println(ocfg.Arrow)
 	assert.True(t, ok)
 	assert.Equal(t, ocfg.RetrySettings, exporterhelper.NewDefaultRetrySettings())
 	assert.Equal(t, ocfg.QueueSettings, exporterhelper.NewDefaultQueueSettings())
 	assert.Equal(t, ocfg.TimeoutSettings, exporterhelper.NewDefaultTimeoutSettings())
 	assert.Equal(t, ocfg.Compression, configcompression.Gzip)
-	assert.Equal(t, ocfg.Arrow, ArrowSettings{Disabled: false, NumStreams: runtime.NumCPU(), MaxStreamLifetime: math.MaxInt32 * time.Second}) 
+	assert.Equal(t, ocfg.Arrow, ArrowSettings{Disabled: false, NumStreams: runtime.NumCPU()}) 
 }
 
 func TestCreateMetricsExporter(t *testing.T) {

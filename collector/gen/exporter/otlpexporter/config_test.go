@@ -77,7 +77,6 @@ func TestUnmarshalConfig(t *testing.T) {
 				Auth:            &configauth.Authentication{AuthenticatorID: component.NewID("nop")},
 			},
 			Arrow: ArrowSettings{
-				MaxStreamLifetime: time.Second * 10,
 				NumStreams:         2,
 				EnableMixedSignals: true,
 			},
@@ -95,9 +94,9 @@ func TestArrowSettingsValidate(t *testing.T) {
 
 	require.Error(t, settings(true, 0, time.Second * 10).Validate())
 	require.Contains(t, settings(true, 0, time.Second * 10).Validate().Error(), "stream count must be")
-	require.Contains(t, settings(true, 1, time.Second * 0).Validate().Error(), "max stream life must be")
+	require.Contains(t, settings(true, 1, time.Second * -1).Validate().Error(), "max stream life cannot")
 	require.Error(t, settings(false, -1, time.Second * 10).Validate())
-	require.Error(t, settings(false, 1, time.Second * 0).Validate())
+	require.Error(t, settings(false, 1, time.Second * -1).Validate())
 	require.Error(t, settings(true, math.MinInt, time.Second * 10).Validate())
 }
 

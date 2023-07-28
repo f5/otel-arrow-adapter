@@ -99,14 +99,17 @@ func (s *Stream) setBatchChannel(batchID int64, errCh chan error) {
 func (s *Stream) logStreamError(err error) {
 	isEOF := errors.Is(err, io.EOF)
 	isCanceled := errors.Is(err, context.Canceled)
+	isDeadlineExceeded := errors.Is(err, context.DeadlineExceeded)
 
 	switch {
-	case !isEOF && !isCanceled:
+	case !isEOF && !isCanceled && !isDeadlineExceeded:
 		s.telemetry.Logger.Error("arrow stream error", zap.Error(err))
 	case isEOF:
 		s.telemetry.Logger.Debug("arrow stream end")
 	case isCanceled:
 		s.telemetry.Logger.Debug("arrow stream canceled")
+	case isDeadlineExceeded:
+		s.telemetry.Logger.Debug("arrow stream deadline exceeded")
 	}
 }
 
@@ -203,7 +206,7 @@ func (s *Stream) run(bgctx context.Context, streamClient StreamClientFunc, grpcO
 				// production); in both cases "NO_ERROR" is the key
 				// signifier.
 				if strings.Contains(status.Message(), "NO_ERROR") {
-					s.telemetry.Logger.Debug("arrow stream shutdown")
+					s.telemetry.Logger.Info("arrow stream shutdown")
 				} else {
 					s.telemetry.Logger.Error("arrow stream unavailable",
 						zap.String("message", status.Message()),
@@ -229,6 +232,10 @@ func (s *Stream) run(bgctx context.Context, streamClient StreamClientFunc, grpcO
 						zap.String("message", status.Message()),
 					)
 				}
+			case codes.DeadlineExceeded:
+				s.telemetry.Logger.Debug("max stream lifetime reached",
+					zap.Uint32("code", uint32(status.Code())))
+					zap.String("message", status.Message())
 			default:
 				s.telemetry.Logger.Error("arrow stream unknown",
 					zap.Uint32("code", uint32(status.Code())),

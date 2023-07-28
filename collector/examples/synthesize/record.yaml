@@ -3,6 +3,10 @@ receivers:
     protocols:
       grpc:
         endpoint: 127.0.0.1:4000
+        keepalive:
+          server_parameters:
+            max_connection_age: 6s
+            max_connection_age_grace: 6s
       arrow:
         disabled: false
   otlp:

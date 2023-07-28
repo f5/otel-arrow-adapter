@@ -5,9 +5,7 @@ package otlpexporter // import "github.com/f5/otel-arrow-adapter/collector/gen/e
 
 import (
 	"context"
-	"math"
 	"runtime"
-	"time"
 
 	arrowpb "github.com/f5/otel-arrow-adapter/api/experimental/arrow/v1"
 	"google.golang.org/grpc"
@@ -52,8 +50,6 @@ func createDefaultConfig() component.Config {
 		},
 		Arrow: ArrowSettings{
 			NumStreams: runtime.NumCPU(),
-			// set to a large number by default
-			MaxStreamLifetime: math.MaxInt32 * time.Second,
 		},
 	}
 }

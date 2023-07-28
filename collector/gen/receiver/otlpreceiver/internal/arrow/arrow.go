@@ -226,6 +226,9 @@ func (r *Receiver) logStreamError(err error) {
 			r.telemetry.Logger.Info("arrow stream unavailable",
 				zap.String("message", status.Message()),
 			)
+		case codes.DeadlineExceeded:
+			r.telemetry.Logger.Debug("arrow stream deadline exceeded",
+				zap.String("message", status.Message()))
 		default:
 			r.telemetry.Logger.Error("arrow stream error",
 				zap.Uint32("code", uint32(status.Code())),

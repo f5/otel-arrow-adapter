@@ -61,8 +61,8 @@ func (cfg *ArrowSettings) Validate() error {
 		return fmt.Errorf("stream count must be > 0: %d", cfg.NumStreams)
 	}
 
-	if cfg.MaxStreamLifetime.Seconds() < float64(1) {
-		return fmt.Errorf("max stream life must be > 0: %d", cfg.MaxStreamLifetime)
+	if cfg.MaxStreamLifetime.Seconds() < float64(0) {
+		return fmt.Errorf("max stream life cannot be negative: %d", cfg.MaxStreamLifetime)
 	} 
 
 	return nil
