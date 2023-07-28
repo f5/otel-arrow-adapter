@@ -87,17 +87,17 @@ func TestArrowSettingsValidate(t *testing.T) {
 	settings := func(enabled bool, numStreams int, maxStreamLifetime time.Duration) *ArrowSettings {
 		return &ArrowSettings{Disabled: !enabled, NumStreams: numStreams, MaxStreamLifetime: maxStreamLifetime}
 	}
-	require.NoError(t, settings(true, 1, time.Second*10).Validate())
-	require.NoError(t, settings(false, 1, time.Second*10).Validate())
-	require.NoError(t, settings(true, 2, time.Second*1).Validate())
-	require.NoError(t, settings(true, math.MaxInt, time.Second*10).Validate())
+	require.NoError(t, settings(true, 1, 10 * time.Second).Validate())
+	require.NoError(t, settings(false, 1, 10 * time.Second).Validate())
+	require.NoError(t, settings(true, 2, 1 * time.Second).Validate())
+	require.NoError(t, settings(true, math.MaxInt, 10 * time.Second).Validate())
 
-	require.Error(t, settings(true, 0, time.Second*10).Validate())
-	require.Contains(t, settings(true, 0, time.Second*10).Validate().Error(), "stream count must be")
-	require.Contains(t, settings(true, 1, time.Second*-1).Validate().Error(), "max stream life must be")
-	require.Error(t, settings(false, -1, time.Second*10).Validate())
-	require.Error(t, settings(false, 1, time.Second*-1).Validate())
-	require.Error(t, settings(true, math.MinInt, time.Second*10).Validate())
+	require.Error(t, settings(true, 0, 10 * time.Second).Validate())
+	require.Contains(t, settings(true, 0, 10 * time.Second).Validate().Error(), "stream count must be")
+	require.Contains(t, settings(true, 1, -1 * time.Second).Validate().Error(), "max stream life must be")
+	require.Error(t, settings(false, -1, 10 * time.Second).Validate())
+	require.Error(t, settings(false, 1, -1 * time.Second).Validate())
+	require.Error(t, settings(true, math.MinInt, 10 * time.Second).Validate())
 }
 
 func TestDefaultSettingsValid(t *testing.T) {
