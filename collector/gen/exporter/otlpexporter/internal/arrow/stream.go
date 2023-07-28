@@ -205,7 +205,7 @@ func (s *Stream) run(bgctx context.Context, streamClient StreamClientFunc, grpcO
 				// production); in both cases "NO_ERROR" is the key
 				// signifier.
 				if strings.Contains(status.Message(), "NO_ERROR") {
-					s.telemetry.Logger.Info("arrow stream shutdown")
+					s.telemetry.Logger.Debug("arrow stream shutdown")
 				} else {
 					s.telemetry.Logger.Error("arrow stream unavailable",
 						zap.String("message", status.Message()),
@@ -279,10 +279,10 @@ func (s *Stream) write(ctx context.Context) error {
 			// is a potential sender race since the stream
 			// is currently in the ready set.
 			s.prioritizer.removeReady(s)
-			err := s.client.CloseSend()
-			if err != nil {
-				return err
-			}
+			// err := s.client.CloseSend()
+			// if err != nil {
+			// 	return err
+			// }
 			return ctx.Err()
 		}
 		// Note: For the two return statements below there is no potential
