@@ -87,21 +87,24 @@ func TestArrowSettingsValidate(t *testing.T) {
 	settings := func(enabled bool, numStreams int, maxStreamLifetime time.Duration) *ArrowSettings {
 		return &ArrowSettings{Disabled: !enabled, NumStreams: numStreams, MaxStreamLifetime: maxStreamLifetime}
 	}
-	require.NoError(t, settings(true, 1, time.Second * 10).Validate())
-	require.NoError(t, settings(false, 1, time.Second * 10).Validate())
-	require.NoError(t, settings(true, 2, time.Second * 1).Validate())
-	require.NoError(t, settings(true, math.MaxInt, time.Second * 10).Validate())
+	require.NoError(t, settings(true, 1, time.Second*10).Validate())
+	require.NoError(t, settings(false, 1, time.Second*10).Validate())
+	require.NoError(t, settings(true, 2, time.Second*1).Validate())
+	require.NoError(t, settings(true, math.MaxInt, time.Second*10).Validate())
 
-	require.Error(t, settings(true, 0, time.Second * 10).Validate())
-	require.Contains(t, settings(true, 0, time.Second * 10).Validate().Error(), "stream count must be")
-	require.Contains(t, settings(true, 1, time.Second * -1).Validate().Error(), "max stream life cannot")
-	require.Error(t, settings(false, -1, time.Second * 10).Validate())
-	require.Error(t, settings(false, 1, time.Second * -1).Validate())
-	require.Error(t, settings(true, math.MinInt, time.Second * 10).Validate())
+	require.Error(t, settings(true, 0, time.Second*10).Validate())
+	require.Contains(t, settings(true, 0, time.Second*10).Validate().Error(), "stream count must be")
+	require.Contains(t, settings(true, 1, time.Second*-1).Validate().Error(), "max stream life must be")
+	require.Error(t, settings(false, -1, time.Second*10).Validate())
+	require.Error(t, settings(false, 1, time.Second*-1).Validate())
+	require.Error(t, settings(true, math.MinInt, time.Second*10).Validate())
 }
 
 func TestDefaultSettingsValid(t *testing.T) {
 	cfg := createDefaultConfig()
+	// this must always be set by the user and config
+	// validation checks that a value is set
+	cfg.(*Config).Arrow.MaxStreamLifetime = 2 * time.Second
 	require.NoError(t, cfg.(*Config).Validate())
 
 }

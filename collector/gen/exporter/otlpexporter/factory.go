@@ -10,6 +10,7 @@ import (
 	arrowpb "github.com/f5/otel-arrow-adapter/api/experimental/arrow/v1"
 	"google.golang.org/grpc"
 
+	"github.com/f5/otel-arrow-adapter/collector/gen/exporter/otlpexporter/internal/arrow"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/config/configcompression"
 	"go.opentelemetry.io/collector/config/configgrpc"
@@ -17,7 +18,6 @@ import (
 	"go.opentelemetry.io/collector/consumer"
 	"go.opentelemetry.io/collector/exporter"
 	"go.opentelemetry.io/collector/exporter/exporterhelper"
-	"github.com/f5/otel-arrow-adapter/collector/gen/exporter/otlpexporter/internal/arrow"
 )
 
 const (

@@ -34,10 +34,10 @@ type Config struct {
 // ArrowSettings includes whether Arrow is enabled and the number of
 // concurrent Arrow streams.
 type ArrowSettings struct {
-	Disabled           bool `mapstructure:"disabled"`
-	NumStreams         int  `mapstructure:"num_streams"`
-	DisableDowngrade   bool `mapstructure:"disable_downgrade"`
-	EnableMixedSignals bool `mapstructure:"enable_mixed_signals"`
+	Disabled           bool          `mapstructure:"disabled"`
+	NumStreams         int           `mapstructure:"num_streams"`
+	DisableDowngrade   bool          `mapstructure:"disable_downgrade"`
+	EnableMixedSignals bool          `mapstructure:"enable_mixed_signals"`
 	MaxStreamLifetime  time.Duration `mapstructure:"max_stream_lifetime"`
 }
 
@@ -61,9 +61,9 @@ func (cfg *ArrowSettings) Validate() error {
 		return fmt.Errorf("stream count must be > 0: %d", cfg.NumStreams)
 	}
 
-	if cfg.MaxStreamLifetime.Seconds() < float64(0) {
-		return fmt.Errorf("max stream life cannot be negative: %d", cfg.MaxStreamLifetime)
-	} 
+	if cfg.MaxStreamLifetime.Seconds() < float64(1) {
+		return fmt.Errorf("max stream life must be > 0: %d", cfg.MaxStreamLifetime)
+	}
 
 	return nil
 }

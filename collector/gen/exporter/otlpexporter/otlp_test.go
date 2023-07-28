@@ -31,6 +31,8 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/durationpb"
 
+	"github.com/f5/otel-arrow-adapter/collector/gen/exporter/otlpexporter/internal/arrow/grpcmock"
+	"github.com/f5/otel-arrow-adapter/collector/gen/internal/testdata"
 	"go.opentelemetry.io/collector/client"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/component/componenttest"
@@ -40,10 +42,8 @@ import (
 	"go.opentelemetry.io/collector/config/configtls"
 	"go.opentelemetry.io/collector/exporter"
 	"go.opentelemetry.io/collector/exporter/exportertest"
-	"github.com/f5/otel-arrow-adapter/collector/gen/exporter/otlpexporter/internal/arrow/grpcmock"
 	"go.opentelemetry.io/collector/extension"
 	"go.opentelemetry.io/collector/extension/auth"
-	"github.com/f5/otel-arrow-adapter/collector/gen/internal/testdata"
 	"go.opentelemetry.io/collector/pdata/plog"
 	"go.opentelemetry.io/collector/pdata/plog/plogotlp"
 	"go.opentelemetry.io/collector/pdata/pmetric"
@@ -926,7 +926,7 @@ func testSendArrowTraces(t *testing.T, mixedSignals, clientWaitForReady, streamS
 	cfg.Arrow = ArrowSettings{
 		NumStreams:         1,
 		EnableMixedSignals: mixedSignals,
-		MaxStreamLifetime: 100 * time.Second,
+		MaxStreamLifetime:  100 * time.Second,
 	}
 
 	set := exportertest.NewNopCreateSettings()
@@ -1099,7 +1099,7 @@ func TestSendArrowFailedTraces(t *testing.T) {
 	cfg.Arrow = ArrowSettings{
 		NumStreams:         1,
 		EnableMixedSignals: true,
-		MaxStreamLifetime: 100 * time.Second,
+		MaxStreamLifetime:  100 * time.Second,
 	}
 	cfg.QueueSettings.Enabled = false
 

@@ -235,7 +235,7 @@ func (s *Stream) run(bgctx context.Context, streamClient StreamClientFunc, grpcO
 			case codes.DeadlineExceeded:
 				s.telemetry.Logger.Debug("max stream lifetime reached",
 					zap.Uint32("code", uint32(status.Code())))
-					zap.String("message", status.Message())
+				zap.String("message", status.Message())
 			default:
 				s.telemetry.Logger.Error("arrow stream unknown",
 					zap.Uint32("code", uint32(status.Code())),
