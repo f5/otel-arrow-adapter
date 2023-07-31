@@ -118,7 +118,7 @@ func NewExporter(
 // Start creates the background context used by all streams and starts
 // a stream controller, which initializes the initial set of streams.
 func (e *Exporter) Start(ctx context.Context) error {
-	ctx, cancel := context.WithTimeout(ctx, e.maxStreamLifetime)
+	ctx, cancel := context.WithCancel(ctx)
 
 	e.cancel = cancel
 	e.wg.Add(1)
@@ -180,6 +180,7 @@ func (e *Exporter) runArrowStream(ctx context.Context) {
 	producer := e.newProducer()
 
 	stream := newStream(producer, e.ready, e.telemetry, e.perRPCCredentials)
+	stream.maxStreamLifetime = e.maxStreamLifetime
 
 	defer func() {
 		if err := producer.Close(); err != nil {

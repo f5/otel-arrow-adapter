@@ -11,6 +11,7 @@ import (
 	"io"
 	"strings"
 	"sync"
+	"time"
 
 	arrowpb "github.com/f5/otel-arrow-adapter/api/experimental/arrow/v1"
 	arrowRecord "github.com/f5/otel-arrow-adapter/pkg/otel/arrow_record"
@@ -31,6 +32,12 @@ import (
 
 // Stream is 1:1 with gRPC stream.
 type Stream struct {
+	// maxStreamLifetime is the max timeout before stream
+	// should be closed on the client side. This ensures a
+	// graceful shutdown before max_connection_age is reached
+	// on the server side.
+	maxStreamLifetime time.Duration
+
 	// producer is exclusive to the holder of the stream.
 	producer arrowRecord.ProducerAPI
 
@@ -57,6 +64,8 @@ type Stream struct {
 
 	// waiters is the response channel for each active batch.
 	waiters map[int64]chan error
+
+	closed chan int
 }
 
 // writeItem is passed from the sender (a pipeline consumer) to the
@@ -99,17 +108,14 @@ func (s *Stream) setBatchChannel(batchID int64, errCh chan error) {
 func (s *Stream) logStreamError(err error) {
 	isEOF := errors.Is(err, io.EOF)
 	isCanceled := errors.Is(err, context.Canceled)
-	isDeadlineExceeded := errors.Is(err, context.DeadlineExceeded)
 
 	switch {
-	case !isEOF && !isCanceled && !isDeadlineExceeded:
+	case !isEOF && !isCanceled:
 		s.telemetry.Logger.Error("arrow stream error", zap.Error(err))
 	case isEOF:
 		s.telemetry.Logger.Debug("arrow stream end")
 	case isCanceled:
 		s.telemetry.Logger.Debug("arrow stream canceled")
-	case isDeadlineExceeded:
-		s.telemetry.Logger.Debug("arrow stream deadline exceeded")
 	}
 }
 
@@ -152,15 +158,17 @@ func (s *Stream) run(bgctx context.Context, streamClient StreamClientFunc, grpcO
 	ww.Add(1)
 	go func() {
 		defer ww.Done()
-		defer cancel()
 		writeErr = s.write(ctx)
+		if writeErr != nil {
+			cancel()
+		}
 	}()
 
 	// the result from read() is processed after cancel and wait,
 	// so we can set s.client = nil in case of a delayed Unimplemented.
 	err = s.read(ctx)
 
-	// Wait for the writer to ensure that all waiters are known.
+	// Wait for the writer to ensure that all waiters are known
 	cancel()
 	ww.Wait()
 
@@ -205,7 +213,7 @@ func (s *Stream) run(bgctx context.Context, streamClient StreamClientFunc, grpcO
 				// production); in both cases "NO_ERROR" is the key
 				// signifier.
 				if strings.Contains(status.Message(), "NO_ERROR") {
-					s.telemetry.Logger.Debug("arrow stream shutdown")
+					s.telemetry.Logger.Info("arrow stream shutdown")
 				} else {
 					s.telemetry.Logger.Error("arrow stream unavailable",
 						zap.String("message", status.Message()),
@@ -226,14 +234,10 @@ func (s *Stream) run(bgctx context.Context, streamClient StreamClientFunc, grpcO
 					// reset the writeErr so it doesn't print below.
 					writeErr = nil
 				} else {
-					s.telemetry.Logger.Error("arrow stream canceled",
+					s.telemetry.Logger.Info("arrow stream canceled",
 						zap.String("message", status.Message()),
 					)
 				}
-			case codes.DeadlineExceeded:
-				s.telemetry.Logger.Debug("max stream lifetime reached",
-					zap.Uint32("code", uint32(status.Code())))
-				zap.String("message", status.Message())
 			default:
 				s.telemetry.Logger.Error("arrow stream unknown",
 					zap.Uint32("code", uint32(status.Code())),
@@ -264,6 +268,8 @@ func (s *Stream) write(ctx context.Context) error {
 	var hdrsBuf bytes.Buffer
 	hdrsEnc := hpack.NewEncoder(&hdrsBuf)
 
+	timer := time.NewTimer(s.maxStreamLifetime)
+
 	for {
 		// Note: this can't block b/c stream has capacity &
 		// individual streams shut down synchronously.
@@ -272,17 +278,22 @@ func (s *Stream) write(ctx context.Context) error {
 		// this can block, and if the context is canceled we
 		// wait for the reader to find this stream.
 		var wri writeItem
+		var ok bool
 		select {
-		case wri = <-s.toWrite:
+		case <-timer.C:
+			s.prioritizer.removeReady(s)
+			s.client.CloseSend()
+			return nil
+		case wri, ok = <-s.toWrite:
+			// channel is closed
+			if !ok {
+				return nil
+			}
 		case <-ctx.Done():
 			// Because we did not <-stream.toWrite, there
 			// is a potential sender race since the stream
 			// is currently in the ready set.
 			s.prioritizer.removeReady(s)
-			// err := s.client.CloseSend()
-			// if err != nil {
-			// 	return err
-			// }
 			return ctx.Err()
 		}
 		// Note: For the two return statements below there is no potential
@@ -336,8 +347,15 @@ func (s *Stream) read(_ context.Context) error {
 	// cancel a call to Recv() but the call to processBatchStatus
 	// is non-blocking.
 	for {
+		// Note: a dead stream error is potentially possible if the client
+		// closes the send direction of the stream and enough time elapses.
+		//  return a dead stream error.
 		resp, err := s.client.Recv()
 		if err != nil {
+			// Once the send direction of stream is closed the server will return EOF
+			if strings.Contains(err.Error(), "EOF") {
+				return nil
+			}
 			// Note: do not wrap, contains a Status.
 			return err
 		}
@@ -345,6 +363,7 @@ func (s *Stream) read(_ context.Context) error {
 		if err = s.processBatchStatus(resp); err != nil {
 			return fmt.Errorf("process: %w", err)
 		}
+
 	}
 }
 

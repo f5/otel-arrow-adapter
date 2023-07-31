@@ -5,8 +5,8 @@ receivers:
         endpoint: 127.0.0.1:4000
         keepalive:
           server_parameters:
-            max_connection_age: 6s
-            max_connection_age_grace: 6s
+            max_connection_age: 10s
+            max_connection_age_grace: 10s
       arrow:
         disabled: false
   otlp:
@@ -24,7 +24,7 @@ exporters:
     arrow:
       disabled: false
       num_streams: 1
-      max_stream_lifetime: 10s
+      max_stream_lifetime: 5s
     retry_on_failure:
       enabled: false
     sending_queue:
