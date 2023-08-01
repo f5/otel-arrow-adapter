@@ -102,8 +102,8 @@ func TestArrowSettingsValidate(t *testing.T) {
 
 func TestDefaultSettingsValid(t *testing.T) {
 	cfg := createDefaultConfig()
-	// this must always be set by the user and config
-	// validation checks that a value is set
+	// this must be set by the user and config
+	// validation always checks that a value is set.
 	cfg.(*Config).Arrow.MaxStreamLifetime = 2 * time.Second
 	require.NoError(t, cfg.(*Config).Validate())
 

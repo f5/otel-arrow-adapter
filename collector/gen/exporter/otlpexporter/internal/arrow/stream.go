@@ -64,8 +64,6 @@ type Stream struct {
 
 	// waiters is the response channel for each active batch.
 	waiters map[int64]chan error
-
-	closed chan int
 }
 
 // writeItem is passed from the sender (a pipeline consumer) to the
@@ -168,7 +166,7 @@ func (s *Stream) run(bgctx context.Context, streamClient StreamClientFunc, grpcO
 	// so we can set s.client = nil in case of a delayed Unimplemented.
 	err = s.read(ctx)
 
-	// Wait for the writer to ensure that all waiters are known
+	// Wait for the writer to ensure that all waiters are known.
 	cancel()
 	ww.Wait()
 
@@ -234,7 +232,7 @@ func (s *Stream) run(bgctx context.Context, streamClient StreamClientFunc, grpcO
 					// reset the writeErr so it doesn't print below.
 					writeErr = nil
 				} else {
-					s.telemetry.Logger.Info("arrow stream canceled",
+					s.telemetry.Logger.Error("arrow stream canceled",
 						zap.String("message", status.Message()),
 					)
 				}
@@ -347,12 +345,12 @@ func (s *Stream) read(_ context.Context) error {
 	// cancel a call to Recv() but the call to processBatchStatus
 	// is non-blocking.
 	for {
-		// Note: a dead stream error is potentially possible if the client
-		// closes the send direction of the stream and enough time elapses.
-		//  return a dead stream error.
+		// Note: a dead stream error might be possible if the client
+		// calls CloseSend() and is stuck waiting for a response from the server.
 		resp, err := s.client.Recv()
 		if err != nil {
-			// Once the send direction of stream is closed the server will return EOF
+			// Once the send direction of stream is closed the server should
+			// return an error that mentions an EOF.
 			if strings.Contains(err.Error(), "EOF") {
 				return nil
 			}
