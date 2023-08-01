@@ -30,7 +30,7 @@ import (
 	"go.opentelemetry.io/collector/pdata/ptrace"
 )
 
-const defaultMaxStreamLifetime = 10 * time.Second
+const defaultMaxStreamLifetime = 11 * time.Second
 type compareJSONTraces struct{ ptrace.Traces }
 type compareJSONMetrics struct{ pmetric.Metrics }
 type compareJSONLogs struct{ plog.Logs }
