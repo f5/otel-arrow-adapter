@@ -53,6 +53,7 @@ func newStreamTestCase(t *testing.T) *streamTestCase {
 	ctc.requestMetadataCall.AnyTimes().Return(nil, nil)
 
 	stream := newStream(producer, prio, ctc.telset, ctc.perRPCCredentials)
+	stream.maxStreamLifetime = 10 * time.Second
 
 	fromTracesCall := producer.EXPECT().BatchArrowRecordsFromTraces(gomock.Any()).Times(0)
 	fromMetricsCall := producer.EXPECT().BatchArrowRecordsFromMetrics(gomock.Any()).Times(0)
