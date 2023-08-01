@@ -31,6 +31,7 @@ exporters:
       enabled: false
   file/traces:
     path: ./recorded_traces.json
+    compression: zstd
     format: json
   file/metrics:
     path: ./recorded_metrics.json
@@ -51,9 +52,18 @@ processors:
 # list of processors below.
 service:
   pipelines:
+    # This pipeline generates trace data, obfuscates + batches the data, and
+    # send it to the otlp receiver of this same collector
     traces/generate:
       receivers: [generator]
+      processors: [obfuscation, batch]
       exporters: [otlp/arrow, logging]
+
     traces/loop:
       receivers: [otlp/loopback]
       exporters: [file/traces]
+
+    metrics:
+      receivers: [generator]
+      processors: [obfuscation, batch]
+      exporters: [file/metrics, logging]
