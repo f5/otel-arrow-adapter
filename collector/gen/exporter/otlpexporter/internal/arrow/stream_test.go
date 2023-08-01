@@ -12,6 +12,7 @@ import (
 	"time"
 
 	arrowpb "github.com/f5/otel-arrow-adapter/api/experimental/arrow/v1"
+	arrowpbmock "github.com/f5/otel-arrow-adapter/api/experimental/arrow/v1/mock"
 	arrowRecordMock "github.com/f5/otel-arrow-adapter/pkg/otel/arrow_record/mock"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
@@ -35,6 +36,7 @@ type streamTestCase struct {
 	fromTracesCall  *gomock.Call
 	fromMetricsCall *gomock.Call
 	fromLogsCall    *gomock.Call
+	closeSendCall   *gomock.Call
 	stream          *Stream
 	wait            sync.WaitGroup
 }
@@ -42,6 +44,7 @@ type streamTestCase struct {
 func newStreamTestCase(t *testing.T) *streamTestCase {
 	ctrl := gomock.NewController(t)
 	producer := arrowRecordMock.NewMockProducerAPI(ctrl)
+	pbclient := arrowpbmock.NewMockArrowStreamService_ArrowStreamClient(ctrl)
 
 	bg, cancel := context.WithCancel(context.Background())
 	prio := newStreamPrioritizer(bg, 1)
@@ -58,6 +61,7 @@ func newStreamTestCase(t *testing.T) *streamTestCase {
 	fromTracesCall := producer.EXPECT().BatchArrowRecordsFromTraces(gomock.Any()).Times(0)
 	fromMetricsCall := producer.EXPECT().BatchArrowRecordsFromMetrics(gomock.Any()).Times(0)
 	fromLogsCall := producer.EXPECT().BatchArrowRecordsFromLogs(gomock.Any()).Times(0)
+	closeSendCall := pbclient.EXPECT().CloseSend().AnyTimes().Return(nil)
 
 	return &streamTestCase{
 		commonTestCase:   ctc,
@@ -70,6 +74,7 @@ func newStreamTestCase(t *testing.T) *streamTestCase {
 		fromTracesCall:   fromTracesCall,
 		fromMetricsCall:  fromMetricsCall,
 		fromLogsCall:     fromLogsCall,
+		closeSendCall:    closeSendCall,
 	}
 }
 
@@ -117,6 +122,35 @@ func (tc *streamTestCase) connectTestStream(h testChannel) func(context.Context,
 // get returns the stream via the prioritizer it is registered with.
 func (tc *streamTestCase) get() *Stream {
 	return <-tc.prioritizer.readyChannel()
+}
+
+// TestStreamEncodeError verifies that exceeding the
+// max_stream_lifetime results in shutdown that
+// simply restarts the stream.
+func TestStreamGracefulShutdown(t *testing.T) {
+	tc := newStreamTestCase(t)
+	tc.stream.maxStreamLifetime = 1 * time.Nanosecond
+
+	// testErr := fmt.Errorf("test encode error")
+	tc.closeSendCall.Times(1).Return(nil)
+	tc.fromTracesCall.Times(1).Return(oneBatch, nil)
+
+	channel := newHealthyTestChannel()
+	tc.start(channel)
+	defer tc.cancelAndWaitForShutdown()
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+	defer wg.Wait()
+	go func() {
+		defer wg.Done()
+		<-channel.sent
+		channel.recv <- statusOKFor(1)
+	}()
+
+	err := tc.get().SendAndWait(tc.bgctx, twoTraces)
+	require.NoError(t, err)
+	require.True(t, errors.Is(err, ErrStreamRestarting))
 }
 
 // TestStreamEncodeError verifies that an encoder error in the sender
