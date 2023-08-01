@@ -351,7 +351,7 @@ func (s *Stream) read(_ context.Context) error {
 		if err != nil {
 			// Once the send direction of stream is closed the server should
 			// return an error that mentions an EOF.
-			if strings.Contains(err.Error(), "EOF") {
+			if status, ok := status.FromError(err); ok && status.Message() == "EOF" {
 				return nil
 			}
 			// Note: do not wrap, contains a Status.
