@@ -108,8 +108,9 @@ func (te TestEntropy) NewSingleResourceAttributes() []pcommon.Map {
 }
 
 func (te TestEntropy) NewStandardResourceAttributes() []pcommon.Map {
+	// 3 resources with attributes and 1 resource with no attributes
 	return []pcommon.Map{
-		pcommon.NewMap(),
+		pcommon.NewMap(), // No attributes
 		te.shuffleAttrs(
 			func(attrs Attrs) { attrs.PutStr("hostname", "host1.mydomain.com") },
 			func(attrs Attrs) { attrs.PutStr("ip", "192.168.0.1") },
@@ -137,6 +138,19 @@ func (te TestEntropy) NewStandardResourceAttributes() []pcommon.Map {
 	}
 }
 
+func (te TestEntropy) NewRandomResourceAttributes(count int) []pcommon.Map {
+	attrs := make([]pcommon.Map, count)
+
+	// empty attributes
+	attrs[0] = pcommon.NewMap()
+
+	// attributes with random values
+	for i := 1; i < count; i++ {
+		attrs[i] = te.RandomAttributes()
+	}
+	return attrs
+}
+
 func (te TestEntropy) NewSingleInstrumentationScopes() []pcommon.InstrumentationScope {
 	s1 := pcommon.NewInstrumentationScope()
 	s1.SetName("fake_generator")
@@ -156,7 +170,28 @@ func (te TestEntropy) NewStandardInstrumentationScopes() []pcommon.Instrumentati
 
 	empty := pcommon.NewInstrumentationScope()
 
+	// 2 instrumentation scopes and 1 empty
 	return []pcommon.InstrumentationScope{s1, s2, empty}
+}
+
+func (te TestEntropy) NewRandomInstrumentationScopes(count int) []pcommon.InstrumentationScope {
+	scopes := make([]pcommon.InstrumentationScope, count)
+
+	// empty scope
+	scopes[0] = pcommon.NewInstrumentationScope()
+
+	// scopes with random attributes
+	for i := 1; i < count; i++ {
+		scope := pcommon.NewInstrumentationScope()
+		scope.SetName("fake_generator")
+		scope.SetVersion(fmt.Sprintf("1.0.%d", i))
+		if i%2 == 0 {
+			te.RandomAttributes().CopyTo(scope.Attributes())
+		}
+		scopes[i] = scope
+	}
+
+	return scopes
 }
 
 func (te TestEntropy) NewStandardSpanEventAttributes() pcommon.Map {

@@ -228,7 +228,7 @@ func (b *TracesBuilder) Append(traces ptrace.Traces) error {
 			})
 		}
 		// Append the resource schema URL if exists
-		if err = b.rb.AppendWithID(resID, span.Resource, span.ResourceSchemaUrl, resAttrs); err != nil {
+		if err = b.rb.Append(resID, span.Resource, span.ResourceSchemaUrl); err != nil {
 			return werror.Wrap(err)
 		}
 
@@ -253,7 +253,7 @@ func (b *TracesBuilder) Append(traces ptrace.Traces) error {
 			})
 		}
 		// Append the scope name, version, and schema URL (if exists)
-		if err = b.scb.AppendWithAttrsID(scopeID, span.Scope, scopeAttrs); err != nil {
+		if err = b.scb.Append(scopeID, span.Scope); err != nil {
 			return werror.Wrap(err)
 		}
 		b.sschb.AppendNonEmpty(span.ScopeSchemaUrl)

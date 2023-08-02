@@ -199,7 +199,7 @@ func (b *MetricsBuilder) Append(metrics pmetric.Metrics) error {
 			})
 		}
 		// Append the resource schema URL if exists
-		if err = b.rb.AppendWithID(resID, metric.Resource, metric.ResourceSchemaUrl, resAttrs); err != nil {
+		if err = b.rb.Append(resID, metric.Resource, metric.ResourceSchemaUrl); err != nil {
 			return werror.Wrap(err)
 		}
 
@@ -224,7 +224,7 @@ func (b *MetricsBuilder) Append(metrics pmetric.Metrics) error {
 			})
 		}
 		// Append the scope name, version, and schema URL (if exists)
-		if err = b.scb.AppendWithAttrsID(scopeID, metric.Scope, scopeAttrs); err != nil {
+		if err = b.scb.Append(scopeID, metric.Scope); err != nil {
 			return werror.Wrap(err)
 		}
 		b.sschb.AppendNonEmpty(metric.ScopeSchemaUrl)

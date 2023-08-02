@@ -246,7 +246,7 @@ func (b *LogsBuilder) Append(logs plog.Logs) (err error) {
 			})
 		}
 		// Append the resource schema URL if exists
-		if err = b.rb.AppendWithID(resID, logRec.ResScope.Resource, logRec.ResScope.ResourceSchemaUrl, resAttrs); err != nil {
+		if err = b.rb.Append(resID, logRec.ResScope.Resource, logRec.ResScope.ResourceSchemaUrl); err != nil {
 			return werror.Wrap(err)
 		}
 
@@ -271,7 +271,7 @@ func (b *LogsBuilder) Append(logs plog.Logs) (err error) {
 			})
 		}
 		// Append the scope name, version, and schema URL (if exists)
-		if err = b.scb.AppendWithAttrsID(scopeID, logRec.ResScope.Scope, scopeAttrs); err != nil {
+		if err = b.scb.Append(scopeID, logRec.ResScope.Scope); err != nil {
 			return werror.Wrap(err)
 		}
 		b.sschb.AppendNonEmpty(logRec.ResScope.ScopeSchemaUrl)
