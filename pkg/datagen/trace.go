@@ -72,18 +72,24 @@ func (tg *TraceGenerator) GenerateRandomTraces(batchSize int, collectInterval ti
 	result := ptrace.NewTraces()
 
 	resourceSpans := result.ResourceSpans().AppendEmpty()
-	pick(tg.TestEntropy, tg.resourceAttributes).CopyTo(resourceSpans.Resource().Attributes())
+	if tg.GenBool() {
+		pick(tg.TestEntropy, tg.resourceAttributes).CopyTo(resourceSpans.Resource().Attributes())
+	}
 
-	scopeSpans := resourceSpans.ScopeSpans().AppendEmpty()
-	pick(tg.TestEntropy, tg.instrumentationScopes).CopyTo(scopeSpans.Scope())
+	for i := 0; i < 2; i++ {
+		scopeSpans := resourceSpans.ScopeSpans().AppendEmpty()
+		if tg.GenBool() {
+			pick(tg.TestEntropy, tg.instrumentationScopes).CopyTo(scopeSpans.Scope())
+		}
 
-	resourceSpans.SetSchemaUrl("https://opentelemetry.io/schemas/1.0.0")
+		resourceSpans.SetSchemaUrl("https://opentelemetry.io/schemas/1.0.0")
 
-	spans := scopeSpans.Spans()
+		spans := scopeSpans.Spans()
 
-	for i := 0; i < batchSize; i++ {
-		tg.AdvanceTime(collectInterval)
-		tg.AddRandomSpansTo(spans)
+		for i := 0; i < batchSize; i++ {
+			tg.AdvanceTime(collectInterval)
+			tg.AddRandomSpansTo(spans)
+		}
 	}
 
 	return result

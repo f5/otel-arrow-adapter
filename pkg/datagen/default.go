@@ -109,6 +109,7 @@ func (te TestEntropy) NewSingleResourceAttributes() []pcommon.Map {
 
 func (te TestEntropy) NewStandardResourceAttributes() []pcommon.Map {
 	return []pcommon.Map{
+		pcommon.NewMap(),
 		te.shuffleAttrs(
 			func(attrs Attrs) { attrs.PutStr("hostname", "host1.mydomain.com") },
 			func(attrs Attrs) { attrs.PutStr("ip", "192.168.0.1") },
@@ -153,7 +154,9 @@ func (te TestEntropy) NewStandardInstrumentationScopes() []pcommon.Instrumentati
 	s2.SetName("fake_generator")
 	s2.SetVersion("1.0.1")
 
-	return []pcommon.InstrumentationScope{s1, s2}
+	empty := pcommon.NewInstrumentationScope()
+
+	return []pcommon.InstrumentationScope{s1, s2, empty}
 }
 
 func (te TestEntropy) NewStandardSpanEventAttributes() pcommon.Map {

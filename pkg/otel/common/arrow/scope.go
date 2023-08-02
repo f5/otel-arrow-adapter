@@ -92,7 +92,7 @@ func (b *ScopeBuilder) Append(scope *pcommon.InstrumentationScope, attrsAccu *At
 	})
 }
 
-func (b *ScopeBuilder) AppendWithAttrsID(ID int64, scope pcommon.InstrumentationScope) error {
+func (b *ScopeBuilder) AppendWithAttrsID(ID int64, scope pcommon.InstrumentationScope, scopeAttrs pcommon.Map) error {
 	if b.released {
 		return werror.Wrap(ErrBuilderAlreadyReleased)
 	}
@@ -101,10 +101,10 @@ func (b *ScopeBuilder) AppendWithAttrsID(ID int64, scope pcommon.Instrumentation
 		b.nb.AppendNonEmpty(scope.Name())
 		b.vb.AppendNonEmpty(scope.Version())
 
-		if ID >= 0 {
+		if scopeAttrs.Len() > 0 {
 			b.aib.Append(uint16(ID))
 		} else {
-			// ID == -1 when the attributes are empty.
+			// No attributes, so no need to store the scope ID.
 			b.aib.AppendNull()
 		}
 

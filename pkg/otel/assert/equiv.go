@@ -68,6 +68,14 @@ func Equiv(t *testing.T, expected []json.Marshaler, actual []json.Marshaler) {
 		}
 	}
 	if len(missingExpectedVPaths) > 0 || len(missingActualVPaths) > 0 {
+		// To debug the difference between the expected and actual json objects,
+		// uncomment the following lines to print the expected and actual json
+		// objects.
+		expectedJSON, _ := json.MarshalIndent(expected, "", "  ")
+		println("expected json: " + string(expectedJSON))
+		actualJSON, _ := json.MarshalIndent(actual, "", "  ")
+		println("actual json: " + string(actualJSON))
+
 		assert.FailNow(t, "Traces are not equivalent")
 	}
 }
@@ -182,7 +190,6 @@ func exportAllVPaths(traces map[string]interface{}, currentVPath string, vPaths 
 		switch v := value.(type) {
 		case []interface{}:
 			for i := 0; i < len(v); i++ {
-				// TODO: this is an approximation that is good enough for now, medium-term we should compute the index key based on a signature of the non-array fields.
 				if vMap, ok := v[i].(map[string]interface{}); ok {
 					index := nonPositionalIndex(key, vMap)
 					if index != "_" {
@@ -229,16 +236,16 @@ func nonPositionalIndex(key string, vMap map[string]interface{}) string {
 			return sig(res)
 		}
 	case "scopeMetrics", "scopeLogs", "scopeSpans":
-		res, ok := vMap["scope"]
+		scope, ok := vMap["scope"]
 		if ok {
-			return sig(res)
+			return sig(scope)
 		}
 	case "events", "links":
 		return sig(vMap)
 	case "attributes":
 		return sig(vMap)
-		//case "spans":
-		//	return sig(vMap)
+	case "spans":
+		return sig(vMap)
 	}
 	return "_"
 }
@@ -300,10 +307,11 @@ func mapSig(vMap map[string]interface{}) string {
 		if count > 0 {
 			sigBuilder.WriteString(",")
 		}
+
+		// Special case for attributes, which are sorted by key.
 		if key == "attributes" {
 			attributes, ok := vMap[key].([]interface{})
 			if ok {
-				// Special case for attributes, which are sorted by key.
 				attrsSig, done := tryAttributesSig(attributes)
 				if done {
 					sigBuilder.WriteString("attributes=")
@@ -313,6 +321,23 @@ func mapSig(vMap map[string]interface{}) string {
 				}
 			}
 		}
+
+		// Special case for events and links, which are sorted by non-positional
+		// index.
+		if key == "events" || key == "links" {
+			items, ok := vMap[key].([]interface{})
+			if ok {
+				sig, done := itemsSig(key, items)
+				if done {
+					sigBuilder.WriteString(key)
+					sigBuilder.WriteString("=")
+					sigBuilder.WriteString(sig)
+					count++
+					continue
+				}
+			}
+		}
+
 		sigBuilder.WriteString(fmt.Sprintf("%s=%s", key, sig(vMap[key])))
 		count++
 	}
@@ -366,6 +391,37 @@ func tryAttributesSig(attrs []interface{}) (string, bool) {
 	sigBuilder.WriteString("}")
 
 	return sigBuilder.String(), true
+}
+
+func itemsSig(key string, items []interface{}) (string, bool) {
+	// Convert the attributes to a slice of otelAttribute structs.
+	nonPositionalIndices := make([]string, 0, len(items))
+	for _, item := range items {
+		// Convert the item to a map[string]interface{}. Events and links are
+		// represented as a slice of map[string]interface{}.
+		structuredItem, ok := item.(map[string]interface{})
+		if !ok {
+			return "", false
+		}
+		npi := nonPositionalIndex(key, structuredItem)
+		nonPositionalIndices = append(nonPositionalIndices, npi)
+	}
+
+	// Sort the items by non-positional index.
+	sort.Slice(nonPositionalIndices, func(i, j int) bool {
+		return nonPositionalIndices[i] < nonPositionalIndices[j]
+	})
+
+	var sigBuilder strings.Builder
+
+	for i, npi := range nonPositionalIndices {
+		if i > 0 {
+			sigBuilder.WriteString(",")
+		}
+		sigBuilder.WriteString(npi)
+	}
+
+	return md5Hash(sigBuilder.String()), true
 }
 
 func jsonify(marshaler []json.Marshaler) ([]map[string]interface{}, error) {

@@ -105,16 +105,16 @@ func (b *ResourceBuilder) Append(resource *pcommon.Resource, attrsAccu *Attribut
 	})
 }
 
-func (b *ResourceBuilder) AppendWithID(attrsID int64, resource pcommon.Resource, schemaUrl string) error {
+func (b *ResourceBuilder) AppendWithID(resID int64, resource pcommon.Resource, schemaUrl string, resAttrs pcommon.Map) error {
 	if b.released {
 		return werror.Wrap(ErrBuilderAlreadyReleased)
 	}
 
 	return b.builder.Append(resource, func() error {
-		if attrsID >= 0 {
-			b.aib.Append(uint16(attrsID))
+		if resAttrs.Len() > 0 {
+			b.aib.Append(uint16(resID))
 		} else {
-			// ID == -1 when the attributes are empty.
+			// No attributes ==> no need to store the resource ID.
 			b.aib.AppendNull()
 		}
 		b.schb.AppendNonEmpty(schemaUrl)
