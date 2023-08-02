@@ -75,7 +75,7 @@ func newStreamTestCase(t *testing.T) *streamTestCase {
 
 // start runs a test stream according to the behavior of testChannel.
 func (tc *streamTestCase) start(channel testChannel) {
-	tc.streamCall.AnyTimes().DoAndReturn(tc.connectTestStream(channel))
+	tc.streamCall.Times(1).DoAndReturn(tc.connectTestStream(channel))
 
 	tc.wait.Add(1)
 
