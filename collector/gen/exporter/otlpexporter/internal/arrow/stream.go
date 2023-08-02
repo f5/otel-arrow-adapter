@@ -346,13 +346,15 @@ func (s *Stream) read(_ context.Context) error {
 	// cancel a call to Recv() but the call to processBatchStatus
 	// is non-blocking.
 	for {
-		// Note: a dead stream error might be possible if the client
-		// calls CloseSend() and is stuck waiting for a response from the server.
+		// Note: if the client has called CloseSend() and is waiting for a response from the server.
+		// And if the server fails for some reason, we will wait until some other condition, such as a context
+		// timeout.  TODO: possibly, improve to wait for no outstanding requests and then stop reading.
 		resp, err := s.client.Recv()
 		if err != nil {
-			// Once the send direction of stream is closed the server should
-			// return an error that mentions an EOF.
-			if status, ok := status.FromError(err); ok && status.Message() == "EOF" {
+			// Once the send direction of stream is closed the server should return
+			// an error that mentions an EOF. The expected error code is codes.Unknown.
+			status, ok := status.FromError(err)
+			if ok && status.Message() == "EOF" && status.Code() == codes.Unknown {
 				return nil
 			}
 			// Note: do not wrap, contains a Status.
