@@ -248,11 +248,19 @@ func (o *obfuscation) Shutdown(context.Context) error {
 }
 
 func (o *obfuscation) encryptStringToBytes(source string) []byte {
-	obfuscated, _ := o.encrypt.Encrypt(source)
+	obfuscated, err := o.encrypt.Encrypt(source)
+	if err != nil {
+		o.logger.Error("failed to obfuscate bytes, returning original", zap.Error(err))
+		return []byte(source)
+	}
 	return obfuscated.Bytes()
 }
 
 func (o *obfuscation) encryptString(source string) string {
-	obfuscated, _ := o.encrypt.Encrypt(source)
+	obfuscated, err := o.encrypt.Encrypt(source)
+	if err != nil {
+		o.logger.Error("failed to obfuscate string, returning original", zap.Error(err))
+		return source
+	}
 	return obfuscated.String(true)
 }
