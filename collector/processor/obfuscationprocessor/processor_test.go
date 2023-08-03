@@ -20,9 +20,11 @@ var (
 	spanAttrKey      = "span-attr"
 	spanEventAttrKey = "span-event-attr"
 	spanLinkAttrKey  = "span-link-attr"
+	byteIDKey        = "byte-id"
 
 	resAttrVal   = "resource-attr-val-1"
 	scopeAttrVal = "scope-attr-val-1"
+	byteIDVal = []byte("abcdefg")
 
 	// span specific attrs
 	spanAttrVal  = "span-attr-val-1"
@@ -41,7 +43,7 @@ var (
 )
 
 // returns a map that has a more complicated structure to obfuscate
-func newMap() pcommon.Map {
+func newFilledMap() pcommon.Map {
 	kv := pcommon.NewMap()
 
 	mp := kv.PutEmptyMap("baz")
@@ -49,13 +51,13 @@ func newMap() pcommon.Map {
 	elt1 := slc1.AppendEmpty()
 	elt1.SetStr("fooval1")
 	elt2 := slc1.AppendEmpty()
-	elt2.SetStr("fooval2")
+	elt2.SetEmptyBytes().FromRaw([]byte("fooval2"))
 
 	slc2 := mp.PutEmptySlice("bar")
 	elt3 := slc2.AppendEmpty()
 	elt3.SetStr("barval1")
 	elt4 := slc2.AppendEmpty()
-	elt4.SetStr("barval2")
+	elt4.SetEmptyBytes().FromRaw([]byte("fooval2"))
 
 	return kv
 }
@@ -72,8 +74,9 @@ func setupSpanWithAttrs() ptrace.Traces {
 	span := ss.Spans().AppendEmpty()
 	span.SetName("operationA")
 	span.Attributes().PutStr("span-attr", spanAttrVal)
+	span.Attributes().PutEmptyBytes(byteIDKey).FromRaw(byteIDVal)
 	mp := span.Attributes().PutEmptyMap("complex-span-attr")
-	newMap().CopyTo(mp)
+	newFilledMap().CopyTo(mp)
 
 	link0 := span.Links().AppendEmpty()
 	link0.Attributes().PutStr("span-link-attr", linkAttrVal)
@@ -107,6 +110,9 @@ func validateTraceAttrs(t *testing.T, expected map[string]pair, traces ptrace.Tr
 				val2, ok := span.Attributes().Get(expected["complex-span-attr"].key)
 				assert.True(t, ok)
 				assert.Equal(t, expected["complex-span-attr"].val.AsString(), val2.AsString())
+				val3, ok := span.Attributes().Get(expected["byte-id"].key)
+				assert.True(t, ok)
+				assert.Equal(t, expected["byte-id"].val.AsString(), val3.AsString())
 
 				for h := 0; h < span.Events().Len(); h++ {
 					// validate event attributes
@@ -139,6 +145,10 @@ func cryptPair(o *obfuscation, k string, v pcommon.Value) pair {
 	case pcommon.ValueTypeStr:
 		ov, _ := o.encrypt.Encrypt(v.Str())
 		v.SetStr(ov.String(true))
+	case pcommon.ValueTypeBytes:
+		obf := o.encryptStringToBytes(string(v.Bytes().AsRaw()))
+		byteSlice := v.SetEmptyBytes()
+		byteSlice.FromRaw(obf)
 	case pcommon.ValueTypeSlice:
 		o.processSliceValue(context.Background(), v.Slice())
 	case pcommon.ValueTypeMap:
@@ -159,7 +169,9 @@ func TestProcessTraces(t *testing.T) {
 		encryptAll: true,
 	}
 	csVal := pcommon.NewValueMap()
-	newMap().CopyTo(csVal.SetEmptyMap())
+	newFilledMap().CopyTo(csVal.SetEmptyMap())
+	bVal := pcommon.NewValueBytes()
+	bVal.SetEmptyBytes().FromRaw(byteIDVal)
 
 	expected := map[string]pair{
 		"resource-attr":     cryptPair(processor, resAttrKey, pcommon.NewValueStr(resAttrVal)),
@@ -168,6 +180,7 @@ func TestProcessTraces(t *testing.T) {
 		"span-link-attr":    cryptPair(processor, spanLinkAttrKey, pcommon.NewValueStr(linkAttrVal)),
 		"span-event-attr":   cryptPair(processor, spanEventAttrKey, pcommon.NewValueStr(eventAttrVal)),
 		"complex-span-attr": cryptPair(processor, "complex-span-attr", csVal),
+		"byte-id":           cryptPair(processor, "byte-id", bVal),
 	}
 
 	processedTraces, err := processor.processTraces(context.Background(), traces)
@@ -188,36 +201,41 @@ func setupMetricsWithAttrs() pmetric.Metrics {
 	gauge := metric.SetEmptyGauge()
 	gdp := gauge.DataPoints().AppendEmpty()
 	gdp.Attributes().PutStr("gauge-attr", gaugeAttrVal)
+	gdp.Attributes().PutEmptyBytes(byteIDKey).FromRaw(byteIDVal)
 	mp1 := gdp.Attributes().PutEmptyMap("complex-metric-attr")
-	newMap().CopyTo(mp1)
+	newFilledMap().CopyTo(mp1)
 
 	metric = sm.Metrics().AppendEmpty()
 	sum := metric.SetEmptySum()
 	sdp := sum.DataPoints().AppendEmpty()
 	sdp.Attributes().PutStr("sum-attr", sumAttrVal)
+	sdp.Attributes().PutEmptyBytes(byteIDKey).FromRaw(byteIDVal)
 	mp2 := sdp.Attributes().PutEmptyMap("complex-metric-attr")
-	newMap().CopyTo(mp2)
+	newFilledMap().CopyTo(mp2)
 
 	metric = sm.Metrics().AppendEmpty()
 	hist := metric.SetEmptyHistogram()
 	hdp := hist.DataPoints().AppendEmpty()
 	hdp.Attributes().PutStr("histogram-attr", histAttrVal)
+	hdp.Attributes().PutEmptyBytes(byteIDKey).FromRaw(byteIDVal)
 	mp3 := hdp.Attributes().PutEmptyMap("complex-metric-attr")
-	newMap().CopyTo(mp3)
+	newFilledMap().CopyTo(mp3)
 
 	metric = sm.Metrics().AppendEmpty()
 	eHist := metric.SetEmptyExponentialHistogram()
 	ehdp := eHist.DataPoints().AppendEmpty()
 	ehdp.Attributes().PutStr("exp-histogram-attr", eHistAttrVal)
+	ehdp.Attributes().PutEmptyBytes(byteIDKey).FromRaw(byteIDVal)
 	mp4 := ehdp.Attributes().PutEmptyMap("complex-metric-attr")
-	newMap().CopyTo(mp4)
+	newFilledMap().CopyTo(mp4)
 
 	metric = sm.Metrics().AppendEmpty()
 	summary := metric.SetEmptySummary()
 	smdp := summary.DataPoints().AppendEmpty()
 	smdp.Attributes().PutStr("summary-attr", summaryAttrVal)
+	smdp.Attributes().PutEmptyBytes(byteIDKey).FromRaw(byteIDVal)
 	mp5 := smdp.Attributes().PutEmptyMap("complex-metric-attr")
-	newMap().CopyTo(mp5)
+	newFilledMap().CopyTo(mp5)
 
 	return md
 }
@@ -248,9 +266,7 @@ func validateMetricsAttrs(t *testing.T, expected map[string]pair, metrics pmetri
 						val, ok := dp.Attributes().Get(expected["gauge-attr"].key)
 						assert.True(t, ok)
 						assert.Equal(t, expected["gauge-attr"].val.AsString(), val.AsString())
-						val2, ok := dp.Attributes().Get(expected["complex-metric-attr"].key)
-						assert.True(t, ok)
-						assert.Equal(t, expected["complex-metric-attr"].val.AsString(), val2.AsString())
+						assertCommonMetricAttrs(t, expected, dp.Attributes())
 					}
 
 				case pmetric.MetricTypeSum:
@@ -260,9 +276,7 @@ func validateMetricsAttrs(t *testing.T, expected map[string]pair, metrics pmetri
 						val, ok := dp.Attributes().Get(expected["sum-attr"].key)
 						assert.True(t, ok)
 						assert.Equal(t, expected["sum-attr"].val.AsString(), val.AsString())
-						val2, ok := dp.Attributes().Get(expected["complex-metric-attr"].key)
-						assert.True(t, ok)
-						assert.Equal(t, expected["complex-metric-attr"].val.AsString(), val2.AsString())
+						assertCommonMetricAttrs(t, expected, dp.Attributes())
 					}
 
 				case pmetric.MetricTypeHistogram:
@@ -272,9 +286,7 @@ func validateMetricsAttrs(t *testing.T, expected map[string]pair, metrics pmetri
 						val, ok := dp.Attributes().Get(expected["histogram-attr"].key)
 						assert.True(t, ok)
 						assert.Equal(t, expected["histogram-attr"].val.AsString(), val.AsString())
-						val2, ok := dp.Attributes().Get(expected["complex-metric-attr"].key)
-						assert.True(t, ok)
-						assert.Equal(t, expected["complex-metric-attr"].val.AsString(), val2.AsString())
+						assertCommonMetricAttrs(t, expected, dp.Attributes())
 					}
 
 				case pmetric.MetricTypeExponentialHistogram:
@@ -284,9 +296,7 @@ func validateMetricsAttrs(t *testing.T, expected map[string]pair, metrics pmetri
 						val, ok := dp.Attributes().Get(expected["exp-histogram-attr"].key)
 						assert.True(t, ok)
 						assert.Equal(t, expected["exp-histogram-attr"].val.AsString(), val.AsString())
-						val2, ok := dp.Attributes().Get(expected["complex-metric-attr"].key)
-						assert.True(t, ok)
-						assert.Equal(t, expected["complex-metric-attr"].val.AsString(), val2.AsString())
+						assertCommonMetricAttrs(t, expected, dp.Attributes())
 					}
 
 				case pmetric.MetricTypeSummary:
@@ -296,14 +306,21 @@ func validateMetricsAttrs(t *testing.T, expected map[string]pair, metrics pmetri
 						val, ok := dp.Attributes().Get(expected["summary-attr"].key)
 						assert.True(t, ok)
 						assert.Equal(t, expected["summary-attr"].val.AsString(), val.AsString())
-						val2, ok := dp.Attributes().Get(expected["complex-metric-attr"].key)
-						assert.True(t, ok)
-						assert.Equal(t, expected["complex-metric-attr"].val.AsString(), val2.AsString())
+						assertCommonMetricAttrs(t, expected, dp.Attributes())
 					}
 				}
 			}
 		}
 	}
+}
+
+func assertCommonMetricAttrs(t *testing.T, expected map[string]pair, attrs pcommon.Map) {
+	val2, ok := attrs.Get(expected["complex-metric-attr"].key)
+	assert.True(t, ok)
+	assert.Equal(t, expected["complex-metric-attr"].val.AsString(), val2.AsString())
+	val3, ok := attrs.Get(expected["byte-id"].key)
+	assert.True(t, ok)
+	assert.Equal(t, expected["byte-id"].val.AsString(), val3.AsString())
 }
 
 func TestProcessMetrics(t *testing.T) {
@@ -314,7 +331,9 @@ func TestProcessMetrics(t *testing.T) {
 		encryptAll: true,
 	}
 	cmVal := pcommon.NewValueMap()
-	newMap().CopyTo(cmVal.SetEmptyMap())
+	newFilledMap().CopyTo(cmVal.SetEmptyMap())
+	bVal := pcommon.NewValueBytes()
+	bVal.SetEmptyBytes().FromRaw(byteIDVal)
 
 	expected := map[string]pair{
 		"resource-attr":       cryptPair(processor, resAttrKey, pcommon.NewValueStr(resAttrVal)),
@@ -325,6 +344,7 @@ func TestProcessMetrics(t *testing.T) {
 		"exp-histogram-attr":  cryptPair(processor, "exp-histogram-attr", pcommon.NewValueStr(eHistAttrVal)),
 		"summary-attr":        cryptPair(processor, "summary-attr", pcommon.NewValueStr(summaryAttrVal)),
 		"complex-metric-attr": cryptPair(processor, "complex-metric-attr", cmVal),
+		"byte-id":             cryptPair(processor, "byte-id", bVal),
 	}
 
 	processedMetrics, err := processor.processMetrics(context.Background(), metrics)
@@ -343,8 +363,9 @@ func setupLogsWithAttrs() plog.Logs {
 
 	log := sl.LogRecords().AppendEmpty()
 	log.Attributes().PutStr("log-attr", logAttrVal)
+	log.Attributes().PutEmptyBytes(byteIDKey).FromRaw(byteIDVal)
 	mp := log.Attributes().PutEmptyMap("complex-log-attr")
-	newMap().CopyTo(mp)
+	newFilledMap().CopyTo(mp)
 
 	return ld
 }
@@ -374,6 +395,10 @@ func validateLogsAttrs(t *testing.T, expected map[string]pair, logs plog.Logs) {
 				val2, ok := log.Attributes().Get(expected["complex-log-attr"].key)
 				assert.True(t, ok)
 				assert.Equal(t, expected["complex-log-attr"].val.AsString(), val2.AsString())
+
+				val3, ok := log.Attributes().Get(expected["byte-id"].key)
+				assert.True(t, ok)
+				assert.Equal(t, expected["byte-id"].val.AsString(), val3.AsString())
 			}
 		}
 	}
@@ -387,13 +412,16 @@ func TestProcessLogs(t *testing.T) {
 		encryptAll: true,
 	}
 	clVal := pcommon.NewValueMap()
-	newMap().CopyTo(clVal.SetEmptyMap())
+	newFilledMap().CopyTo(clVal.SetEmptyMap())
+	bVal := pcommon.NewValueBytes()
+	bVal.SetEmptyBytes().FromRaw(byteIDVal)
 
 	expected := map[string]pair{
 		"resource-attr":    cryptPair(processor, resAttrKey, pcommon.NewValueStr(resAttrVal)),
 		"scope-attr":       cryptPair(processor, scopeAttrKey, pcommon.NewValueStr(scopeAttrVal)),
 		"log-attr":         cryptPair(processor, "log-attr", pcommon.NewValueStr(logAttrVal)),
 		"complex-log-attr": cryptPair(processor, "complex-log-attr", clVal),
+		"byte-id":          cryptPair(processor, "byte-id", bVal),
 	}
 
 	processedLogs, err := processor.processLogs(context.Background(), logs)

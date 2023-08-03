@@ -175,6 +175,10 @@ func (o *obfuscation) processSliceValue(ctx context.Context, slice pcommon.Slice
 		switch val.Type() {
 		case pcommon.ValueTypeStr:
 			cpyVal.SetStr(o.encryptString(val.Str()))
+		case pcommon.ValueTypeBytes:
+			obf := o.encryptStringToBytes(string(val.Bytes().AsRaw()))
+			byteSlice := cpyVal.SetEmptyBytes()
+			byteSlice.FromRaw(obf)
 		case pcommon.ValueTypeSlice:
 			cpySlice := cpyVal.SetEmptySlice()
 			o.processSliceValue(ctx, val.Slice())
@@ -208,6 +212,10 @@ func (o *obfuscation) processAttrs(ctx context.Context, attributes pcommon.Map) 
 		switch value.Type() {
 		case pcommon.ValueTypeStr:
 			cpy.PutStr(o.encryptString(k), o.encryptString(value.Str()))
+		case pcommon.ValueTypeBytes:
+			byteSlice := cpy.PutEmptyBytes(o.encryptString(k))
+			obf := o.encryptStringToBytes(string(value.Bytes().AsRaw()))
+			byteSlice.FromRaw(obf)
 		case pcommon.ValueTypeSlice:
 			slc := cpy.PutEmptySlice(o.encryptString(k))
 			o.processSliceValue(ctx, value.Slice())
@@ -237,6 +245,11 @@ func (o *obfuscation) Start(_ context.Context, _ component.Host) error {
 // Shutdown the obfuscation processor
 func (o *obfuscation) Shutdown(context.Context) error {
 	return nil
+}
+
+func (o *obfuscation) encryptStringToBytes(source string) []byte {
+	obfuscated, _ := o.encrypt.Encrypt(source)
+	return obfuscated.Bytes()
 }
 
 func (o *obfuscation) encryptString(source string) string {
