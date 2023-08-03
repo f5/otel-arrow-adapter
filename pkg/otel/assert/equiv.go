@@ -224,9 +224,9 @@ func exportAllVPaths(traces map[string]interface{}, currentVPath string, vPaths 
 	}
 }
 
-// nonPositionalIndex returns a string that can be used to identify:
-// - a resource,
-// - a scope,
+// nonPositionalIndex returns a string that can be used to identify: resource,
+// scope, event, link, attribute, span, metrics, dataPoints.
+//
 // Note: The string `_` is returned if the key is not supported.
 func nonPositionalIndex(key string, vMap map[string]interface{}) string {
 	switch key {
@@ -240,11 +240,12 @@ func nonPositionalIndex(key string, vMap map[string]interface{}) string {
 		if ok {
 			return sig(scope)
 		}
-	case "events", "links":
+	case "events", "links", "attributes", "spans", "quantileValues",
+		"filteredAttributes", "exemplars":
 		return sig(vMap)
-	case "attributes":
+	case "dataPoints":
 		return sig(vMap)
-	case "spans":
+	case "metrics":
 		return sig(vMap)
 	}
 	return "_"
@@ -308,8 +309,9 @@ func mapSig(vMap map[string]interface{}) string {
 			sigBuilder.WriteString(",")
 		}
 
-		// Special case for attributes, which are sorted by key.
-		if key == "attributes" {
+		// Special case for attributes (and filtered attributes), which are
+		// sorted by key.
+		if key == "attributes" || key == "filteredAttributes" {
 			attributes, ok := vMap[key].([]interface{})
 			if ok {
 				attrsSig, done := tryAttributesSig(attributes)
@@ -322,9 +324,9 @@ func mapSig(vMap map[string]interface{}) string {
 			}
 		}
 
-		// Special case for events and links, which are sorted by non-positional
-		// index.
-		if key == "events" || key == "links" {
+		// Special case for events, links, and exemplars, which are sorted by
+		// non-positional index.
+		if key == "events" || key == "links" || key == "exemplars" {
 			items, ok := vMap[key].([]interface{})
 			if ok {
 				sig, done := itemsSig(key, items)
