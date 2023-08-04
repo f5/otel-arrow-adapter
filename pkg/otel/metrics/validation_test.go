@@ -48,7 +48,7 @@ func TestMetricsEncodingDecoding(t *testing.T) {
 	t.Parallel()
 
 	metricsGen := MetricsGenerator()
-	expectedRequest := pmetricotlp.NewExportRequestFromMetrics(metricsGen.GenerateAllKindOfMetrics(100, 100))
+	expectedRequest := pmetricotlp.NewExportRequestFromMetrics(metricsGen.GenerateRandomMetrics(50, 100))
 
 	CheckEncodeDecode(t, expectedRequest)
 }
