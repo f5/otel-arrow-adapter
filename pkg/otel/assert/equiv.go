@@ -25,8 +25,41 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
+
+// Testing is an interface that makes `assert.Equiv` independent of the testing
+// framework. It is then possible to use `assert.Equiv` in contexts where the
+// testing framework is not available.
+type Testing interface {
+	Helper()
+	FailNow(failureMessage string, msgAndArgs ...interface{}) bool
+	NoError(err error, msgAndArgs ...interface{})
+	Equal(expected, actual interface{}, msgAndArgs ...interface{}) bool
+}
+
+type StdUnitTest struct {
+	t *testing.T
+}
+
+func NewStdUnitTest(t *testing.T) Testing {
+	return &StdUnitTest{t: t}
+}
+
+func (a *StdUnitTest) Helper() {
+	a.t.Helper()
+}
+
+func (a *StdUnitTest) FailNow(failureMessage string, msgAndArgs ...interface{}) bool {
+	return assert.FailNow(a.t, failureMessage, msgAndArgs...)
+}
+
+func (a *StdUnitTest) NoError(err error, msgAndArgs ...interface{}) {
+	assert.NoError(a.t, err, msgAndArgs...)
+}
+
+func (a *StdUnitTest) Equal(expected, actual interface{}, msgAndArgs ...interface{}) bool {
+	return assert.Equal(a.t, expected, actual, msgAndArgs...)
+}
 
 // Equiv asserts that two arrays of json.Marshaler are equivalent. Metrics, logs, and traces requests implement
 // json.Marshaler and are considered equivalent if they have the same set of vPaths. A vPath is a path to a value
@@ -41,15 +74,15 @@ import (
 // This concept of equivalence is useful for testing the conversion OTLP to/from OTLP Arrow as this conversion doesn't
 // necessarily preserve the structure of the original OTLP entity. Resource spans or scope spans can be split or merged
 // during the conversion if the semantic is preserved.
-func Equiv(t *testing.T, expected []json.Marshaler, actual []json.Marshaler) {
+func Equiv(t Testing, expected []json.Marshaler, actual []json.Marshaler) {
 	t.Helper()
 	expectedVPaths, err := vPaths(expected)
 	if err != nil {
-		assert.FailNow(t, "Failed to convert expected traces to canonical representation", err)
+		t.FailNow("Failed to convert expected traces to canonical representation", err)
 	}
 	actualVPaths, err := vPaths(actual)
 	if err != nil {
-		assert.FailNow(t, "Failed to convert actual traces to canonical representation", err)
+		t.FailNow("Failed to convert actual traces to canonical representation", err)
 	}
 
 	missingExpectedVPaths := difference(expectedVPaths, actualVPaths)
@@ -76,19 +109,19 @@ func Equiv(t *testing.T, expected []json.Marshaler, actual []json.Marshaler) {
 		actualJSON, _ := json.MarshalIndent(actual, "", "  ")
 		println("actual json: " + string(actualJSON))
 
-		assert.FailNow(t, "Traces are not equivalent")
+		t.FailNow("Traces are not equivalent")
 	}
 }
 
-func EquivFromBytes(t *testing.T, expected []byte, actual []byte) {
+func EquivFromBytes(t Testing, expected []byte, actual []byte) {
 	t.Helper()
 	expectedVPaths, err := vPathsFromBytes(expected)
 	if err != nil {
-		assert.FailNow(t, "Failed to convert expected traces to canonical representation", err)
+		t.FailNow("Failed to convert expected traces to canonical representation", err)
 	}
 	actualVPaths, err := vPathsFromBytes(actual)
 	if err != nil {
-		assert.FailNow(t, "Failed to convert actual traces to canonical representation", err)
+		t.FailNow("Failed to convert actual traces to canonical representation", err)
 	}
 
 	missingExpectedVPaths := difference(expectedVPaths, actualVPaths)
@@ -107,27 +140,27 @@ func EquivFromBytes(t *testing.T, expected []byte, actual []byte) {
 		}
 	}
 	if len(missingExpectedVPaths) > 0 || len(missingActualVPaths) > 0 {
-		assert.FailNow(t, "Traces are not equivalent")
+		t.FailNow("Traces are not equivalent")
 	}
 }
 
 // NotEquiv asserts that two arrays of json.Marshaler are not equivalent. See Equiv for the definition of equivalence.
-func NotEquiv(t *testing.T, expected []json.Marshaler, actual []json.Marshaler) {
+func NotEquiv(t Testing, expected []json.Marshaler, actual []json.Marshaler) {
 	t.Helper()
 	expectedVPaths, err := vPaths(expected)
 	if err != nil {
-		assert.FailNow(t, "Failed to convert expected traces to canonical representation", err)
+		t.FailNow("Failed to convert expected traces to canonical representation", err)
 	}
 	actualVPaths, err := vPaths(actual)
 	if err != nil {
-		assert.FailNow(t, "Failed to convert actual traces to canonical representation", err)
+		t.FailNow("Failed to convert actual traces to canonical representation", err)
 	}
 
 	missingExpectedVPaths := difference(expectedVPaths, actualVPaths)
 	missingActualVPaths := difference(actualVPaths, expectedVPaths)
 
 	if len(missingExpectedVPaths) == 0 && len(missingActualVPaths) == 0 {
-		assert.FailNow(t, "Traces should not be equivalent")
+		t.FailNow("Traces should not be equivalent")
 	}
 }
 
@@ -455,18 +488,18 @@ func jsonifyFromBytes(jsonBytes []byte) (map[string]interface{}, error) {
 // JSONCanonicalEq compares two JSON objects for equality after converting
 // them to a canonical form. This is useful for comparing JSON objects that may
 // have different key orders or array orders.
-func JSONCanonicalEq(t *testing.T, expected interface{}, actual interface{}) {
+func JSONCanonicalEq(t Testing, expected interface{}, actual interface{}) {
 	t.Helper()
 
 	expected, err := jsonFrom(expected)
-	require.NoError(t, err)
+	t.NoError(err)
 	actual, err = jsonFrom(actual)
-	require.NoError(t, err)
+	t.NoError(err)
 
 	expectedID := CanonicalObjectID(expected)
 	actualID := CanonicalObjectID(actual)
 
-	assert.Equal(t, expectedID, actualID)
+	t.Equal(expectedID, actualID)
 }
 
 // CanonicalObjectID computes a unique ID for an object.

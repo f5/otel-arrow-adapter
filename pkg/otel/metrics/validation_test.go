@@ -127,6 +127,8 @@ func MetricsGenerator() *datagen.MetricsGenerator {
 }
 
 func CheckEncodeDecode(t *testing.T, expectedRequest pmetricotlp.ExportRequest) {
+	stdTesting := assert.NewStdUnitTest(t)
+
 	// Convert the OTLP metrics request to Arrow.
 	pool := memory.NewCheckedAllocator(memory.NewGoAllocator())
 	defer pool.AssertSize(t, 0)
@@ -165,7 +167,7 @@ func CheckEncodeDecode(t *testing.T, expectedRequest pmetricotlp.ExportRequest) 
 
 	record.Release()
 
-	assert.Equiv(t, []json.Marshaler{expectedRequest}, []json.Marshaler{pmetricotlp.NewExportRequestFromMetrics(metrics)})
+	assert.Equiv(stdTesting, []json.Marshaler{expectedRequest}, []json.Marshaler{pmetricotlp.NewExportRequestFromMetrics(metrics)})
 }
 
 // MultiRoundOfCheckEncodeMessUpDecode tests the robustness of the conversion of
