@@ -274,11 +274,7 @@ func nonPositionalIndex(key string, vMap map[string]interface{}) string {
 			return sig(scope)
 		}
 	case "events", "links", "attributes", "spans", "quantileValues",
-		"filteredAttributes", "exemplars":
-		return sig(vMap)
-	case "dataPoints":
-		return sig(vMap)
-	case "metrics":
+		"filteredAttributes", "exemplars", "dataPoints", "metrics", "logRecords", "values":
 		return sig(vMap)
 	}
 	return "_"
@@ -359,7 +355,7 @@ func mapSig(vMap map[string]interface{}) string {
 
 		// Special case for events, links, and exemplars, which are sorted by
 		// non-positional index.
-		if key == "events" || key == "links" || key == "exemplars" {
+		if key == "events" || key == "links" || key == "exemplars" || key == "values" {
 			items, ok := vMap[key].([]interface{})
 			if ok {
 				sig, done := itemsSig(key, items)
