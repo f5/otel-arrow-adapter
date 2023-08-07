@@ -32,6 +32,7 @@ import (
 	"github.com/f5/otel-arrow-adapter/collector/gen/internal/testdata"
 )
 
+const defaultMaxStreamLifetime = 11 * time.Second
 type compareJSONTraces struct{ ptrace.Traces }
 type compareJSONMetrics struct{ pmetric.Metrics }
 type compareJSONLogs struct{ plog.Logs }
@@ -125,7 +126,7 @@ func newExporterTestCaseCommon(t *testing.T, noisy noisyTest, numStreams int, di
 		})
 	}
 
-	exp := NewExporter(numStreams, disableDowngrade, ctc.telset, nil, func() arrowRecord.ProducerAPI {
+	exp := NewExporter(defaultMaxStreamLifetime, numStreams, disableDowngrade, ctc.telset, nil, func() arrowRecord.ProducerAPI {
 		// Mock the close function, use a real producer for testing dataflow.
 		mock := arrowRecordMock.NewMockProducerAPI(ctc.ctrl)
 		prod := arrowRecord.NewProducer()
