@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"time"
 
 	arrowpb "github.com/f5/otel-arrow-adapter/api/experimental/arrow/v1"
 	arrowRecord "github.com/f5/otel-arrow-adapter/pkg/otel/arrow_record"
@@ -291,7 +292,31 @@ func (r *Receiver) anyStream(serverStream anyStreamServer) (retErr error) {
 		}
 	}()
 
+	timer := time.NewTimer(r.gsettings.Keepalive.ServerParameters.MaxConnectionAge)
 	for {
+		select {
+		case <-timer.C:
+			// Receive a batch corresponding with one ptrace.Traces, pmetric.Metrics,
+			// or plog.Logs item.
+			req, err := serverStream.Recv()
+
+			if err != nil {
+				r.logStreamError(err)
+				return err
+			}
+			r.telemetry.Logger.Debug("max stream lifetime reached")
+			status := &arrowpb.BatchStatus{BatchId: req.GetBatchId()}
+			status.StatusCode = arrowpb.StatusCode_OK
+			status.StatusMessage = "lifetime expired"
+			err = serverStream.Send(status)
+			if err != nil {
+				r.logStreamError(err)
+				return err
+			}
+			return nil
+		default:
+			break
+		}
 		// Receive a batch corresponding with one ptrace.Traces, pmetric.Metrics,
 		// or plog.Logs item.
 		req, err := serverStream.Recv()

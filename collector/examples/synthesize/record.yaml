@@ -1,8 +1,33 @@
 receivers:
+  otlp/loopback:
+    protocols:
+      grpc:
+        endpoint: 127.0.0.1:4000
+        keepalive:
+          server_parameters:
+            max_connection_age: 3s
+            max_connection_age_grace: 1s
+      arrow:
+        disabled: false
+  otlp:
+    protocols:
+      grpc:
   generator:
     path: ./generator/hipster_shop.yaml
 
 exporters:
+  otlp/arrow:
+    endpoint: 127.0.0.1:4000
+    wait_for_ready: true
+    tls:
+      insecure: true
+    arrow:
+      disabled: false
+      num_streams: 1
+    retry_on_failure:
+      enabled: false
+    sending_queue:
+      enabled: false
   file/traces:
     path: ./recorded_traces.json
     compression:

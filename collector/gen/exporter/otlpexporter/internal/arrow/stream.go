@@ -64,6 +64,8 @@ type Stream struct {
 
 	// waiters is the response channel for each active batch.
 	waiters map[int64]chan error
+
+	closed chan int
 }
 
 // writeItem is passed from the sender (a pipeline consumer) to the
@@ -91,6 +93,7 @@ func newStream(
 		telemetry:         telemetry,
 		toWrite:           make(chan writeItem, 1),
 		waiters:           map[int64]chan error{},
+		closed:            make(chan int, 1),
 	}
 }
 
@@ -211,7 +214,7 @@ func (s *Stream) run(bgctx context.Context, streamClient StreamClientFunc, grpcO
 				// production); in both cases "NO_ERROR" is the key
 				// signifier.
 				if strings.Contains(status.Message(), "NO_ERROR") {
-					s.telemetry.Logger.Debug("arrow stream shutdown")
+					s.telemetry.Logger.Info("arrow stream shutdown")
 				} else {
 					s.telemetry.Logger.Error("arrow stream unavailable",
 						zap.String("message", status.Message()),
@@ -266,8 +269,6 @@ func (s *Stream) write(ctx context.Context) error {
 	var hdrsBuf bytes.Buffer
 	hdrsEnc := hpack.NewEncoder(&hdrsBuf)
 
-	timer := time.NewTimer(s.maxStreamLifetime)
-
 	for {
 		// Note: this can't block b/c stream has capacity &
 		// individual streams shut down synchronously.
@@ -278,10 +279,12 @@ func (s *Stream) write(ctx context.Context) error {
 		var wri writeItem
 		var ok bool
 		select {
-		case <-timer.C:
-			s.prioritizer.removeReady(s)
-			s.client.CloseSend()
-			return nil
+		case _, ok := <-s.closed:
+			if !ok {
+				s.prioritizer.removeReady(s)
+				s.client.CloseSend()
+				return nil
+			}
 		case wri, ok = <-s.toWrite:
 			// channel is closed
 			if !ok {
@@ -350,14 +353,15 @@ func (s *Stream) read(_ context.Context) error {
 		// timeout.  TODO: possibly, improve to wait for no outstanding requests and then stop reading.
 		resp, err := s.client.Recv()
 		if err != nil {
-			// Once the send direction of stream is closed the server should return
-			// an error that mentions an EOF. The expected error code is codes.Unknown.
-			status, ok := status.FromError(err)
-			if ok && status.Message() == "EOF" && status.Code() == codes.Unknown {
-				return nil
-			}
 			// Note: do not wrap, contains a Status.
 			return err
+		}
+
+		// signals that max_connection_age was reached on the server,
+		// so close send direction for client
+		if resp.StatusMessage == "lifetime expired" {
+			close(s.closed)
+			return nil
 		}
 
 		if err = s.processBatchStatus(resp); err != nil {

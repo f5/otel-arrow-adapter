@@ -5,7 +5,6 @@ package otlpexporter // import "github.com/f5/otel-arrow-adapter/collector/gen/e
 
 import (
 	"fmt"
-	"time"
 
 	"google.golang.org/grpc"
 
@@ -38,7 +37,6 @@ type ArrowSettings struct {
 	NumStreams         int           `mapstructure:"num_streams"`
 	DisableDowngrade   bool          `mapstructure:"disable_downgrade"`
 	EnableMixedSignals bool          `mapstructure:"enable_mixed_signals"`
-	MaxStreamLifetime  time.Duration `mapstructure:"max_stream_lifetime"`
 }
 
 var _ component.Config = (*Config)(nil)
@@ -59,10 +57,6 @@ func (cfg *Config) Validate() error {
 func (cfg *ArrowSettings) Validate() error {
 	if cfg.NumStreams < 1 {
 		return fmt.Errorf("stream count must be > 0: %d", cfg.NumStreams)
-	}
-
-	if cfg.MaxStreamLifetime.Seconds() < float64(1) {
-		return fmt.Errorf("max stream life must be > 0: %d", cfg.MaxStreamLifetime)
 	}
 
 	return nil

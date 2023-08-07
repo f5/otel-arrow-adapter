@@ -457,7 +457,6 @@ func TestSendTracesWhenEndpointHasHttpScheme(t *testing.T) {
 			cfg := factory.CreateDefaultConfig().(*Config)
 			cfg.GRPCClientSettings = test.gRPCClientSettings
 			cfg.GRPCClientSettings.Endpoint = test.scheme + ln.Addr().String()
-			cfg.Arrow.MaxStreamLifetime = 100 * time.Second
 			if test.useTLS {
 				cfg.GRPCClientSettings.TLSSetting.InsecureSkipVerify = true
 			}
@@ -514,7 +513,6 @@ func TestSendMetrics(t *testing.T) {
 			"header": "header-value",
 		},
 	}
-	cfg.Arrow.MaxStreamLifetime = 100 * time.Second
 	set := exportertest.NewNopCreateSettings()
 	set.BuildInfo.Description = "Collector"
 	set.BuildInfo.Version = "1.2.3test"
@@ -613,7 +611,6 @@ func TestSendTraceDataServerDownAndUp(t *testing.T) {
 		// Do not rely on external retry logic here, if that is intended set InitialInterval to 100ms.
 		WaitForReady: true,
 	}
-	cfg.Arrow.MaxStreamLifetime = 100 * time.Second
 	set := exportertest.NewNopCreateSettings()
 	exp, err := factory.CreateTracesExporter(context.Background(), set, cfg)
 	require.NoError(t, err)
@@ -671,7 +668,6 @@ func TestSendTraceDataServerStartWhileRequest(t *testing.T) {
 			Insecure: true,
 		},
 	}
-	cfg.Arrow.MaxStreamLifetime = 100 * time.Second
 	set := exportertest.NewNopCreateSettings()
 	exp, err := factory.CreateTracesExporter(context.Background(), set, cfg)
 	require.NoError(t, err)
@@ -725,7 +721,6 @@ func TestSendTracesOnResourceExhaustion(t *testing.T) {
 			Insecure: true,
 		},
 	}
-	cfg.Arrow.MaxStreamLifetime = 100 * time.Second
 	set := exportertest.NewNopCreateSettings()
 	exp, err := factory.CreateTracesExporter(context.Background(), set, cfg)
 	require.NoError(t, err)
@@ -808,7 +803,6 @@ func TestSendLogData(t *testing.T) {
 			Insecure: true,
 		},
 	}
-	cfg.Arrow.MaxStreamLifetime = 100 * time.Second
 	set := exportertest.NewNopCreateSettings()
 	set.BuildInfo.Description = "Collector"
 	set.BuildInfo.Version = "1.2.3test"
@@ -926,7 +920,6 @@ func testSendArrowTraces(t *testing.T, mixedSignals, clientWaitForReady, streamS
 	cfg.Arrow = ArrowSettings{
 		NumStreams:         1,
 		EnableMixedSignals: mixedSignals,
-		MaxStreamLifetime:  100 * time.Second,
 	}
 
 	set := exportertest.NewNopCreateSettings()
@@ -1099,7 +1092,6 @@ func TestSendArrowFailedTraces(t *testing.T) {
 	cfg.Arrow = ArrowSettings{
 		NumStreams:         1,
 		EnableMixedSignals: true,
-		MaxStreamLifetime:  100 * time.Second,
 	}
 	cfg.QueueSettings.Enabled = false
 
