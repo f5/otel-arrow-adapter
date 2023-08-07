@@ -79,9 +79,13 @@ func LogsFrom(record arrow.Record, relatedData *RelatedData) (plog.Logs, error) 
 	prevResID := None
 	prevScopeID := None
 
+	var resID uint16
+	var scopeID uint16
+
 	for row := 0; row < rows; row++ {
 		// Process resource logs, resource, schema url (resource)
-		resID, err := otlp.ResourceIDFromRecord(record, row, logRecordIDs.Resource)
+		resDeltaID, err := otlp.ResourceIDFromRecord(record, row, logRecordIDs.Resource)
+		resID += resDeltaID
 		if err != nil {
 			return logs, werror.Wrap(err)
 		}
@@ -98,7 +102,8 @@ func LogsFrom(record arrow.Record, relatedData *RelatedData) (plog.Logs, error) 
 		}
 
 		// Process scope logs, scope, schema url (scope)
-		scopeID, err := otlp.ScopeIDFromRecord(record, row, logRecordIDs.Scope)
+		scopeDeltaID, err := otlp.ScopeIDFromRecord(record, row, logRecordIDs.Scope)
+		scopeID += scopeDeltaID
 		if err != nil {
 			return logs, werror.Wrap(err)
 		}
@@ -119,11 +124,10 @@ func LogsFrom(record arrow.Record, relatedData *RelatedData) (plog.Logs, error) 
 
 		// Process log record fields
 		logRecord := logRecordSlice.AppendEmpty()
-		deltaID, err := arrowutils.U16FromRecord(record, logRecordIDs.ID, row)
+		deltaID, err := arrowutils.NullableU16FromRecord(record, logRecordIDs.ID, row)
 		if err != nil {
 			return logs, werror.Wrap(err)
 		}
-		ID := relatedData.LogRecordIDFromDelta(deltaID)
 
 		timeUnixNano, err := arrowutils.TimestampFromRecord(record, logRecordIDs.TimeUnixNano, row)
 		if err != nil {
@@ -224,10 +228,15 @@ func LogsFrom(record arrow.Record, relatedData *RelatedData) (plog.Logs, error) 
 		}
 
 		logRecordAttrs := logRecord.Attributes()
-		attrs := relatedData.LogRecordAttrMapStore.AttributesByID(ID)
-		if attrs != nil {
-			attrs.CopyTo(logRecordAttrs)
+
+		if deltaID != nil {
+			ID := relatedData.LogRecordIDFromDelta(*deltaID)
+			attrs := relatedData.LogRecordAttrMapStore.AttributesByID(ID)
+			if attrs != nil {
+				attrs.CopyTo(logRecordAttrs)
+			}
 		}
+
 		droppedAttributesCount, err := arrowutils.U32FromRecord(record, logRecordIDs.DropAttributesCount, row)
 		if err != nil {
 			return logs, werror.WrapWithContext(err, map[string]interface{}{"row": row})

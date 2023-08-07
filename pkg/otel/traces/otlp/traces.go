@@ -85,17 +85,23 @@ func TracesFrom(record arrow.Record, relatedData *RelatedData) (ptrace.Traces, e
 	prevResID := None
 	prevScopeID := None
 
+	var resID uint16
+	var scopeID uint16
+
 	for row := 0; row < rows; row++ {
 		// Process resource spans, resource, schema url (resource)
-		resID, err := otlp.ResourceIDFromRecord(record, row, traceIDs.Resource)
+		resDeltaID, err := otlp.ResourceIDFromRecord(record, row, traceIDs.Resource)
+		resID += resDeltaID
 		if err != nil {
 			return traces, werror.Wrap(err)
 		}
+
 		if prevResID != int(resID) {
 			prevResID = int(resID)
 			resSpans = resSpansSlice.AppendEmpty()
 			scopeSpansSlice = resSpans.ScopeSpans()
 			prevScopeID = None
+
 			schemaUrl, err := otlp.UpdateResourceFromRecord(resSpans.Resource(), record, row, traceIDs.Resource, relatedData.ResAttrMapStore)
 			if err != nil {
 				return traces, werror.Wrap(err)
@@ -104,7 +110,8 @@ func TracesFrom(record arrow.Record, relatedData *RelatedData) (ptrace.Traces, e
 		}
 
 		// Process scope spans, scope, schema url (scope)
-		scopeID, err := otlp.ScopeIDFromRecord(record, row, traceIDs.Scope)
+		scopeDeltaID, err := otlp.ScopeIDFromRecord(record, row, traceIDs.Scope)
+		scopeID += scopeDeltaID
 		if err != nil {
 			return traces, werror.Wrap(err)
 		}
@@ -125,11 +132,10 @@ func TracesFrom(record arrow.Record, relatedData *RelatedData) (ptrace.Traces, e
 
 		// Process span fields
 		span := spanSlice.AppendEmpty()
-		deltaID, err := arrowutils.U16FromRecord(record, traceIDs.ID, row)
+		deltaID, err := arrowutils.NullableU16FromRecord(record, traceIDs.ID, row)
 		if err != nil {
 			return traces, werror.Wrap(err)
 		}
-		ID := relatedData.SpanIDFromDelta(deltaID)
 
 		traceID, err := arrowutils.FixedSizeBinaryFromRecord(record, traceIDs.TraceID, row)
 		if err != nil {
@@ -203,22 +209,27 @@ func TracesFrom(record arrow.Record, relatedData *RelatedData) (ptrace.Traces, e
 			}
 			span.Status().SetCode(ptrace.StatusCode(code))
 		}
-		spanAttrs := span.Attributes()
-		attrs := relatedData.SpanAttrMapStore.AttributesByID(ID)
-		if attrs != nil {
-			attrs.CopyTo(spanAttrs)
-		}
 
-		events := relatedData.SpanEventsStore.EventsByID(ID)
-		eventSlice := span.Events()
-		for _, event := range events {
-			event.MoveTo(eventSlice.AppendEmpty())
-		}
+		if deltaID != nil {
+			ID := relatedData.SpanIDFromDelta(*deltaID)
 
-		links := relatedData.SpanLinksStore.LinksByID(ID)
-		linkSlice := span.Links()
-		for _, link := range links {
-			link.MoveTo(linkSlice.AppendEmpty())
+			spanAttrs := span.Attributes()
+			attrs := relatedData.SpanAttrMapStore.AttributesByID(ID)
+			if attrs != nil {
+				attrs.CopyTo(spanAttrs)
+			}
+
+			events := relatedData.SpanEventsStore.EventsByID(ID)
+			eventSlice := span.Events()
+			for _, event := range events {
+				event.MoveTo(eventSlice.AppendEmpty())
+			}
+
+			links := relatedData.SpanLinksStore.LinksByID(ID)
+			linkSlice := span.Links()
+			for _, link := range links {
+				link.MoveTo(linkSlice.AppendEmpty())
+			}
 		}
 
 		var tid pcommon.TraceID

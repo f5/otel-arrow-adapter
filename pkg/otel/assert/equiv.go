@@ -15,6 +15,8 @@
 package assert
 
 import (
+	"crypto/md5"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"sort"
@@ -23,8 +25,41 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
+
+// Testing is an interface that makes `assert.Equiv` independent of the testing
+// framework. It is then possible to use `assert.Equiv` in contexts where the
+// testing framework is not available.
+type Testing interface {
+	Helper()
+	FailNow(failureMessage string, msgAndArgs ...interface{}) bool
+	NoError(err error, msgAndArgs ...interface{})
+	Equal(expected, actual interface{}, msgAndArgs ...interface{}) bool
+}
+
+type StdUnitTest struct {
+	t *testing.T
+}
+
+func NewStdUnitTest(t *testing.T) Testing {
+	return &StdUnitTest{t: t}
+}
+
+func (a *StdUnitTest) Helper() {
+	a.t.Helper()
+}
+
+func (a *StdUnitTest) FailNow(failureMessage string, msgAndArgs ...interface{}) bool {
+	return assert.FailNow(a.t, failureMessage, msgAndArgs...)
+}
+
+func (a *StdUnitTest) NoError(err error, msgAndArgs ...interface{}) {
+	assert.NoError(a.t, err, msgAndArgs...)
+}
+
+func (a *StdUnitTest) Equal(expected, actual interface{}, msgAndArgs ...interface{}) bool {
+	return assert.Equal(a.t, expected, actual, msgAndArgs...)
+}
 
 // Equiv asserts that two arrays of json.Marshaler are equivalent. Metrics, logs, and traces requests implement
 // json.Marshaler and are considered equivalent if they have the same set of vPaths. A vPath is a path to a value
@@ -39,15 +74,15 @@ import (
 // This concept of equivalence is useful for testing the conversion OTLP to/from OTLP Arrow as this conversion doesn't
 // necessarily preserve the structure of the original OTLP entity. Resource spans or scope spans can be split or merged
 // during the conversion if the semantic is preserved.
-func Equiv(t *testing.T, expected []json.Marshaler, actual []json.Marshaler) {
+func Equiv(t Testing, expected []json.Marshaler, actual []json.Marshaler) {
 	t.Helper()
 	expectedVPaths, err := vPaths(expected)
 	if err != nil {
-		assert.FailNow(t, "Failed to convert expected traces to canonical representation", err)
+		t.FailNow("Failed to convert expected traces to canonical representation", err)
 	}
 	actualVPaths, err := vPaths(actual)
 	if err != nil {
-		assert.FailNow(t, "Failed to convert actual traces to canonical representation", err)
+		t.FailNow("Failed to convert actual traces to canonical representation", err)
 	}
 
 	missingExpectedVPaths := difference(expectedVPaths, actualVPaths)
@@ -66,19 +101,27 @@ func Equiv(t *testing.T, expected []json.Marshaler, actual []json.Marshaler) {
 		}
 	}
 	if len(missingExpectedVPaths) > 0 || len(missingActualVPaths) > 0 {
-		assert.FailNow(t, "Traces are not equivalent")
+		// To debug the difference between the expected and actual json objects,
+		// uncomment the following lines to print the expected and actual json
+		// objects.
+		expectedJSON, _ := json.MarshalIndent(expected, "", "  ")
+		println("expected json: " + string(expectedJSON))
+		actualJSON, _ := json.MarshalIndent(actual, "", "  ")
+		println("actual json: " + string(actualJSON))
+
+		t.FailNow("Traces are not equivalent")
 	}
 }
 
-func EquivFromBytes(t *testing.T, expected []byte, actual []byte) {
+func EquivFromBytes(t Testing, expected []byte, actual []byte) {
 	t.Helper()
 	expectedVPaths, err := vPathsFromBytes(expected)
 	if err != nil {
-		assert.FailNow(t, "Failed to convert expected traces to canonical representation", err)
+		t.FailNow("Failed to convert expected traces to canonical representation", err)
 	}
 	actualVPaths, err := vPathsFromBytes(actual)
 	if err != nil {
-		assert.FailNow(t, "Failed to convert actual traces to canonical representation", err)
+		t.FailNow("Failed to convert actual traces to canonical representation", err)
 	}
 
 	missingExpectedVPaths := difference(expectedVPaths, actualVPaths)
@@ -97,27 +140,27 @@ func EquivFromBytes(t *testing.T, expected []byte, actual []byte) {
 		}
 	}
 	if len(missingExpectedVPaths) > 0 || len(missingActualVPaths) > 0 {
-		assert.FailNow(t, "Traces are not equivalent")
+		t.FailNow("Traces are not equivalent")
 	}
 }
 
 // NotEquiv asserts that two arrays of json.Marshaler are not equivalent. See Equiv for the definition of equivalence.
-func NotEquiv(t *testing.T, expected []json.Marshaler, actual []json.Marshaler) {
+func NotEquiv(t Testing, expected []json.Marshaler, actual []json.Marshaler) {
 	t.Helper()
 	expectedVPaths, err := vPaths(expected)
 	if err != nil {
-		assert.FailNow(t, "Failed to convert expected traces to canonical representation", err)
+		t.FailNow("Failed to convert expected traces to canonical representation", err)
 	}
 	actualVPaths, err := vPaths(actual)
 	if err != nil {
-		assert.FailNow(t, "Failed to convert actual traces to canonical representation", err)
+		t.FailNow("Failed to convert actual traces to canonical representation", err)
 	}
 
 	missingExpectedVPaths := difference(expectedVPaths, actualVPaths)
 	missingActualVPaths := difference(actualVPaths, expectedVPaths)
 
 	if len(missingExpectedVPaths) == 0 && len(missingActualVPaths) == 0 {
-		assert.FailNow(t, "Traces should not be equivalent")
+		t.FailNow("Traces should not be equivalent")
 	}
 }
 
@@ -180,9 +223,12 @@ func exportAllVPaths(traces map[string]interface{}, currentVPath string, vPaths 
 		switch v := value.(type) {
 		case []interface{}:
 			for i := 0; i < len(v); i++ {
-				// TODO: this is an approximation that is good enough for now, medium-term we should compute the index key based on a signature of the non-array fields.
 				if vMap, ok := v[i].(map[string]interface{}); ok {
-					arrayVPath := localVPath + "[_]"
+					index := nonPositionalIndex(key, vMap)
+					if index != "_" {
+						index = md5Hash(index)
+					}
+					arrayVPath := localVPath + "[" + index + "]"
 					exportAllVPaths(vMap, arrayVPath, vPaths)
 				} else {
 					arrayVPath := fmt.Sprintf("%s[%d]=%s", localVPath, i, fmt.Sprint(v[i]))
@@ -209,6 +255,204 @@ func exportAllVPaths(traces map[string]interface{}, currentVPath string, vPaths 
 			vPaths[localVPath+"="+fmt.Sprintf("%f", 123.456)] = true
 		}
 	}
+}
+
+// nonPositionalIndex returns a string that can be used to identify: resource,
+// scope, event, link, attribute, span, metrics, dataPoints.
+//
+// Note: The string `_` is returned if the key is not supported.
+func nonPositionalIndex(key string, vMap map[string]interface{}) string {
+	switch key {
+	case "resourceMetrics", "resourceLogs", "resourceSpans":
+		res, ok := vMap["resource"]
+		if ok {
+			return sig(res)
+		}
+	case "scopeMetrics", "scopeLogs", "scopeSpans":
+		scope, ok := vMap["scope"]
+		if ok {
+			return sig(scope)
+		}
+	case "events", "links", "attributes", "spans", "quantileValues",
+		"filteredAttributes", "exemplars", "dataPoints", "metrics", "logRecords", "values":
+		return sig(vMap)
+	}
+	return "_"
+}
+
+func md5Hash(text string) string {
+	hash := md5.Sum([]byte(text))
+	return hex.EncodeToString(hash[:])
+}
+
+func sig(value interface{}) string {
+	var sigBuilder strings.Builder
+
+	switch v := value.(type) {
+	case string:
+		sigBuilder.WriteString(v)
+	case int:
+		sigBuilder.WriteString(strconv.Itoa(v))
+	case int64:
+		sigBuilder.WriteString(strconv.FormatInt(v, 10))
+	case float64:
+		sigBuilder.WriteString(strconv.FormatFloat(v, 'G', -1, 64))
+	case bool:
+		sigBuilder.WriteString(strconv.FormatBool(v))
+	case []string:
+		sigBuilder.WriteString(fmt.Sprintf("[%s]", strings.Join(v, ",")))
+	case []int64:
+		sigBuilder.WriteString(strings.Join(strings.Fields(fmt.Sprint(v)), ","))
+	case []float64:
+		sigBuilder.WriteString(strings.Join(strings.Fields(fmt.Sprint(v)), ","))
+	case []bool:
+		sigBuilder.WriteString(strings.Join(strings.Fields(fmt.Sprint(v)), ","))
+	case map[string]interface{}:
+		sigBuilder.WriteString(mapSig(v))
+	case []interface{}:
+		sigBuilder.WriteString("[")
+		for i := 0; i < len(v); i++ {
+			if i > 0 {
+				sigBuilder.WriteString(",")
+			}
+			sigBuilder.WriteString(sig(v[i]))
+		}
+		sigBuilder.WriteString("]")
+	}
+	return sigBuilder.String()
+}
+
+func mapSig(vMap map[string]interface{}) string {
+	var sigBuilder strings.Builder
+
+	// Compute a signature of the map by sorting the keys and then appending the values.
+	keys := make([]string, 0, len(vMap))
+	for key := range vMap {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	sigBuilder.WriteString("{")
+	count := 0
+	for _, key := range keys {
+		if count > 0 {
+			sigBuilder.WriteString(",")
+		}
+
+		// Special case for attributes (and filtered attributes), which are
+		// sorted by key.
+		if key == "attributes" || key == "filteredAttributes" {
+			attributes, ok := vMap[key].([]interface{})
+			if ok {
+				attrsSig, done := tryAttributesSig(attributes)
+				if done {
+					sigBuilder.WriteString("attributes=")
+					sigBuilder.WriteString(attrsSig)
+					count++
+					continue
+				}
+			}
+		}
+
+		// Special case for events, links, and exemplars, which are sorted by
+		// non-positional index.
+		if key == "events" || key == "links" || key == "exemplars" || key == "values" {
+			items, ok := vMap[key].([]interface{})
+			if ok {
+				sig, done := itemsSig(key, items)
+				if done {
+					sigBuilder.WriteString(key)
+					sigBuilder.WriteString("=")
+					sigBuilder.WriteString(sig)
+					count++
+					continue
+				}
+			}
+		}
+
+		sigBuilder.WriteString(fmt.Sprintf("%s=%s", key, sig(vMap[key])))
+		count++
+	}
+	sigBuilder.WriteString("}")
+
+	return sigBuilder.String()
+}
+
+func tryAttributesSig(attrs []interface{}) (string, bool) {
+	type otelAttribute struct {
+		Key   string
+		Value interface{}
+	}
+
+	// Convert the attributes to a slice of otelAttribute structs.
+	otelAttrs := make([]otelAttribute, 0, len(attrs))
+	for _, attr := range attrs {
+		attr, ok := attr.(map[string]interface{})
+		if !ok {
+			return "", false
+		}
+		key, found := attr["key"]
+		if !found {
+			return "", false
+		}
+		keyStr, ok := key.(string)
+		if !ok {
+			return "", false
+		}
+		value, found := attr["value"]
+		if !found {
+			return "", false
+		}
+		otelAttrs = append(otelAttrs, otelAttribute{Key: keyStr, Value: value})
+	}
+
+	// Sort the attributes by key.
+	sort.Slice(otelAttrs, func(i, j int) bool {
+		return otelAttrs[i].Key < otelAttrs[j].Key
+	})
+
+	var sigBuilder strings.Builder
+
+	sigBuilder.WriteString("{")
+	for i, attr := range otelAttrs {
+		if i > 0 {
+			sigBuilder.WriteString(",")
+		}
+		sigBuilder.WriteString(fmt.Sprintf("%s=%s", attr.Key, sig(attr.Value)))
+	}
+	sigBuilder.WriteString("}")
+
+	return sigBuilder.String(), true
+}
+
+func itemsSig(key string, items []interface{}) (string, bool) {
+	// Convert the attributes to a slice of otelAttribute structs.
+	nonPositionalIndices := make([]string, 0, len(items))
+	for _, item := range items {
+		// Convert the item to a map[string]interface{}. Events and links are
+		// represented as a slice of map[string]interface{}.
+		structuredItem, ok := item.(map[string]interface{})
+		if !ok {
+			return "", false
+		}
+		npi := nonPositionalIndex(key, structuredItem)
+		nonPositionalIndices = append(nonPositionalIndices, npi)
+	}
+
+	// Sort the items by non-positional index.
+	sort.Slice(nonPositionalIndices, func(i, j int) bool {
+		return nonPositionalIndices[i] < nonPositionalIndices[j]
+	})
+
+	var sigBuilder strings.Builder
+
+	for i, npi := range nonPositionalIndices {
+		if i > 0 {
+			sigBuilder.WriteString(",")
+		}
+		sigBuilder.WriteString(npi)
+	}
+
+	return md5Hash(sigBuilder.String()), true
 }
 
 func jsonify(marshaler []json.Marshaler) ([]map[string]interface{}, error) {
@@ -240,18 +484,18 @@ func jsonifyFromBytes(jsonBytes []byte) (map[string]interface{}, error) {
 // JSONCanonicalEq compares two JSON objects for equality after converting
 // them to a canonical form. This is useful for comparing JSON objects that may
 // have different key orders or array orders.
-func JSONCanonicalEq(t *testing.T, expected interface{}, actual interface{}) {
+func JSONCanonicalEq(t Testing, expected interface{}, actual interface{}) {
 	t.Helper()
 
 	expected, err := jsonFrom(expected)
-	require.NoError(t, err)
+	t.NoError(err)
 	actual, err = jsonFrom(actual)
-	require.NoError(t, err)
+	t.NoError(err)
 
 	expectedID := CanonicalObjectID(expected)
 	actualID := CanonicalObjectID(actual)
 
-	assert.Equal(t, expectedID, actualID)
+	t.Equal(expectedID, actualID)
 }
 
 // CanonicalObjectID computes a unique ID for an object.

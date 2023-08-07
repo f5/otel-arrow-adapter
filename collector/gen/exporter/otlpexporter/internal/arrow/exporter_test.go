@@ -13,10 +13,6 @@ import (
 	"testing"
 	"time"
 
-	arrowpb "github.com/f5/otel-arrow-adapter/api/experimental/arrow/v1"
-	arrowRecord "github.com/f5/otel-arrow-adapter/pkg/otel/arrow_record"
-	arrowRecordMock "github.com/f5/otel-arrow-adapter/pkg/otel/arrow_record/mock"
-	otelAssert "github.com/f5/otel-arrow-adapter/pkg/otel/assert"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -24,12 +20,19 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 
-	"github.com/f5/otel-arrow-adapter/collector/gen/internal/testdata"
+	arrowpb "github.com/f5/otel-arrow-adapter/api/experimental/arrow/v1"
+	arrowRecord "github.com/f5/otel-arrow-adapter/pkg/otel/arrow_record"
+	arrowRecordMock "github.com/f5/otel-arrow-adapter/pkg/otel/arrow_record/mock"
+	otelAssert "github.com/f5/otel-arrow-adapter/pkg/otel/assert"
+
 	"go.opentelemetry.io/collector/pdata/plog"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 	"go.opentelemetry.io/collector/pdata/ptrace"
+
+	"github.com/f5/otel-arrow-adapter/collector/gen/internal/testdata"
 )
 
+const defaultMaxStreamLifetime = 11 * time.Second
 type compareJSONTraces struct{ ptrace.Traces }
 type compareJSONMetrics struct{ pmetric.Metrics }
 type compareJSONLogs struct{ plog.Logs }
@@ -123,7 +126,7 @@ func newExporterTestCaseCommon(t *testing.T, noisy noisyTest, numStreams int, di
 		})
 	}
 
-	exp := NewExporter(numStreams, disableDowngrade, ctc.telset, nil, func() arrowRecord.ProducerAPI {
+	exp := NewExporter(defaultMaxStreamLifetime, numStreams, disableDowngrade, ctc.telset, nil, func() arrowRecord.ProducerAPI {
 		// Mock the close function, use a real producer for testing dataflow.
 		mock := arrowRecordMock.NewMockProducerAPI(ctc.ctrl)
 		prod := arrowRecord.NewProducer()
@@ -177,6 +180,7 @@ func statusUnrecognizedFor(id int64) *arrowpb.BatchStatus {
 
 // TestArrowExporterSuccess tests a single Send through a healthy channel.
 func TestArrowExporterSuccess(t *testing.T) {
+	stdTesting := otelAssert.NewStdUnitTest(t)
 	for _, inputData := range []interface{}{twoTraces, twoMetrics, twoLogs} {
 		tc := newSingleStreamTestCase(t)
 		channel := newHealthyTestChannel()
@@ -207,7 +211,7 @@ func TestArrowExporterSuccess(t *testing.T) {
 			traces, err := testCon.TracesFrom(outputData)
 			require.NoError(t, err)
 			require.Equal(t, 1, len(traces))
-			otelAssert.Equiv(t, []json.Marshaler{
+			otelAssert.Equiv(stdTesting, []json.Marshaler{
 				compareJSONTraces{testData},
 			}, []json.Marshaler{
 				compareJSONTraces{traces[0]},
@@ -216,7 +220,7 @@ func TestArrowExporterSuccess(t *testing.T) {
 			logs, err := testCon.LogsFrom(outputData)
 			require.NoError(t, err)
 			require.Equal(t, 1, len(logs))
-			otelAssert.Equiv(t, []json.Marshaler{
+			otelAssert.Equiv(stdTesting, []json.Marshaler{
 				compareJSONLogs{testData},
 			}, []json.Marshaler{
 				compareJSONLogs{logs[0]},
@@ -225,7 +229,7 @@ func TestArrowExporterSuccess(t *testing.T) {
 			metrics, err := testCon.MetricsFrom(outputData)
 			require.NoError(t, err)
 			require.Equal(t, 1, len(metrics))
-			otelAssert.Equiv(t, []json.Marshaler{
+			otelAssert.Equiv(stdTesting, []json.Marshaler{
 				compareJSONMetrics{testData},
 			}, []json.Marshaler{
 				compareJSONMetrics{metrics[0]},
