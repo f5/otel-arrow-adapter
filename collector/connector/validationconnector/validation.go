@@ -34,17 +34,27 @@ type inputToOutputContext struct{}   // value is int64
 type inputToValidateContext struct{} // value is int64
 
 type Config struct {
+	// Follower is the name of a pipeline where the second validation
+	// connector is a receiver.  This should be set only for the first
+	// validation connector, as it is how they distinguish themselves.
 	Follower component.ID `mapstructure:"follower"`
 }
 
+// validation is used for any signal.
 type validation struct {
-	lock   sync.Mutex
+	// lock protects store and sendSequence.
+	lock sync.Mutex
+
 	cfg    *Config
 	logger *zap.Logger
 
+	// store is holds all the expected data that has yet to arrive.
 	store map[int64]any
 
+	// sendSequence is used to generate new sequence numbers.
 	sendSequence int64
+
+	// only one of the following fields will be set in any given pipeline
 
 	nextTraces  consumer.Traces
 	nextMetrics consumer.Metrics
@@ -76,6 +86,10 @@ func (c *Config) hasFollower() bool {
 	return c.Follower.Type() != ""
 }
 
+// reorder _was an attempt_ to solve the problem described in
+// https://github.com/open-telemetry/opentelemetry-collector/issues/8104,
+// however it does not work.  This places the follower first in the list
+// of components because we want it to receive the data first.
 func (v *validation) reorder(ids []component.ID) ([]component.ID, error) {
 	var ordered []component.ID
 
@@ -93,10 +107,10 @@ func (v *validation) reorder(ids []component.ID) ([]component.ID, error) {
 	if v.cfg.hasFollower() && !found {
 		return nil, errMissingFollower
 	}
-	v.logger.Info("LOOK AT ORDER", zap.Reflect("ord", ordered))
 	return ordered, nil
 }
 
+// expecting places an expectation by sequence number.
 func (v *validation) expecting(seq int64, data any) error {
 	v.lock.Lock()
 	defer v.lock.Unlock()
@@ -108,6 +122,8 @@ func (v *validation) expecting(seq int64, data any) error {
 	return nil
 }
 
+// received calls assert.Equiv for the received data item, assuming we
+// have the expectation.
 func (v *validation) received(seq int64, data any) error {
 	v.lock.Lock()
 	defer v.lock.Unlock()
@@ -260,6 +276,8 @@ func (v *validation) consumeNext(ctx context.Context, data any) error {
 	return nil
 }
 
+// consume is the central logic of the validation connector, both
+// instances.
 func (v *validation) consume(ctx context.Context, data any) error {
 	if v.cfg.hasFollower() {
 		// Here, the first validation connector.
