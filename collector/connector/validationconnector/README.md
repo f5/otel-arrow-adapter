@@ -60,7 +60,8 @@ extensions:
 ```
 
 Two validation connectors are initialized, one labeled "verify" and
-one labeled "expect".
+one labeled "expect".  The "expect" connector names the pipeline of
+the "verify" conector, as follows:
 
 ```
 connectors:
@@ -73,18 +74,26 @@ connectors:
 service:
   extensions: [headers_setter]
   pipelines:
+    # The input is routed to the first validation connector.
     traces/input:
       receivers: [INPUT]
       exporters: [validation/expect/traces]
 
+    # This pipeline provides the real/expected input from the first
+	# validation connector to the second connector and the system under
+	# test.  This pipeline is named as the "follower" of the validation 
+	# connector, above.
     traces/validate:
       receivers: [validation/expect/traces]
       exporters: [validation/verify/traces, otlp/arrow]
 
+    # This pipeline provides the actual input from the system under test
+	# to the second validation connector.
     traces/loop:
       receivers: [otlp/loopback]
       exporters: [validation/verify/traces]
-	  
+	
+	# This pipeline continues following validation.
     traces/output:
       receivers: [validation/verify/traces]
       exporters: [OUTPUT1, OUTPUT2, ...]
