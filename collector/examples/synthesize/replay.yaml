@@ -3,6 +3,7 @@ receivers:
     protocols:
       grpc:
         endpoint: 127.0.0.1:4000
+        include_metadata: true
       arrow:
         disabled: false
   file/traces:
@@ -22,11 +23,15 @@ exporters:
       insecure: true
     arrow:
       disabled: false
+      disable_downgrade: true
       num_streams: 1
     retry_on_failure:
       enabled: false
     sending_queue:
       enabled: false
+    auth:
+      authenticator: headers_setter
+    
   file/traces:
     path: ./replayed_traces.json
     format: json
@@ -44,7 +49,14 @@ connectors:
   validation/expect/metrics:
     follower: metrics/validate
 
+extensions:
+  headers_setter:
+    headers:
+      - key: validation-sequence
+        from_context: X-Validation-Sequence
+
 service:
+  extensions: [headers_setter]
   pipelines:
     traces/input:
       receivers: [file/traces]
@@ -81,5 +93,5 @@ service:
       address: 127.0.0.1:8888
       level: detailed
     logs:
-      #level: debug
-      level: info
+      level: debug
+      #level: info

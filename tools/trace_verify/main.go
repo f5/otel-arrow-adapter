@@ -20,10 +20,8 @@ import (
 	"bufio"
 	"encoding/json"
 	"flag"
-	"fmt"
 	"log"
 	"os"
-	"testing"
 
 	"github.com/f5/otel-arrow-adapter/pkg/otel/arrow_record"
 	"github.com/f5/otel-arrow-adapter/pkg/otel/assert"
@@ -32,7 +30,7 @@ import (
 	"go.opentelemetry.io/collector/pdata/ptrace/ptraceotlp"
 )
 
-func TestMain(t *testing.T) {
+func main() {
 	flag.Parse()
 
 	producer := arrow_record.NewProducer()
@@ -40,9 +38,9 @@ func TestMain(t *testing.T) {
 
 	args := flag.Args()
 
-	args = []string{
-		"recorded_traces.json",
-	}
+	args = os.Args[1:]
+
+	asserter := assert.NewStandaloneTest()
 
 	for _, file := range args {
 		f, err := os.Open(file)
@@ -59,13 +57,11 @@ func TestMain(t *testing.T) {
 				log.Fatalf("parse: %v", err)
 			}
 
-			fmt.Println("PRODUCING")
 			batch, err := producer.BatchArrowRecordsFromTraces(expected)
 			if err != nil {
 				log.Fatalf("produce arrow: %v", err)
 			}
 
-			fmt.Println("CONSUMING")
 			received, err := consumer.TracesFrom(batch)
 			if err != nil {
 				log.Fatalf("consume arrow: %v", err)
@@ -74,19 +70,13 @@ func TestMain(t *testing.T) {
 				log.Fatalf("expecting 1 traces: %d", len(received))
 			}
 
-			assert.Equiv(t, []json.Marshaler{
+			assert.Equiv(asserter, []json.Marshaler{
 				ptraceotlp.NewExportRequestFromTraces(expected),
 			}, []json.Marshaler{
 				ptraceotlp.NewExportRequestFromTraces(received[0]),
 			})
 
-			var mar ptrace.JSONMarshaler
-
-			data1, _ := mar.MarshalTraces(expected)
-			data2, _ := mar.MarshalTraces(received[0])
-
-			fmt.Println("DATA1", string(data1))
-			fmt.Println("DATA2", string(data2))
+			log.Printf("Verified %d traces\n", expected.SpanCount())
 		}
 		if err := scanner.Err(); err != nil {
 			log.Fatalf("read: %v", err)
