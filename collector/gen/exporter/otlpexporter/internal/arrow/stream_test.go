@@ -118,6 +118,42 @@ func (tc *streamTestCase) get() *Stream {
 	return <-tc.prioritizer.readyChannel()
 }
 
+// TestStreamGracefulShutdown verifies that exceeding the
+// max_stream_lifetime results in shutdown that
+// simply restarts the stream.
+func TestStreamGracefulShutdown(t *testing.T) {
+	tc := newStreamTestCase(t)
+
+	tc.fromTracesCall.Times(2).Return(oneBatch, nil)
+	tc.closeSendCall.Times(1).Return(nil)
+
+	channel := newHealthyTestChannel()
+	tc.start(channel)
+	defer tc.cancelAndWaitForShutdown()
+	var wg sync.WaitGroup
+	wg.Add(1)
+	defer wg.Wait()
+	go func() {
+		defer wg.Done()
+		batch := <-channel.sent
+		channel.recv <- statusOKFor(batch.BatchId)
+
+		batch = <-channel.sent
+		channel.recv <- statusOKAndEOLFor(batch.BatchId)
+	}()
+
+	err := tc.get().SendAndWait(tc.bgctx, twoTraces)
+	require.NoError(t, err)
+	// let stream get closed and send again.
+	time.Sleep(5 * time.Second)
+	err = tc.get().SendAndWait(tc.bgctx, twoTraces)
+	// fmt.Println("148")
+	require.Error(t, err)
+	fmt.Println(err)
+	require.True(t, errors.Is(err, ErrStreamRestarting))
+	fmt.Println("152")
+}
+
 // TestStreamEncodeError verifies that an encoder error in the sender
 // yields a permanent error.
 func TestStreamEncodeError(t *testing.T) {

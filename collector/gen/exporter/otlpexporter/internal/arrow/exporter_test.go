@@ -153,6 +153,22 @@ func statusOKFor(id int64) *arrowpb.BatchStatus {
 	}
 }
 
+func statusOKAndEOLFor(id int64) *arrowpb.BatchStatus {
+	return &arrowpb.BatchStatus{
+		BatchId: id,
+		StatusCode: arrowpb.StatusCode_OK,
+		EndOfLifetime: true,
+	}
+}
+
+func statusUnavailableAndEOLFor(id int64) *arrowpb.BatchStatus {
+	return &arrowpb.BatchStatus{
+		BatchId: id,
+		StatusCode: arrowpb.StatusCode_UNAVAILABLE,
+		EndOfLifetime: true,
+	}
+}
+
 func statusUnavailableFor(id int64) *arrowpb.BatchStatus {
 	return &arrowpb.BatchStatus{
 		BatchId:       id,

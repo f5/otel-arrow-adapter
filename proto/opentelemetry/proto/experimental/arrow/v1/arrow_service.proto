@@ -139,6 +139,7 @@ message BatchStatus {
   int64 batch_id = 1;
   StatusCode status_code = 2;
   string status_message = 3;
+  bool end_of_lifetime = 4;
 }
 
 enum StatusCode {

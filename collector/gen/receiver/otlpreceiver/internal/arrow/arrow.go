@@ -271,6 +271,13 @@ type anyStreamServer interface {
 	grpc.ServerStream
 }
 
+func durationMax(a time.Duration, b time.Duration) time.Duration {
+	if a.Milliseconds() >= b.Milliseconds() {
+		return a
+	}
+	return b
+}
+
 func (r *Receiver) anyStream(serverStream anyStreamServer) (retErr error) {
 	streamCtx := serverStream.Context()
 	ac := r.newConsumer()
@@ -292,31 +299,15 @@ func (r *Receiver) anyStream(serverStream anyStreamServer) (retErr error) {
 		}
 	}()
 
-	timer := time.NewTimer(r.gsettings.Keepalive.ServerParameters.MaxConnectionAge)
-	for {
-		select {
-		case <-timer.C:
-			// Receive a batch corresponding with one ptrace.Traces, pmetric.Metrics,
-			// or plog.Logs item.
-			req, err := serverStream.Recv()
+	// subtracting some arbitrary value from MaxConnectionAge.
+	// Otherwise if MaxConnectionAgeGrace is sufficiently small
+	// grpc might cut the connection before server.Send() is called
+	// to signal a graceful shutdown in the client.
+	duration := durationMax(r.gsettings.Keepalive.ServerParameters.MaxConnectionAge - 2 * time.Second, 1 * time.Second)
+	fmt.Println(duration)
+	timer := time.NewTimer(duration)
 
-			if err != nil {
-				r.logStreamError(err)
-				return err
-			}
-			r.telemetry.Logger.Debug("max stream lifetime reached")
-			status := &arrowpb.BatchStatus{BatchId: req.GetBatchId()}
-			status.StatusCode = arrowpb.StatusCode_OK
-			status.StatusMessage = "lifetime expired"
-			err = serverStream.Send(status)
-			if err != nil {
-				r.logStreamError(err)
-				return err
-			}
-			return nil
-		default:
-			break
-		}
+	for {
 		// Receive a batch corresponding with one ptrace.Traces, pmetric.Metrics,
 		// or plog.Logs item.
 		req, err := serverStream.Recv()
@@ -371,11 +362,19 @@ func (r *Receiver) anyStream(serverStream anyStreamServer) (retErr error) {
 			}
 		}
 
+		select {
+		case <-timer.C:
+			r.telemetry.Logger.Info("max stream lifetime reached")
+			status.EndOfLifetime = true
+		default:
+		}
+
 		err = serverStream.Send(status)
 		if err != nil {
 			r.logStreamError(err)
 			return err
 		}
+
 	}
 }
 
