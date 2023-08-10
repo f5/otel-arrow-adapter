@@ -304,7 +304,6 @@ func (r *Receiver) anyStream(serverStream anyStreamServer) (retErr error) {
 	// grpc might cut the connection before server.Send() is called
 	// to signal a graceful shutdown in the client.
 	duration := durationMax(r.gsettings.Keepalive.ServerParameters.MaxConnectionAge - 2 * time.Second, 1 * time.Second)
-	fmt.Println(duration)
 	timer := time.NewTimer(duration)
 
 	for {
@@ -364,6 +363,7 @@ func (r *Receiver) anyStream(serverStream anyStreamServer) (retErr error) {
 
 		select {
 		case <-timer.C:
+			fmt.Println("GETTING HERE")
 			r.telemetry.Logger.Info("max stream lifetime reached")
 			status.EndOfLifetime = true
 		default:

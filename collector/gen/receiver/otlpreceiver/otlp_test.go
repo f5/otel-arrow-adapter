@@ -1177,6 +1177,11 @@ func TestGRPCArrowReceiver(t *testing.T) {
 				cfg.GRPC.IncludeMetadata = true
 				cfg.Arrow.Disabled = disabled
 				cfg.HTTP = nil
+				cfg.GRPC.Keepalive = &configgrpc.KeepaliveServerConfig{
+					ServerParameters: &configgrpc.KeepaliveServerParameters{
+						MaxConnectionAge: 10 * time.Minute,
+					},
+				}
 				id := component.NewID("arrow")
 				ocr := newReceiver(t, factory, cfg, id, sink, nil)
 
@@ -1309,6 +1314,11 @@ func TestGRPCArrowReceiverAuth(t *testing.T) {
 	cfg.HTTP = nil
 	cfg.Arrow.Disabled = false
 	cfg.Arrow.DisableSeparateSignals = true
+	cfg.GRPC.Keepalive = &configgrpc.KeepaliveServerConfig{
+		ServerParameters: &configgrpc.KeepaliveServerParameters{
+			MaxConnectionAge: 10 * time.Minute,
+		},
+	}
 	id := component.NewID("arrow")
 	ocr := newReceiver(t, factory, cfg, id, sink, nil)
 

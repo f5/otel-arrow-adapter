@@ -13,6 +13,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
@@ -300,7 +301,13 @@ func (ctc *commonTestCase) newErrorConsumer() arrowRecord.ConsumerAPI {
 
 func (ctc *commonTestCase) start(newConsumer func() arrowRecord.ConsumerAPI, opts ...func(*configgrpc.GRPCServerSettings, *auth.Server)) {
 	var authServer auth.Server
-	gsettings := &configgrpc.GRPCServerSettings{}
+	gsettings := &configgrpc.GRPCServerSettings{
+		Keepalive: &configgrpc.KeepaliveServerConfig{
+			ServerParameters: &configgrpc.KeepaliveServerParameters{
+				MaxConnectionAge: 10 * time.Minute,
+			},
+		}, 
+	}
 	for _, gf := range opts {
 		gf(gsettings, &authServer)
 	}
