@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"strings"
 	"time"
 
@@ -303,7 +304,13 @@ func (r *Receiver) anyStream(serverStream anyStreamServer) (retErr error) {
 	// Otherwise if MaxConnectionAgeGrace is sufficiently small
 	// grpc might cut the connection before server.Send() is called
 	// to signal a graceful shutdown in the client.
-	duration := durationMax(r.gsettings.Keepalive.ServerParameters.MaxConnectionAge - 2 * time.Second, 1 * time.Second)
+	var duration time.Duration
+	if r.gsettings.Keepalive != nil && r.gsettings.Keepalive.ServerParameters != nil {
+		duration = durationMax(r.gsettings.Keepalive.ServerParameters.MaxConnectionAge - 2 * time.Second, 1 * time.Second)
+	} else {
+		// if keepalive is not explicitly set then set duration to a really large number.
+		duration = math.MaxInt32 * time.Second
+	}
 	timer := time.NewTimer(duration)
 
 	for {
@@ -363,7 +370,6 @@ func (r *Receiver) anyStream(serverStream anyStreamServer) (retErr error) {
 
 		select {
 		case <-timer.C:
-			fmt.Println("GETTING HERE")
 			r.telemetry.Logger.Debug("max stream lifetime reached")
 			status.EndOfLifetime = true
 		default:
