@@ -364,7 +364,7 @@ func (r *Receiver) anyStream(serverStream anyStreamServer) (retErr error) {
 		select {
 		case <-timer.C:
 			fmt.Println("GETTING HERE")
-			r.telemetry.Logger.Info("max stream lifetime reached")
+			r.telemetry.Logger.Debug("max stream lifetime reached")
 			status.EndOfLifetime = true
 		default:
 		}
@@ -374,7 +374,6 @@ func (r *Receiver) anyStream(serverStream anyStreamServer) (retErr error) {
 			r.logStreamError(err)
 			return err
 		}
-
 	}
 }
 
