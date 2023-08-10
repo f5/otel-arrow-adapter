@@ -1,6 +1,6 @@
 This package supports validation of data that has passed through Arrow
-encoding and decoding, recognizing that structural differences for
-semantically equivalent data.
+encoding and decoding, recognizing that there may be structural
+differences for semantically equivalent data.
 
 Examples of transformations that are allowed by `assert.Equiv()`:
 
