@@ -118,10 +118,10 @@ func (tc *streamTestCase) get() *Stream {
 	return <-tc.prioritizer.readyChannel()
 }
 
-// TestStreamGracefulShutdown verifies that exceeding the
-// max_stream_lifetime results in shutdown that
-// simply restarts the stream.
-func TestStreamGracefulShutdown(t *testing.T) {
+// TestStreamGracefulShutdownStatusOK tests the
+// scenario where the server returns an error and a signal
+// to shutdown.
+func TestStreamGracefulShutdownStatusOK(t *testing.T) {
 	tc := newStreamTestCase(t)
 
 	tc.fromTracesCall.Times(2).Return(oneBatch, nil)
@@ -144,14 +144,49 @@ func TestStreamGracefulShutdown(t *testing.T) {
 
 	err := tc.get().SendAndWait(tc.bgctx, twoTraces)
 	require.NoError(t, err)
-	// let stream get closed and send again.
-	time.Sleep(5 * time.Second)
+
 	err = tc.get().SendAndWait(tc.bgctx, twoTraces)
-	// fmt.Println("148")
+	require.NoError(t, err)
+
+	err = tc.get().SendAndWait(tc.bgctx, twoTraces)
 	require.Error(t, err)
-	fmt.Println(err)
 	require.True(t, errors.Is(err, ErrStreamRestarting))
-	fmt.Println("152")
+}
+
+// TestStreamGracefulShutdownStatusUnavailable tests the
+// scenario where the server returns an error and a signal
+// to shutdown.
+func TestStreamGracefulShutdownStatusUnavailable(t *testing.T) {
+	tc := newStreamTestCase(t)
+
+	tc.fromTracesCall.Times(2).Return(oneBatch, nil)
+	tc.closeSendCall.Times(1).Return(nil)
+
+	channel := newHealthyTestChannel()
+	tc.start(channel)
+	defer tc.cancelAndWaitForShutdown()
+	var wg sync.WaitGroup
+	wg.Add(1)
+	defer wg.Wait()
+	go func() {
+		defer wg.Done()
+		batch := <-channel.sent
+		channel.recv <- statusOKFor(batch.BatchId)
+
+		batch = <-channel.sent
+		channel.recv <- statusUnavailableAndEOLFor(batch.BatchId)
+	}()
+
+	err := tc.get().SendAndWait(tc.bgctx, twoTraces)
+	require.NoError(t, err)
+
+	err = tc.get().SendAndWait(tc.bgctx, twoTraces)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "test unavailable")
+
+	err = tc.get().SendAndWait(tc.bgctx, twoTraces)
+	require.Error(t, err)
+	require.True(t, errors.Is(err, ErrStreamRestarting))
 }
 
 // TestStreamEncodeError verifies that an encoder error in the sender

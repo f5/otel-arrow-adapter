@@ -255,10 +255,8 @@ func (s *Stream) run(bgctx context.Context, streamClient StreamClientFunc, grpcO
 
 	// The reader and writer have both finished; respond to any
 	// outstanding waiters.
-		fmt.Println("GOT4")
 	for _, ch := range s.waiters {
 		// Note: the top-level OTLP exporter will retry.
-		fmt.Println("GOT3")
 		ch <- ErrStreamRestarting
 	}
 }
@@ -282,9 +280,7 @@ func (s *Stream) write(ctx context.Context) error {
 		var ok bool
 		select {
 		case _, ok := <-s.closed:
-			fmt.Println("GOT HERE2")
 			if !ok {
-				fmt.Println("GOT HERE")
 				s.prioritizer.removeReady(s)
 				s.client.CloseSend()
 				return nil
@@ -369,7 +365,6 @@ func (s *Stream) read(_ context.Context) error {
 			return fmt.Errorf("process: %w", err)
 		} else if resp.EndOfLifetime {
 			// no errors but received signal from server to shutdown
-			fmt.Println("NO ERR")
 			return nil
 		}
 	}

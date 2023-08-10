@@ -165,6 +165,7 @@ func statusUnavailableAndEOLFor(id int64) *arrowpb.BatchStatus {
 	return &arrowpb.BatchStatus{
 		BatchId: id,
 		StatusCode: arrowpb.StatusCode_UNAVAILABLE,
+		StatusMessage: "test unavailable",
 		EndOfLifetime: true,
 	}
 }
