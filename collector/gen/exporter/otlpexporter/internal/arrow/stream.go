@@ -11,7 +11,6 @@ import (
 	"io"
 	"strings"
 	"sync"
-	"time"
 
 	arrowpb "github.com/f5/otel-arrow-adapter/api/experimental/arrow/v1"
 	arrowRecord "github.com/f5/otel-arrow-adapter/pkg/otel/arrow_record"
