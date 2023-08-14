@@ -58,7 +58,9 @@ type Stream struct {
 	// waiters is the response channel for each active batch.
 	waiters map[int64]chan error
 
-	closed chan int
+	// closeSuggested indicates that the reader has received a request
+	// to end the stream from the server.
+	closeSuggested chan int
 }
 
 // writeItem is passed from the sender (a pipeline consumer) to the
@@ -86,7 +88,7 @@ func newStream(
 		telemetry:         telemetry,
 		toWrite:           make(chan writeItem, 1),
 		waiters:           map[int64]chan error{},
-		closed:            make(chan int, 1),
+		closeSuggested:    make(chan int, 1),
 	}
 }
 
@@ -272,7 +274,7 @@ func (s *Stream) write(ctx context.Context) error {
 		var wri writeItem
 		var ok bool
 		select {
-		case _, ok := <-s.closed:
+		case _, ok := <-s.closeSuggested:
 			if !ok {
 				s.prioritizer.removeReady(s)
 				s.client.CloseSend()
@@ -340,6 +342,7 @@ func (s *Stream) read(_ context.Context) error {
 	// Note we do not use the context, the stream context might
 	// cancel a call to Recv() but the call to processBatchStatus
 	// is non-blocking.
+	closeSuggested := s.closeSuggested
 	for {
 		// Note: if the client has called CloseSend() and is waiting for a response from the server.
 		// And if the server fails for some reason, we will wait until some other condition, such as a context
@@ -350,17 +353,25 @@ func (s *Stream) read(_ context.Context) error {
 			return err
 		}
 
-		if resp.EndOfLifetime {
-			close(s.closed)
+		if resp.EndOfLifetime && closeSuggested != nil {
+			close(s.closeSuggested)
+			closeSuggested = nil
 		}
 
 		if err = s.processBatchStatus(resp); err != nil {
 			return fmt.Errorf("process: %w", err)
-		} else if resp.EndOfLifetime {
+		} else if resp.EndOfLifetime && s.numWaiters() == 0 {
 			// no errors but received signal from server to shutdown
 			return nil
 		}
 	}
+}
+
+func (s *Stream) numWaiters() int {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	return len(s.waiters)
 }
 
 // getSenderChannels takes the stream lock and removes the

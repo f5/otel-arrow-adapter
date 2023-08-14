@@ -306,7 +306,7 @@ func (r *Receiver) anyStream(serverStream anyStreamServer) (retErr error) {
 	// to signal a graceful shutdown in the client.
 	var duration time.Duration
 	if r.gsettings.Keepalive != nil && r.gsettings.Keepalive.ServerParameters != nil {
-		duration = durationMax(r.gsettings.Keepalive.ServerParameters.MaxConnectionAge - 2 * time.Second, 1 * time.Second)
+		duration = durationMax(r.gsettings.Keepalive.ServerParameters.MaxConnectionAge - 5 * time.Second, 1 * time.Second)
 	} else {
 		// if keepalive is not explicitly set then set duration to a really large number.
 		duration = math.MaxInt32 * time.Second
@@ -372,6 +372,12 @@ func (r *Receiver) anyStream(serverStream anyStreamServer) (retErr error) {
 		case <-timer.C:
 			r.telemetry.Logger.Debug("max stream lifetime reached")
 			status.EndOfLifetime = true
+			err = serverStream.Send(status)
+			if err != nil {
+				r.logStreamError(err)
+				return err
+			}
+			return nil
 		default:
 		}
 
