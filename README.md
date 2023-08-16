@@ -1,3 +1,5 @@
+** Important Note: This repository has been donated to and is now part of the OpenTelemetry project, specifically under [otel-arrow](https://github.com/open-telemetry/otel-arrow) and [otel-arrow-collector](https://github.com/open-telemetry/otel-arrow-collector) sub-projects.**
+ 
 # OTel Arrow Protocol implementation
 
 This package is a reference implementation of the OTel Arrow protocol specified in this [OTEP](https://github.com/open-telemetry/oteps/blob/main/text/0156-columnar-encoding.md).
