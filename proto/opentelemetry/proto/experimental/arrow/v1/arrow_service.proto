@@ -13,10 +13,10 @@
 // limitations under the License.
 
 // This protocol specifies the services and messages utilized by the OTel Arrow
-// Protocol. It extends the OTLP protocol by representing OTLP entities in a
-// columnar manner using Apache Arrow. The primary objective of this new
-// protocol is to optimize transport efficiency in terms of compression (phase 1),
-// memory, and CPU usage (phase 2).
+// Protocol. OTelArrow represents OTLP entities in a columnar manner using
+// Apache Arrow. The primary objective of this new protocol is to optimize
+// transport efficiency in terms of compression (phase 1), memory, and CPU usage
+// (phase 2).
 //
 // Note: This protocol is still experimental and subject to change.
 
